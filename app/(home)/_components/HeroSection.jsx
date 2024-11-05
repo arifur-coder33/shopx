@@ -5,7 +5,7 @@ export default function HeroSection() {
     <div className="h-300 md:h-500">
       <Image
         alt="banner"
-        src={"/images/banner.png"}
+        src={"/images/banner.webp"}
         width={1280}
         height={300}
         className="md:max-h-[500] rounded-3xl py-1"
