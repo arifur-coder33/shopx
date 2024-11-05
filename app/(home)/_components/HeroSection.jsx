@@ -18,7 +18,8 @@ export default function HeroSection() {
         fill
         className="object-cover"
         priority
-        loading="eager"
+        placeholder="blur"
+        blurDataURL="data:image/png;base64"
         quality={75}
       />
     </div>
