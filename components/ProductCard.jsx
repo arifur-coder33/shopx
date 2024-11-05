@@ -9,6 +9,7 @@ export default function ProductCard() {
         height={300}
         width={300}
         alt="product name"
+        priority
       />
       <div className="md:text-2xl">বাটা ক্লাসিক স্নাকারস (সাদা)</div>
       <div className="px-2 cursor-auto">

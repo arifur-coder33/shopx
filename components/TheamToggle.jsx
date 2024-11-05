@@ -31,7 +31,12 @@ export default function ThemeToggle() {
   };
 
   return (
-    <button onClick={toggleTheme} className="p-2 rounded-md ">
+    <button
+      id="toggle"
+      aria-label="them toggle"
+      onClick={toggleTheme}
+      className="p-2 rounded-md "
+    >
       {isDarkMode ? <Sun /> : <MoonStar />}
     </button>
   );

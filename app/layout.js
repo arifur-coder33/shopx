@@ -23,7 +23,7 @@ const solaiman = localFont({
 
 const KalpanaUNICODE = localFont({
   src: "../public/fonts/KalpanaUNICODE.ttf",
-})
+});
 export default function RootLayout({ children }) {
   return (
     <html lang="bn">
@@ -31,7 +31,7 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${solaiman.className} ${geistMono.variable} antialiased  theam`}
       >
         <NavBar />
-        <div className="max-w-7xl mx-auto">{children}</div>
+        <div className="max-w-7xl mx-auto p-2">{children}</div>
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ export default function HeroSection() {
       width={1280}
       height={300}
       className="md:max-h-[500] rounded-3xl py-1"
+      priority
     />
   );
 }
