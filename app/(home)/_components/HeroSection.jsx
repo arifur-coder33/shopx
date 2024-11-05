@@ -7,7 +7,7 @@ export default function HeroSection() {
       src={"/images/banner.png"}
       width={1280}
       height={300}
-      className="md:h-[500]"
+      className="md:max-h-[500] rounded-3xl py-1"
     />
   );
 }
