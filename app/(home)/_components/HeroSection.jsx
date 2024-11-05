@@ -15,9 +15,11 @@ export default function HeroSection() {
       <Image
         alt="banner"
         src="/images/banner.png"
-        layout="fill"
+        fill
         className="object-cover"
         priority
+        loading="eager"
+        quality={75}
       />
     </div>
   );
