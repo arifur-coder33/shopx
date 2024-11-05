@@ -20,11 +20,15 @@ export const metadata = {
 const solaiman = localFont({
   src: "../public/fonts/SolaimanLipi.ttf",
 });
+
+const KalpanaUNICODE = localFont({
+  src: "../public/fonts/KalpanaUNICODE.ttf",
+})
 export default function RootLayout({ children }) {
   return (
     <html lang="bn">
       <body
-        className={`${geistSans.variable} ${solaiman.className} ${geistMono.variable} antialiased  bg-slate-200 dark:bg-slate-900 text-slate-950 dark:text-slate-300`}
+        className={`${geistSans.variable} ${solaiman.className} ${geistMono.variable} antialiased  theam`}
       >
         <NavBar />
         <div className="max-w-7xl mx-auto">{children}</div>

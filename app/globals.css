@@ -19,3 +19,36 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer base {
+  @font-face {
+    font-family: 'kalpana';
+    font-weight: normal;
+    font-style: normal;
+    src: url('/fonts/KalpanaUNICODE.ttf') format('truetype');
+  }
+
+  @font-face {
+    font-family: 'solaiman';
+    font-weight: normal;
+    font-style: normal;
+    src: url('/fonts/SolaimanLipi.ttf') format('truetype');
+  }
+}
+
+@layer components {
+  .select2-dropdown {
+    @apply rounded-b-lg shadow-md;
+  }
+
+  .theam {
+    @apply bg-slate-100 text-base md:text-lg  dark:bg-slate-900 text-slate-700 dark:text-slate-300
+  }
+  .button{
+    @apply tracking-wider bg-orange-700 font-kalpana  hover:bg-orange-800 text-xl md:text-2xl pt-2 text-center text-slate-100  rounded-md
+  }
+  .product-card{
+    @apply rounded-md p-2 border-[1px] border-slate-400 dark:border-none max-w-64 cursor-pointer drop-shadow-sm bg-gradient-to-tl from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 dark:drop-shadow-md
+  }
+  /* ... */
+}
