@@ -2,16 +2,14 @@ import Image from "next/image";
 
 export default function HeroSection() {
   return (
-    <div className="h-300 md:h-500">
+    <div className="relative  w-[1280px] h-[500px]">
       <Image
         alt="banner"
         src={"/images/banner.webp"}
-        width={1280}
-        height={300}
-        className="md:max-h-[500] rounded-3xl py-1"
-        priority
+        className=" rounded-3xl py-1 object-cover"
+        fill
         placeholder="blur"
-        blurDataURL="data:image/png;base64"
+        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
       />
     </div>
   );
