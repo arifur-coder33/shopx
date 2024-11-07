@@ -3,17 +3,28 @@ import Image from "next/image";
 export default function ProductCard() {
   return (
     <div className="product-card ">
-      <Image
+      {/* <Image
         className="rounded-md"
         src={`https://images.unsplash.com/flagged/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60`}
         height={300}
         width={300}
         alt="product name"
         priority
-      />
-      <div className="md:text-2xl">বাটা ক্লাসিক স্নাকারস (সাদা)</div>
+      /> */}
+      <div className="relative">
+        <Image
+          alt="banner"
+          src={`https://images.unsplash.com/flagged/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=300&q=60`}
+          className=" rounded-md "
+          placeholder="blur"
+          blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+          width={300}
+          height={300}
+        />
+      </div>
+      <div className="">বাটা ক্লাসিক স্নাকারস (সাদা)</div>
       <div className="px-2 cursor-auto">
-        <span className="text-2xl md:text-xl"> ৫৮৬-/ </span>
+        <span className=""> ৫৮৬-/ </span>
         <del>৭০০</del>
       </div>
       <button className="w-full button ">এখনি কিনুন</button>
