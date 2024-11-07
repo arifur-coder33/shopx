@@ -21,12 +21,12 @@ body {
 }
 
 @layer base {
-  @font-face {
+  /* @font-face {
     font-family: "kalpana";
     font-weight: normal;
     font-style: normal;
     src: url("/fonts/KalpanaUNICODE.ttf") format("truetype");
-  }
+  } */
 
   /* @font-face {
     font-family: "solaiman";

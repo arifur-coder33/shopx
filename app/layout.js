@@ -21,9 +21,9 @@ const solaiman = localFont({
   src: "../public/fonts/SolaimanLipi.ttf",
 });
 
-// const KalpanaUNICODE = localFont({
-//   src: "../public/fonts/KalpanaUNICODE.ttf",
-// });
+export const KalpanaUNICODE = localFont({
+  src: "../public/fonts/KalpanaUNICODE.ttf",
+});
 export default function RootLayout({ children }) {
   return (
     <html lang="bn">
