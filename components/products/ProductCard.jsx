@@ -22,7 +22,7 @@ export default function ProductCard({
           blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
           width={300}
           height={300}
-          priority
+      
         />
       </div>
       <div className="p-2">

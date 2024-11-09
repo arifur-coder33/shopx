@@ -21,7 +21,7 @@ export default function HeroSection() {
         className=" rounded-3xl"
         width={1280}
         height={500}
-        sizes="(max-width: 480px) 400px, 
+        sizes="(max-width: 480px) 300px, 
                (max-width: 1024px) 900px, 
                1280px"
         priority
