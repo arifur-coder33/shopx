@@ -57,7 +57,7 @@ body {
              text-base sm:text-lg md:text-xl;
   }
   .button {
-    @apply tracking-wider bg-orange-700 hover:bg-orange-800  rounded-md
+    @apply tracking-wider bg-orange-600 hover:bg-orange-700  rounded-md
             text-center py-1 text-slate-100;
   }
   .product-card {
