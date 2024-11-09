@@ -58,7 +58,7 @@ body {
   }
   .button {
     @apply tracking-wider bg-orange-700 hover:bg-orange-800  rounded-md
-           font-kalpana  text-center py-1 text-slate-100;
+            text-center py-1 text-slate-100;
   }
   .product-card {
     @apply md:leading-6 flex-1 rounded-md  border border-slate-200 dark:border-none max-w-64 cursor-pointer 

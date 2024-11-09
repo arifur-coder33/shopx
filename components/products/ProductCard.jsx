@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { customLoader } from "../images/Images-Loader";
+import Link from "next/link";
+import KalapanaFont from "../KalapanaFont";
 export default function ProductCard({
   productName,
   regularPrice,
@@ -8,15 +10,9 @@ export default function ProductCard({
 }) {
   return (
     <div className="product-card ">
-      {/* <Image
-        className="rounded-md"
-        src={`https://images.unsplash.com/flagged/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60`}
-        height={300}
-        width={300}
-        alt="product name"
-        priority
-      /> */}
-      <div className="relative">
+  
+  <Link href={`/product/applephone`}>
+  <div className="relative">
         <Image
           loader={customLoader}
           alt={productName}
@@ -38,9 +34,11 @@ export default function ProductCard({
           </span>
           <del className="price-del">{regularPrice}</del>
         </div>
-
-        <button className="w-full button ">এখনি কিনুন</button>
-      </div>
+        </div>
+  </Link>
+ 
+        <button className={`w-full button `}><KalapanaFont>এখনি কিনুন</KalapanaFont> </button>
+      
     </div>
   );
 }

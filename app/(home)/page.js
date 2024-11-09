@@ -5,6 +5,7 @@ import HeroSection from "./_components/HeroSection";
 export default function Home() {
   return (
     <>
+ 
       <HeroSection />
 
       <ProductList headerName={"টপ প্রোডাক্ট"}>
