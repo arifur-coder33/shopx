@@ -1,10 +1,9 @@
 import NavBar from "@/components/NavBar";
-import { solaiman,KalpanaUNICODE } from "./fonts/font";
 import {Tiro_Bangla} from "next/font/google"
 import "./globals.css";
 
 const tiro_bangla = Tiro_Bangla({
-  subsets: [''],
+  subsets: ['bengali'],
   display: 'swap',
    weight: '400'
 
