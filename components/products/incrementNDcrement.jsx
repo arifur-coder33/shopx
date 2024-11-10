@@ -1,8 +1,9 @@
 "use client";
+
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
-import Button from "../Button";
+import Button from "../button";
 export default function IncrementNDcrement() {
   const [qty, setQty] = useState(1);
   const increment = () => {

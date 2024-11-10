@@ -1,4 +1,4 @@
-import Button from "../Button";
+import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 
 export default function AddToCartButton(props) {
