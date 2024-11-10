@@ -24,6 +24,7 @@ export default async function ProductPage({ params }) {
           width={650}
           height={650}
           alt="image"
+          priority
         />
         <div className="flex flex-row gap-1 ">
           <ImageGallery />
@@ -50,7 +51,7 @@ export default async function ProductPage({ params }) {
             </p>
 
             <div className="flex flex-row items-center text-center">
-              পরিমানঃ
+              <label htmlFor="qtyinput">পরিমানঃ</label>
               <IncrementNDcrement />{" "}
             </div>
           </div>

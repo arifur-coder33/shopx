@@ -21,11 +21,11 @@ export default function IncrementNDcrement() {
     <div className="flex flex-row  gap-2 pl-2 text-center">
       <Button
         onClick={decrement}
-        bgcolor={"bg-transparent hover:bg-transparent"}
+        className="border dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65 "
       >
-        <Minus className="border dark:border-slate-300 border-slate-700 bg-purple rounded-full w-8 h-8" />
+        <Minus />
       </Button>
-      <label hidden htmlFor="qtyinput"></label>
+
       <input
         id="qtyinput"
         name="qtyinput"
@@ -35,10 +35,10 @@ export default function IncrementNDcrement() {
       />
 
       <Button
-        bgcolor={"bg-transparent hover:bg-transparent"}
         onClick={increment}
+        className="border dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65 "
       >
-        <Plus className="border dark:border-slate-300 border-slate-700 bg-slate-900  text-slate-300 rounded-full w-8 h-8" />
+        <Plus />
       </Button>
     </div>
   );
