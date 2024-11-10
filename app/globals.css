@@ -57,8 +57,8 @@ body {
              text-base sm:text-lg md:text-xl;
   }
   .button {
-    @apply tracking-wider bg-orange-600 hover:bg-orange-700  rounded-md
-            text-center py-1 text-slate-100;
+    @apply tracking-wider bg-purple hover:bg-purple-600    rounded-md
+            text-center py-1  text-slate-100  text-xl md:text-2xl;
   }
   .product-card {
     @apply md:leading-6 flex-1 rounded-md  border border-slate-200 dark:border-none max-w-64 cursor-pointer 
@@ -68,5 +68,13 @@ body {
   }
   .price-del {
     @apply text-[12px] sm:text-[14px] md:text-[16px];
+  }
+
+  .bg-purple {
+    @apply bg-purple-600/80;
+  }
+
+  .text-purple {
+    @apply text-purple-600/80 dark:text-purple-500;
   }
 }

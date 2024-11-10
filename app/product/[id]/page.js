@@ -14,6 +14,9 @@ export default async function ProductPage({ params }) {
           src={
             "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=90"
           }
+          sizes="(max-width: 480px) 450px, 
+          (max-width: 1024px) 650px, 
+          1280px"
           loader={customLoader}
           className=" rounded-md "
           placeholder="blur"
@@ -30,37 +33,43 @@ export default async function ProductPage({ params }) {
         </div>
       </div>
       <div className="col-span-2">
-
- {/* product Name */}
+        {/* product Name */}
         <p>
           বাটা ক্লাসিক স্নাকারস (সাদা) ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক
           স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস
         </p>
         {/* Price  */}
         <KalapanaFont>
-          <div className="text-orange-600 text-2xl ">
+          <div className=" dark:text-slate-300 text-2xl ">
             <p>
-              মূল্যঃ <span className="text-5xl ">{replaceNumbers("399")}</span>{" "}
+              মূল্যঃ{" "}
+              <span className="text-5xl text-purple">
+                {replaceNumbers("399")}
+              </span>{" "}
               টাকা
             </p>
 
-            <div className="flex flex-row items-center text-center">পরিমানঃ<IncrementNDcrement/> </div>
+            <div className="flex flex-row items-center text-center">
+              পরিমানঃ
+              <IncrementNDcrement />{" "}
+            </div>
           </div>
         </KalapanaFont>
 
         <div className="grid grid-cols-2 gap-2 mt-4">
           {/* buy now button  */}
           <div className="relative ">
-          
-              <BuyNowButton bgcolor="bg-sky-500"  className={" w-full  text-white hover:bg-sky-700 rounded-md text-4xl"} />
-            
+            <BuyNowButton className={" w-full  pt-4   text-4xl"} />
 
-            <span className="animate-ping absolute -top-1 z-0 -left-1 h-3 w-3 rounded-full bg-sky-500 opacity-90"></span>
+            <span className="animate-ping absolute -top-1 z-0 -right-1 h-3 w-3 rounded-full bg-purple-500 opacity-90"></span>
           </div>
 
           {/* Add to cart button  */}
 
-          <AddToCartButton  className={" w-full rounded-md   text-4xl"}/>
+          <AddToCartButton
+            bgcolor="bg-sky-500"
+            className={" w-full hover:bg-sky-700   text-4xl"}
+          />
         </div>
       </div>
     </div>

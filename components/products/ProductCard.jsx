@@ -1,3 +1,4 @@
+import { replaceNumbers } from "@/utils/engToBanNumber";
 import Image from "next/image";
 import Link from "next/link";
 import { customLoader } from "../images/Images-Loader";
@@ -26,16 +27,17 @@ export default function ProductCard({
         <div className="p-2">
           <div className="line-clamp-2 ">{productName}</div>
           <div className="px-2 cursor-auto">
-            <span className="text-orange-700 font-bold ">
-              {" "}
-              {discountPrice}-/{" "}
+            <span className="text-purple font-bold text-xl md:text-2xl">
+              {replaceNumbers(discountPrice.toString())}-/{" "}
             </span>
-            <del className="price-del">{regularPrice}</del>
+            <del className="price-del">
+              {replaceNumbers(regularPrice.toString())}
+            </del>
           </div>
         </div>
       </Link>
 
-      <BuyNowButton  className="w-full"/>
+      <BuyNowButton className="w-full" />
     </div>
   );
 }
