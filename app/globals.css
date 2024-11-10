@@ -71,7 +71,7 @@ body {
   }
 
   .bg-purple {
-    @apply bg-purple-600/80;
+    @apply bg-purple-600;
   }
 
   .text-purple {
