@@ -10,9 +10,9 @@ export default async function ProductPage({ params }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
       <div className="col-span-3">
-        <Image
+        {/* <Image
           src={
-            "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=90"
+            "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=75"
           }
           sizes="(max-width: 480px) 300px, 
           (max-width: 1024px) 600px, 
@@ -25,7 +25,21 @@ export default async function ProductPage({ params }) {
           height={650}
           alt="image"
           priority
+        /> */}
+
+        <Image
+          src="/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=75"
+          sizes="(max-width: 480px) 300px, (max-width: 768px) 500px, 650px"
+          loader={customLoader}
+          className="rounded-md"
+          placeholder="blur"
+          blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+          width={650}
+          height={650}
+          alt="image"
+          priority
         />
+
         <div className="flex flex-row gap-1 ">
           <ImageGallery />
           <ImageGallery />
