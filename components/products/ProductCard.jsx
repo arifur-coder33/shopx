@@ -35,7 +35,7 @@ export default function ProductCard({
         </div>
       </Link>
 
-      <BuyNowButton />
+      <BuyNowButton  className="w-full"/>
     </div>
   );
 }

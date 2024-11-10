@@ -1,9 +1,12 @@
+
+
+import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 
-export default function AddToCartButton() {
+export default function AddToCartButton(props) {
   return (
-    <button className={` bg-orange-500 rounded-md px-2 `}>
+    <Button {...props}  >
       <KalapanaFont>ব্যাগে রাখুন</KalapanaFont>{" "}
-    </button>
+    </Button>
   );
 }

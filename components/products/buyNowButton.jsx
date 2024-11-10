@@ -1,9 +1,10 @@
+import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 
-export default function BuyNowButton({ className }) {
+export default function BuyNowButton(props) {
   return (
-    <button className={` button px-2 ${className}`}>
+    <Button {...props}  >
       <KalapanaFont>এখনি কিনুন</KalapanaFont>{" "}
-    </button>
+    </Button>
   );
 }

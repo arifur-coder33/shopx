@@ -2,6 +2,7 @@ import { customLoader } from "@/components/images/Images-Loader";
 import KalapanaFont from "@/components/KalapanaFont";
 import AddToCartButton from "@/components/products/addToCartButton";
 import BuyNowButton from "@/components/products/buyNowButton";
+import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import Image from "next/image";
 export default async function ProductPage({ params }) {
@@ -29,30 +30,37 @@ export default async function ProductPage({ params }) {
         </div>
       </div>
       <div className="col-span-2">
+
+ {/* product Name */}
         <p>
           বাটা ক্লাসিক স্নাকারস (সাদা) ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক
           স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস
         </p>
+        {/* Price  */}
         <KalapanaFont>
-          <div className="text-orange-500 text-2xl ">
+          <div className="text-orange-600 text-2xl ">
             <p>
-              মূল্যঃ <span className="text-4xl ">{replaceNumbers("399")}</span>{" "}
+              মূল্যঃ <span className="text-5xl ">{replaceNumbers("399")}</span>{" "}
               টাকা
             </p>
 
-            <p>পরিমানঃ ১ টি</p>
+            <div className="flex flex-row items-center text-center">পরিমানঃ<IncrementNDcrement/> </div>
           </div>
         </KalapanaFont>
 
         <div className="grid grid-cols-2 gap-2 mt-4">
+          {/* buy now button  */}
           <div className="relative ">
-            <div className="z-40">
-              <BuyNowButton className={"w-full bg-sky-500 hover:bg-sky-700"} />
-            </div>
+          
+              <BuyNowButton bgcolor="bg-sky-500"  className={" w-full  text-white hover:bg-sky-700 rounded-md text-4xl"} />
+            
 
             <span className="animate-ping absolute -top-1 z-0 -left-1 h-3 w-3 rounded-full bg-sky-500 opacity-90"></span>
           </div>
-          <AddToCartButton />
+
+          {/* Add to cart button  */}
+
+          <AddToCartButton  className={" w-full rounded-md   text-4xl"}/>
         </div>
       </div>
     </div>
