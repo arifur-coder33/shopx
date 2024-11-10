@@ -14,9 +14,9 @@ export default async function ProductPage({ params }) {
           src={
             "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=90"
           }
-          sizes="(max-width: 480px) 450px, 
-          (max-width: 1024px) 650px, 
-          1280px"
+          sizes="(max-width: 480px) 300px, 
+          (max-width: 1024px) 600px, 
+          600px"
           loader={customLoader}
           className=" rounded-md "
           placeholder="blur"
@@ -67,8 +67,8 @@ export default async function ProductPage({ params }) {
           {/* Add to cart button  */}
 
           <AddToCartButton
-            bgcolor="bg-sky-500"
-            className={" w-full hover:bg-sky-700   text-4xl"}
+            bgcolor="bg-sky-600"
+            className={" w-full hover:bg-sky-500 text-white   text-4xl"}
           />
         </div>
       </div>
