@@ -1,4 +1,3 @@
-import NavBar from "@/components/NavBar";
 import {Tiro_Bangla} from "next/font/google"
 import "./globals.css";
 
@@ -21,9 +20,8 @@ export default function RootLayout({ children }) {
       <body
         className={` ${tiro_bangla.className}  antialiased  theam`}
       >
-        <NavBar />
   
-        <div className="max-w-7xl mx-auto p-2">{children}</div>
+        <div className="">{children}</div>
       </body>
     </html>
   );
