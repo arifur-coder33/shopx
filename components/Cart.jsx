@@ -8,7 +8,7 @@ export default function Cart() {
   return (
     <div className="relative ">
       <ShoppingCart className=" text-slate-200" />
-      <span className="absolute -top-4  left-2 "> {replaceNumbers(totalCartQuantity.toString()) }</span>
+      <span className="absolute -top-4  left-2 bg-white rounded-full text-purple-800 text-base font-bold w-5 h-5 opacity-100 "> {replaceNumbers(totalCartQuantity.toString()) }</span>
     </div>
   )
 }
