@@ -1,4 +1,3 @@
-import NavBar from "@/components/NavBar";
 
 
 
@@ -10,13 +9,10 @@ export const metadata = {
 export default function AdminLayout({ children }) {
   return (
   
-      <div
-      
-      >
-        <NavBar />
+   
   
         <div className="max-w-7xl mx-auto p-2">{children}</div>
-      </div>
+    
    
   );
 }
