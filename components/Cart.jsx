@@ -1,14 +1,26 @@
-'use client'
-import { ShoppingCart } from "lucide-react";
+"use client";
 import { useCart } from "@/context/CartContext";
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import { ShoppingCart } from "lucide-react";
+import { useState } from "react";
+import Drawer from "./Drawer";
 export default function Cart() {
-  const {totalCartQuantity}=useCart()
+  const { totalCartQuantity } = useCart();
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="relative ">
-      <ShoppingCart className=" text-slate-200" />
-      <span className="absolute -top-4  left-2 bg-white rounded-full text-purple-800 text-base font-bold w-5 h-5 opacity-100 "> {replaceNumbers(totalCartQuantity.toString()) }</span>
-    </div>
-  )
+    <>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative cursor-pointer "
+      >
+        <ShoppingCart />
+        <span className="absolute -top-2 text-center  left-2 text-white rounded-full bg-purple text-base font-bold w-5 h-5 opacity-100 ">
+          {" "}
+          {replaceNumbers(totalCartQuantity.toString())}
+        </span>
+      </div>
+      <Drawer isOpen={isOpen} setIsOpen={setIsOpen} />
+    </>
+  );
 }
