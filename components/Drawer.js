@@ -1,6 +1,8 @@
 // components/Drawer.js
 
-export default function Drawer({ isOpen, setIsOpen }) {
+import KalapanaFont from "./KalapanaFont";
+
+export default function Drawer({ isOpen, setIsOpen,children ,title}) {
   // Function to toggle the drawer state
   const toggleDrawer = () => {
     setIsOpen(!isOpen);
@@ -10,7 +12,7 @@ export default function Drawer({ isOpen, setIsOpen }) {
     <div className="relative">
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-purple dark:bg-slate-950 bg-opacity-10 dark:bg-opacity-50 z-40 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={toggleDrawer}
@@ -18,7 +20,7 @@ export default function Drawer({ isOpen, setIsOpen }) {
 
       {/* Drawer Content */}
       <div
-        className={`fixed right-0 top-4 w-80 h-screen bg-slate-900 shadow-lg z-50 transform transition-transform duration-300 ${
+        className={`fixed right-0 top-4 w-80 h-screen bg-gray-100 border-2 border-gray-500 dark:bg-slate-900 shadow-lg z-50 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -29,9 +31,10 @@ export default function Drawer({ isOpen, setIsOpen }) {
           ✗
         </button>
         <div className="p-4">
-          <h2 className="text-xl font-bold border-b-2 ">Cart</h2>
+          {/* <h2 className="text-xl font-bold border-b-2 text-slate-900 dark:text-slate-200 tracking-wider"><KalapanaFont>{title}</KalapanaFont></h2> */}
 
           {/* Add your drawer content here */}
+          {children}
         </div>
       </div>
     </div>

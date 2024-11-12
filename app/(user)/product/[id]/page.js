@@ -1,36 +1,19 @@
-import { customLoader } from "@/components/images/Images-Loader";
+
 import KalapanaFont from "@/components/KalapanaFont";
-import AddToCartButton from "@/components/products/addToCartButton";
-import BuyNowButton from "@/components/products/buyNowButton";
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import Image from "next/image";
+import Images from "./_components/Images";
+import ActionButtons from "./_components/ActionButtons";
 export default async function ProductPage({ params }) {
   const { id } = await params;
   return (
     <div className="mb-16">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <div className="col-span-3">
-          <Image
-            src="/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=75"
-            sizes="(max-width: 480px) 300px, (max-width: 768px) 500px, 650px"
-            loader={customLoader}
-            className="rounded-md"
-            placeholder="blur"
-            blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-            width={650}
-            height={650}
-            alt="image"
-            priority
-          />
 
-          <div className="flex flex-row gap-1 ">
-            <ImageGallery />
-            <ImageGallery />
-            <ImageGallery />
-            <ImageGallery />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+        {/* product Image  */}
+        <div className="col-span-3">
+        <Images/>
         </div>
         <div className="col-span-2">
           {/* product Name */}
@@ -38,7 +21,7 @@ export default async function ProductPage({ params }) {
             বাটা ক্লাসিক স্নাকারস (সাদা) ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস
             ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস
           </h1>
-          {/* Price  */}
+          {/* Price  & qty  */}
           <KalapanaFont>
             <div className=" dark:text-slate-300 text-2xl ">
               <p>
@@ -55,21 +38,8 @@ export default async function ProductPage({ params }) {
               </div>
             </div>
           </KalapanaFont>
-
-          <div className="grid grid-cols-2 gap-2 mt-4 fixed bottom-1 left-0 w-full sm:static">
-            {/* Add to cart button  */}
-
-            <AddToCartButton
-              bgcolor="bg-sky-600"
-              className={" w-full hover:bg-sky-500 text-white   text-4xl"}
-            />
-            {/* buy now button  */}
-            <div className="relative ">
-              <BuyNowButton className={" w-full  pt-4    text-4xl"} />
-
-              <span className="animate-ping absolute -top-1 z-0 -left-1 h-3 w-3 rounded-full bg-purple-500 opacity-90"></span>
-            </div>
-          </div>
+         {/* Add to cart and buy now button  */}
+          <ActionButtons/>
         </div>
       </div>
       <ProductDescription />
@@ -77,19 +47,4 @@ export default async function ProductPage({ params }) {
   );
 }
 
-export function ImageGallery() {
-  return (
-    <Image
-      src={
-        "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=150&q=50"
-      }
-      loader={customLoader}
-      className=" rounded-md w-36"
-      placeholder="blur"
-      blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-      width={100}
-      height={100}
-      alt="image"
-    />
-  );
-}
+

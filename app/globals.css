@@ -36,6 +36,8 @@ body {
   } */
 }
 
+
+
 @layer components {
   .select2-dropdown {
     @apply rounded-b-lg shadow-md;
@@ -58,7 +60,7 @@ body {
   }
   .button {
     @apply tracking-wider bg-purple hover:bg-purple-500    rounded-md
-            text-center py-1  text-slate-100  text-xl md:text-2xl;
+            text-center   text-slate-100  text-xl md:text-2xl;
   }
   .product-card {
     @apply md:leading-6 flex-1 rounded-md  border border-slate-200 dark:border-none max-w-64 cursor-pointer 
