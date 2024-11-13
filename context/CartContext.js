@@ -51,8 +51,14 @@ export const CartProvider = ({ children }) => {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   }, [cartItems]);
 
+    // Calculate total cart price in the cart
+    const totalCartPrice = useMemo(() => {
+      return cartItems.reduce((total, item) => total + item.price, 0);
+    }, [cartItems]);
+
+
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, totalCartQuantity }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, totalCartQuantity ,totalCartPrice}}>
       {children}
     </CartContext.Provider>
   );

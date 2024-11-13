@@ -9,7 +9,7 @@ export default function Drawer({ isOpen, setIsOpen,children ,title}) {
   };
 
   return (
-    <div className="relative">
+    <div className="">
       {/* Overlay */}
       <div
         className={`fixed inset-0 bg-purple dark:bg-slate-950 bg-opacity-10 dark:bg-opacity-50 z-40 transition-opacity duration-300 ${
@@ -19,12 +19,14 @@ export default function Drawer({ isOpen, setIsOpen,children ,title}) {
       ></div>
 
       {/* Drawer Content */}
-      <div
-        className={`fixed right-0 top-4 w-80 h-screen bg-gray-100 border-2 border-gray-500 dark:bg-slate-900 shadow-lg z-50 transform transition-transform duration-300 ${
+
+     <div
+        className={`fixed right-0 top-4 w-80   h-screen bg-sky-500 z-50 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <button
+      <div   className={`  h-[calc(100vh - 100px)]   bg-red-500 border-2 border-gray-500 dark:bg-slate-900 shadow-lg `} >
+      <button
           onClick={toggleDrawer}
           className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-2xl w-10 h-10 rounded-full focus:outline-none text-white"
         >
@@ -37,6 +39,8 @@ export default function Drawer({ isOpen, setIsOpen,children ,title}) {
           {children}
         </div>
       </div>
+      </div>
+    
     </div>
   );
 }
