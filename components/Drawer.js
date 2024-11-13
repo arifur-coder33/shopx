@@ -1,8 +1,6 @@
 // components/Drawer.js
 
-import KalapanaFont from "./KalapanaFont";
-
-export default function Drawer({ isOpen, setIsOpen,children ,title}) {
+export default function Drawer({ isOpen, setIsOpen, children, title }) {
   // Function to toggle the drawer state
   const toggleDrawer = () => {
     setIsOpen(!isOpen);
@@ -20,27 +18,28 @@ export default function Drawer({ isOpen, setIsOpen,children ,title}) {
 
       {/* Drawer Content */}
 
-     <div
-        className={`fixed right-0 top-4 w-80   h-screen bg-sky-500 z-50 transform transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "translate-x-full"
+      <div
+        className={`fixed right-0 top-4 w-80   h-screen  z-50 transform transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "translate-x-96"
         }`}
       >
-      <div   className={`  h-[calc(100vh - 100px)]   bg-red-500 border-2 border-gray-500 dark:bg-slate-900 shadow-lg `} >
-      <button
-          onClick={toggleDrawer}
-          className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-2xl w-10 h-10 rounded-full focus:outline-none text-white"
+        <div
+          className={`   h-[calc(100vh_-_20px)]  bg-slate-100   dark:bg-slate-900 shadow-lg rounded-md dark:shadow-white`}
         >
-          ✗
-        </button>
-        <div className="p-4">
-          {/* <h2 className="text-xl font-bold border-b-2 text-slate-900 dark:text-slate-200 tracking-wider"><KalapanaFont>{title}</KalapanaFont></h2> */}
+          <button
+            onClick={toggleDrawer}
+            className="absolute -top-2 -left-2 bg-red-500 hover:bg-red-600 text-2xl w-8 h-8 rounded-full focus:outline-none text-white"
+          >
+            ✗
+          </button>
+          <div className="p-2 h-full">
+            {/* <h2 className="text-xl font-bold border-b-2 text-slate-900 dark:text-slate-200 tracking-wider"><KalapanaFont>{title}</KalapanaFont></h2> */}
 
-          {/* Add your drawer content here */}
-          {children}
+            {/* Add your drawer content here */}
+            {children}
+          </div>
         </div>
       </div>
-      </div>
-    
     </div>
   );
 }

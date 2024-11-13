@@ -1,7 +1,6 @@
-
-'use client'
+"use client";
 // context/CartContext.js
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const CartContext = createContext();
 
@@ -10,8 +9,9 @@ export const CartProvider = ({ children }) => {
 
   // Load cart from localStorage on initial render
   useEffect(() => {
-    if (typeof window !== 'undefined') {  // Check if we're in the browser
-      const storedCart = localStorage.getItem('cartItems');
+    if (typeof window !== "undefined") {
+      // Check if we're in the browser
+      const storedCart = localStorage.getItem("cartItems");
       if (storedCart) {
         setCartItems(JSON.parse(storedCart));
       }
@@ -20,15 +20,17 @@ export const CartProvider = ({ children }) => {
 
   // Update localStorage whenever cartItems changes
   useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    localStorage.setItem("cartItems", JSON.stringify(cartItems));
   }, [cartItems]);
 
   const addToCart = (product) => {
     setCartItems((prevItems) => {
-      const itemExists = prevItems.find(item => item.id === product.id);
+      const itemExists = prevItems.find((item) => item.id === product.id);
       if (itemExists) {
-        return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        return prevItems.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
         );
       } else {
         return [...prevItems, { ...product, quantity: 1 }];
@@ -38,7 +40,7 @@ export const CartProvider = ({ children }) => {
 
   const removeFromCart = (productId) => {
     setCartItems((prevItems) =>
-      prevItems.filter(item => item.id !== productId)
+      prevItems.filter((item) => item.id !== productId)
     );
   };
 
@@ -51,14 +53,25 @@ export const CartProvider = ({ children }) => {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   }, [cartItems]);
 
-    // Calculate total cart price in the cart
-    const totalCartPrice = useMemo(() => {
-      return cartItems.reduce((total, item) => total + item.price, 0);
-    }, [cartItems]);
-
+  // Calculate total cart price in the cart
+  const totalCartPrice = useMemo(() => {
+    return cartItems.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+  }, [cartItems]);
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, totalCartQuantity ,totalCartPrice}}>
+    <CartContext.Provider
+      value={{
+        cartItems,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        totalCartQuantity,
+        totalCartPrice,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
