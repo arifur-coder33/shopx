@@ -29,7 +29,7 @@ export default function CartPage() {
               </span>{" "}
               টাকার পন্য আছে
             </p>
-            <Button className={"text-lg md:text-xl px-2 py-1"}>
+            <Button className={"text-lg md:text-xl px-2 py-1 tracking-normal"}>
               ব্যাগের পন্য গুলো অর্ডার করুন
             </Button>
           </div>
