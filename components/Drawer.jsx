@@ -1,7 +1,12 @@
 // components/Drawer.js
 
-export default function Drawer({ isOpen, setIsOpen, children, title }) {
-  // Function to toggle the drawer state
+export default function Drawer({
+  isOpen,
+  setIsOpen,
+  children,
+  title,
+  modalStyles,
+}) {
   const toggleDrawer = () => {
     setIsOpen(!isOpen);
   };

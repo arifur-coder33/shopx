@@ -3,9 +3,9 @@ import { useCart } from "@/context/CartContext";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { ShoppingCart } from "lucide-react";
 import { useState } from "react";
-import Drawer from "./Drawer";
-import CartItem from "./cart/CartItem";
 import CartPage from "./cart/CartPage";
+import Modal from "./Modal";
+
 export default function Cart() {
   const { totalCartQuantity } = useCart();
   const [isOpen, setIsOpen] = useState(false);
@@ -22,9 +22,17 @@ export default function Cart() {
           {replaceNumbers(totalCartQuantity.toString())}
         </span>
       </div>
-      <Drawer isOpen={isOpen} setIsOpen={setIsOpen} title={`${<ShoppingCart/>}`} > 
-       <CartPage/>
-        </Drawer>
+
+      {/* <Drawer
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        title={`${(<ShoppingCart />)}`}
+      >
+        <CartPage />
+      </Drawer> */}
+      <Modal isOpen={isOpen} setIsOpen={setIsOpen} openStyle="right">
+        <CartPage />
+      </Modal>
     </>
   );
 }
