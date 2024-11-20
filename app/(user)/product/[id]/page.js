@@ -1,19 +1,17 @@
-
 import KalapanaFont from "@/components/KalapanaFont";
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import Images from "./_components/Images";
 import ActionButtons from "./_components/ActionButtons";
+import Images from "./_components/Images";
 export default async function ProductPage({ params }) {
   const { id } = await params;
   return (
     <div className="mb-16">
-
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         {/* product Image  */}
         <div className="col-span-3">
-        <Images/>
+          <Images />
         </div>
         <div className="col-span-2">
           {/* product Name */}
@@ -38,13 +36,11 @@ export default async function ProductPage({ params }) {
               </div>
             </div>
           </KalapanaFont>
-         {/* Add to cart and buy now button  */}
-          <ActionButtons/>
+          {/* Add to cart and buy now button  */}
+          <ActionButtons productId={id} />
         </div>
       </div>
       <ProductDescription />
     </div>
   );
 }
-
-

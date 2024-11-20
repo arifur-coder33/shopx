@@ -5,11 +5,11 @@ import HeroSection from "./_components/HeroSection";
 export default function Home() {
   return (
     <>
- 
       <HeroSection />
 
       <ProductList headerName={"টপ প্রোডাক্ট"}>
         <ProductCard
+          productId={"applephone"}
           productName={
             "  বাটা ক্লাসিক স্নাকারস (সাদা) ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক  স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস "
           }

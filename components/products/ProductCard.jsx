@@ -8,6 +8,7 @@ export default function ProductCard({
   regularPrice,
   discountPrice,
   imageSrc,
+  productId,
 }) {
   return (
     <div className="product-card ">
@@ -37,7 +38,7 @@ export default function ProductCard({
         </div>
       </Link>
 
-      <BuyNowButton className="w-full" />
+      <BuyNowButton productId={productId} className="w-full" />
     </div>
   );
 }
