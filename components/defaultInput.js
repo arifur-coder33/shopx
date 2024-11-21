@@ -1,28 +1,21 @@
-export default function DefaultInput({ mode, data, inputHandler, item }) {
-  // console.log(mode)
-  // console.log(`item`)
-  // console.log(item)
-
-  return (
-    <>
-      <label
-        className="pl-1 block uppercase tracking-wide text-gray-700 dark-text text-xs font-bold "
-        htmlFor="grid-sub-districe"
-      >
-        {item?.labelName}{" "}
-        {item?.required && <span className="text-red-600">*</span>}
-      </label>
-
-      <input
-        step={item?.inputType === "number" ? "any" : "false"}
-        name={item?.inputName}
-        defaultValue={mode === "edit" && data ? data[item?.inputName] : ""}
-        onChange={(e) => inputHandler(e)}
-        type={item?.inputType}
-        required={item?.required}
-        className={`p-2  focus:border-green-500 focus:ring-1 focus:ring-green-500  appearance-none block w-full  dark:bg-slate-700 bg-gray-200 text-gray-700 dark:text-slate-300 border  rounded   leading-tight focus:outline-none focus:bg-white focus:dark:bg-slate-900`}
-        placeholder={`Enter ${item?.labelName}`}
-      ></input>
-    </>
-  );
+export function DefaultInput({name,title,type,inputMode,pattern}){
+  return(
+    <div className="relative my-3 ">
+    <input
+    inputMode={inputMode}
+    pattern={pattern}
+      type={type}
+      name={name}
+      id={name}
+      className="block px-2.5 pb-2.5 pt-4 w-full  text-gray-900 bg-slate-200 dark:bg-slate-600 rounded-lg border-1  appearance-none dark:text-white dark:border-gray-600 dark:focus:border-red-500 focus:outline-none focus:ring-2 focus:border-slate-200 peer"
+      placeholder={' '}
+    />
+    <label
+      htmlFor={name}
+      className="absolute rounded-md text-gray-500 bg-slate-200 dark:bg-slate-600 dark:text-gray-400 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0]   px-2 peer-focus:px-2 peer-focus:text-blue-600 peer-focus:dark:text-slate-200 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1"
+    >
+   {title}
+    </label>
+  </div>
+  )
 }

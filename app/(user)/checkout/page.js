@@ -1,3 +1,7 @@
+import { DefaultInput } from "@/components/defaultInput";
+import { Truck } from "lucide-react";
+
+
 export default async function CheckOutPage(props) {
   const { p } = await props.searchParams;
   return (
@@ -6,20 +10,30 @@ export default async function CheckOutPage(props) {
         <div className="w-full md:w-1/2">Product Details</div>
         <div className="w-full md:w-1/2">
           <form className="max-w-md mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                id="floating_outlined"
-                className="block px-2.5 pb-2.5 pt-4 w-full text-sm text-gray-900 bg-white dark:bg-slate-600 rounded-lg border-1 border-purple-500 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-slate-200 focus:outline-none focus:ring-1 focus:border-slate-200 peer"
-                placeholder=" "
-              />
-              <label
-                htmlFor="floating_outlined"
-                className="absolute rounded-md text-gray-500 bg-white dark:bg-slate-600 dark:text-gray-400 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0]   px-2 peer-focus:px-2 peer-focus:text-blue-600 peer-focus:dark:text-slate-200 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto start-1"
-              >
-                আপনার নামঃ
-              </label>
+          
+
+       <div className="w-full rounded-sm flex flex-row gap-1 font-bold border-b-slate-400  border-4 bg-slate-300 p-2" ><Truck/> <span>ডেলিভারি ঠিকানাঃ</span></div>
+           <DefaultInput title={'আপনার নামঃ'} name={'name'} inputType={'text'}/>
+           
+           <DefaultInput title={'আপনার ফোন নাম্বারঃ'} name={'number'} inputType={'text'} inputMode={'numeric'} pattern={'[0-9]*'}/>
+           <DefaultInput title={' ঠিকানাঃ'} name={'address'} inputType={'text'}/>
+           <div>
+            ডেলিভারি ঠিকানা কি ঢাকা জেলার ভিতরে? 
+          <div className="flex flex-row gap-2">
+          <div className="bg-slate-400 hover:bg-blue-400 p-2 rounded-md ">
+              <input type="radio" name="delivery-area" id="inside-dhaka"/>
+              <label className="cursor-pointer focus:bg-blue-500" htmlFor="inside-dhaka"> হ্যা। ঢাকার ভিতরে।</label>
             </div>
+            <div className="bg-slate-400 focus:bg-blue-400 p-2 rounded-md">
+              <input type="radio" name="delivery-area" id="outside-dhaka"/>
+              <label htmlFor="outside-dhaka"> না। ঢাকার বাহিরে</label>
+            </div>
+          </div>
+           </div>
+
+   
+
+
           </form>
         </div>
       </div>
