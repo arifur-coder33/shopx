@@ -10,7 +10,7 @@ export default function BuyNowButton(props) {
 
   return (
     <>
-      <Link href={`/checkout?directBuy=true&p=${productId}`}>
+      <Link href={`/checkout?from=directBuy&p=${productId}`}>
         <Button {...props}>
           <KalapanaFont>এখনি কিনুন</KalapanaFont>{" "}
         </Button>

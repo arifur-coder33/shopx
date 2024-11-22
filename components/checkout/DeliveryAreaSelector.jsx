@@ -2,8 +2,13 @@
 import { useState } from "react";
 import RadioButton from "../RadioButton";
 
-function DeliveryAreaSelector() {
+function DeliveryAreaSelector({ setDeliveryArea }) {
   const [selectedArea, setSelectedArea] = useState(null);
+
+  function onChangeArea(id) {
+    setDeliveryArea(id);
+    setSelectedArea(id);
+  }
 
   return (
     <div className="bg-slate-200 dark:text-slate-300 dark:bg-slate-600 p-2 rounded-md font-bold">
@@ -14,14 +19,14 @@ function DeliveryAreaSelector() {
           name="delivery-area"
           label="হ্যা। ঢাকার ভিতরে।"
           isSelected={selectedArea === "inside-dhaka"}
-          onSelect={setSelectedArea}
+          onSelect={onChangeArea}
         />
         <RadioButton
           id="outside-dhaka"
           name="delivery-area"
           label="না। ঢাকার বাহিরে"
           isSelected={selectedArea === "outside-dhaka"}
-          onSelect={setSelectedArea}
+          onSelect={onChangeArea}
         />
       </div>
     </div>

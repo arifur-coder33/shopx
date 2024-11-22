@@ -2,10 +2,11 @@
 import { useCart } from "@/context/CartContext";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { ShoppingBag } from "lucide-react";
+import Link from "next/link";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 import CartItem from "./CartItem";
-export default function CartPage() {
+export default function CartPage({ setIsOpen }) {
   const { cartItems, totalCartPrice } = useCart();
   return (
     <div className="relative  h-full ">
@@ -29,9 +30,14 @@ export default function CartPage() {
               </span>{" "}
               টাকার পন্য আছে
             </p>
-            <Button className={"text-lg md:text-xl px-2 py-1 tracking-normal"}>
-              ব্যাগের পন্য গুলো অর্ডার করুন
-            </Button>
+            <Link href={"/checkout?from=cart"}>
+              <Button
+                onClick={() => setIsOpen(false)}
+                className={"text-lg md:text-xl px-2 py-1 tracking-normal"}
+              >
+                ব্যাগের পন্য গুলো অর্ডার করুন
+              </Button>
+            </Link>
           </div>
         </>
       ) : (

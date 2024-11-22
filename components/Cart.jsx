@@ -31,7 +31,7 @@ export default function Cart() {
         <CartPage />
       </Drawer> */}
       <Modal isOpen={isOpen} setIsOpen={setIsOpen} openStyle="right">
-        <CartPage />
+        <CartPage setIsOpen={setIsOpen} />
       </Modal>
     </>
   );

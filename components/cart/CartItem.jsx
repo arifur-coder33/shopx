@@ -2,7 +2,7 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import Imagecustom from "../images/ImageCustom";
 import RemoveCartItem from "./RemoveCartItem";
 
-export default function CartItem({ data }) {
+export default function CartItem({ data, removeItem }) {
   const { name, price, quantity } = data || {};
   const totalPrice = price * quantity;
   return (
@@ -15,13 +15,15 @@ export default function CartItem({ data }) {
         <div className="grid p-0 m-0 grid-cols-2">
           <span>Size: xL</span>
           <span>Size: black</span>
-          <span>পরিমান: {replaceNumbers(quantity.toString())}</span>
-          <span>মূল্য: {replaceNumbers(price.toString())} টাকা </span>
+          <span>পরিমান: {replaceNumbers(quantity?.toString())}</span>
+          <span>মূল্য: {replaceNumbers(price?.toString())} টাকা </span>
         </div>
       </div>
-      <div className="col-span-1 cursor-pointer">
-        <RemoveCartItem productId={"1"} />
-      </div>
+      {removeItem !== "hide" && (
+        <div className="col-span-1 cursor-pointer">
+          <RemoveCartItem productId={"1"} />
+        </div>
+      )}
       <div className="col-span-12 text-center text-white bg-gray-500 dark:bg-slate-800">
         মোট মুল্যঃ {replaceNumbers(totalPrice.toString())} টাকা
       </div>
