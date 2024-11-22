@@ -2,7 +2,7 @@
 import { useCart } from "@/context/CartContext";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Truck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CartItem from "../cart/CartItem";
 export default function CheckoutProductDetails({ from, deliveryArea }) {
   const [orderItems, setOrderItems] = useState([]);
@@ -19,10 +19,12 @@ export default function CheckoutProductDetails({ from, deliveryArea }) {
     }
   }, [from, cartItems]);
 
-  const totalProductPrice = orderItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
+  const totalProductPrice = useMemo(() => {
+    return orderItems.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+  }, [orderItems]);
 
   const deliveryCharge = deliveryArea === "inside-dhaka" ? 90 : 120;
   return (
