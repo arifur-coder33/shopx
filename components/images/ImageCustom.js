@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { customLoader } from "./Images-Loader";
 
-export default function Imagecustom({src,style,w,h,alt}){
+export default function Imagecustom({src,style,w,h,alt,priority}){
     return (
         <Image
         src={
@@ -14,6 +14,7 @@ export default function Imagecustom({src,style,w,h,alt}){
         width={w}
         height={h}
         alt={alt?alt:"image"}
+        priority={priority}
       />
     )
 }

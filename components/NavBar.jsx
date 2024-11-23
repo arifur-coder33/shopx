@@ -15,6 +15,7 @@ export default function NavBar() {
             </Link>
           </div>
           <div className="flex flex-row justify-end items-center">
+            <Link href={'/login'}>লগইন</Link>
             <Cart />
             <ThemeToggle />
           </div>
