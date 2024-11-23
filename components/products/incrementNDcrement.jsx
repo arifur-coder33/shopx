@@ -21,7 +21,7 @@ export default function IncrementNDcrement() {
     <div className="flex flex-row  gap-2 pl-2 text-center">
       <Button
         onClick={decrement}
-        className="border dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65 "
+        className="border border-b-4 dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65 "
       >
         <Minus />
       </Button>
@@ -36,7 +36,7 @@ export default function IncrementNDcrement() {
 
       <Button
         onClick={increment}
-        className="border dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65 "
+        className="border border-b-4 dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65 "
       >
         <Plus />
       </Button>

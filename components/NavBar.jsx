@@ -1,4 +1,5 @@
 // import { KalpanaUNICODE } from "@/app/layout";
+import { User2Icon } from "lucide-react";
 import Link from "next/link";
 import Cart from "./Cart";
 import KalapanaFont from "./KalapanaFont";
@@ -14,10 +15,12 @@ export default function NavBar() {
               <KalapanaFont>আমার শপ</KalapanaFont>{" "}
             </Link>
           </div>
-          <div className="flex flex-row justify-end items-center">
-            <Link href={'/login'}>লগইন</Link>
-            <Cart />
-            <ThemeToggle />
+          <div className="flex flex-row justify-end gap-1 items-center">
+            <Link className="nav-hover" href={"/login"}>
+              <User2Icon />
+            </Link>
+            <Cart className="nav-hover" href={"/login"} />
+            <ThemeToggle className="nav-hover" href={"/login"} />
           </div>
         </div>
       </div>

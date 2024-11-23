@@ -6,7 +6,7 @@ import { useState } from "react";
 import CartPage from "./cart/CartPage";
 import Modal from "./Modal";
 
-export default function Cart() {
+export default function Cart({ className }) {
   const { totalCartQuantity } = useCart();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -14,9 +14,9 @@ export default function Cart() {
     <>
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="relative cursor-pointer "
+        className={`relative cursor-pointer`}
       >
-        <ShoppingCart />
+        <ShoppingCart className={`${className}`} />
         <span className="absolute -top-2 text-center  left-2 text-white rounded-full bg-purple text-base font-bold w-5 h-5 opacity-100 ">
           {" "}
           {replaceNumbers(totalCartQuantity.toString())}

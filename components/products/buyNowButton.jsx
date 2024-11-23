@@ -11,7 +11,10 @@ export default function BuyNowButton(props) {
   return (
     <>
       <Link href={`/checkout?from=directBuy&p=${productId}`}>
-        <Button {...props}>
+        <Button
+          className={"bg-sky-500 border-b-4 border-b-sky-700 p-2"}
+          {...props}
+        >
           <KalapanaFont>এখনি কিনুন</KalapanaFont>{" "}
         </Button>
       </Link>

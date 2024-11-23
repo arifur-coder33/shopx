@@ -3,7 +3,7 @@
 import { MoonStar, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export default function ThemeToggle() {
+export default function ThemeToggle({ className }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Load theme from localStorage or default to light mode
@@ -35,9 +35,13 @@ export default function ThemeToggle() {
       id="toggle"
       aria-label="them toggle"
       onClick={toggleTheme}
-      className="p-2 rounded-md "
+      className={`p-2 rounded-md `}
     >
-      {isDarkMode ? <Sun /> : <MoonStar />}
+      {isDarkMode ? (
+        <Sun className={`${className}`} />
+      ) : (
+        <MoonStar className={`${className}`} />
+      )}
     </button>
   );
 }

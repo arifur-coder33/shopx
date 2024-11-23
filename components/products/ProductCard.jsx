@@ -2,6 +2,7 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import Image from "next/image";
 import Link from "next/link";
 import { customLoader } from "../images/Images-Loader";
+import AddToCartButton from "./addToCartButton";
 import BuyNowButton from "./buyNowButton";
 export default function ProductCard({
   productName,
@@ -11,7 +12,7 @@ export default function ProductCard({
   productId,
 }) {
   return (
-    <div className="product-card ">
+    <div className="product-card  pb-1 ">
       <Link href={`/product/applephone`}>
         <div className="relative">
           <Image
@@ -37,8 +38,14 @@ export default function ProductCard({
           </div>
         </div>
       </Link>
+      <div className="flex flex-row gap-2 px-1 justify-between">
+        <BuyNowButton
+          productId={productId}
+          className="px-2 border-b-4 bg-sky-500 border-purple-900 py-1"
+        />
 
-      <BuyNowButton productId={productId} className="w-full" />
+        <AddToCartButton productId={productId} />
+      </div>
     </div>
   );
 }

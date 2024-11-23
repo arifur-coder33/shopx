@@ -1,0 +1,54 @@
+import BackButton from "@/components/BackButton";
+import Button from "@/components/button";
+import DefaultInput from "@/components/input/DefaultInput";
+import KalapanaFont from "@/components/KalapanaFont";
+import Link from "next/link";
+
+export default function LoginPage() {
+  return (
+    <>
+      <div className="w-full mx-auto bg-slate-700 ">
+        <div className="mx-6 md:max-w-xs md:mx-auto flex items-center justify-center h-screen">
+          <div className="relative w-full bg-slate-900 p-8 rounded-2xl shadow-xl shadow-purple-500">
+            <div className="flex flex-row gap-2 items-center justify-center text-4xl  w-full absolute -top-16  left-0">
+              <div className=" h-24 w-24 flex items-center text-center justify-center rounded-full  bg-gray-700 text-purple-500 font-bold border-b-4 border-l-4 border-r-4 border-purple-500 shadow-inner m-2 ring-purple-500">
+                <KalapanaFont>লগইন</KalapanaFont>
+              </div>
+            </div>
+            <BackButton />
+            <form>
+              <div className="grid grid-cols-12  gap-2"></div>
+              <DefaultInput
+                colSpan={"cols-span-1"}
+                label={"ইমেইলঃ"}
+                placeholder={"আপনার ইমেইল দিন।"}
+                required={true}
+                type={"email"}
+              />
+              <DefaultInput
+                colSpan={"cols-span-1"}
+                label={"পাসওয়ার্ডঃ"}
+                placeholder={"আপনার পাসওয়ার্ড দিন।"}
+                required={true}
+                type={"password"}
+              />
+              <Button className={"w-full mt-2 py-2"}> লগইন করুন</Button>
+            </form>
+            <div className="text-[14px] text-blue-500 hover:underline decoration-blue-500 mt-2 text-right">
+              পাসওয়ার্ড ভুলে গেছেন?
+            </div>
+            <div className="flex justify-between text-[14px]">
+              <p className="text-slate-400">একাউন্ট নেই?</p>
+              <Link
+                href={"/register"}
+                className="text-blue-500 hover:underline decoration-blue-500"
+              >
+                নতুন একাউন্ট খুলুন।
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
