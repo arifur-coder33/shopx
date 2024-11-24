@@ -38,14 +38,13 @@ export default function ProductCard({
           </div>
         </div>
       </Link>
-      <div className="flex flex-row gap-2 px-1 justify-between">
+    
         <BuyNowButton
           productId={productId}
-          className="px-2 border-b-4 bg-sky-500 border-purple-900 py-1"
+          className="px-2 border-b-4 w-full bg-sky-500 border-purple-900 py-1 "
         />
 
-        <AddToCartButton productId={productId} />
-      </div>
+    
     </div>
   );
 }
