@@ -1,3 +1,4 @@
+// Data source for MongoDB
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
@@ -7,55 +8,82 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
-
+// User model with extended features
 model User {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
-  email   String   @unique
-  number  String   @unique
-  name    String?
-  role    Role @default(USER)
-
-
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  email        String      @unique
+  number       String      @unique
+  name         String?
+  password     String                      // Added for authentication
+  role         Role        @default(USER)
+  orders       Order[]                     // Relationship to track user orders
+  createdAt    DateTime    @default(now()) // Timestamp for account creation
+  updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
 }
 
+// Category model for organizing products
 model Category {
-    id      String @id @default(auto()) @map("_id") @db.ObjectId
-  name String 
-  slug String @unique
-  products Product[]
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  name         String                      // Category name
+  slug         String      @unique         // Unique slug for URL identification
+  description  String?                     // Optional category description
+  products     Product[]                   // One-to-many relationship with Product
+  createdAt    DateTime    @default(now()) // Timestamp for category creation
+  updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
 }
 
-model Product{
-    id  String @id @default(auto()) @map("_id") @db.ObjectId
-  title String 
-  slug  String @unique
-  categoryId String @db.ObjectId
-  category  Category @relation(fields: [categoryId], references: [id])
-  regularPrice  Float
-  discountPrice  Float?
-  color   String
-  size    String
-  insideDhaka Float?
-  outSideDhaka Float?
-  weight  Float
-  orders Order[]
-
+// Product model with extended features
+model Product {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  title          String                       // Product title
+  slug           String      @unique         // Unique slug for URL identification
+  description    String?                     // Optional detailed description
+  categoryId     String      @db.ObjectId    // Foreign key for Category
+  category       Category    @relation(fields: [categoryId], references: [id]) // Relation to Category
+  regularPrice   Float                       // Regular price of the product
+  discountPrice  Float?                      // Optional discount price
+  stockQuantity  Int         @default(0)    // Stock quantity for inventory tracking
+  images         String[]                   // Array of image URLs
+  isFeatured     Boolean     @default(false) // Indicates if the product is featured
+  isActive       Boolean     @default(true)  // Marks if the product is active
+  color          String[]                      // Product color
+  size           String[]                      // Product size
+  insideDhaka    Float?                      // Optional delivery charge inside Dhaka
+  outSideDhaka   Float?                      // Optional delivery charge outside Dhaka
+  weight         Float                       // Product weight for shipping purposes
+  orders         Order[]                    // One-to-many relationship with Order
+  createdAt      DateTime    @default(now()) // Timestamp for product creation
+  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
 
-model Order{
-      id  String @id @default(auto()) @map("_id") @db.ObjectId
-      productId String @db.ObjectId
-        product  Product @relation(fields: [productId], references: [id])
-      orderPrice Float
-      deliveryCharge Float
-      deliveryAddress String
-    
+// Order model with extended features
+model Order {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String      @db.ObjectId    // Foreign key for User
+  user           User        @relation(fields: [userId], references: [id]) // Relation to User
+  productId      String      @db.ObjectId    // Foreign key for Product
+  product        Product     @relation(fields: [productId], references: [id]) // Relation to Product
+  orderPrice     Float                       // Price of the product at the time of order
+  deliveryCharge Float                       // Delivery charge for the order
+  deliveryAddress String                     // Address for product delivery
+  status         OrderStatus @default(PENDING) // Order status enumeration
+  createdAt      DateTime    @default(now()) // Timestamp for order placement
+  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
 
+// Review and rating model for products
 
 
+// Enumeration for order status
+enum OrderStatus {
+  PENDING 
+  PROCESSING 
+  SHIPPED 
+  DELIVERED 
+  CANCELED
+}
 
+// Enumeration for user roles
 enum Role {
   USER 
   ADMIN

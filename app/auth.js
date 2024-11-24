@@ -1,35 +1,48 @@
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-// Your own logic for dealing with plaintext password strings; be careful!
-import { saltAndHashPassword } from "@/utils/password"
- 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+import prisma from "@/lib/prisma";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  debug: true,
+  adapter: MongoDBAdapter(mongoClientPromise, {
+    databaseName: process.env.ENVIRONMENT,
+  }),
+  ...authConfig,
   providers: [
-    Credentials({
-      // You can specify which fields should be submitted, by adding keys to the `credentials` object.
-      // e.g. domain, username, password, 2FA token, etc.
-      credentials: {
-        email: {},
-        password: {},
-      },
-      authorize: async (credentials) => {
-        let user = null
- 
-        // logic to salt and hash password
-        const pwHash = saltAndHashPassword(credentials.password)
- 
-        // logic to verify if the user exists
-        user = await getUserFromDb(credentials.email, pwHash)
- 
-        if (!user) {
-          // No user found, so this is their first attempt to login
-          // Optionally, this is also the place you could do a user registration
-          throw new Error("Invalid credentials.")
+    CredentialsProvider({
+      async authorize(credentials) {
+        if (credentials == null) return null;
+
+        try {
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials?.email,
+            },
+          });
+          console.log(user);
+
+          if (user) {
+            const isMatch = credentials.password == user.password;
+
+            if (isMatch) {
+              return user;
+            } else {
+              throw new Error("CHECK_YOUR_PASSWORD");
+            }
+          } else {
+            throw new Error("USER_NOT_FOUND");
+          }
+        } catch (error) {
+          if (
+            error.message == "CHECK_YOUR_PASSWORD" ||
+            error.message == "USER_NOT_FOUND"
+          ) {
+            throw error;
+          } else {
+            throw new Error("Something Went Wrong");
+          }
         }
- 
-        // return user object with their profile data
-        return user
       },
     }),
   ],
-})
+});

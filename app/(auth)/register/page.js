@@ -7,8 +7,8 @@ import Link from "next/link";
 export default function RegisterPage() {
   return (
     <div className="w-full mx-auto bg-slate-700 ">
-      <div className=" mx-6 md:max-w-xs md:mx-auto flex items-center justify-center h-screen">
-        <div className="relative w-full bg-slate-900 p-8 rounded-2xl shadow-xl shadow-purple-500">
+      <div className=" mx-6 md:max-w-xs md:mx-auto flex items-center justify-center min-h-screen">
+        <div className="relative w-full bg-slate-900 p-8 rounded-2xl shadow-xl shadow-purple-500 mt-16">
           <div className="flex flex-row gap-2 items-center justify-center text-4xl  w-full absolute -top-16  left-0">
             <div className=" h-28 w-28 flex items-center text-center justify-center rounded-full  bg-gray-700 text-purple-500 font-bold border-b-4 border-l-4 border-r-4 border-purple-500 shadow-inner m-2 ring-purple-500">
               <KalapanaFont>নতুন নিবন্ধন</KalapanaFont>
