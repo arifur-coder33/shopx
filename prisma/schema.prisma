@@ -12,7 +12,7 @@ generator client {
 model User {
   id           String      @id @default(auto()) @map("_id") @db.ObjectId
   email        String      @unique
-  number       String      @unique
+  phone       String      @unique
   name         String?
   password     String                      // Added for authentication
   role         Role        @default(USER)

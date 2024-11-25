@@ -1,10 +1,19 @@
+import { registrationAction } from "@/app/backend/serverActions/authActions";
 import BackButton from "@/components/BackButton";
 import Button from "@/components/button";
 import DefaultInput from "@/components/input/DefaultInput";
 import KalapanaFont from "@/components/KalapanaFont";
 import Link from "next/link";
 
-export default function RegisterPage() {
+export default  function RegisterPage() {
+ async function test(formData){ 
+  'use server'
+try {
+  await registrationAction(formData)
+} catch (error) {
+  console.log(error)
+}
+ }
   return (
     <div className="w-full mx-auto bg-slate-700 ">
       <div className=" mx-6 md:max-w-xs md:mx-auto flex items-center justify-center min-h-screen">
@@ -15,14 +24,8 @@ export default function RegisterPage() {
             </div>
           </div>
           <BackButton />
-          <form>
-            {/* <div className="flex flex-row gap-2 items-center justify-center text-4xl  text-purple-500 font-bold border-b-4 border-b-purple-500">
-              <UserRound />
-              <h1 className="  ">
-                <KalapanaFont>রেজিষ্টার</KalapanaFont>
-              </h1>
-            </div> */}
-
+          <form action={test}>
+            
             <div className="grid grid-cols-12  gap-2"></div>
             <DefaultInput
               colSpan={"cols-span-1"}
@@ -30,7 +33,7 @@ export default function RegisterPage() {
               label={"আপনার নাম"}
               placeholder={"আপনার নাম দিন।"}
               required={true}
-              type={"email"}
+              type={"name"}
             />
 
             <DefaultInput
@@ -43,11 +46,11 @@ export default function RegisterPage() {
             />
             <DefaultInput
               colSpan={"cols-span-1"}
-              name="number"
+              name="phone"
               label={"ফোন নাম্বার"}
               placeholder={"আপনার ফোন নাম্বার দিন।"}
               required={true}
-              type={"email"}
+              type={"string"}
             />
 
             <DefaultInput
