@@ -14,3 +14,12 @@ export async function ceredntialLogin(formData) {
     throw error.cause.err;
   }
 }
+
+
+export async function userRegister(formData){
+    try {
+        
+    } catch (error) {
+        
+    }
+}
