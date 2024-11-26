@@ -1,4 +1,4 @@
-import { userregistration } from "@/app/backend/serverActions/authActions"
+import { userregistration } from "@/backend/serverActions/authActions"
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";

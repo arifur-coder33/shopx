@@ -10,9 +10,9 @@ export async function ceredntialLogin(formData) {
       password: formData.get("password"),
       redirect: false,
     });
-    return response;
+    return { success: true, response }; // Return success with user data
   } catch (error) {
-    throw error.cause.err;
+    return { success: false, error: error.message }
   }
 }
 
@@ -74,16 +74,14 @@ export async function userregistration(request) {
 
 
 export async function registrationAction(formData) {
-  
   try {
-    // const formData = await request.formData()
-    const name = formData.get('name')
-    const email = formData.get('email')
-    const password = formData.get('password')
-    const phone = formData.get('phone')
- 
+    const name = formData.get('name');
+    const email = formData.get('email');
+    const password = formData.get('password');
+    const phone = formData.get('phone');
+
     if (!email || !password) {
-     throw new Error ('USER & PASSWORD NEEDED')
+      throw new Error('সব ফিল্ড গুলতে তথ্য দিন।');
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -91,26 +89,22 @@ export async function registrationAction(formData) {
     });
 
     if (existingUser) {
-      throw new Error ('USER EXIS')
+      throw new Error('আপনি ইতিমধ্যে নিবন্ধন করেছেন।');
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the user
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        phone
+        phone,
       },
     });
 
-    return user;
+    return { success: true, user }; // Return success with user data
   } catch (error) {
-    throw error
-  } finally {
-    await prisma.$disconnect();
+    return { success: false, error: error.message }; // Return structured error
   }
 }
