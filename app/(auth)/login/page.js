@@ -1,3 +1,4 @@
+import LoginForm from "@/components/auth/LoginForm";
 import BackButton from "@/components/BackButton";
 import Button from "@/components/button";
 import DefaultInput from "@/components/input/DefaultInput";
@@ -16,7 +17,7 @@ export default function LoginPage() {
               </div>
             </div>
             <BackButton />
-            <form>
+            {/* <form>
               <div className="grid grid-cols-12  gap-2"></div>
               <DefaultInput
                 colSpan={"cols-span-1"}
@@ -33,7 +34,8 @@ export default function LoginPage() {
                 type={"password"}
               />
               <Button className={"w-full mt-2 py-2"}> লগইন করুন</Button>
-            </form>
+            </form> */}
+            <LoginForm/>
             <div className="text-[14px] text-blue-500 hover:underline decoration-blue-500 mt-2 text-right">
               পাসওয়ার্ড ভুলে গেছেন?
             </div>

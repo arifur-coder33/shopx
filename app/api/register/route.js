@@ -1,7 +1,8 @@
+import { userregistration } from "@/backend/serverActions/authActions"
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
-
+import bcrypt from "bcryptjs";
 export async function GET(request) {
   const allUsers = await prisma.user.findMany();
   console.log(allUsers);
@@ -11,28 +12,13 @@ export async function GET(request) {
   });
 }
 
-export async function POST(req) {
-  try {
-    const { name, email, phone, password } = await req.json();
-    const hashedPassword = await bcrypt.hash(password, 10);
-    console.log(request.body);
-    if (!email || !password) {
-      return new Response(
-        JSON.stringify({ message: "Email and password are required" }),
-        { status: 400 }
-      );
-    }
+export async function POST(request) {
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-    });
-    return user;
-  } catch (error) {
-    // Handle errors (e.g., unique constraint violation)
-    throw error;
-  }
+return userregistration(request)
 }
+// export async function POST(request) {
+//   const formData = await request.formData()
+//   const name = formData.get('name')
+//   const email = formData.get('email')
+//   return Response.json({ name, email })
+// }

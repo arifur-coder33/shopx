@@ -1,12 +1,14 @@
 import prisma from "@/lib/prisma";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
+// import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
+import bcrypt from "bcryptjs";
+import CredentialsProvider from "next-auth/providers/credentials";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   debug: true,
-  adapter: MongoDBAdapter(mongoClientPromise, {
-    databaseName: process.env.ENVIRONMENT,
-  }),
+  // adapter: MongoDBAdapter(mongoClientPromise, {
+  //   databaseName: process.env.ENVIRONMENT,
+  // }),
   ...authConfig,
   providers: [
     CredentialsProvider({
@@ -22,7 +24,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.log(user);
 
           if (user) {
-            const isMatch = credentials.password == user.password;
+            const isMatch = bcrypt.compare(credentials.password,user.password) 
 
             if (isMatch) {
               return user;
