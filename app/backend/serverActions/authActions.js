@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { signIn } from "@/app/auth";
 
 export async function ceredntialLogin(formData) {
   try {
@@ -15,11 +15,7 @@ export async function ceredntialLogin(formData) {
   }
 }
 
-
-export async function userRegister(formData){
-    try {
-        
-    } catch (error) {
-        
-    }
+export async function userRegister(formData) {
+  try {
+  } catch (error) {}
 }
