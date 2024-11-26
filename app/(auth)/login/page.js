@@ -1,7 +1,5 @@
 import LoginForm from "@/components/auth/LoginForm";
 import BackButton from "@/components/BackButton";
-import Button from "@/components/button";
-import DefaultInput from "@/components/input/DefaultInput";
 import KalapanaFont from "@/components/KalapanaFont";
 import Link from "next/link";
 
@@ -17,25 +15,8 @@ export default function LoginPage() {
               </div>
             </div>
             <BackButton />
-            {/* <form>
-              <div className="grid grid-cols-12  gap-2"></div>
-              <DefaultInput
-                colSpan={"cols-span-1"}
-                label={"ইমেইলঃ"}
-                placeholder={"আপনার ইমেইল দিন।"}
-                required={true}
-                type={"email"}
-              />
-              <DefaultInput
-                colSpan={"cols-span-1"}
-                label={"পাসওয়ার্ডঃ"}
-                placeholder={"আপনার পাসওয়ার্ড দিন।"}
-                required={true}
-                type={"password"}
-              />
-              <Button className={"w-full mt-2 py-2"}> লগইন করুন</Button>
-            </form> */}
-            <LoginForm/>
+
+            <LoginForm />
             <div className="text-[14px] text-blue-500 hover:underline decoration-blue-500 mt-2 text-right">
               পাসওয়ার্ড ভুলে গেছেন?
             </div>
