@@ -15,6 +15,13 @@ export const loginWithCreds = async (formData) => {
     // Call the NextAuth signIn function
     await signIn("credentials", rawFormData);
   } catch (error) {
+    console.log(
+      "error----------------------------------------------------------------"
+    );
+    console.log(JSON.stringify(error));
+    console.log(
+      "error end----------------------------------------------------------------"
+    );
     throw error.cause.err;
   }
 };

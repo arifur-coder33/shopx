@@ -53,10 +53,20 @@ export const {
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      if (user) {
+        return true; // Allow login if user is found
+      } else {
+        // Log error in production for better debugging
+        console.error("SignIn Error: Incorrect credentials");
+        return false; // Deny login if no user is found
+      }
+    },
     async redirect({ url, baseUrl }) {
-      return baseUrl; // Adjust this as needed
+      return baseUrl;
     },
   },
+
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
