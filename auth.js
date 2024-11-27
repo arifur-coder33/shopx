@@ -50,6 +50,22 @@ export const {
 
         return user;
       },
+      callbacks: {
+        async redirect({ url, baseUrl }) {
+          return baseUrl; // Adjust this as needed
+        },
+      },
+      pages: {
+        signIn: "/auth/login",
+        error: "/auth/error",
+      },
+      session: {
+        strategy: "jwt",
+      },
+      // Define the trusted URLs for local development and production
+      // This tells NextAuth.js to trust the localhost during local dev.
+      trustHost: true, // Important for trusting localhost in dev mode
+      secret: process.env.NEXTAUTH_SECRET, // Don't forget to set a secret
     }),
   ],
 });
