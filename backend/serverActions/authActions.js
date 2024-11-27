@@ -1,62 +1,32 @@
+"use server";
 
-'use server'
-
-
+import { signIn } from "@/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { signIn } from "@/auth";
-import { AuthError } from "next-auth";
 
-export const loginWithCreds = async formData => {
+export const loginWithCreds = async (formData) => {
   const rawFormData = {
     email: formData.get("email"),
     password: formData.get("password"),
-  
-    redirectTo: "/"
-  }
-
- 
+    redirect: false,
+  };
 
   try {
-    await signIn("credentials", rawFormData)
-  } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case "CredentialsSignin":
-          return { error: "Invalid credentials!" }
-        default:
-          return { error: "Something went wrong!" }
-      }
-    }
-
-    throw error
-  }
-  revalidatePath("/")
-}
-
-export async function credentialLogin (formData) {
-  try {
-    const response = await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirect: false,
-    });
-    return response;
+    // Call the NextAuth signIn function
+    await signIn("credentials", rawFormData);
   } catch (error) {
     throw error.cause.err;
   }
-}
-
+};
 
 export async function userregistration(request) {
-  
   try {
-    const formData = await request.formData()
-    const name = formData.get('name')
-    const email = formData.get('email')
-    const password = formData.get('password')
-    const phone = formData.get('phone')
- 
+    const formData = await request.formData();
+    const name = formData.get("name");
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const phone = formData.get("phone");
+
     if (!email || !password) {
       return new Response(
         JSON.stringify({ message: "Email and password are required" }),
@@ -69,10 +39,9 @@ export async function userregistration(request) {
     });
 
     if (existingUser) {
-      return new Response(
-        JSON.stringify({ message: "User already exists" }),
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ message: "User already exists" }), {
+        status: 400,
+      });
     }
 
     // Hash the password
@@ -84,7 +53,7 @@ export async function userregistration(request) {
         email,
         password: hashedPassword,
         name,
-        phone
+        phone,
       },
     });
 
@@ -94,25 +63,23 @@ export async function userregistration(request) {
     );
   } catch (error) {
     console.error(error);
-    return new Response(
-      JSON.stringify({ message: "Something went wrong" }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ message: "Something went wrong" }), {
+      status: 500,
+    });
   } finally {
     await prisma.$disconnect();
   }
 }
 
-
 export async function registrationAction(formData) {
   try {
-    const name = formData.get('name');
-    const email = formData.get('email');
-    const password = formData.get('password');
-    const phone = formData.get('phone');
+    const name = formData.get("name");
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const phone = formData.get("phone");
 
     if (!email || !password) {
-      throw new Error('সব ফিল্ড গুলতে তথ্য দিন।');
+      throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -120,7 +87,7 @@ export async function registrationAction(formData) {
     });
 
     if (existingUser) {
-      throw new Error('আপনি ইতিমধ্যে নিবন্ধন করেছেন।');
+      throw new Error("আপনি ইতিমধ্যে নিবন্ধন করেছেন।");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

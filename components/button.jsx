@@ -4,12 +4,16 @@ export default function Button({
   bgcolor,
   textColor,
   className,
+  disabled,
 }) {
   return (
     <button
+      disabled={disabled}
       aria-label="button"
       onClick={onClick}
-      className={`button ${bgcolor}  ${textColor} ${className}`}
+      className={`button ${bgcolor}  ${textColor} ${className} ${
+        disabled && "opacity-50"
+      }`}
     >
       {children}
     </button>

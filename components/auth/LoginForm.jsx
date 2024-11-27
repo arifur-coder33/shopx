@@ -1,30 +1,40 @@
-
-'use client'
-
-import { loginWithCreds } from '@/backend/serverActions/authActions';
-import Button from '../button';
-import DefaultInput from '../input/DefaultInput';
-
+"use client";
+import { loginWithCreds } from "@/backend/serverActions/authActions";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Button from "../button";
+import DefaultInput from "../input/DefaultInput";
 
 export default function LoginForm() {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function HandleSubmit(formData){
+  async function HandleSubmit(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    setLoading(true);
     try {
-     await loginWithCreds(formData)
-  
-    } catch (error) {
+      await loginWithCreds(formData);
+      router.push("/");
 
+      // Redirect or success logic
+    } catch (error) {
+      setLoading(false);
+      setError(error.message || "Login failed. Please try again.");
     }
- 
   }
+
   return (
-    <form className='mt-6' 
-    action={HandleSubmit}
-    >
-      
-        {/* {error &&  <div className='w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden'>   {error}    </div> } */}
-         
+    <form className="mt-6" onSubmit={HandleSubmit}>
+      {error && (
+        <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden">
+          {error}
+        </div>
+      )}
+
       <DefaultInput
         name="email"
         label="ইমেইলঃ"
@@ -33,7 +43,6 @@ export default function LoginForm() {
         type="email"
       />
 
-   
       <DefaultInput
         name="password"
         label="পাসওয়ার্ডঃ"
@@ -41,13 +50,10 @@ export default function LoginForm() {
         required
         type="password"
       />
-  
-      <Button className="w-full mt-2 py-2">
-        {/* {loading ? 'লগইন হচ্ছে...' : 'লগইন করুন'} */}
-        লগইন করুন
+
+      <Button disabled={loading} className="w-full mt-2 py-2">
+        {loading ? "লগইন হচ্ছে..." : "লগইন করুন"}
       </Button>
-     
-      {/* {success && <p style={{ color: 'green' }}>{success}</p>} */}
     </form>
   );
 }
