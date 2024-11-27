@@ -2,6 +2,7 @@
 'use server'
 
 import { signIn } from "@/auth";
+import prisma from "@/lib/prisma";
 
 export async function credentialLogin (formData) {
   try {
