@@ -22,12 +22,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: credentials?.email,
             },
           })
-       
-          if (user) {
         
-            const isMatch = await bcrypt.compare(credentials.password,user.password)
+          // const user = await userModel.findOne({
+          //   email: credentials?.email,
+          // });
+
+          if (user) {
+            const isMatch =await bcrypt.compare( credentials.password, user.password)
+
             if (isMatch) {
-              return user;
+              const {name,email,role}=user
+              console.log({name,email,role})
+              return {name,email,role};
             } else {
               throw new Error("CHECK_YOUR_PASSWORD");
             }
@@ -39,7 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             error.message == "CHECK_YOUR_PASSWORD" ||
             error.message == "USER_NOT_FOUND"
           ) {
-            throw error;
+            throw new Error("আপনার ইমেইল অথবা পাসওয়ার্ড চেক করুন।");
           } else {
             throw new Error("Something Went Wrong");
           }
@@ -47,4 +53,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-});
+});;
