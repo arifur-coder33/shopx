@@ -25,18 +25,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        
           if (user) {
         
-            const isMatch =await bcrypt.compare(credentials.password,user.password)
+            const isMatch = await bcrypt.compare(credentials.password,user.password)
             if (isMatch) {
               return user;
             } else {
-              throw new Error("আপনার ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।");
+              throw new Error("CHECK_YOUR_PASSWORD");
             }
           } else {
-            throw new Error("আপনি এখনো নিবন্ধন করেননি।");
+            throw new Error("USER_NOT_FOUND");
           }
         } catch (error) {
-          throw error;
-     
+          if (
+            error.message == "CHECK_YOUR_PASSWORD" ||
+            error.message == "USER_NOT_FOUND"
+          ) {
+            throw error;
+          } else {
+            throw new Error("Something Went Wrong");
+          }
         }
       },
     }),
