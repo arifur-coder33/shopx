@@ -1,9 +1,39 @@
 
 'use server'
 
-import { signIn } from "@/auth";
+
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { signIn } from "@/auth";
+import { AuthError } from "next-auth";
+
+export const loginWithCreds = async formData => {
+  const rawFormData = {
+    email: formData.get("email"),
+    password: formData.get("password"),
+  
+    redirectTo: "/"
+  }
+
+ 
+
+  try {
+    await signIn("credentials", rawFormData)
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return { error: "Invalid credentials!" }
+        default:
+          return { error: "Something went wrong!" }
+      }
+    }
+
+    throw error
+  }
+  revalidatePath("/")
+}
+
 export async function credentialLogin (formData) {
   try {
     const response = await signIn("credentials", {

@@ -1,56 +1,64 @@
-import prisma from "@/lib/prisma";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import NextAuth from "next-auth";
-import { authConfig } from "./app/auth.config";
-import bcrypt from "bcryptjs";
-import CredentialsProvider from "next-auth/providers/credentials";
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  debug: true,
-  // adapter: MongoDBAdapter(mongoClientPromise, {
-  //   databaseName: process.env.ENVIRONMENT,
-  // }),
-  // ...authConfig,
+import NextAuth from "next-auth"
+import Github from "next-auth/providers/github"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import Credentials from "next-auth/providers/credentials"
+import bcrypt from "bcryptjs"
+
+// import { saltAndHashPassword } from "./utils/helper"
+import prisma from "./lib/prisma"
+
+export const {
+  handlers: { GET, POST },
+  signIn,
+  signOut,
+  auth
+} = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: "jwt" },
   providers: [
-    CredentialsProvider({
-      async authorize(credentials) {
-        if (credentials == null) return null;
+    // Github({
+    //   clientId: process.env.AUTH_GITHUB_ID,
+    //   clientSecret: process.env.AUTH_GITHUB_SECRET
+    // }),
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: {
+          label: "Email",
+          type: "email",
+          placeholder: "email@example.com"
+        },
+        password: { label: "Password", type: "password" }
+      },
+      authorize: async credentials => {
+        if (!credentials || !credentials.email || !credentials.password) {
+          return null
+        }
 
-        try {
-          // await dbConnect();
-          const user =  await prisma.user.findUnique({
-            where: {
-              email: credentials?.email,
-            },
-          })
-        
-          // const user = await userModel.findOne({
-          //   email: credentials?.email,
-          // });
+        const email = credentials.email
+       
 
-          if (user) {
-            const isMatch =await bcrypt.compare( credentials.password, user.password)
-
-            if (isMatch) {
-              const {name,email,role}=user
-              console.log({name,email,role})
-              return {name,email,role};
-            } else {
-              throw new Error("CHECK_YOUR_PASSWORD");
-            }
-          } else {
-            throw new Error("USER_NOT_FOUND");
+        let user = await prisma.user.findUnique({
+          where: {
+            email
           }
-        } catch (error) {
-          if (
-            error.message == "CHECK_YOUR_PASSWORD" ||
-            error.message == "USER_NOT_FOUND"
-          ) {
-            throw new Error("আপনার ইমেইল অথবা পাসওয়ার্ড চেক করুন।");
-          } else {
-            throw new Error("Something Went Wrong");
+        })
+
+        if (!user) {
+            throw new Error("Incorrect email.")
+        } else {
+          const isMatch = await bcrypt.compare(
+            credentials.password,
+            user.password
+          )
+          console.log(`check password: ${isMatch}`)
+          if (!isMatch) {
+            throw new Error("Incorrect password.")
           }
         }
-      },
-    }),
-  ],
-});;
+
+        return user
+      }
+    })
+  ]
+})

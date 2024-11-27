@@ -1,48 +1,29 @@
-'use client';
 
-import { useState, useTransition } from 'react';
+'use client'
+
+import { loginWithCreds } from '@/backend/serverActions/authActions';
 import Button from '../button';
 import DefaultInput from '../input/DefaultInput';
 
-import { useRouter } from 'next/navigation'; 
-import { credentialLogin } from '@/backend/serverActions/authActions';
+import { useState } from "react";
 
 export default function LoginForm() {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const router=useRouter()
 
-
-  const [loading, setLoading] = useState("");
-
-
-  async function onSubmit(event) {
-    event.preventDefault();
-
+  async function HandleSubmit(formData){
     try {
-      setError("");
-      setLoading(true);
-      const formData = new FormData(event.currentTarget);
-      const response = await credentialLogin(formData);
+     await loginWithCreds(formData)
+  
+    } catch (error) {
 
-      if (!!response.error) {
-        console.error(response.error);
-        setError(response.error);
-      } else {
-        router.push("/");
-      }
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
     }
+ 
   }
-
   return (
-    <form className='mt-6' onSubmit={onSubmit}>
+    <form className='mt-6' 
+    action={HandleSubmit}
+    >
       
-        {error &&  <div className='w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden'>   {error}    </div> }
+        {/* {error &&  <div className='w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden'>   {error}    </div> } */}
          
       <DefaultInput
         name="email"
@@ -62,10 +43,11 @@ export default function LoginForm() {
       />
   
       <Button className="w-full mt-2 py-2">
-        {loading ? 'লগইন হচ্ছে...' : 'লগইন করুন'}
+        {/* {loading ? 'লগইন হচ্ছে...' : 'লগইন করুন'} */}
+        লগইন করুন
       </Button>
      
-      {success && <p style={{ color: 'green' }}>{success}</p>}
+      {/* {success && <p style={{ color: 'green' }}>{success}</p>} */}
     </form>
   );
 }
