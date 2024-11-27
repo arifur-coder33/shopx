@@ -3,8 +3,9 @@
 import { useState, useTransition } from 'react';
 import Button from '../button';
 import DefaultInput from '../input/DefaultInput';
-import { ceredntialLogin } from '@/backend/serverActions/authActions';
+
 import { useRouter } from 'next/navigation'; 
+import { credentialLogin } from '@/backend/serverActions/authActions';
 
 export default function LoginForm() {
   const [isPending, startTransition] = useTransition();
@@ -12,32 +13,34 @@ export default function LoginForm() {
   const [success, setSuccess] = useState(null);
   const router=useRouter()
 
-  const handleSubmit = (e) => {
-    e.preventDefault(); // Prevent default form submission
-    const form = e.target; // Reference to the form element
-    const formData = new FormData(form); // Collect form data
-    setError(null);
-    setSuccess(null);
 
-    startTransition(async () => {
-      const response = await ceredntialLogin(formData); // Call server action
-      console.log(response)
-      if (response.success) {
-        setSuccess('Login successful!');
-        form.reset(); // Clear the form on success
-        setTimeout(() => {
-            router.push('/')
-        }, 1000);
-    
+  const [loading, setLoading] = useState("");
+
+
+  async function onSubmit(event) {
+    event.preventDefault();
+
+    try {
+      setError("");
+      setLoading(true);
+      const formData = new FormData(event.currentTarget);
+      const response = await credentialLogin(formData);
+
+      if (!!response.error) {
+        console.error(response.error);
+        setError(response.error);
       } else {
-        console.log(response.error)
-        setError(response.error || 'Something went wrong');
+        router.push("/");
       }
-    });
-  };
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <form className='mt-6' onSubmit={handleSubmit}>
+    <form className='mt-6' onSubmit={onSubmit}>
       
         {error &&  <div className='w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden'>   {error}    </div> }
          
@@ -59,7 +62,7 @@ export default function LoginForm() {
       />
   
       <Button className="w-full mt-2 py-2">
-        {isPending ? 'লগইন হচ্ছে...' : 'লগইন করুন'}
+        {loading ? 'লগইন হচ্ছে...' : 'লগইন করুন'}
       </Button>
      
       {success && <p style={{ color: 'green' }}>{success}</p>}

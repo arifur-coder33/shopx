@@ -1,18 +1,18 @@
 
 'use server'
-import { signIn } from "@/app/auth";
-import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-export async function ceredntialLogin(formData) {
+
+import { signIn } from "@/auth";
+
+export async function credentialLogin (formData) {
   try {
     const response = await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
       redirect: false,
     });
-    return { success: true, response }; // Return success with user data
+    return response;
   } catch (error) {
-    return { success: false, error: error.message }
+    throw error.cause.err;
   }
 }
 

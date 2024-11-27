@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
-// import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import NextAuth from "next-auth";
-import { authConfig } from "./auth.config";
+import { authConfig } from "./app/auth.config";
 import bcrypt from "bcryptjs";
 import CredentialsProvider from "next-auth/providers/credentials";
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -9,40 +9,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // adapter: MongoDBAdapter(mongoClientPromise, {
   //   databaseName: process.env.ENVIRONMENT,
   // }),
-  ...authConfig,
+  // ...authConfig,
   providers: [
     CredentialsProvider({
       async authorize(credentials) {
         if (credentials == null) return null;
 
         try {
-          const user = await prisma.user.findUnique({
+          // await dbConnect();
+          const user =  await prisma.user.findUnique({
             where: {
               email: credentials?.email,
             },
-          });
-          console.log(user);
-
+          })
+       
           if (user) {
-            const isMatch = bcrypt.compare(credentials.password,user.password) 
-
+        
+            const isMatch =await bcrypt.compare(credentials.password,user.password)
             if (isMatch) {
               return user;
             } else {
-              throw new Error("CHECK_YOUR_PASSWORD");
+              throw new Error("আপনার ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।");
             }
           } else {
-            throw new Error("USER_NOT_FOUND");
+            throw new Error("আপনি এখনো নিবন্ধন করেননি।");
           }
         } catch (error) {
-          if (
-            error.message == "CHECK_YOUR_PASSWORD" ||
-            error.message == "USER_NOT_FOUND"
-          ) {
-            throw error;
-          } else {
-            throw new Error("Something Went Wrong");
-          }
+          throw error;
+     
         }
       },
     }),
