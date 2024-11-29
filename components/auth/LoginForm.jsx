@@ -14,16 +14,23 @@ export default function LoginForm() {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-
+    setError("");
     setLoading(true);
     try {
-      await loginWithCreds(formData);
-      router.push("/");
+      const result = await loginWithCreds(formData);
+      console.log(result);
+      setLoading(false);
+      if (result?.message) {
+        setError(result.message);
+      }
+      if (!result?.message) {
+        router.push("/");
+      }
 
       // Redirect or success logic
     } catch (error) {
-      setLoading(false);
-      setError(error.message || "Login failed. Please try again.");
+      console.log(error);
+      console.log("something went wrong");
     }
   }
 

@@ -3,28 +3,59 @@
 import { signIn } from "@/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { AuthError } from "next-auth";
+// export const loginWithCreds = async (formData) => {
+//   try {
+//     const rawFormData = {
+//       email: formData.get("email"),
+//       password: formData.get("password"),
+//       redirect: false,
+//     };
 
-export const loginWithCreds = async (formData) => {
-  const rawFormData = {
-    email: formData.get("email"),
-    password: formData.get("password"),
-    redirect: false,
-  };
+//     // Call the NextAuth signIn function
+//     await signIn("credentials", rawFormData);
+//   } catch (error) {
+//     if (error instanceof AuthError) {
+//       switch (error.type) {
+//         case "CredentialsSignin":
+//           return {
+//             message: "Invalid credentials",
+//           };
+//         default:
+//           return {
+//             message: "Something went wrong.",
+//           };
+//       }
+//     }
+//     throw error;
+//   }
+// };
 
+export async function loginWithCreds(formData) {
   try {
-    // Call the NextAuth signIn function
+    const rawFormData = {
+      email: formData.get("email"),
+      password: formData.get("password"),
+      redirect: false,
+    };
     await signIn("credentials", rawFormData);
   } catch (error) {
-    console.log(
-      "error----------------------------------------------------------------"
-    );
-    console.log(JSON.stringify(error));
-    console.log(
-      "error end----------------------------------------------------------------"
-    );
-    throw error.cause.err;
+    if (error instanceof AuthError) {
+      console.log(`Error Type: ${error.type}`);
+      switch (error.type) {
+        case "CredentialsSignin":
+          return {
+            message: "Invalid credentials",
+          };
+        default:
+          return {
+            message: "Something went wrong.",
+          };
+      }
+    }
+    throw error;
   }
-};
+}
 
 export async function userregistration(request) {
   try {
