@@ -29,8 +29,7 @@ export default function LoginForm() {
 
       // Redirect or success logic
     } catch (error) {
-      console.log(error);
-      console.log("something went wrong");
+      console.log("");
     }
   }
 

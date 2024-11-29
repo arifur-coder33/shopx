@@ -21,8 +21,6 @@ export const {
           where: { email: credentials.email },
         });
 
-        console.log("User found:", user); // Logs user to verify it's fetched correctly
-
         if (!user) {
           // throw new Error("Incorrect email.");
           return null;
@@ -32,7 +30,6 @@ export const {
           credentials.password,
           user.password
         );
-        console.log("Password match:", isMatch);
 
         if (!isMatch) {
           // throw new Error("Incorrect password.");
@@ -43,6 +40,24 @@ export const {
       },
     }),
   ],
+  callbacks: {
+    jwt({ token, user, trigger, session }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+      }
+      if (trigger === "update" && session) {
+        token = { ...token, ...session };
+      }
+      return token;
+    },
+    session({ session, token }) {
+      session.user.id = token.id;
+      session.user.role = token.role;
+
+      return session;
+    },
+  },
 
   session: {
     strategy: "jwt",
