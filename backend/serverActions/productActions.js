@@ -1,4 +1,5 @@
 export async function createProductAction(formData) {
+  const formDataObj = Object.fromEntries(formData.entries());
   try {
     const data = {
       title: formData.get("title"),
