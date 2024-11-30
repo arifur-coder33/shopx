@@ -38,19 +38,19 @@ model Product {
   title          String                       // Product title
   slug           String      @unique         // Unique slug for URL identification
   description    String?                     // Optional detailed description
-  categoryId     String      @db.ObjectId    // Foreign key for Category
-  category       Category    @relation(fields: [categoryId], references: [id]) // Relation to Category
+  categoryId     String ?     @db.ObjectId    // Foreign key for Category
+  category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
   regularPrice   Float                       // Regular price of the product
   discountPrice  Float?                      // Optional discount price
   stockQuantity  Int         @default(0)    // Stock quantity for inventory tracking
   images         String[]                   // Array of image URLs
-  isFeatured     Boolean     @default(false) // Indicates if the product is featured
-  isActive       Boolean     @default(true)  // Marks if the product is active
-  color          String[]                      // Product color
-  size           String[]                      // Product size
+  isFeatured     Boolean?    @default(false) // Indicates if the product is featured
+  isActive       Boolean?     @default(true)  // Marks if the product is active
+  color          String?                      // Product color
+  size           String?                     // Product size
   insideDhaka    Float?                      // Optional delivery charge inside Dhaka
   outSideDhaka   Float?                      // Optional delivery charge outside Dhaka
-  weight         Float                       // Product weight for shipping purposes
+  weight         Float?                       // Product weight for shipping purposes
   orders         Order[]                    // One-to-many relationship with Order
   createdAt      DateTime    @default(now()) // Timestamp for product creation
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp

@@ -6,7 +6,7 @@ import DefaultInput from '../input/DefaultInput';
 import { registrationAction } from '@/backend/serverActions/authActions';
 import { useRouter } from 'next/navigation'; 
 
-export default function RegistrationForm({ signUp }) {
+export default function RegistrationForm() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);

@@ -1,35 +1,49 @@
+'use server'
+
+import prisma from "@/lib/prisma";
+
 export async function createProductAction(formData) {
   const formDataObj = Object.fromEntries(formData.entries());
   try {
-    const data = {
+    let data = {
       title: formData.get("title"),
-      slug: formData.get("slug"),
+      slug: formData.get("title").split(" ").join("-"),
       description: formData.get("description"),
-      category: formData.get("category"),
-      regularPrice: formData.get("regularPrice"),
-      discountPrice: formData.get("discountPrice"),
-      stockQuantity: formData.get("stockQuantity"),
-      images: formData.get("images"),
+      // category: formData.get("category"),
+      regularPrice: Number(formData.get("regularPrice")),
+      discountPrice: Number(formData.get("discountPrice")),
+      stockQuantity: Number(formData.get("stockQuantity")),
+      images:[ formData.get("images")],
       isFeatured: formData.get("isFeatured"),
       isActive: formData.get("isActive"),
       color: formData.get("color"),
       size: formData.get("size"),
-      insideDhaka: formData.get("insideDhaka"),
-      outSideDhaka: formData.get("outSideDhaka"),
-      weight: formData.get("weight"),
+      insideDhaka:Number( formData.get("insideDhaka")),
+      outSideDhaka: Number(formData.get("outSideDhaka")),
+      weight: Number(formData.get("weight")),
     };
-
-    if (!email || !password) {
+console.log(data)
+    if (!data?.title || !data?.regularPrice || !data?.images)  {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
+const checkSlug=await prisma.product.findUnique({
+        where: { slug:data?.slug },
+})
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+if (checkSlug) {
+  data={
+    ...data,
+    slug:data.slug +"-"+ Math.floor(Math.random() * 10)
+  }
+}
+console.log(data)
+    // const existingUser = await prisma.user.findUnique({
+    //   where: { email },
+    // });
 
-    if (existingUser) {
-      throw new Error("আপনি ইতিমধ্যে নিবন্ধন করেছেন।");
-    }
+    // if (existingUser) {
+    //   throw new Error("আপনি ইতিমধ্যে নিবন্ধন করেছেন।");
+    // }
 
     const details = await prisma.product.create({
       data: data,
@@ -37,6 +51,7 @@ export async function createProductAction(formData) {
 
     return { success: true, details }; // Return success with user data
   } catch (error) {
+    console.log(error.message)
     return { success: false, error: error.message }; // Return structured error
   }
 }
