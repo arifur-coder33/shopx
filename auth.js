@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { authConfig } from "./auth.config";
 import prisma from "./lib/prisma";
 export const {
   handlers: { GET, POST },
@@ -8,6 +9,7 @@ export const {
   signOut,
   auth,
 } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       name: "Credentials",
@@ -49,6 +51,7 @@ export const {
       if (trigger === "update" && session) {
         token = { ...token, ...session };
       }
+
       return token;
     },
     session({ session, token }) {
@@ -57,11 +60,20 @@ export const {
 
       return session;
     },
+    // async redirect({ url, baseUrl }) {
+    //   // If a callbackUrl exists and is relative, use it
+    //   console.log(url);
+    //   if (url.startsWith(baseUrl)) {
+    //     return url;
+    //   }
+    //   if (url.startsWith("/")) {
+    //     return `${baseUrl}${url}`;
+    //   }
+    //   // Default redirect to the base URL
+    //   return baseUrl;
+    // },
   },
 
-  session: {
-    strategy: "jwt",
-  },
   // Define the trusted URLs for local development and production
   // This tells NextAuth.js to trust the localhost during local dev.
   trustHost: true, // Important for trusting localhost in dev mode

@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
@@ -143,4 +143,8 @@ export async function registrationAction(formData) {
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
   }
+}
+
+export async function logout(params) {
+  await signOut();
 }

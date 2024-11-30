@@ -1,14 +1,10 @@
 import NavBar from "@/components/NavBar";
 
 export default function AuthLayout({ children }) {
-    return (
-   
-    
-          <div className="">
-        
-            {children}</div>
-   
-     
-    );
-  }
-  
+  return (
+    <>
+      <NavBar hideCart={true} />
+      <div className="">{children}</div>
+    </>
+  );
+}

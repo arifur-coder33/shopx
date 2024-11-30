@@ -38,7 +38,7 @@ model Product {
   title          String                       // Product title
   slug           String      @unique         // Unique slug for URL identification
   description    String?                     // Optional detailed description
-  categoryId     String ?     @db.ObjectId    // Foreign key for Category
+  categoryId     String?      @db.ObjectId    // Foreign key for Category
   category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
   regularPrice   Float                       // Regular price of the product
   discountPrice  Float?                      // Optional discount price

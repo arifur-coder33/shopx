@@ -17,6 +17,11 @@ const nextConfig = {
         hostname: "a0.muscache.com",
         port: "",
       },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        port: "",
+      },
     ],
   },
 };
