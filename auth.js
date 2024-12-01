@@ -51,7 +51,9 @@ export const {
       if (trigger === "update" && session) {
         token = { ...token, ...session };
       }
-
+      console.log("from moddleware...");
+      console.log(user);
+      console.log(token);
       return token;
     },
     session({ session, token }) {
