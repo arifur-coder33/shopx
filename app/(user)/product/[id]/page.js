@@ -1,3 +1,4 @@
+import { getProductById } from "@/backend/serverActions/productActions";
 import KalapanaFont from "@/components/KalapanaFont";
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
@@ -6,26 +7,34 @@ import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
 export default async function ProductPage({ params }) {
   const { id } = await params;
+  const data = await getProductById(id);
+
+  const {
+    title,
+    regularPrice,
+    images,
+    discountPrice,
+    description,
+    category: { name },
+  } = data?.data;
+
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         {/* product Image  */}
         <div className="col-span-3">
-          <Images />
+          <Images images={images} />
         </div>
         <div className="col-span-2">
           {/* product Name */}
-          <h1 className=" text-xl font-bold">
-            বাটা ক্লাসিক স্নাকারস (সাদা) ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস
-            ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস
-          </h1>
+          <h1 className=" text-xl font-bold">{title}</h1>
           {/* Price  & qty  */}
           <KalapanaFont>
             <div className=" dark:text-slate-300 text-2xl ">
               <p>
                 মূল্যঃ{" "}
                 <span className="text-5xl text-purple">
-                  {replaceNumbers("399")}
+                  {replaceNumbers(discountPrice.toString())}
                 </span>{" "}
                 টাকা
               </p>
@@ -40,7 +49,7 @@ export default async function ProductPage({ params }) {
           <ActionButtons productId={id} />
         </div>
       </div>
-      <ProductDescription />
+      <ProductDescription description={description} />
     </div>
   );
 }

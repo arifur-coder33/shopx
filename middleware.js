@@ -15,14 +15,9 @@ export default async function middleware(req) {
     secureCookie: process.env.NODE_ENV === "production",
   });
 
-  console.log("/////////////////////////////////////////////");
-  console.log(`Token from diddleware : ${JSON.stringify(token)}`);
-
-  console.log("/////////////////////////////////////////////");
-  console.log(`Token2 from diddleware : ${JSON.stringify(token2)}`);
   const isAuthenticated = !!token;
   const userRole = token?.role || null;
-  console.log(`ROLE: ${userRole}`);
+
   // Prevent logged-in users from accessing login or register pages
   if (isAuthenticated && ["/login", "/register"].includes(nextUrl.pathname)) {
     return NextResponse.redirect(new URL(ROOT, nextUrl));

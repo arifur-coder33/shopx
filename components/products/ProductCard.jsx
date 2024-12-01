@@ -1,8 +1,6 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import Image from "next/image";
 import Link from "next/link";
-import { customLoader } from "../images/Images-Loader";
-import AddToCartButton from "./addToCartButton";
+import Imagecustom from "../images/ImageCustom";
 import BuyNowButton from "./buyNowButton";
 export default function ProductCard({
   productName,
@@ -13,9 +11,18 @@ export default function ProductCard({
 }) {
   return (
     <div className="product-card  pb-1 ">
-      <Link href={`/product/applephone`}>
+      <Link href={`/product/${productId}`}>
         <div className="relative">
-          <Image
+          <Imagecustom
+            className=" rounded-md "
+            placeholder="blur"
+            blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+            src={imageSrc}
+            w={300}
+            h={300}
+            alt={productName}
+          />
+          {/* <Image
             loader={customLoader}
             alt={productName}
             src={imageSrc}
@@ -24,7 +31,7 @@ export default function ProductCard({
             blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
             width={300}
             height={300}
-          />
+          /> */}
         </div>
         <div className="p-2">
           <div className="line-clamp-2 ">{productName}</div>
@@ -38,13 +45,11 @@ export default function ProductCard({
           </div>
         </div>
       </Link>
-    
-        <BuyNowButton
-          productId={productId}
-          className="px-2 border-b-4 w-full bg-sky-500 border-purple-900 py-1 "
-        />
 
-    
+      <BuyNowButton
+        productId={productId}
+        className="px-2 border-b-4 w-full bg-sky-500 border-purple-900 py-1 "
+      />
     </div>
   );
 }
