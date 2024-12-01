@@ -9,7 +9,7 @@ export default async function middleware(req) {
 
   // Decode the token using next-auth/jwt
   const token = await getToken({ req, secret });
-  console.log(`Token: ${token}`);
+  console.log(`Token: ${JSON.stringify(token)}`);
   const isAuthenticated = !!token;
   const userRole = token?.role || null;
   console.log(`ROLE: ${userRole}`);

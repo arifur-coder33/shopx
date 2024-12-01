@@ -38,7 +38,11 @@ export const {
           // throw new Error("Incorrect password.");
           return null;
         }
-        console.log(`user: ${user}`);
+        console.log(
+          "-----+++++++++++++++++++++++++++++++++++++++-----------------------------"
+        );
+        console.log(`user after login: ${JSON.stringify(user)}`);
+        console.log("---++++++++++++++++++++++-------------------------------");
         return user;
       },
     }),
@@ -52,15 +56,20 @@ export const {
       if (trigger === "update" && session) {
         token = { ...token, ...session };
       }
-      console.log("from moddleware...");
-      console.log(user);
-      console.log(token);
+      console.log("----------------------------------");
+      console.log(`callback jwt  user :${JSON.stringify(user)}`);
+      console.log("----------------------------------");
+      console.log(`callback jwt  token :${JSON.stringify(token)}`);
+
       return token;
     },
     session({ session, token }) {
       session.user.id = token.id;
       session.user.role = token.role;
-
+      console.log("----------------------------------");
+      console.log(`callback session  session :${JSON.stringify(session)}`);
+      console.log("----------------------------------");
+      console.log(`callback session  token :${JSON.stringify(token)}`);
       return session;
     },
     // async redirect({ url, baseUrl }) {
