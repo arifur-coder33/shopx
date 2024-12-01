@@ -8,8 +8,8 @@ export default async function middleware(req) {
   const { nextUrl } = req;
 
   // Decode the token using next-auth/jwt
-  const token = await getToken({ req, secret });
-  const token2 = await getToken({
+  const token2 = await getToken({ req, secret });
+  const token = await getToken({
     req,
     secret,
     secureCookie: process.env.NODE_ENV === "production",
