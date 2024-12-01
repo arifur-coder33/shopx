@@ -10,6 +10,7 @@ export const {
   auth,
 } = NextAuth({
   ...authConfig,
+
   providers: [
     Credentials({
       name: "Credentials",
@@ -37,7 +38,7 @@ export const {
           // throw new Error("Incorrect password.");
           return null;
         }
-
+        console.log(`user: ${user}`);
         return user;
       },
     }),
