@@ -9,7 +9,17 @@ export default async function middleware(req) {
 
   // Decode the token using next-auth/jwt
   const token = await getToken({ req, secret });
-  console.log(`Token: ${JSON.stringify(token)}`);
+  const token2 = await getToken({
+    req,
+    secret,
+    secureCookie: process.env.NODE_ENV === "production",
+  });
+
+  console.log("/////////////////////////////////////////////");
+  console.log(`Token from diddleware : ${JSON.stringify(token)}`);
+
+  console.log("/////////////////////////////////////////////");
+  console.log(`Token2 from diddleware : ${JSON.stringify(token2)}`);
   const isAuthenticated = !!token;
   const userRole = token?.role || null;
   console.log(`ROLE: ${userRole}`);
