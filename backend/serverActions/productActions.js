@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function createProductAction(formData) {
   const formDataObj = Object.fromEntries(formData.entries());
@@ -40,7 +41,8 @@ export async function createProductAction(formData) {
     const details = await prisma.product.create({
       data: data,
     });
-
+revalidatePath('/admin/product/add')
+revalidatePath('/')
     return { success: true, details }; // Return success with user data
   } catch (error) {
     console.log(error.message);

@@ -1,11 +1,13 @@
+
 import AddCatagoryForm from "@/components/catagory/AddCategoryForm";
 
-export default function CategoryAdd() {
+export default async function CategoryAddPage() {
+
   return (
     <div className=" p-4">
       <div>Product Add</div>
       <div className="w-full ">
-        <AddCatagoryForm />
+        <AddCatagoryForm  />
       </div>
     </div>
   );

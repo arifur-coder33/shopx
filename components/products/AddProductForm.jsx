@@ -5,7 +5,8 @@ import Button from "@/components/button";
 import FloatingInput from "@/components/input/FloatingInput";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-export default function AddProductForm() {
+import SelectInput from "../input/SelectInput";
+export default function AddProductForm({category}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -41,11 +42,8 @@ export default function AddProductForm() {
       )}
 
       <FloatingInput label={"Product Name"} name={"title"} type={"text"} />
-      <FloatingInput
-        label={"Product Catagory"}
-        name={"categoryId"}
-        type={"text"}
-      />
+
+      <SelectInput label={'Catagory'} name={'categoryId'} type={'text'} data={category}/>
       <FloatingInput
         label={"Regular Price"}
         name={"regularPrice"}

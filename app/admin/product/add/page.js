@@ -1,11 +1,14 @@
+import { getCategory } from "@/backend/serverActions/catagoryActions";
 import AddProductForm from "@/components/products/AddProductForm";
 
-export default function ProductAdd() {
+export default async function ProductAdd() {
+  const data=await getCategory()
+  console.log(data)
   return (
     <div className=" p-4">
       <div>Product Add</div>
       <div className="w-full ">
-      <AddProductForm/>
+      <AddProductForm category={data?.data}/>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import ProductList from "@/components/products/productList";
 import HeroSection from "./_components/HeroSection";
 
 export default function Home() {
+  console.log("AUTH_SECRET:", process.env.AUTH_SECRET);
   return (
     <>
       <HeroSection />
