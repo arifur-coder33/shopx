@@ -9,9 +9,10 @@ export default async function middleware(req) {
 
   // Decode the token using next-auth/jwt
   const token = await getToken({ req, secret });
+  console.log(`Token: ${token}`);
   const isAuthenticated = !!token;
   const userRole = token?.role || null;
-console.log(`ROLE: ${userRole}`)
+  console.log(`ROLE: ${userRole}`);
   // Prevent logged-in users from accessing login or register pages
   if (isAuthenticated && ["/login", "/register"].includes(nextUrl.pathname)) {
     return NextResponse.redirect(new URL(ROOT, nextUrl));
@@ -36,13 +37,16 @@ console.log(`ROLE: ${userRole}`)
       return NextResponse.redirect(new URL(LOGIN, nextUrl));
     }
   }
-  
 
   // All other routes are public and can be accessed without restrictions
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/admin", "/dashboard", "/(api|trpc)(.*)"],
+  matcher: [
+    "/((?!.*\\..*|_next).*)",
+    "/admin",
+    "/dashboard",
+    "/(api|trpc)(.*)",
+  ],
 };
-
