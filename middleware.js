@@ -17,7 +17,7 @@ export default async function middleware(req) {
   console.log(`token2 ${JSON.stringify(token2)}`);
   console.log(`token1 ${JSON.stringify(token)}`);
 
-  const isAuthenticated = !!token;
+  const isAuthenticated = !!token2;
   const userRole = token?.role || null;
 
   // Prevent logged-in users from accessing login or register pages
