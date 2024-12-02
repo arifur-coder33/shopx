@@ -2,15 +2,18 @@
 import CheckoutProductDetails from "@/components/checkout/CheckOutProductDetails";
 import DeliveryAddress from "@/components/checkout/DeliveryAddress";
 import { Truck } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
-export default function CheckOutDetails({ from,data }) {
+export default function CheckOutDetails({productId, from }) {
   const [deliveryArea, setDeliveryArea] = useState();
   return (
     <form>
       <div className="flex md:flex-nowrap flex-wrap-reverse md:gap-12 gap-3  ">
         <div className="w-full md:w-1/2">
-          <CheckoutProductDetails from={from} deliveryArea={deliveryArea} data={data} />
+        
+        <CheckoutProductDetails from={from} deliveryArea={deliveryArea} productId={productId}/>
+
+    
         </div>
         <div className="w-full md:w-1/2">
           <div className=" mx-auto">
