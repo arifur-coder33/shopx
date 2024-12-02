@@ -14,12 +14,11 @@ export default async function middleware(req) {
     secret,
     secureCookie: process.env.NODE_ENV === "production",
   });
-  console.log(`token2 ${JSON.stringify(token2)}`);
-  console.log(`token1 ${JSON.stringify(token)}`);
 
-  const isAuthenticated = !!token2;
-  const userRole = !token.role ? token2.role : !token2.role ? token.role : null;
-  console.log(`user ROle ${JSON.stringify(userRole)}`);
+  const isAuthenticated = !!token;
+  const userRole = token?.role || null;
+
+  // Prevent logged-in users from accessing login or register pages
   if (isAuthenticated && ["/login", "/register"].includes(nextUrl.pathname)) {
     return NextResponse.redirect(new URL(ROOT, nextUrl));
   }
