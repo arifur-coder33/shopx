@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
 
 export async function createProductAction(formData) {
   const formDataObj = Object.fromEntries(formData.entries());
@@ -86,3 +87,23 @@ export async function getProductById(slug) {
     return { success: false, error: error.message }; // Return structured error
   }
 }
+
+export const getProductBySlug = cache(async (slug) => {
+  try {
+    console.log("product request: done");
+    const data = await prisma.product.findUnique({
+      where: { slug },
+      include: {
+        category: {
+          select: {
+            name: true, // Include only the category name
+          },
+        },
+      },
+    });
+    return { success: true, data }; // Return success with product data
+  } catch (error) {
+    console.log(error.message);
+    return { success: false, error: error.message }; // Return structured error
+  }
+});

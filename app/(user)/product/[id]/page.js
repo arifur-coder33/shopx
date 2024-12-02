@@ -1,13 +1,25 @@
-import { getProductById } from "@/backend/serverActions/productActions";
+import {
+  getProductBySlug,
+  getProducts,
+} from "@/backend/serverActions/productActions";
 import KalapanaFont from "@/components/KalapanaFont";
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
+
+export async function generateStaticParams() {
+  const data = await getProducts();
+
+  // Render the first 10 posts at build time
+  return data?.data.slice(0, 10).map((product) => ({
+    slug: product.slug,
+  }));
+}
 export default async function ProductPage({ params }) {
   const { id } = await params;
-  const data = await getProductById(id);
+  const data = await getProductBySlug(id);
 
   const {
     title,

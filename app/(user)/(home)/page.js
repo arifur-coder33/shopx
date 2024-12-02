@@ -2,6 +2,7 @@ import { getProducts } from "@/backend/serverActions/productActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
 import HeroSection from "./_components/HeroSection";
+
 export default async function Home() {
   const data = await getProducts();
 
