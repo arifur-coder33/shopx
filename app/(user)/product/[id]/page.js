@@ -1,3 +1,4 @@
+export const dynamic = "force-static";
 import {
   getProductBySlug,
   getProducts,
@@ -13,7 +14,7 @@ export async function generateStaticParams() {
   const data = await getProducts();
 
   // Render the first 10 posts at build time
-  return data?.data.slice(0, 10).map((product) => ({
+  return data?.data.map((product) => ({
     slug: product.slug,
   }));
 }
