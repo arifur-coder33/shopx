@@ -1,12 +1,12 @@
 import AddToCartButton from "@/components/products/addToCartButton";
 import BuyNowButton from "@/components/products/buyNowButton";
 
-export default function ActionButtons({ productId }) {
+export default function ActionButtons({ productId,product }) {
   return (
     <div className="grid grid-cols-2 z-30 gap-2 mt-4 fixed bottom-1 left-0 w-full sm:static">
       {/* Add to cart button  */}
 
-      <AddToCartButton className={" w-full   text-4xl"} />
+      <AddToCartButton product={product} className={" w-full   text-4xl"} />
 
       {/* buy now button  */}
       <div className="relative ">

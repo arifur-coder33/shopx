@@ -4,28 +4,27 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Truck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import CartItem from "../cart/CartItem";
-export default function CheckoutProductDetails({ from, deliveryArea }) {
+export default function CheckoutProductDetails({ from, deliveryArea,data }) {
   const [orderItems, setOrderItems] = useState([]);
   const { cartItems, totalCartPrice } = useCart();
+console.log(`data: ${JSON.stringify(data)}`)
 
   useEffect(() => {
     if (from === "cart") {
       setOrderItems(cartItems);
     } else if (from === "directBuy") {
-      const buyNowProduct = [
-        { name: "Iphone 16 pro", price: 16500, id: "1", quantity: 1 },
-      ];
-      setOrderItems(buyNowProduct);
+      const buyNowProduct ={...data,quantity:1};
+      setOrderItems([buyNowProduct]);
     }
-  }, [from, cartItems]);
+  }, [from, cartItems,data]);
 
   const totalProductPrice = useMemo(() => {
     return orderItems.reduce(
-      (total, item) => total + item.price * item.quantity,
+      (total, item) => total + item.discountPrice * item.quantity,
       0
     );
   }, [orderItems]);
-
+  console.log(`data state: ${JSON.stringify(orderItems)}`)
   const deliveryCharge = deliveryArea === "inside-dhaka" ? 90 : 120;
   return (
     <>

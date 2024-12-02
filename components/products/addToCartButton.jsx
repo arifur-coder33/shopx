@@ -4,9 +4,12 @@ import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
   const { addToCart } = useCart();
+  const {product}=props
+
 
   const handleAddToCart = () => {
-    addToCart({ name: "Iphone 16 pro", price: 16500, id: "1" });
+    // addToCart({ name: "Iphone 16 pro", price: 16500, id:product?.id });
+    addToCart(product)
   };
   return (
     <Button

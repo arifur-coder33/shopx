@@ -56,7 +56,7 @@ export const CartProvider = ({ children }) => {
   // Calculate total cart price in the cart
   const totalCartPrice = useMemo(() => {
     return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
+      (total, item) => total + item.discountPrice * item.quantity,
       0
     );
   }, [cartItems]);

@@ -46,7 +46,7 @@ export default async function ProductPage({ params }) {
             </div>
           </KalapanaFont>
           {/* Add to cart and buy now button  */}
-          <ActionButtons productId={id} />
+          <ActionButtons product={data?.data} productId={id} />
         </div>
       </div>
       <ProductDescription description={description} />
