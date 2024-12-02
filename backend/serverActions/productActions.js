@@ -44,6 +44,7 @@ export async function createProductAction(formData) {
     });
     revalidatePath("/admin/product/add");
     revalidatePath("/");
+    revalidateTag("products");
     return { success: true, details }; // Return success with user data
   } catch (error) {
     console.log(error.message);

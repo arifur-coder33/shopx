@@ -1,3 +1,4 @@
+export const dynamic = "force-static";
 import LoginForm from "@/components/auth/LoginForm";
 import BackButton from "@/components/BackButton";
 import KalapanaFont from "@/components/KalapanaFont";

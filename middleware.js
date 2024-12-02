@@ -14,6 +14,8 @@ export default async function middleware(req) {
     secret,
     secureCookie: process.env.NODE_ENV === "production",
   });
+  console.log(`token2 ${JSON.stringify(token2)}`);
+  console.log(`token1 ${JSON.stringify(token)}`);
 
   const isAuthenticated = !!token;
   const userRole = token?.role || null;

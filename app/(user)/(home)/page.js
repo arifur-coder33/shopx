@@ -1,18 +1,27 @@
-import { getProducts } from "@/backend/serverActions/productActions";
+export const dynamic = "force-static"; // Ensures the page is statically generated
+
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
+import prisma from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 import HeroSection from "./_components/HeroSection";
 
-export default async function Home() {
-  const data = await getProducts();
+const getProducts = unstable_cache(
+  async () => {
+    return await prisma.product.findMany();
+  },
+  ["products"],
+  { revalidate: 3600, tags: ["products"] }
+);
 
+export default async function Home() {
+  const allProduct = await getProducts();
   return (
     <>
       <HeroSection />
-
       <ProductList headerName={"টপ প্রোডাক্ট"}>
-        {data?.data?.length > 0 &&
-          data?.data?.map((product) => (
+        {allProduct?.length > 0 &&
+          allProduct?.map((product) => (
             <ProductCard
               key={product?.id}
               productId={product?.slug}
@@ -22,17 +31,6 @@ export default async function Home() {
               imageSrc={product?.images[0]}
             />
           ))}
-        <ProductCard
-          productId={"applephone"}
-          productName={
-            "  বাটা ক্লাসিক স্নাকারস (সাদা) ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক  স্নাকারস ক্লাসিক স্নাকারস ক্লাসিক স্নাকারস "
-          }
-          regularPrice={"500"}
-          discountPrice={"400"}
-          imageSrc={
-            "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=300&q=60"
-          }
-        />
       </ProductList>
     </>
   );

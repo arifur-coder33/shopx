@@ -1,18 +1,19 @@
+export const dynamic = "force-static";
 import { registrationAction } from "@/backend/serverActions/authActions";
 import RegistrationForm from "@/components/auth/RegistrationForm";
 import BackButton from "@/components/BackButton";
 import KalapanaFont from "@/components/KalapanaFont";
 import Link from "next/link";
 
-export default  function RegisterPage() {
- async function signUp(formData){ 
-  'use server'
-try {
-  await registrationAction(formData)
-} catch (error) {
-  console.log(error)
-}
- }
+export default function RegisterPage() {
+  async function signUp(formData) {
+    "use server";
+    try {
+      await registrationAction(formData);
+    } catch (error) {
+      console.log(error);
+    }
+  }
   return (
     <div className="w-full mx-auto bg-slate-700 ">
       <div className=" mx-6 md:max-w-xs md:mx-auto flex items-center justify-center min-h-screen">
@@ -23,7 +24,7 @@ try {
             </div>
           </div>
           <BackButton />
-        <RegistrationForm  signUp={signUp}/>
+          <RegistrationForm signUp={signUp} />
           <div className="text-[14px] mt-2 flex flex-row justify-between">
             <p className="text-slate-200"> একাউন্ট আছে?</p>
             <Link
