@@ -18,9 +18,8 @@ export default async function middleware(req) {
   console.log(`token1 ${JSON.stringify(token)}`);
 
   const isAuthenticated = !!token2;
-  const userRole = token2?.role || token?.role || null;
-
-  // Prevent logged-in users from accessing login or register pages
+  const userRole = !token.role ? token2.role : !token2.role ? token.role : null;
+  console.log(`user ROle ${JSON.stringify(userRole)}`);
   if (isAuthenticated && ["/login", "/register"].includes(nextUrl.pathname)) {
     return NextResponse.redirect(new URL(ROOT, nextUrl));
   }
