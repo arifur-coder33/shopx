@@ -1,34 +1,35 @@
 "use client";
-import { getProductBySlug } from "@/backend/serverActions/productActions";
 import { useCart } from "@/context/CartContext";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Truck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import CartItem from "../cart/CartItem";
 import Imagecustom from "../images/ImageCustom";
 export default function CheckoutProductDetails({
-  productId,
+  slug,
   from,
   deliveryArea,
   data,
 }) {
   const [orderItems, setOrderItems] = useState([]);
   const { cartItems, totalCartPrice } = useCart();
-  console.log(`product d : ${productId}`);
+
   console.log(orderItems.length);
   useEffect(() => {
     if (from === "cart") {
       setOrderItems(cartItems);
     } else if (from === "directBuy") {
-      async function buyNowProductSet(params) {
-        const getData = await getProductBySlug(params);
+      // async function buyNowProductSet(params) {
+      //   const getData = await getProductBySlug(params);
 
-        const buyNowProduct = { ...getData?.data, quantity: 1 };
-        setOrderItems([buyNowProduct]);
-      }
-      buyNowProductSet(productId);
+      //   const buyNowProduct = { ...getData?.data, quantity: 1 };
+      //   setOrderItems([buyNowProduct]);
+      // }
+      // buyNowProductSet(slug);
+      const buyNowProduct = { ...data, quantity: 1 };
+      setOrderItems([buyNowProduct]);
     }
-  }, [from, cartItems, data, productId]);
+  }, [from, cartItems, data]);
 
   const totalProductPrice = useMemo(() => {
     return orderItems.reduce(
@@ -53,8 +54,14 @@ export default function CheckoutProductDetails({
           ))}
         </>
       )}
-      {/* </Suspense> */}
 
+      <Suspense
+        fallback={<p className="bg-red-500 h-64 w-64"> Loading ..........</p>}
+      >
+        {orderItems.map((item) => (
+          <CartItem key={item.id} data={item} removeItem={"hide"} />
+        ))}
+      </Suspense>
       <Item label={"পণ্যর মোট মুল্যঃ"} value={totalProductPrice} />
       <Item label={"ডিস্কাউন্টঃ"} value={100} />
       <Item label={"ডেলিভারি চার্জঃ"} value={deliveryCharge} />

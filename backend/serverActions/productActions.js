@@ -70,10 +70,10 @@ export async function getProducts() {
   }
 }
 
-export async function getProductById(slug) {
+export async function getProductById(id) {
   try {
     const data = await prisma.product.findUnique({
-      where: { slug },
+      where: { id },
       include: {
         category: {
           select: {

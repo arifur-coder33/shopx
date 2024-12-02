@@ -7,11 +7,11 @@ export default function ProductCard({
   regularPrice,
   discountPrice,
   imageSrc,
-  productId,
+  slug,
 }) {
   return (
     <div className="product-card  pb-1 ">
-      <Link href={`/product/${productId}`}>
+      <Link href={`/product/${slug}`}>
         <div className="relative">
           <Imagecustom
             className=" rounded-md "
@@ -47,7 +47,7 @@ export default function ProductCard({
       </Link>
 
       <BuyNowButton
-        productId={productId}
+        slug={slug}
         className="px-2 border-b-4 w-full bg-sky-500 border-purple-900 py-1 "
       />
     </div>

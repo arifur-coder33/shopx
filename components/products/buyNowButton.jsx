@@ -6,11 +6,11 @@ import KalapanaFont from "../KalapanaFont";
 
 export default function BuyNowButton(props) {
   const [isOpen, setIsOpen] = useState(false);
-  const { productId } = props;
+  const { slug } = props;
 
   return (
     <>
-      <Link href={`/checkout?from=directBuy&p=${productId}`}>
+      <Link href={`/checkout?from=directBuy&product=${slug}`}>
         <Button
           className={"bg-sky-500 border-b-4 border-b-sky-700 p-2"}
           {...props}

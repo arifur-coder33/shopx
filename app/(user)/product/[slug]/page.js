@@ -19,10 +19,11 @@ export async function generateStaticParams() {
   }));
 }
 export default async function ProductPage({ params }) {
-  const { id } = await params;
-  const data = await getProductBySlug(id);
+  const { slug } = await params;
+  const data = await getProductBySlug(slug);
 
   const {
+    id,
     title,
     regularPrice,
     images,
@@ -59,7 +60,7 @@ export default async function ProductPage({ params }) {
             </div>
           </KalapanaFont>
           {/* Add to cart and buy now button  */}
-          <ActionButtons product={data?.data} productId={id} />
+          <ActionButtons product={data?.data} />
         </div>
       </div>
       <ProductDescription description={description} />

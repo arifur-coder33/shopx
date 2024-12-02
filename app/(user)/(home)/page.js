@@ -29,6 +29,7 @@ export default async function Home() {
               regularPrice={product?.regularPrice}
               discountPrice={product?.discountPrice}
               imageSrc={product?.images[0]}
+              slug={product?.slug}
             />
           ))}
       </ProductList>
