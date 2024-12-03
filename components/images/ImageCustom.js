@@ -17,7 +17,7 @@ export default function Imagecustom({
       loader={customLoader}
       className={`rounded-md  ${style}`}
       placeholder="blur"
-      blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
       width={w}
       height={h}
       alt={alt ? alt : "image"}

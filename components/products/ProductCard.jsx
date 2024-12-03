@@ -17,7 +17,6 @@ export default function ProductCard({
             sizes="(max-width: 480px) 300px, (max-width: 768px) 300px, 300px"
             className=" rounded-md "
             placeholder="blur"
-            blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
             src={imageSrc}
             w={300}
             h={300}
@@ -52,7 +51,12 @@ export default function ProductCard({
         className="px-2 border-b-4 w-full bg-sky-500 border-purple-900 py-1 "
       />
 
-       <Link className="w-full p-2 mt-2 bg-green-200" href={`/pr/product/${slug}`}>View</Link>
+      <Link
+        className="w-full p-2 mt-2 bg-green-200"
+        href={`/pr/product/${slug}`}
+      >
+        View
+      </Link>
     </div>
   );
 }
