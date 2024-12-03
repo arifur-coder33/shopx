@@ -50,6 +50,8 @@ export default function ProductCard({
         slug={slug}
         className="px-2 border-b-4 w-full bg-sky-500 border-purple-900 py-1 "
       />
+      
+       <Link className="w-full p-2 mt-2 bg-green-200" href={`/pr/product/${slug}`}>View</Link>
     </div>
   );
 }
