@@ -10,7 +10,7 @@ export default function BuyNowButton(props) {
 
   return (
     <>
-      <Link href={`/checkout?from=directBuy&product=${slug}`}>
+      <Link href={`/buynow/${slug}`}>
         <Button
           className={"bg-sky-500 border-b-4 border-b-sky-700 p-2"}
           {...props}

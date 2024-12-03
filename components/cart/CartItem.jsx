@@ -3,7 +3,8 @@ import Imagecustom from "../images/ImageCustom";
 import RemoveCartItem from "./RemoveCartItem";
 
 export default function CartItem({ data, removeItem }) {
-  const { title, discountPrice, quantity,id ,images} = data || {};
+  const { title, discountPrice,id ,images,quantity} = data || {};
+
   const totalPrice = discountPrice * quantity;
   return (
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">

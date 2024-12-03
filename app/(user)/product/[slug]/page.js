@@ -1,3 +1,5 @@
+
+
 export const dynamic = "force-static";
 import {
   getProductBySlug,
@@ -9,18 +11,35 @@ import ProductDescription from "@/components/products/productDescription";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
+import { unstable_cache } from "next/cache";
 
 export async function generateStaticParams() {
   const data = await getProducts();
-
-  // Render the first 10 posts at build time
   return data?.data.map((product) => ({
     slug: product.slug,
   }));
 }
+
 export default async function ProductPage({ params }) {
-  const { slug } = await params;
-  const data = await getProductBySlug(slug);
+  const { slug } =await params;
+
+  const getProduct = unstable_cache(
+    async () => {
+      const data = await getProductBySlug(slug);
+      return data?.data;
+    },
+    [slug],
+    { revalidate: 3600, tags: [slug] } // Use string array for tags
+  );
+
+ 
+
+
+  const data = await getProduct();
+
+  if (!data) {
+    return <p>Product not found</p>; // Handle 404 cases
+  }
 
   const {
     id,
@@ -30,37 +49,32 @@ export default async function ProductPage({ params }) {
     discountPrice,
     description,
     category: { name },
-  } = data?.data;
+  } = data;
 
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        {/* product Image  */}
         <div className="col-span-3">
           <Images images={images} />
         </div>
         <div className="col-span-2">
-          {/* product Name */}
           <h1 className=" text-xl font-bold">{title}</h1>
-          {/* Price  & qty  */}
           <KalapanaFont>
-            <div className=" dark:text-slate-300 text-2xl ">
+            <div className="dark:text-slate-300 text-2xl">
               <p>
                 মূল্যঃ{" "}
                 <span className="text-5xl text-purple">
-                  {replaceNumbers(discountPrice.toString())}
+                  {replaceNumbers((discountPrice || 0).toString())}
                 </span>{" "}
                 টাকা
               </p>
-
               <div className="flex flex-row items-center text-center">
                 <label htmlFor="qtyinput">পরিমানঃ</label>
-                <IncrementNDcrement />{" "}
+                <IncrementNDcrement />
               </div>
             </div>
           </KalapanaFont>
-          {/* Add to cart and buy now button  */}
-          <ActionButtons product={data?.data} />
+          <ActionButtons product={data} />
         </div>
       </div>
       <ProductDescription description={description} />

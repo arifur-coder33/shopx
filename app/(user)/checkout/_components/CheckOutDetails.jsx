@@ -11,10 +11,9 @@ export default function CheckOutDetails({ data, slug, from }) {
       <div className="flex md:flex-nowrap flex-wrap-reverse md:gap-12 gap-3  ">
         <div className="w-full md:w-1/2">
           <CheckoutProductDetails
-            data={data}
-            from={from}
+           
             deliveryArea={deliveryArea}
-            slug={slug}
+            
           />
         </div>
         <div className="w-full md:w-1/2">

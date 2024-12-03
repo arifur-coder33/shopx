@@ -1,8 +1,18 @@
-import { getProducts } from "@/backend/serverActions/productActions";
-import Imagecustom from "../images/ImageCustom";
 
+import { unstable_cache } from "next/cache";
+import Imagecustom from "../images/ImageCustom";
+import { getProducts } from "@/backend/serverActions/productActions";
+
+const getData = unstable_cache(
+  async () => {
+    const data= await getProducts();
+    return data?.data
+  },
+  ["products"],
+  { revalidate: 3600, tags: ["products"] }
+);
 export default async function ProductListTable() {
-  const data = await getProducts();
+  const data = await getData();
 
   return (
     <>
