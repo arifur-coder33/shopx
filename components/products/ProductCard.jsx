@@ -14,6 +14,7 @@ export default function ProductCard({
       <Link href={`/product/${slug}`}>
         <div className="relative">
           <Imagecustom
+            sizes="(max-width: 480px) 300px, (max-width: 768px) 300px, 300px"
             className=" rounded-md "
             placeholder="blur"
             blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
@@ -50,7 +51,7 @@ export default function ProductCard({
         slug={slug}
         className="px-2 border-b-4 w-full bg-sky-500 border-purple-900 py-1 "
       />
-      
+
        <Link className="w-full p-2 mt-2 bg-green-200" href={`/pr/product/${slug}`}>View</Link>
     </div>
   );

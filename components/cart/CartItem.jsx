@@ -9,7 +9,7 @@ export default function CartItem({ data, removeItem }) {
   return (
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
       <div className="col-span-3">
-        <Imagecustom  alt={title} src={images[0]} w={75} h={75} priority={true} />
+        <Imagecustom       sizes="(max-width: 480px) 75px, (max-width: 768px) 100px, 100px" alt={title} src={images[0]} w={75} h={75} priority={true} />
       </div>
       <div className="col-span-8 leading-none ">
         <h1 className="text-base line-clamp-1">{title}</h1>
