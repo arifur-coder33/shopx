@@ -1,5 +1,5 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import Imagecustom from "../images/ImageCustom";
+import Image from "next/image";
 import RemoveCartItem from "./RemoveCartItem";
 
 export default function CartItem({ data, removeItem }) {
@@ -9,13 +9,21 @@ export default function CartItem({ data, removeItem }) {
   return (
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
       <div className="col-span-3">
-        <Imagecustom
+        {/* <Imagecustom
           sizes="(max-width: 480px) 75px, (max-width: 768px) 100px"
           alt={title}
           src={images[0]}
           w={75}
           h={75}
           priority={true}
+        /> */}
+        <Image
+          sizes="75px"
+          width={75}
+          height={75}
+          alt={title}
+          src={images[0]}
+          priority
         />
       </div>
       <div className="col-span-8 leading-none ">

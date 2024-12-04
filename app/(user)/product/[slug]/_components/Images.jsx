@@ -1,11 +1,11 @@
 import { ProductImageGallery } from "./Images/ProductImagegallery";
 import ProductMainImage from "./Images/ProductMainImage";
 
-export default function Images({ images }) {
+export default function Images({ images, title }) {
   {
     return (
       <>
-        <ProductMainImage image={images[0]} />
+        <ProductMainImage title={title} image={images[0]} />
         <div className="flex flex-row gap-1 mt-1">
           <ProductImageGallery />
           <ProductImageGallery />

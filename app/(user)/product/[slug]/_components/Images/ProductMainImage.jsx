@@ -1,12 +1,21 @@
 "use client";
-import { CldImage } from "next-cloudinary";
-export default function ProductMainImage({ image }) {
+import Image from "next/image";
+export default function ProductMainImage({ image, title }) {
   return (
-    <CldImage
+    // <CldImage
+    //   src={image}
+    //   width="400"
+    //   height="400"
+    //   alt="Description of my image"
+    // />
+
+    <Image
+      sizes="500px"
+      width={500}
+      height={500}
+      alt={title}
       src={image}
-      width="400"
-      height="400"
-      alt="Description of my image"
+      priority
     />
     // <Image
     // src="/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=75"

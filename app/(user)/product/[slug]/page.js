@@ -1,5 +1,3 @@
-
-
 export const dynamic = "force-static";
 import {
   getProductBySlug,
@@ -9,9 +7,9 @@ import KalapanaFont from "@/components/KalapanaFont";
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import { unstable_cache } from "next/cache";
 import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
-import { unstable_cache } from "next/cache";
 
 export async function generateStaticParams() {
   const data = await getProducts();
@@ -21,7 +19,7 @@ export async function generateStaticParams() {
 }
 
 export default async function ProductPage({ params }) {
-  const { slug } =await params;
+  const { slug } = await params;
 
   const getProduct = unstable_cache(
     async () => {
@@ -31,9 +29,6 @@ export default async function ProductPage({ params }) {
     [slug],
     { revalidate: 3600, tags: [slug] } // Use string array for tags
   );
-
- 
-
 
   const data = await getProduct();
 
@@ -55,7 +50,7 @@ export default async function ProductPage({ params }) {
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         <div className="col-span-3">
-          <Images images={images} />
+          <Images title={title} images={images} />
         </div>
         <div className="col-span-2">
           <h1 className=" text-xl font-bold">{title}</h1>
