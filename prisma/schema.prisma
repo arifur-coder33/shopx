@@ -59,8 +59,9 @@ model Product {
 // Order model with extended features
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String      @db.ObjectId    // Foreign key for User
-  user           User        @relation(fields: [userId], references: [id]) // Relation to User
+  orderNo        String
+  userId         String?      @db.ObjectId    // Foreign key for User
+  user           User?        @relation(fields: [userId], references: [id]) // Relation to User
   productId      String      @db.ObjectId    // Foreign key for Product
   product        Product     @relation(fields: [productId], references: [id]) // Relation to Product
   orderPrice     Float                       // Price of the product at the time of order

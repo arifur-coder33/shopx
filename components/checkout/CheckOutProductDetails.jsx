@@ -9,7 +9,7 @@ export default function CheckoutProductDetails({
  
 
   deliveryArea,
-  data,
+
 }) {
   const [orderItems, setOrderItems] = useState([]);
   const { cartItems, totalCartPrice,totalCartRegularPrice } = useCart();

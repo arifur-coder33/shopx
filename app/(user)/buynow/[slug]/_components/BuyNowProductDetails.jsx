@@ -8,7 +8,7 @@ export default function BuyNowProductDetails({
   deliveryArea,
   data,
 }) {
-    console.log(`getData ${JSON.stringify(data)}`)
+ 
     const {
       
         regularPrice,

@@ -13,7 +13,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         inputMode={"numeric"}
         pattern={"[0-9]*"}
       />
-      <DefaultInput title={" ঠিকানাঃ"} name={"address"} inputType={"text"} />
+      <DefaultInput title={" ঠিকানাঃ"} name={"deliveryAddress"} inputType={"text"} />
       <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} />
     </>
   );

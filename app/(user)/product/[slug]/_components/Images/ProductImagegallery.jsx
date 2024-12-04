@@ -1,10 +1,10 @@
 import { customLoader } from "@/components/images/Images-Loader";
 import Image from "next/image";
 
-export function ProductImageGallery() {
+export function ProductImageGallery({image,title}) {
     return (
     <>
-      <Image
+      {/* <Image
         src={
           "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=75&q=50"
         }
@@ -15,8 +15,17 @@ export function ProductImageGallery() {
         width={50}
         height={50}
         alt="image"
-      />
+      /> */}
 
+<Image
+          sizes="45px"
+          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
+          width={50}
+          height={50}
+          alt={title}
+          src={image}
+      
+        />
       
     </>
 

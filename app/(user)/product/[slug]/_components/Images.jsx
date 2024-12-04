@@ -7,9 +7,9 @@ export default function Images({ images, title }) {
       <>
         <ProductMainImage title={title} image={images[0]} />
         <div className="flex flex-row gap-1 mt-1">
-          <ProductImageGallery />
-          <ProductImageGallery />
-          <ProductImageGallery />
+          <ProductImageGallery title={title} image={images[0]} />
+          <ProductImageGallery title={title} image={images[0]}/>
+          <ProductImageGallery title={title} image={images[0]}/>
         </div>
       </>
     );
