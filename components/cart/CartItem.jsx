@@ -19,6 +19,7 @@ export default function CartItem({ data, removeItem }) {
         /> */}
         <Image
           sizes="50px"
+          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
           width={75}
           height={75}
           alt={title}
