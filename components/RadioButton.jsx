@@ -1,4 +1,4 @@
-function RadioButton({ id, name, label, isSelected, onSelect }) {
+function RadioButton({ id, name, label, isSelected, onSelect, value }) {
   return (
     <div
       className={`p-1 py-2 px-2 rounded-xl ${
@@ -11,6 +11,7 @@ function RadioButton({ id, name, label, isSelected, onSelect }) {
       <input
         type="radio"
         id={id}
+        value={id}
         name={name}
         className="mr-1"
         checked={isSelected}

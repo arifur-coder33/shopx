@@ -7,7 +7,7 @@ export default function ProductDescription({ description }) {
       >
         পণ্যের বিবরণ:
       </div>
-      <div>{description}</div>
+      <div dangerouslySetInnerHTML={{ __html: description }}></div>
     </div>
   );
 }

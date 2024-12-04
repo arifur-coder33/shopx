@@ -72,6 +72,13 @@ model Order {
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
 
+model onderCounter {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  lastOrderNumber Int
+}
+
+
+
 // Review and rating model for products
 
 
