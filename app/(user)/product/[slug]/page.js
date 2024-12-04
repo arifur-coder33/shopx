@@ -32,10 +32,6 @@ export default async function ProductPage({ params }) {
 
   const data = await getProduct();
 
-  if (!data) {
-    return <p>Product not found</p>; // Handle 404 cases
-  }
-
   const {
     id,
     title,
