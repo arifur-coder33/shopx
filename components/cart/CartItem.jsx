@@ -18,7 +18,7 @@ export default function CartItem({ data, removeItem }) {
           priority={true}
         /> */}
         <Image
-          sizes="75px"
+          sizes="50px"
           width={75}
           height={75}
           alt={title}

@@ -10,7 +10,9 @@ export default function ProductMainImage({ image, title }) {
     // />
 
     <Image
-      sizes="500px"
+      sizes="400px"
+      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
+      placeholder="blur"
       width={500}
       height={500}
       alt={title}
