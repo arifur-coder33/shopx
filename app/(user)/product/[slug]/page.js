@@ -7,6 +7,7 @@ import KalapanaFont from "@/components/KalapanaFont";
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { unstable_cache } from "next/cache";
 import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
@@ -75,7 +76,7 @@ export async function generateMetadata({ params }) {
 
       images: [
         {
-          url: imageUrl,
+          url: convertImageToOG_cloudinary(imageUrl, "t_og-image"),
           alt: title,
         },
       ],
@@ -87,7 +88,7 @@ export async function generateMetadata({ params }) {
         description || `${title} is a premium product available for purchase.`,
       images: [
         {
-          url: imageUrl,
+          url: convertImageToOG_cloudinary(imageUrl, "t_og-image"),
           alt: title,
         },
       ],
