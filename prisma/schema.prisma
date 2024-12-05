@@ -60,19 +60,24 @@ model Product {
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   orderNo        String
+  orderItemNo    Float
   userId         String?      @db.ObjectId    // Foreign key for User
   user           User?        @relation(fields: [userId], references: [id]) // Relation to User
-  productId      String      @db.ObjectId    // Foreign key for Product
+  productId      String      @db.ObjectId   
+  quantity       Int // Foreign key for Product
   product        Product     @relation(fields: [productId], references: [id]) // Relation to Product
+  customerName   String
+  phoneNumber    String
   orderPrice     Float                       // Price of the product at the time of order
-  deliveryCharge Float                       // Delivery charge for the order
+  deliveryCharge Float     
+  deliveryArea   String                  // Delivery charge for the order
   deliveryAddress String                     // Address for product delivery
   status         OrderStatus @default(PENDING) // Order status enumeration
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
 
-model onderCounter {
+model orderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   lastOrderNumber Int
 }

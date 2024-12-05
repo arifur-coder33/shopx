@@ -8,7 +8,7 @@ export async function createOrder(formData) {
 
     console.log(data);
 
-    if (!data?.name || !data?.number || !data?.deliveryAddress) {
+    if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
       throw new Error(
         "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।"
       );
@@ -44,6 +44,10 @@ export async function createOrder(formData) {
       const order = await tx.order.create({
         data: {
           ...data,
+          orderItemNo: 1,
+          quantity: Number(data?.quantity),
+          deliveryCharge: Number(data?.deliveryCharge),
+          orderPrice: Number(data?.orderPrice),
           orderNo: newOrderNumber.toString(),
         },
       });
@@ -51,7 +55,7 @@ export async function createOrder(formData) {
       return order;
     });
 
-    return { success: true, details: result }; // Return success with order data
+    return { success: true, data: result }; // Return success with order data
   } catch (error) {
     console.log(error.message);
     return { success: false, error: error.message }; // Return structured error

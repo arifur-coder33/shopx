@@ -3,7 +3,7 @@ import { useState } from "react";
 import RadioButton from "../RadioButton";
 
 function DeliveryAreaSelector({ setDeliveryArea }) {
-  const [selectedArea, setSelectedArea] = useState(null);
+  const [selectedArea, setSelectedArea] = useState("outside-dhaka");
 
   function onChangeArea(id) {
     setDeliveryArea(id);
@@ -16,14 +16,15 @@ function DeliveryAreaSelector({ setDeliveryArea }) {
       <div className="flex flex-row gap-2">
         <RadioButton
           id="inside-dhaka"
-          name="delivery-area"
+          name="deliveryArea"
           label="হ্যা। ঢাকার ভিতরে।"
           isSelected={selectedArea === "inside-dhaka"}
           onSelect={onChangeArea}
         />
         <RadioButton
           id="outside-dhaka"
-          name="delivery-area"
+          selected={true}
+          name="deliveryArea"
           label="না। ঢাকার বাহিরে"
           isSelected={selectedArea === "outside-dhaka"}
           onSelect={onChangeArea}

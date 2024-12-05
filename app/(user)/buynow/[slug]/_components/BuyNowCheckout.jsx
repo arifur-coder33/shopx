@@ -20,12 +20,12 @@ export default function BuyNowCheckout({ data }) {
       deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
     const form = e.target; // Reference to the form element
     const formData = new FormData(form); // Collect form data
-    formData.append("quantity", 1);
+    formData.append("quantity", Number(1));
     formData.append("productId", data?.id);
-    formData.append("deliveryCharge", deliveryCharge);
+    formData.append("deliveryCharge", Number(deliveryCharge));
     formData.append("userId", session?.user?.id);
-    formData.append("orderPrice", data?.discountPrice + deliveryCharge);
-
+    formData.append("orderPrice", Number(data?.discountPrice + deliveryCharge));
+    // formData.append("deliveryArea", deliveryArea);
     setError(null);
     setSuccess(null);
 
@@ -33,7 +33,9 @@ export default function BuyNowCheckout({ data }) {
       const response = await createOrder(formData); // Call server action
       console.log(response);
       if (response.success) {
-        setSuccess("Registration successful!");
+        setSuccess(
+          `আপনার অর্ডারটি সঠিক ভাভে করা হয়েছে। অর্ডার নাম্বার হলঃ ${response?.data?.orderNo}`
+        );
         form.reset(); // Clear the form on success
       } else {
         console.log(response.error);
