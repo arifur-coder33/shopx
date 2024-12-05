@@ -72,7 +72,7 @@ export async function generateMetadata({ params }) {
         description ||
         `Shop ${title} from ${category?.name} at the best price.`,
       url,
-      type: "product",
+
       images: [
         {
           url: imageUrl,
