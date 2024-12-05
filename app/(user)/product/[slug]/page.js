@@ -47,11 +47,11 @@ export async function generateMetadata({ params }) {
   } = data;
 
   const imageUrl =
-    images[0]?.url ||
+    images[0] ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const price = discountPrice || regularPrice;
   const availability = data.stock > 0 ? "InStock" : "OutOfStock";
-  const brandName = data.brand || process.env.NEXT_PUBLIC_SITE_URL;
+  const brandName = data.brand || process.env.NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
 
   return {
