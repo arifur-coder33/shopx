@@ -23,7 +23,10 @@ export default function BuyNowCheckout({ data }) {
     formData.append("quantity", Number(1));
     formData.append("productId", data?.id);
     formData.append("deliveryCharge", Number(deliveryCharge));
-    formData.append("userId", session?.user?.id);
+    if (session?.user?.id) {
+      formData.append("userId", session?.user?.id);
+    }
+
     formData.append("orderPrice", Number(data?.discountPrice + deliveryCharge));
     // formData.append("deliveryArea", deliveryArea);
     setError(null);

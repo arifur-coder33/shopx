@@ -60,6 +60,9 @@ model Product {
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   orderNo        String
+  productName    String
+  productColor   String?
+  productSize    String?
   orderItemNo    Float
   userId         String?      @db.ObjectId    // Foreign key for User
   user           User?        @relation(fields: [userId], references: [id]) // Relation to User

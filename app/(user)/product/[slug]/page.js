@@ -13,7 +13,7 @@ import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
 
 export async function generateMetadata({ params }) {
-  const { slug } = params;
+  const { slug } = await params;
 
   const product = await getProductBySlug(slug);
   const data = product?.data;
@@ -139,7 +139,8 @@ export async function generateStaticParams() {
 }
 
 export default async function ProductPage({ params }) {
-  const { slug } = await params;
+  const getParams = await params;
+  const { slug } = getParams;
 
   const getProduct = unstable_cache(
     async () => {
