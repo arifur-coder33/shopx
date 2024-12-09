@@ -4,11 +4,13 @@ export default function FloatingInput({
   type,
   inputMode,
   pattern,
+  value
 }) {
   return (
     <div className="relative my-3 ">
       <input
         inputMode={inputMode}
+        defaultValue={value}
         pattern={pattern}
         type={type}
         name={name}

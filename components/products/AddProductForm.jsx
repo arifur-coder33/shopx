@@ -6,7 +6,7 @@ import FloatingInput from "@/components/input/FloatingInput";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import SelectInput from "../input/SelectInput";
-export default function AddProductForm({category}) {
+export default function AddProductForm({category,data}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -41,38 +41,48 @@ export default function AddProductForm({category}) {
         </div>
       )}
 
-      <FloatingInput label={"Product Name"} name={"title"} type={"text"} />
+      <FloatingInput value={data?.title} label={"Product Name"} name={"title"} type={"text"} />
 
-      <SelectInput label={'Catagory'} name={'categoryId'} type={'text'} data={category}/>
+      <SelectInput value={data?.categoryId} label={'Catagory'} name={'categoryId'} type={'text'} data={category}/>
       <FloatingInput
         label={"Regular Price"}
         name={"regularPrice"}
         type={"number"}
+        value={data?.regularPrice}
       />
 
       <FloatingInput
         label={"Discount Price"}
         name={"discountPrice"}
         type={"number"}
+        value={data?.discountPrice}
       />
       <FloatingInput
         label={"In side dhaka Delivery Charge"}
         name={"insideDhaka"}
         type={"text"}
+        value={data?.insideDhaka}
       />
       <FloatingInput
         label={"out side dhaka delivery charge"}
         name={"outSideDhaka"}
         type={"text"}
+        value={data?.outSideDhaka}
       />
-      <FloatingInput label={"Product Weight"} name={"weight"} type={"text"} />
+      <FloatingInput 
+      label={"Product Weight"} name={"weight"} type={"text"} 
+      value={data?.weight}
+      />
       <FloatingInput
         label={"Product Description"}
         name={"description"}
         type={"textArea"}
+        value={data?.description}
       />
 
-      <FloatingInput label={"Photo"} name={"images"} type={"text"} />
+      <FloatingInput label={"Photo"} name={"images"} type={"text"}
+        value={data?.images[0]}
+      />
       <Button className="w-full mt-2 py-2">
         {isPending ? "Adding ......" : "save Product"}
       </Button>

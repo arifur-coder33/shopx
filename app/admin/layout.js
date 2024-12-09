@@ -18,7 +18,7 @@ export default function AdminLayout({ children }) {
                 <Link href={"/admin/product/add"}>Add Product</Link>
               </div>
               <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
-                <Link href={"/admin/product/list"}>Product List</Link>
+                <Link href={"/admin/product"}>Product List</Link>
               </div>
               <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
                 <Link href={"/admin/category/add"}>Add Category</Link>

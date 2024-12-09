@@ -4,7 +4,7 @@ import Button from "@/components/button";
 import DeliveryAddress from "@/components/checkout/DeliveryAddress";
 import { Truck } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import BuyNowProductDetails from "./BuyNowProductDetails";
 export default function BuyNowCheckout({ data }) {
@@ -38,17 +38,19 @@ export default function BuyNowCheckout({ data }) {
 
     startTransition(async () => {
       const response = await createOrder(formData); // Call server action
-      console.log(response);
+
       if (response.success) {
-        setSuccess(
-          `আপনার অর্ডারটি সঠিক ভাভে করা হয়েছে। অর্ডার নাম্বার হলঃ ${response?.data?.orderNo}`
-        );
-        form.reset(); // Clear the form on success
+        router.push(`/tracking/${response?.data?.orderNo}`)
+        // setSuccess(
+        //   `আপনার অর্ডারটি সঠিক ভাভে করা হয়েছে। অর্ডার নাম্বার হলঃ ${response?.data?.orderNo}`
+        // );
+        // form.reset(); // Clear the form on success
       } else {
         console.log(response.error);
+        window.scrollTo(0, 0);
         setError(response.error || "Something went wrong");
       }
-      window.scrollTo(0, 0);
+
     });
   };
   return (

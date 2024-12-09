@@ -2,6 +2,7 @@
 import { unstable_cache } from "next/cache";
 import Imagecustom from "../images/ImageCustom";
 import { getProducts } from "@/backend/serverActions/productActions";
+import Link from "next/link";
 
 const getData = unstable_cache(
   async () => {
@@ -68,12 +69,12 @@ const Item = ({ data }) => {
         <td className="px-6 py-4">{data?.category?.name}</td>
         <td className="px-6 py-4">{data?.discountPrice}</td>
         <td className="px-6 py-4">
-          <a
-            href="#"
+          <Link
+            href={`/admin/product/edit/${data?.id}`}
             className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
           >
             Edit
-          </a>
+          </Link>
         </td>
       </tr>
     </>

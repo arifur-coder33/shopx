@@ -1,4 +1,4 @@
-export default function SelectInput({ name, label, data }) {
+export default function SelectInput({ name, label, data,value }) {
   return (
     <>
       <label
@@ -17,7 +17,7 @@ export default function SelectInput({ name, label, data }) {
         </option>
         {data?.length > 0 &&
           data?.map((item) => (
-            <option key={item} value={item.id}>
+            <option selected={item.id===value} key={item} value={item.id}>
               {item.name}
             </option>
           ))}

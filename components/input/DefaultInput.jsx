@@ -1,4 +1,4 @@
-export default function DefaultInput({colSpan,name,label,type,placeholder,required}){
+export default function DefaultInput({colSpan,value,name,label,type,placeholder,required}){
     return(
         <div className={`${colSpan} mt-3`}>
         <label
@@ -8,6 +8,7 @@ export default function DefaultInput({colSpan,name,label,type,placeholder,requir
        {label}
         </label>
         <input
+        defaultValue={value}
           type={type}
           name={name}
           id={name}
