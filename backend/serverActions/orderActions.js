@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { unstable_cache } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 
 export async function createOrder(formData) {
   try {
@@ -55,7 +55,7 @@ export async function createOrder(formData) {
 
       return order;
     });
-
+revalidateTag('orders')
     return { success: true, data: result }; // Return success with order data
   } catch (error) {
     console.log(error.message);
@@ -65,7 +65,13 @@ export async function createOrder(formData) {
 
 export const getAllOrders = unstable_cache(
   async () => {
-    return await prisma.order.findMany();
+  try {
+   const data=await prisma.order.findMany();
+
+    return { success: true, data:data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
   },
   ["orders"],
   { revalidate: 3600, tags: ["orders"] }

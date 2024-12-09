@@ -28,6 +28,10 @@ export default function BuyNowCheckout({ data }) {
     }
 
     formData.append("orderPrice", Number(data?.discountPrice + deliveryCharge));
+    formData.append("productName", data?.title);
+    formData.append("productColor", data?.color);
+    formData.append("productSize", data?.size);
+
     // formData.append("deliveryArea", deliveryArea);
     setError(null);
     setSuccess(null);
@@ -44,6 +48,7 @@ export default function BuyNowCheckout({ data }) {
         console.log(response.error);
         setError(response.error || "Something went wrong");
       }
+      window.scrollTo(0, 0);
     });
   };
   return (

@@ -23,6 +23,10 @@ export default function AdminLayout({ children }) {
               <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
                 <Link href={"/admin/category/add"}>Add Category</Link>
               </div>
+              <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
+                <Link href={"/admin/order"}>Order</Link>
+              </div>
+              
             </div>
           </div>
           <div className="flex-1 shrink overflow-scroll bg-slate-300 min-h-screen">

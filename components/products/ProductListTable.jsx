@@ -6,13 +6,14 @@ import { getProducts } from "@/backend/serverActions/productActions";
 const getData = unstable_cache(
   async () => {
     const data= await getProducts();
-    return data?.data
+   
+    return data
   },
   ["products"],
   { revalidate: 3600, tags: ["products"] }
 );
 export default async function ProductListTable() {
-  const data = await getData();
+  const {data} = await getData();
 
   return (
     <>
@@ -41,8 +42,8 @@ export default async function ProductListTable() {
             </tr>
           </thead>
           <tbody>
-            {data?.data?.length > 0 &&
-              data.data.map((item) => <Item key={item?.id} data={item} />)}
+            {data?.length > 0 &&
+              data.map((item) => <Item key={item?.id} data={item} />)}
           </tbody>
         </table>
       </div>
