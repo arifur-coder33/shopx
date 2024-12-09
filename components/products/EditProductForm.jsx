@@ -27,9 +27,9 @@ export default function EditProductForm({ category, data }) {
       }); // Call server action
       console.log(response);
       if (response.success) {
+        form.reset(); // Clear the form on success
         router.push("/admin/product");
         setSuccess(response?.message);
-        form.reset(); // Clear the form on success
       } else {
         console.log(response.error);
         setError(response.error || "Something went wrong");
