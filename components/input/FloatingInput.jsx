@@ -4,7 +4,7 @@ export default function FloatingInput({
   type,
   inputMode,
   pattern,
-  value
+  value,
 }) {
   return (
     <div className="relative my-3 ">

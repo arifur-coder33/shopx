@@ -73,7 +73,7 @@ export async function getProducts() {
 export async function getProductById(id) {
   try {
     const data = await prisma.product.findUnique({
-      where: { id:id },
+      where: { id: id },
       include: {
         category: {
           select: {
@@ -91,7 +91,6 @@ export async function getProductById(id) {
 
 export const getProductBySlug = cache(async (slug) => {
   try {
-    console.log("product request: done");
     const data = await prisma.product.findUnique({
       where: { slug },
       include: {
@@ -108,3 +107,45 @@ export const getProductBySlug = cache(async (slug) => {
     return { success: false, error: error.message }; // Return structured error
   }
 });
+
+export const updateProductAction = async ({ productId, formData, slug }) => {
+  const data = Object.fromEntries(formData.entries());
+
+  const UpdatedData = {
+    ...data,
+    regularPrice: data?.regularPrice && Number(data?.regularPrice),
+    discountPrice: data?.discountPrice && Number(data?.discountPrice),
+    stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
+    insideDhaka: data?.insideDhaka && Number(data?.insideDhaka),
+    outSideDhaka: data?.outSideDhaka && Number(data?.outSideDhaka),
+    weight: data?.weight && Number(data?.weight),
+    images: [data?.images],
+    category: {
+      connect: { id: data?.category },
+    },
+  };
+  console.log(UpdatedData);
+  try {
+    const update = await prisma.product.update({
+      where: { id: productId },
+      data: UpdatedData,
+    });
+
+    console.log(UpdatedData);
+    // revalidatePath("/");
+    // revalidatePath("/admin/product");
+    console.log(slug);
+    revalidateTag("products");
+    revalidateTag(slug);
+    return {
+      success: true,
+      message: "সফল ভাবে আপডেইট করা হয়েছে।",
+      data: update,
+    };
+  } catch (error) {
+    return {
+      SubmitEvent: false,
+      message: error?.message || "আবার চেস্টা করুন।",
+    };
+  }
+};

@@ -1,4 +1,12 @@
-export default function SelectInput({ name, label, data,value }) {
+import { useState } from "react";
+
+export default function SelectInput({
+  name,
+  label,
+  data,
+  value: defaultValue,
+}) {
+  const [value, setValue] = useState(defaultValue || "-");
   return (
     <>
       <label
@@ -8,16 +16,18 @@ export default function SelectInput({ name, label, data,value }) {
         {label}
       </label>
       <select
+        defaultValue={value} // Bind the selected value to state
+        onChange={(e) => setValue(e.target.value)}
         name={name}
         id={name}
         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
       >
-        <option value={"-"} disabled selected={true}>
+        <option disabled value={"-"}>
           Choose a country
         </option>
         {data?.length > 0 &&
           data?.map((item) => (
-            <option selected={item.id===value} key={item} value={item.id}>
+            <option key={item.id} value={item?.id}>
               {item.name}
             </option>
           ))}
