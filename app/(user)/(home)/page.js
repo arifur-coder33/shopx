@@ -1,9 +1,8 @@
 export const dynamic = "force-static"; // Ensures the page is statically generated
 
+import { getProducts } from "@/backend/serverActions/productActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
-import prisma from "@/lib/prisma";
-import { unstable_cache } from "next/cache";
 import HeroSection from "./_components/HeroSection";
 
 export async function generateMetadata() {
@@ -90,22 +89,22 @@ export async function generateMetadata() {
   };
 }
 
-const getProducts = unstable_cache(
-  async () => {
-    return await prisma.product.findMany();
-  },
-  ["products"],
-  { revalidate: 3600, tags: ["products"] }
-);
+// const getProducts = unstable_cache(
+//   async () => {
+//     return await prisma.product.findMany();
+//   },
+//   ["products"],
+//   { revalidate: 3600, tags: ["products"] }
+// );
 
 export default async function Home() {
-  const allProduct = await getProducts();
+  const { data } = await getProducts();
   return (
     <>
       <HeroSection />
       <ProductList headerName={"টপ প্রোডাক্ট"}>
-        {allProduct?.length > 0 &&
-          allProduct?.map((product) => (
+        {data?.length > 0 &&
+          data?.map((product) => (
             <ProductCard
               key={product?.id}
               productId={product?.slug}

@@ -1,8 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath, revalidateTag } from "next/cache";
-import { cache } from "react";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
 export async function createProductAction(formData) {
   const formDataObj = Object.fromEntries(formData.entries());
@@ -42,7 +41,7 @@ export async function createProductAction(formData) {
     const details = await prisma.product.create({
       data: data,
     });
-    revalidatePath("/admin/product/add");
+    revalidatePath("/admin/product");
     revalidatePath("/");
     revalidateTag("products");
     return { success: true, details }; // Return success with user data
@@ -52,23 +51,23 @@ export async function createProductAction(formData) {
   }
 }
 
-export async function getProducts() {
-  try {
-    const data = await prisma.product.findMany({
-      include: {
-        category: {
-          select: {
-            name: true, // Include only the category name
-          },
-        },
-      },
-    });
-    return { success: true, data }; // Return success with product data
-  } catch (error) {
-    console.log(error.message);
-    return { success: false, error: error.message }; // Return structured error
-  }
-}
+// export async function getProducts() {
+//   try {
+//     const data = await prisma.product.findMany({
+//       include: {
+//         category: {
+//           select: {
+//             name: true, // Include only the category name
+//           },
+//         },
+//       },
+//     });
+//     return { success: true, data }; // Return success with product data
+//   } catch (error) {
+//     console.log(error.message);
+//     return { success: false, error: error.message }; // Return structured error
+//   }
+// }
 
 export async function getProductById(id) {
   try {
@@ -89,7 +88,22 @@ export async function getProductById(id) {
   }
 }
 
-export const getProductBySlug = cache(async (slug) => {
+export const getProducts = unstable_cache(
+  async () => {
+    const data = await prisma.product.findMany({
+      include: {
+        category: {},
+      },
+      //     });
+    });
+
+    return { success: true, data };
+  },
+  ["products"],
+  { revalidate: 3600, tags: ["products"] }
+);
+
+export const getProductBySlug = async (slug) => {
   try {
     const data = await prisma.product.findUnique({
       where: { slug },
@@ -106,7 +120,7 @@ export const getProductBySlug = cache(async (slug) => {
     console.log(error.message);
     return { success: false, error: error.message }; // Return structured error
   }
-});
+};
 
 export const updateProductAction = async ({ productId, formData, slug }) => {
   const data = Object.fromEntries(formData.entries());
@@ -124,19 +138,20 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       connect: { id: data?.category },
     },
   };
-  console.log(UpdatedData);
+
   try {
     const update = await prisma.product.update({
       where: { id: productId },
       data: UpdatedData,
     });
 
-    console.log(UpdatedData);
-    // revalidatePath("/");
-    // revalidatePath("/admin/product");
-    console.log(slug);
+    revalidatePath("/");
+    revalidatePath("/admin/product");
+    revalidatePath(`/product/${slug}`);
+    revalidatePath(`/buynow/${slug}`);
     revalidateTag("products");
-    revalidateTag(slug);
+    revalidateTag(`product-${slug}`);
+    revalidateTag(`product-${productId}`);
     return {
       success: true,
       message: "সফল ভাবে আপডেইট করা হয়েছে।",

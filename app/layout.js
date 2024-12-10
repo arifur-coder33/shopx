@@ -9,6 +9,7 @@ const tiro_bangla = Tiro_Bangla({
 });
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL),
   title: "ShopX - Your Online Store",
   description: "ShopX - The best place to shop online.",
   icons: {
@@ -22,11 +23,12 @@ export const metadata = {
   openGraph: {
     title: "ShopX - Your Online Store",
     description: "ShopX - The best place to shop online.",
-    url: "https://yourwebsite.com", // Add your actual website URL here
+    url: process.env.NEXT_PUBLIC_SITE_URL,
+    // Add your actual website URL here
     site_name: "ShopX",
     images: [
       {
-        url: "/path/to/your/og-image.jpg", // Provide the image URL for OpenGraph
+        url: "/images/site_logo_og.png", // Provide the image URL for OpenGraph
         width: 1200,
         height: 630,
         alt: "ShopX - Your Online Store",
