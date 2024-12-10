@@ -1,8 +1,9 @@
 export const dynamic = "force-static"; // Ensures the page is statically generated
 
-import { getProducts } from "@/backend/serverActions/productActions";
+// import { getProducts } from "@/backend/serverActions/productActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
+import prisma from "@/lib/prisma";
 import HeroSection from "./_components/HeroSection";
 
 export async function generateMetadata() {
@@ -89,16 +90,16 @@ export async function generateMetadata() {
   };
 }
 
-// const getProducts = unstable_cache(
-//   async () => {
-//     return await prisma.product.findMany();
-//   },
-//   ["products"],
-//   { revalidate: 3600, tags: ["products"] }
-// );
+const getProducts = unstable_cache(
+  async () => {
+    return await prisma.product.findMany();
+  },
+  ["products"],
+  { revalidate: 3600, tags: ["products"] }
+);
 
 export default async function Home() {
-  const { data } = await getProducts();
+  const data = await getProducts();
   return (
     <>
       <HeroSection />
