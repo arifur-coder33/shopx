@@ -96,11 +96,12 @@ const getProducts = unstable_cache(
     return await prisma.product.findMany();
   },
   ["products"],
-  { revalidate: 3600, tags: ["products"] }
+  { revalidate: 60, tags: ["products"] }
 );
 
 export default async function Home() {
   const data = await getProducts();
+
   return (
     <>
       <HeroSection />

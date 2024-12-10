@@ -1,4 +1,3 @@
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { SessionProvider } from "next-auth/react";
 import { Tiro_Bangla } from "next/font/google";
 import "./globals.css";
@@ -44,7 +43,6 @@ export default function RootLayout({ children }) {
         <SessionProvider>
           <div className="">{children}</div>
         </SessionProvider>
-        <ServiceWorkerRegister />
       </body>
     </html>
   );
