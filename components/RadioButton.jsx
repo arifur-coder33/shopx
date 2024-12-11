@@ -3,7 +3,7 @@ function RadioButton({ id, name, label, isSelected, onSelect, value }) {
     <div
       className={`p-1 py-2 px-2 rounded-xl ${
         isSelected
-          ? "bg-green-500 dark:bg-slate-800 shadow-inner border-4 dark:border-green-700 "
+          ? "bg-cyan-500 shadow-lg shadow-cyan-500/50 "
           : "bg-slate-400 dark:bg-slate-500 border-b-4 border-slate-600 dark:border-black    "
       } cursor-pointer`}
       onClick={() => onSelect(id)}

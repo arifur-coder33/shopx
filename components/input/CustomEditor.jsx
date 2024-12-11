@@ -1,15 +1,63 @@
 "use client";
 
-import React, { useState } from "react";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css"; // Include the Quill styles
+import dynamic from "next/dynamic";
+import "react-quill-new/dist/quill.snow.css";
 
-export default function TextEditor() {
-  const [content, setContent] = useState("");
+// Dynamically import ReactQuill with SSR disabled
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+export default function CustomEditor({
+  editorValue,
+  setEditorValue,
+  label,
+  name,
+}) {
+  const modules = {
+    toolbar: [
+      ["bold", "italic", "underline", "strike"], // toggled buttons
+      ["blockquote", "code-block"],
+      ["link", "image", "video", "formula"],
+
+      [{ header: 1 }, { header: 2 }], // custom button values
+      [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
+      [{ script: "sub" }, { script: "super" }], // superscript/subscript
+      [{ indent: "-1" }, { indent: "+1" }], // outdent/indent
+      [{ direction: "rtl" }], // text direction
+
+      [{ header: [1, 2, 3, 4, 5, 6, false] }],
+
+      [{ color: [] }, { background: [] }], // dropdown with defaults from theme
+
+      ["clean"],
+    ],
+  };
+
+  const formats = [
+    "header",
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "blockquote",
+    "list",
+    "bullet",
+    "indent",
+    "link",
+    "image",
+  ];
 
   return (
-    <div>
-      <ReactQuill value={content} onChange={setContent} />
+    <div className="text-editor">
+      <label htmlFor={name} className="block  text-sm font-medium">
+        {label}
+      </label>
+      <ReactQuill
+        id={name}
+        theme="snow"
+        className="dark:text-slate-950 "
+        defaultValue={editorValue}
+        onChange={setEditorValue} // Updates state when the editor content changes
+        modules={modules}
+      />
     </div>
   );
 }

@@ -12,9 +12,9 @@ export default function ActionButtons({ product }) {
       <div className="relative ">
         <BuyNowButton
           slug={product?.slug}
-          bgcolor="bg-sky-600"
+          bgcolor="bg-cyan-500"
           className={
-            " w-full hover:bg-blue-700 hover:border-blue-900 text-white  border-b-4  border-sky-800  py-2 text-4xl "
+            " w-full hover:bg-cyan-600 hover:border-b-cyan-900 text-white  border-b-4  border-cyan-800  py-2 text-4xl "
           }
         />
 

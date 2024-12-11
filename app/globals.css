@@ -19,7 +19,16 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+.ql-toolbar {
+  background-color: #f0f0f0; /* Change this to the desired color */
+  border-bottom: 2px solid #ccc; /* Optional: Add a border to separate the toolbar */
+}
 
+/* Keep the background color of the editor area as white (or any other color) */
+.ql-editor {
+  background-color: white;
+  padding: 10px; /* Optional: Add some padding to the text editor */
+}
 @layer base {
   /* @font-face {
     font-family: "kalpana";
@@ -62,9 +71,9 @@ body {
             text-center   text-slate-100  text-xl md:text-2xl;
   }
   .product-card {
-    @apply md:leading-6 flex-1 rounded-md  border border-slate-200 dark:border-none max-w-64 cursor-pointer 
+    @apply md:leading-6 flex-1 rounded-md   border-slate-200 dark:border-none max-w-64 cursor-pointer 
    
-  hover:scale-105  transition
+  border-2 hover:border-cyan-500 transition
       bg-gradient-to-tl from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 dark:shadow-md;
   }
   .price-del {

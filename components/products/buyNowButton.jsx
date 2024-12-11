@@ -12,7 +12,7 @@ export default function BuyNowButton(props) {
     <>
       <Link href={`/buynow/${slug}`}>
         <Button
-          className={"bg-sky-500 border-b-4 border-b-sky-700 p-2"}
+          className={"bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
           {...props}
         >
           <KalapanaFont>এখনি কিনুন</KalapanaFont>{" "}

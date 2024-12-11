@@ -10,7 +10,7 @@ export default function ProductCard({
   slug,
 }) {
   return (
-    <div className="product-card  pb-1 ">
+    <div className="product-card   ">
       <Link href={`/product/${slug}`}>
         <div className="relative">
           <Imagecustom
