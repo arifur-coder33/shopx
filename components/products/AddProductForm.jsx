@@ -6,6 +6,7 @@ import FloatingInput from "@/components/input/FloatingInput";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import SelectInput from "../input/SelectInput";
+
 export default function AddProductForm({category,data}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -79,6 +80,8 @@ export default function AddProductForm({category,data}) {
         type={"textArea"}
         value={data?.description}
       />
+
+   
 
       <FloatingInput label={"Photo"} name={"images"} type={"text"}
         value={data?.images[0]}
