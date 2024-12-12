@@ -97,10 +97,10 @@ export default function EditProductForm({ category, data }) {
       />
 
       <FloatingInput
-        label={"Photo"}
-        name={"images"}
+        label={"Main Image"}
+        name={"mainImage"}
         type={"text"}
-        value={data?.images[0]}
+        value={data?.mainImage}
       />
 
       <CustomEditor

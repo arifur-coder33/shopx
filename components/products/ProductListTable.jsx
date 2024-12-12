@@ -1,20 +1,19 @@
-
-import { unstable_cache } from "next/cache";
-import Imagecustom from "../images/ImageCustom";
 import { getProducts } from "@/backend/serverActions/productActions";
+import { unstable_cache } from "next/cache";
 import Link from "next/link";
+import Imagecustom from "../images/ImageCustom";
 
 const getData = unstable_cache(
   async () => {
-    const data= await getProducts();
-   
-    return data
+    const data = await getProducts();
+
+    return data;
   },
   ["products"],
   { revalidate: 3600, tags: ["products"] }
 );
 export default async function ProductListTable() {
-  const {data} = await getData();
+  const { data } = await getData();
 
   return (
     <>
@@ -57,7 +56,7 @@ const Item = ({ data }) => {
     <>
       <tr className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
         <td className="px-6 py-4">
-          <Imagecustom src={data?.images[0]} w={50} h={50} alt={data?.title} />
+          <Imagecustom src={data?.mainImage} w={50} h={50} alt={data?.title} />
         </td>
         <th
           scope="row"

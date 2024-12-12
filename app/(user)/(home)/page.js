@@ -114,7 +114,7 @@ export default async function Home() {
               productName={product?.title}
               regularPrice={product?.regularPrice}
               discountPrice={product?.discountPrice}
-              imageSrc={product?.images[0]}
+              imageSrc={product?.mainImage}
               slug={product?.slug}
             />
           ))}

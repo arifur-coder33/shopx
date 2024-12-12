@@ -3,7 +3,7 @@ import Image from "next/image";
 import RemoveCartItem from "./RemoveCartItem";
 
 export default function CartItem({ data, removeItem }) {
-  const { title, discountPrice, id, images, quantity } = data || {};
+  const { title, discountPrice, id, mainImage, quantity } = data || {};
 
   const totalPrice = discountPrice * quantity;
   return (
@@ -23,7 +23,7 @@ export default function CartItem({ data, removeItem }) {
           width={75}
           height={75}
           alt={title}
-          src={images[0]}
+          src={mainImage}
           priority
         />
       </div>

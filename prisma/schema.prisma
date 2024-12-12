@@ -43,7 +43,8 @@ model Product {
   regularPrice   Float                       // Regular price of the product
   discountPrice  Float?                      // Optional discount price
   stockQuantity  Int         @default(0)    // Stock quantity for inventory tracking
-  images         String[]                   // Array of image URLs
+  mainImage     String
+  imageGallery   String[]                  // Array of image URLs
   isFeatured     Boolean?    @default(false) // Indicates if the product is featured
   isActive       Boolean?     @default(true)  // Marks if the product is active
   color          String?                      // Product color

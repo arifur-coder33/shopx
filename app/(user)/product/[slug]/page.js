@@ -40,7 +40,7 @@ export async function generateMetadata({ params }) {
   const {
     title,
     description,
-    images,
+    mainImage,
     category,
     regularPrice,
     discountPrice,
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }) {
   } = data;
 
   const imageUrl =
-    images[0] ||
+    mainImage ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const price = discountPrice || regularPrice;
   const availability = data.stock > 0 ? "InStock" : "OutOfStock";
@@ -157,9 +157,10 @@ export default async function ProductPage({ params }) {
     id,
     title,
     regularPrice,
-    images,
+    imageGallery,
     discountPrice,
     description,
+    mainImage,
     category: { name },
   } = data;
 
@@ -167,7 +168,11 @@ export default async function ProductPage({ params }) {
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         <div className="col-span-3">
-          <Images title={title} images={images} />
+          <Images
+            title={title}
+            mainImage={mainImage}
+            imageGallery={imageGallery}
+          />
         </div>
         <div className="col-span-2">
           <h1 className=" text-xl font-bold">{title}</h1>

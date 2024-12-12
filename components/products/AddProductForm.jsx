@@ -91,10 +91,10 @@ export default function AddProductForm({ category, data }) {
         value={data?.weight}
       />
       <FloatingInput
-        label={"Photo"}
-        name={"images"}
+        label={"Main Image"}
+        name={"mainImage"}
         type={"text"}
-        value={data?.images[0]}
+        value={data?.mainImage}
       />
       <CustomEditor
         label={"Description"}
