@@ -57,7 +57,7 @@ export default function ProductForm({ category, data, actionType }) {
           {error}{" "}
         </div>
       )}
-      <div className="grid grid-cols-6 gap-2 ">
+      <div className="md:grid md:grid-cols-6 gap-2 ">
         <FloatingInput
           value={data?.title}
           label={"Product Name"}
@@ -163,7 +163,7 @@ export default function ProductForm({ category, data, actionType }) {
         </Button>
         <Button
           disabled={isPending}
-          className=" mt-2 p-2 absolute -top-12 right-0"
+          className=" mt-2 p-2 absolute md:-top-12 -top-14 right-0"
         >
           {isPending ? "Saving ......" : "Save"}
         </Button>
