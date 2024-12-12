@@ -5,9 +5,11 @@ export default function FloatingInput({
   inputMode,
   pattern,
   value,
+  colSpan,
 }) {
+  // const colSpan = 6;
   return (
-    <div className="relative my-3 ">
+    <div className={`relative my-3  col-span-${colSpan}`}>
       <input
         inputMode={inputMode}
         defaultValue={value}

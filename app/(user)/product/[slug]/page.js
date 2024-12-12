@@ -40,6 +40,8 @@ export async function generateMetadata({ params }) {
   const {
     title,
     description,
+    seoDescription,
+    seoKeyWord,
     mainImage,
     category,
     regularPrice,
@@ -51,16 +53,19 @@ export async function generateMetadata({ params }) {
     mainImage ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const price = discountPrice || regularPrice;
-  const availability = data.stock > 0 ? "InStock" : "OutOfStock";
+  // const availability = data.stock > 0 ? "InStock" : "OutOfStock";
+  const availability = "InStock";
   const brandName = data.brand || process.env.NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
 
   return {
     title: `${title} - Buy Online at ${price} TK`,
     description:
+      seoDescription ||
       description ||
       `${title} is a top-quality product from ${category?.name}. Order now at the best price!.`,
     keywords: [
+      seoKeyWord,
       title,
       category?.name,
       "Buy online",
@@ -70,6 +75,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: `${title} - Buy Online at ${price} TK`,
       description:
+        seoDescription ||
         description ||
         `Shop ${title} from ${category?.name} at the best price.`,
       url,
@@ -85,7 +91,9 @@ export async function generateMetadata({ params }) {
       card: "summary_large_image",
       title: `${title} - Buy Online at ${price} TK`,
       description:
-        description || `${title} is a premium product available for purchase.`,
+        seoDescription ||
+        description ||
+        `${title} is a premium product available for purchase.`,
       images: [
         {
           url: convertImageToOG_cloudinary(imageUrl, "t_og-image"),

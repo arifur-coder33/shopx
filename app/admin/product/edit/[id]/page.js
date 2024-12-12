@@ -1,7 +1,7 @@
 export const dynamic = "force-static";
 import { getCategory } from "@/backend/serverActions/catagoryActions";
 import { getProductById } from "@/backend/serverActions/productActions";
-import EditProductForm from "@/components/products/EditProductForm";
+import ProductForm from "@/components/products/ProductForm";
 import { unstable_cache } from "next/cache";
 
 export default async function ProductEdit({ params }) {
@@ -21,9 +21,10 @@ export default async function ProductEdit({ params }) {
 
   return (
     <div className=" p-4">
-      <div>Product Add</div>
+      <div>Product Edit</div>
       <div className="w-full ">
-        <EditProductForm data={data} category={getCat?.data} />
+        {/* <EditProductForm data={data} category={getCat?.data} /> */}
+        <ProductForm data={data} category={getCat?.data} actionType={"edit"} />
       </div>
     </div>
   );

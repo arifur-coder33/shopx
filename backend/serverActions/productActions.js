@@ -4,31 +4,26 @@ import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
 export async function createProductAction(formData) {
-  const formDataObj = Object.fromEntries(formData.entries());
+  let data = Object.fromEntries(formData.entries());
   try {
-    let data = {
-      title: formData.get("title"),
-      slug: formData.get("title").split(" ").join("-"),
-      description: formData.get("description"),
-      categoryId: formData.get("categoryId"),
-      regularPrice: Number(formData.get("regularPrice")),
-      discountPrice: Number(formData.get("discountPrice")),
-      stockQuantity: Number(formData.get("stockQuantity")),
-      images: [formData.get("images")],
-      isFeatured: formData.get("isFeatured"),
-      isActive: formData.get("isActive"),
-      color: formData.get("color"),
-      size: formData.get("size"),
-      insideDhaka: Number(formData.get("insideDhaka")),
-      outSideDhaka: Number(formData.get("outSideDhaka")),
-      weight: Number(formData.get("weight")),
-    };
-
-    if (!data?.title || !data?.regularPrice || !data?.images) {
+    if (!data?.title || !data?.regularPrice || !data?.mainImage) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
+    const slug = data?.slug
+      ? data?.slug.split(" ").join("-")
+      : data?.title.split(" ").join("-");
+    data = {
+      ...data,
+      slug: slug,
+      regularPrice: data?.regularPrice && Number(data?.regularPrice),
+      discountPrice: data?.discountPrice && Number(data?.discountPrice),
+      stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
+      insideDhaka: data?.insideDhaka && Number(data?.insideDhaka),
+      outSideDhaka: data?.outSideDhaka && Number(data?.outSideDhaka),
+      weight: data?.weight && Number(data?.weight),
+    };
     const checkSlug = await prisma.product.findUnique({
-      where: { slug: data?.slug },
+      where: { slug: slug },
     });
 
     if (checkSlug) {
@@ -133,7 +128,7 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
     insideDhaka: data?.insideDhaka && Number(data?.insideDhaka),
     outSideDhaka: data?.outSideDhaka && Number(data?.outSideDhaka),
     weight: data?.weight && Number(data?.weight),
-    images: [data?.images],
+
     category: {
       connect: { id: data?.category },
     },
