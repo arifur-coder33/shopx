@@ -1,4 +1,3 @@
-import { SessionProvider } from "next-auth/react";
 import { Tiro_Bangla } from "next/font/google";
 import "./globals.css";
 const tiro_bangla = Tiro_Bangla({
@@ -40,9 +39,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="bn">
       <body className={` ${tiro_bangla.className}  antialiased  theam`}>
-        <SessionProvider>
-          <div className="">{children}</div>
-        </SessionProvider>
+        <div className="">{children}</div>
       </body>
     </html>
   );

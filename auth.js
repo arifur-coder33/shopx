@@ -50,16 +50,17 @@ export const {
         token.id = user.id;
         token.role = user.role;
       }
-      if (trigger === "update" && session) {
-        token = { ...token, ...session };
-      }
+      // if (trigger === "update" && session) {
+      //   token = { ...token, ...session };
+      // }
 
       return token;
     },
     session({ session, token }) {
-      session.user.id = token.id;
-      session.user.role = token.role;
-
+      if (session?.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+      }
       return session;
     },
     // async redirect({ url, baseUrl }) {

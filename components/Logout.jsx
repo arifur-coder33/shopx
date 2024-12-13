@@ -1,3 +1,4 @@
+"use server";
 import { auth } from "@/auth";
 import { logout } from "@/backend/serverActions/authActions";
 import { LogOutIcon } from "lucide-react";

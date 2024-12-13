@@ -121,7 +121,7 @@ export default function ProductForm({ category, data, actionType }) {
         <FloatingInput
           label={"Main Image"}
           name={"mainImage"}
-          type={"text"}
+          type={"file"}
           value={data?.mainImage}
           colSpan={"full"}
         />
