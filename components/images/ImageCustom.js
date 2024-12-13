@@ -1,5 +1,5 @@
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-import { customLoader } from "./Images-Loader";
 
 export default function Imagecustom({
   src,
@@ -12,9 +12,9 @@ export default function Imagecustom({
 }) {
   return (
     <Image
-      src={src}
+      src={cloudinaryMainImage(src)}
       sizes={sizes}
-      loader={customLoader}
+      // loader={customLoader}
       className={`rounded-md  ${style}`}
       placeholder="blur"
       blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="

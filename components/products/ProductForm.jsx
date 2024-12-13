@@ -6,9 +6,10 @@ import {
 } from "@/backend/serverActions/productActions";
 import Button from "@/components/button";
 import FloatingInput from "@/components/input/FloatingInput";
-import Image from "next/image";
+import { toBase64 } from "@/utils/toBase64";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import Imagecustom from "../images/ImageCustom";
 import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
 export default function ProductForm({ category, data, actionType }) {
@@ -19,10 +20,19 @@ export default function ProductForm({ category, data, actionType }) {
   const [mainImage, setMainImage] = useState(data?.mainImage);
   const router = useRouter();
   console.log(data);
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
     const form = e.target; // Reference to the form element
     const formData = new FormData(form); // Collect form data
+    formData.delete("mainImage");
+    const fileInput = form.querySelector('input[name="mainImage"]');
+    const file = fileInput.files[0];
+    if (file) {
+      const base64Image = await toBase64(file);
+      console.log(base64Image);
+      formData.append("mainImage", base64Image); // Append the base64 string
+    }
+
     formData.append("description", editorValue);
     setError(null);
     setSuccess(null);
@@ -76,7 +86,7 @@ export default function ProductForm({ category, data, actionType }) {
           <SelectInput
             value={data?.categoryId}
             label={"Catagory"}
-            name={actionType === "edit" ? "category" : "categoryId"}
+            name={"category"}
             type={"text"}
             data={category}
           />
@@ -122,14 +132,13 @@ export default function ProductForm({ category, data, actionType }) {
           label={"Main Image"}
           name={"mainImage"}
           type={"file"}
-          value={data?.mainImage}
           colSpan={"full"}
         />
         {mainImage && (
-          <Image
+          <Imagecustom
             className="col-span-full"
-            width={300}
-            height={300}
+            w={300}
+            h={300}
             src={mainImage}
             alt="mainImage"
           />

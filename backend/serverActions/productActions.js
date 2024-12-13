@@ -1,5 +1,6 @@
 "use server";
 
+import cloudinary from "@/lib/cloudinary";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
@@ -9,37 +10,49 @@ export async function createProductAction(formData) {
     if (!data?.title || !data?.regularPrice || !data?.mainImage) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
-    const slug = data?.slug
+    let slug = data?.slug
       ? data?.slug.split(" ").join("-")
       : data?.title.split(" ").join("-");
-    data = {
-      ...data,
-      slug: slug,
-      regularPrice: data?.regularPrice && Number(data?.regularPrice),
-      discountPrice: data?.discountPrice && Number(data?.discountPrice),
-      stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
-      insideDhaka: data?.insideDhaka && Number(data?.insideDhaka),
-      outSideDhaka: data?.outSideDhaka && Number(data?.outSideDhaka),
-      weight: data?.weight && Number(data?.weight),
-    };
-    const checkSlug = await prisma.product.findUnique({
-      where: { slug: slug },
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      const checkSlug = await tx.product.findUnique({
+        where: { slug: slug },
+      });
 
-    if (checkSlug) {
+      if (checkSlug) {
+        slug = data.slug + "-" + Math.floor(Math.random() * 10);
+      }
+
+      const uploadResult = await cloudinary.uploader.upload(data?.mainImage, {
+        folder: "shopzy",
+        public_id: slug + "_mainImage",
+        tags: [data?.tags],
+      });
+      console.log(uploadResult);
       data = {
         ...data,
-        slug: data.slug + "-" + Math.floor(Math.random() * 10),
+        slug: slug,
+        category: {
+          connect: { id: data?.category },
+        },
+        mainImage: uploadResult.display_name + "." + uploadResult.format,
+        regularPrice: data?.regularPrice && Number(data?.regularPrice),
+        discountPrice: data?.discountPrice && Number(data?.discountPrice),
+        stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
+        insideDhaka: data?.insideDhaka && Number(data?.insideDhaka),
+        outSideDhaka: data?.outSideDhaka && Number(data?.outSideDhaka),
+        weight: data?.weight && Number(data?.weight),
       };
-    }
-
-    const details = await prisma.product.create({
-      data: data,
+      const details = await tx.product.create({
+        data: data,
+      });
+      return details;
     });
+    console.log("result");
+    console.log(result);
     revalidatePath("/admin/product");
     revalidatePath("/");
     revalidateTag("products");
-    return { success: true, details }; // Return success with user data
+    return { success: true, result }; // Return success with user data
   } catch (error) {
     console.log(error.message);
     return { success: false, error: error.message }; // Return structured error

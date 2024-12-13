@@ -1,3 +1,4 @@
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import Image from "next/image";
 import RemoveCartItem from "./RemoveCartItem";
@@ -9,23 +10,22 @@ export default function CartItem({ data, removeItem }) {
   return (
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
       <div className="col-span-3">
-        {/* <Imagecustom
-          sizes="(max-width: 480px) 75px, (max-width: 768px) 100px"
-          alt={title}
-          src={images[0]}
-          w={75}
-          h={75}
-          priority={true}
-        /> */}
         <Image
           sizes="50px"
           blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
           width={75}
           height={75}
           alt={title}
-          src={mainImage}
+          src={cloudinaryMainImage(mainImage)}
           priority
         />
+        {/* <Imagecustom
+          src={mainImage}
+          w={50}
+          h={50}
+          alt={data?.title}
+          priority={true}
+        /> */}
       </div>
       <div className="col-span-8 leading-none ">
         <h1 className="text-base line-clamp-1">{title}</h1>

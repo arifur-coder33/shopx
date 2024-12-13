@@ -1,6 +1,7 @@
 import AdminNavBar from "@/components/nav/AdminNav";
 import { SessionProvider } from "next-auth/react";
 import Link from "next/link";
+import { Suspense } from "react";
 export const metadata = {
   title: "Admin | আমার শপ",
   description: "ঘরে বসে পন্য অর্ডার করুন",
@@ -30,7 +31,7 @@ export default function AdminLayout({ children }) {
               </div>
             </div>
             <div className="flex-1 shrink overflow-scroll bg-slate-300 min-h-screen">
-              {children}
+              <Suspense fallback="loading...........">{children}</Suspense>
             </div>
           </div>
         </div>
