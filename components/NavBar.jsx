@@ -4,8 +4,9 @@ import { User2Icon } from "lucide-react";
 import Link from "next/link";
 import KalapanaFont from "./KalapanaFont";
 import ThemeToggle from "./TheamToggle";
-import RoleWiseNav from "./nav/RoleWiseNav";
-import Cart from "@/components/cart";
+import Cart from "./Cart";
+
+
 export default async function NavBar() {
   return (
     <>
