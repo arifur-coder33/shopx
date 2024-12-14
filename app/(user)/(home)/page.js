@@ -91,16 +91,17 @@ export async function generateMetadata() {
   };
 }
 
-const getProducts = unstable_cache(
-  async () => {
-    return await prisma.product.findMany();
-  },
-  ["products"],
-  { revalidate: 60, tags: ["products"] }
-);
+const getProducts = await prisma.product.findMany();
 
+// const getProducts = unstable_cache(
+//   async () => {
+//     return await prisma.product.findMany();
+//   },
+//   ["products"],
+//   { revalidate: 0.1, tags: ["products"] }
+// );
 export default async function Home() {
-  const data = await getProducts();
+  const data = await prisma.product.findMany();
 
   return (
     <>

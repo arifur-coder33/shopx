@@ -19,7 +19,7 @@ export default function ProductForm({ category, data, actionType }) {
   const [editorValue, setEditorValue] = useState(data?.description);
   const [mainImage, setMainImage] = useState(data?.mainImage);
   const router = useRouter();
-  console.log(data);
+  
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
     const form = e.target; // Reference to the form element

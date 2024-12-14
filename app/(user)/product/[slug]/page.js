@@ -11,6 +11,7 @@ import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { unstable_cache } from "next/cache";
 import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -50,7 +51,7 @@ export async function generateMetadata({ params }) {
   } = data;
 
   const imageUrl =
-    mainImage ||
+    cloudinaryMainImage(mainImage) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const price = discountPrice || regularPrice;
   // const availability = data.stock > 0 ? "InStock" : "OutOfStock";
@@ -156,7 +157,7 @@ export default async function ProductPage({ params }) {
       return data?.data;
     },
     [slug],
-    { revalidate: 60, tags: [`product-${slug}`] } // Use string array for tags
+    { revalidate: 0.1, tags: [`product-${slug}`] } // Use string array for tags
   );
 
   const data = await getProduct();

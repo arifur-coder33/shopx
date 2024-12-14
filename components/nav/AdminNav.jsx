@@ -6,7 +6,7 @@ import Link from "next/link";
 import Logout from "@/components/auth/Logout";
 import KalapanaFont from "@/components/KalapanaFont";
 import ThemeToggle from "@/components/TheamToggle";
-import UserName from "../auth/userName";
+import UserName from "@/components/auth/UserName";
 export default async function AdminNavBar() {
   return (
     <>

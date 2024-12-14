@@ -5,7 +5,8 @@ import Link from "next/link";
 import KalapanaFont from "./KalapanaFont";
 import ThemeToggle from "./TheamToggle";
 import RoleWiseNav from "./nav/RoleWiseNav";
-export default async function NavBar({ hideCart }) {
+import Cart from "@/components/cart";
+export default async function NavBar() {
   return (
     <>
       <div className=" sticky top-0 z-40 text-slate-200 hover:text-slate-100  w-full bg-gradient-to-br from-[rgba(15,23,42,0.85)] via-[rgba(0,0,0,0.85)] to-[rgba(15,23,42,0.85)] shadow-sm shadow-slate-200 p-2">
@@ -22,7 +23,7 @@ export default async function NavBar({ hideCart }) {
               <User2Icon />
             </Link>
             <Logout />
-            <RoleWiseNav />
+           <Cart className="nav-hover" />
             <ThemeToggle className="nav-hover" href={"/login"} />
           </div>
         </div>

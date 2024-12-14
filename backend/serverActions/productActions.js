@@ -1,8 +1,8 @@
 "use server";
 
-import cloudinary from "@/lib/cloudinary";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cloudinaryUpload } from "../utils/cloudinary";
 
 export async function createProductAction(formData) {
   let data = Object.fromEntries(formData.entries());
@@ -21,12 +21,8 @@ export async function createProductAction(formData) {
       if (checkSlug) {
         slug = data.slug + "-" + Math.floor(Math.random() * 10);
       }
+const uploadResult=await cloudinaryUpload({image:data?.mainImage,slug,tag:data?.seoKeyWord})
 
-      const uploadResult = await cloudinary.uploader.upload(data?.mainImage, {
-        folder: "shopzy",
-        public_id: slug + "_mainImage",
-        tags: [data?.tags],
-      });
       console.log(uploadResult);
       data = {
         ...data,
@@ -132,9 +128,18 @@ export const getProductBySlug = async (slug) => {
 
 export const updateProductAction = async ({ productId, formData, slug }) => {
   const data = Object.fromEntries(formData.entries());
+  let UpdatedData
+if (data?.mainImage) {
+  const uploadResult=await cloudinaryUpload({image:data?.mainImage,slug:slug,tag:data?.seoKeyWord})
+  console.log(uploadResult)
+  UpdatedData={
+       ...data,
+    mainImage: uploadResult.display_name + "." + uploadResult.format,
+  }
+}
 
-  const UpdatedData = {
-    ...data,
+   UpdatedData = {
+    ...UpdatedData,
     regularPrice: data?.regularPrice && Number(data?.regularPrice),
     discountPrice: data?.discountPrice && Number(data?.discountPrice),
     stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),

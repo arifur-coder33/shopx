@@ -1,4 +1,5 @@
 import { dateConvertToLocalString } from "@/utils/dateConvert";
+import { Delete, Edit, Edit2, Eye, Trash, View } from "lucide-react";
 
 export default async function OrderListTable({ data }) {
   return (
@@ -69,13 +70,15 @@ const Item = ({ data }) => {
         <td className="px-6 py-4">{data?.quantity}</td>
         <td className="px-6 py-4">{data?.status}</td>
    
-        <td className="px-6 py-4">
-          <a
-            href="#"
-            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-          >
-            Edit
-          </a>
+        <td className="px-6 py-4 grid grid-cols-3">
+      
+             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer"/>
+          
+          
+     
+            <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer"/>
+            <Trash className="text-red-500 hover:scale-105 transition cursor-pointer"/>
+          
         </td>
       </tr>
     </>
