@@ -21,7 +21,11 @@ export async function createProductAction(formData) {
       if (checkSlug) {
         slug = data.slug + "-" + Math.floor(Math.random() * 10);
       }
-const uploadResult=await cloudinaryUpload({image:data?.mainImage,slug,tag:data?.seoKeyWord})
+      const uploadResult = await cloudinaryUpload({
+        image: data?.mainImage,
+        slug,
+        tag: data?.seoKeyWord,
+      });
 
       console.log(uploadResult);
       data = {
@@ -75,7 +79,7 @@ const uploadResult=await cloudinaryUpload({image:data?.mainImage,slug,tag:data?.
 
 export async function getProductById(id) {
   try {
-    const data = await prisma.product.findUnique({
+    const data = await prisma.product.find({
       where: { id: id },
       include: {
         category: {
@@ -128,17 +132,21 @@ export const getProductBySlug = async (slug) => {
 
 export const updateProductAction = async ({ productId, formData, slug }) => {
   const data = Object.fromEntries(formData.entries());
-  let UpdatedData
-if (data?.mainImage) {
-  const uploadResult=await cloudinaryUpload({image:data?.mainImage,slug:slug,tag:data?.seoKeyWord})
-  console.log(uploadResult)
-  UpdatedData={
-       ...data,
-    mainImage: uploadResult.display_name + "." + uploadResult.format,
+  let UpdatedData;
+  if (data?.mainImage) {
+    const uploadResult = await cloudinaryUpload({
+      image: data?.mainImage,
+      slug: slug,
+      tag: data?.seoKeyWord,
+    });
+    console.log(uploadResult);
+    UpdatedData = {
+      ...data,
+      mainImage: uploadResult.display_name + "." + uploadResult.format,
+    };
   }
-}
 
-   UpdatedData = {
+  UpdatedData = {
     ...UpdatedData,
     regularPrice: data?.regularPrice && Number(data?.regularPrice),
     discountPrice: data?.discountPrice && Number(data?.discountPrice),

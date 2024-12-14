@@ -55,7 +55,7 @@ export async function createOrder(formData) {
 
       return order;
     });
-revalidateTag('orders')
+    revalidateTag("orders");
     return { success: true, data: result }; // Return success with order data
   } catch (error) {
     console.log(error.message);
@@ -65,14 +65,28 @@ revalidateTag('orders')
 
 export const getAllOrders = unstable_cache(
   async () => {
-  try {
-   const data=await prisma.order.findMany();
+    try {
+      const data = await prisma.order.findMany();
 
-    return { success: true, data:data };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+      return { success: true, data: data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   },
   ["orders"],
   { revalidate: 3600, tags: ["orders"] }
 );
+
+export async function getOrderByOrderNo(orderNo) {
+  try {
+    const data = await prisma.order.findMany({
+      where: { orderNo: orderNo },
+      include: {
+        product: true,
+      },
+    });
+    return { success: true, data }; // Return success with product data
+  } catch (error) {
+    return { success: false, error: error.message }; // Return structured error
+  }
+}

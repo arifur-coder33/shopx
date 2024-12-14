@@ -10,6 +10,7 @@ import { toBase64 } from "@/utils/toBase64";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import Imagecustom from "../images/ImageCustom";
+import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
 export default function ProductForm({ category, data, actionType }) {
@@ -19,7 +20,7 @@ export default function ProductForm({ category, data, actionType }) {
   const [editorValue, setEditorValue] = useState(data?.description);
   const [mainImage, setMainImage] = useState(data?.mainImage);
   const router = useRouter();
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
     const form = e.target; // Reference to the form element
@@ -57,7 +58,9 @@ export default function ProductForm({ category, data, actionType }) {
       }
     });
   };
-
+  {
+    console.log(data);
+  }
   return (
     <form onSubmit={handleSubmit} className="relative">
       {success && <p style={{ color: "green" }}>{success}</p>}
@@ -68,6 +71,20 @@ export default function ProductForm({ category, data, actionType }) {
         </div>
       )}
       <div className="md:grid md:grid-cols-6 gap-2 ">
+        <CheckBox
+          value={actionType === "edit" ? data?.isActive : true}
+          label={"Is Active"}
+          name={"isActive"}
+          colSpan="1"
+        />
+
+        <CheckBox
+          value={data?.isFeatured}
+          label={"Is Fetured Product"}
+          name={"isFeatured"}
+          colSpan="1"
+        />
+
         <FloatingInput
           value={data?.title}
           label={"Product Name"}
