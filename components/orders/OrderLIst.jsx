@@ -38,7 +38,15 @@ export default async function OrderListTable({ data }) {
           </thead>
           <tbody>
             {data?.length > 0 &&
-              data?.map((item) => <Item key={item?.id} data={item} />)}
+              data?.map((order) => {
+                return (
+                  <>
+                    {order?.orderItems?.map((orderItem) => (
+                      <Item key={orderItem?.id} data={orderItem} />
+                    ))}
+                  </>
+                );
+              })}
           </tbody>
         </table>
       </div>
@@ -68,7 +76,7 @@ const Item = ({ data }) => {
         >
           {data.productName}
         </th>
-        <td className="px-6 py-4">{data?.orderPrice}</td>
+        <td className="px-6 py-4">{data?.price}</td>
 
         <td className="px-6 py-4">{data?.quantity}</td>
         <td className="px-6 py-4">{data?.status}</td>

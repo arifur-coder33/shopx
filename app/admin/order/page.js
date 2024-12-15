@@ -1,19 +1,18 @@
-export const dynamic = "force-static";
+// export const dynamic = "force-static";
 
-import { getAllOrders } from "@/backend/serverActions/orderActions";
+import { getAllOrder } from "@/backend/serverActions/orderActions";
 import OrderListTable from "@/components/orders/OrderLIst";
 
 export default async function ProductListPage() {
-  const data = await getAllOrders();
-
-  if (!data.success) {
-    return "Some thing went wrong"
+  const { success, data, error } = await getAllOrder();
+  console.log(data);
+  if (!success) {
+    return "Some thing went wrong";
   }
 
-  if (data.success && data?.data.length===0) {
-    return "No order received Yet."
+  if (success && data.length === 0) {
+    return "No order received Yet.";
   }
 
-
-  return <OrderListTable data={data?.data} />;
+  return <OrderListTable data={data} />;
 }

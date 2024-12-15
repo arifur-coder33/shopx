@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { revalidateTag, unstable_cache } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 export async function createOrder(formData) {
   try {
@@ -14,7 +14,6 @@ export async function createOrder(formData) {
         "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।"
       );
     }
-
 
     // Fetch the last order number and increment it atomically
     const result = await prisma.$transaction(async (tx) => {
@@ -38,16 +37,16 @@ export async function createOrder(formData) {
       });
 
       // Create the order with the new order number
-      const orderData={
-        orderNo:newOrderNumber.toString(),   
-        customerName:data?.customerName,
-        phoneNumber:data?.phoneNumber,
+      const orderData = {
+        orderNo: newOrderNumber.toString(),
+        customerName: data?.customerName,
+        phoneNumber: data?.phoneNumber,
         deliveryCharge: Number(data?.deliveryCharge),
-        orderPrice: Number(data?.orderPrice),   
-        deliveryArea:data?.deliveryArea,
-        deliveryAddress:data?.deliveryAddress,  
-      }
-      const orderItems=JSON.parse(data?.products)
+        orderPrice: Number(data?.orderPrice),
+        deliveryArea: data?.deliveryArea,
+        deliveryAddress: data?.deliveryAddress,
+      };
+      const orderItems = JSON.parse(data?.products);
       // const order = await tx.order.create({
       //   data: {
       //     ...data,
@@ -60,20 +59,21 @@ export async function createOrder(formData) {
       // });
 
       const order = await tx.order.create({
-        data: {...orderData,
+        data: {
+          ...orderData,
           orderItems: {
-            create:  orderItems.map((item,i)=>({
-              orderNo:newOrderNumber.toString(),
-              orderItemNo:i+1,
-              productName:item?.productName,
-              price:Number(item?.price),
-              quantity:Number(item?.quantity),
-              productColor:item?.productColor,
-              productSize:item?.productSize,
-              productId:item?.productId,  
-            }))
-          }
-        }
+            create: orderItems.map((item, i) => ({
+              orderNo: newOrderNumber.toString(),
+              orderItemNo: i + 1,
+              productName: item?.productName,
+              price: Number(item?.price),
+              quantity: Number(item?.quantity),
+              productColor: item?.productColor,
+              productSize: item?.productSize,
+              productId: item?.productId,
+            })),
+          },
+        },
       });
 
       return order;
@@ -86,31 +86,39 @@ export async function createOrder(formData) {
   }
 }
 
-export const getAllOrders = unstable_cache(
-  async () => {
-    try {
-      const data = await prisma.order.findMany();
-
-      return { success: true, data: data };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  },
-  ["orders"],
-  { revalidate: 3600, tags: ["orders"] }
-);
-
-export async function getOrderByOrderNo(orderNo,phoneNumber) {
+export async function getAllOrder(params) {
   try {
-    const data = await prisma.order.findUnique({
-      where: { orderNo: orderNo,phoneNumber },
+    const data = await prisma.order.findMany({
       include: {
         orderItems: {
           include: {
             product: {
-              select:{
-                mainImage:true
-              }
+              select: {
+                mainImage: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    console.log(data);
+    return { success: true, data: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getOrderByOrderNo(orderNo, phoneNumber) {
+  try {
+    const data = await prisma.order.findUnique({
+      where: { orderNo: orderNo, phoneNumber },
+      include: {
+        orderItems: {
+          include: {
+            product: {
+              select: {
+                mainImage: true,
+              },
             },
           },
         },
