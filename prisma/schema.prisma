@@ -56,7 +56,7 @@ model Product {
   insideDhaka    Float?                      // Optional delivery charge inside Dhaka
   outSideDhaka   Float?                      // Optional delivery charge outside Dhaka
   weight         Float?                       // Product weight for shipping purposes
-  orders         Order[]                    // One-to-many relationship with Order
+  orders         OrderItem[]                    // One-to-many relationship with Order
   createdAt      DateTime    @default(now()) // Timestamp for product creation
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
@@ -64,16 +64,10 @@ model Product {
 // Order model with extended features
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  orderNo        String
-  productName    String
-  productColor   String?
-  productSize    String?
-  orderItemNo    Float
+  orderNo        String @unique
+  orderItems     OrderItem[]
   userId         String?      @db.ObjectId    // Foreign key for User
   user           User?        @relation(fields: [userId], references: [id]) // Relation to User
-  productId      String      @db.ObjectId   
-  quantity       Int // Foreign key for Product
-  product        Product     @relation(fields: [productId], references: [id]) // Relation to Product
   customerName   String
   phoneNumber    String
   orderPrice     Float                       // Price of the product at the time of order
@@ -85,6 +79,24 @@ model Order {
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
 
+model OrderItem{
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  orderId         String      @db.ObjectId    
+  order           Order       @relation(fields: [orderId], references: [id]) 
+  orderNo        String
+  orderItemNo    Int 
+  productName    String
+  price          Float
+  quantity       Int // Foreign key for Product
+  productColor   String?
+  productSize    String?
+  productId      String      @db.ObjectId   
+  product      Product     @relation(fields: [productId], references: [id]) // Relation to Product
+  status         OrderStatus @default(PENDING)
+  createdAt      DateTime    @default(now()) // Timestamp for order placement
+  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
+
+}
 model orderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   lastOrderNumber Int

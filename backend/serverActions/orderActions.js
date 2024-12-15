@@ -14,11 +14,7 @@ export async function createOrder(formData) {
         "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।"
       );
     }
-    if (!data?.productId) {
-      throw new Error(
-        "কোন একটি সমস্যা হয়েছে। দয়া করে কিছুক্ষন আবার চেষ্টা করুন।"
-      );
-    }
+
 
     // Fetch the last order number and increment it atomically
     const result = await prisma.$transaction(async (tx) => {
@@ -42,15 +38,42 @@ export async function createOrder(formData) {
       });
 
       // Create the order with the new order number
+      const orderData={
+        orderNo:newOrderNumber.toString(),   
+        customerName:data?.customerName,
+        phoneNumber:data?.phoneNumber,
+        deliveryCharge: Number(data?.deliveryCharge),
+        orderPrice: Number(data?.orderPrice),   
+        deliveryArea:data?.deliveryArea,
+        deliveryAddress:data?.deliveryAddress,  
+      }
+      const orderItems=JSON.parse(data?.products)
+      // const order = await tx.order.create({
+      //   data: {
+      //     ...data,
+      //     orderItemNo: 1,
+      //     quantity: Number(data?.quantity),
+      //     deliveryCharge: Number(data?.deliveryCharge),
+      //     orderPrice: Number(data?.orderPrice),
+      //     orderNo: newOrderNumber.toString(),
+      //   },
+      // });
+
       const order = await tx.order.create({
-        data: {
-          ...data,
-          orderItemNo: 1,
-          quantity: Number(data?.quantity),
-          deliveryCharge: Number(data?.deliveryCharge),
-          orderPrice: Number(data?.orderPrice),
-          orderNo: newOrderNumber.toString(),
-        },
+        data: {...orderData,
+          orderItems: {
+            create:  orderItems.map((item,i)=>({
+              orderNo:newOrderNumber.toString(),
+              orderItemNo:i+1,
+              productName:item?.productName,
+              price:Number(item?.price),
+              quantity:Number(item?.quantity),
+              productColor:item?.productColor,
+              productSize:item?.productSize,
+              productId:item?.productId,  
+            }))
+          }
+        }
       });
 
       return order;
@@ -77,12 +100,20 @@ export const getAllOrders = unstable_cache(
   { revalidate: 3600, tags: ["orders"] }
 );
 
-export async function getOrderByOrderNo(orderNo) {
+export async function getOrderByOrderNo(orderNo,phoneNumber) {
   try {
-    const data = await prisma.order.findMany({
-      where: { orderNo: orderNo },
+    const data = await prisma.order.findUnique({
+      where: { orderNo: orderNo,phoneNumber },
       include: {
-        product: true,
+        orderItems: {
+          include: {
+            product: {
+              select:{
+                mainImage:true
+              }
+            },
+          },
+        },
       },
     });
     return { success: true, data }; // Return success with product data

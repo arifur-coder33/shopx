@@ -20,17 +20,30 @@ export default function BuyNowCheckout({ data }) {
       deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
     const form = e.target; // Reference to the form element
     const formData = new FormData(form); // Collect form data
-    formData.append("quantity", Number(1));
-    formData.append("productId", data?.id);
+ 
     formData.append("deliveryCharge", Number(deliveryCharge));
     if (session?.user?.id) {
       formData.append("userId", session?.user?.id);
     }
 
     formData.append("orderPrice", Number(data?.discountPrice + deliveryCharge));
-    formData.append("productName", data?.title);
-    formData.append("productColor", data?.color);
-    formData.append("productSize", data?.size);
+    // formData.append("productName", data?.title);
+    // formData.append("productColor", data?.color);
+    // formData.append("productSize", data?.size);
+    // formData.append("quantity", Number(1));
+    // formData.append("productId", data?.id);
+    const products=[
+      {
+  productName:data?.title,
+  price:Number(data?.discountPrice),  
+  quantity:Number(1),
+  productColor:data?.color,
+  productSize:data?.size,
+  productId:data?.id
+      }
+    ]
+    formData.append("products",JSON.stringify(products))
+    
 
     // formData.append("deliveryArea", deliveryArea);
     setError(null);
