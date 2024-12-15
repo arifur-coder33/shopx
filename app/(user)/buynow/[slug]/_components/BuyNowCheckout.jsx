@@ -53,7 +53,7 @@ export default function BuyNowCheckout({ data }) {
       const response = await createOrder(formData); // Call server action
 
       if (response.success) {
-        router.push(`/tracking/${response?.data?.orderNo}`)
+        router.push(`/tracking/${response?.data?.orderNo}?p=${response?.data?.phoneNumber}`)
         // setSuccess(
         //   `আপনার অর্ডারটি সঠিক ভাভে করা হয়েছে। অর্ডার নাম্বার হলঃ ${response?.data?.orderNo}`
         // );
