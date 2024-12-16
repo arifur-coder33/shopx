@@ -6,12 +6,12 @@ import {
 import KalapanaFont from "@/components/KalapanaFont";
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { unstable_cache } from "next/cache";
 import ActionButtons from "./_components/ActionButtons";
 import Images from "./_components/Images";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -53,6 +53,9 @@ export async function generateMetadata({ params }) {
   const imageUrl =
     cloudinaryMainImage(mainImage) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
+  const ogImageUrl =
+    convertImageToOG_cloudinary(imageUrl, "t_og-image") ||
+    `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
   const price = discountPrice || regularPrice;
   // const availability = data.stock > 0 ? "InStock" : "OutOfStock";
   const availability = "InStock";
@@ -97,7 +100,7 @@ export async function generateMetadata({ params }) {
         `${title} is a premium product available for purchase.`,
       images: [
         {
-          url: convertImageToOG_cloudinary(imageUrl, "t_og-image"),
+          url: ogImageUrl,
           alt: title,
         },
       ],
@@ -157,7 +160,7 @@ export default async function ProductPage({ params }) {
       return data?.data;
     },
     [slug],
-    { revalidate: 0.1, tags: [`product-${slug}`] } // Use string array for tags
+    { revalidate: 60, tags: [`product-${slug}`] } // Use string array for tags
   );
 
   const data = await getProduct();

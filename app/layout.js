@@ -1,4 +1,5 @@
 import { Tiro_Bangla } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 const tiro_bangla = Tiro_Bangla({
   subsets: ["bengali"],
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="bn">
       <body className={` ${tiro_bangla.className}  antialiased  theam`}>
+        <NextTopLoader showSpinner={false} />
         <div className="">{children}</div>
       </body>
     </html>

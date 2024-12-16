@@ -29,6 +29,16 @@ body {
   background-color: white;
   padding: 10px; /* Optional: Add some padding to the text editor */
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @layer base {
   /* @font-face {
     font-family: "kalpana";

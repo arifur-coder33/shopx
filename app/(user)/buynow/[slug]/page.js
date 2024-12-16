@@ -23,7 +23,7 @@ export default async function ProductPage({ params }) {
       return data?.data;
     },
     [slug],
-    { revalidate: 0.1, tags: [`product-${slug}`] } // Use string array for tags
+    { revalidate: 60, tags: [`product-${slug}`] } // Use string array for tags
   );
 
   const data = await getProduct();
