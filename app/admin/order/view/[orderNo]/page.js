@@ -1,14 +1,17 @@
 import { getOrderByOrderNo } from "@/backend/serverActions/orderActions";
-
-export default async function OrderDetailsPage({ params }) {
+import OrderDeliveryDetails from "@/components/tracking/OrderDeliveryDetails";
+import OrderItemTable from "@/components/tracking/OrderItemTable";
+export default async function OrderDetailsPage({ params, searchParams }) {
   const { orderNo } = await params;
-  const orderData = await getOrderByOrderNo(orderNo);
-  console.log(orderData);
-  if (orderData.data.length === 0) {
-    return "No order found";
+  const { p, orderSuccess } = await searchParams;
+  const { success, data, error } = await getOrderByOrderNo(orderNo, p);
+  if ((!success && error) || !data) {
+    return <p>কোন ডাটা পাওয়া যায়নি।</p>;
   }
-  if (!orderData?.success) {
-    return "Something Went wron";
-  }
-  return <h1>Order Page {orderNo}</h1>;
+  return (
+    <div className="grid sm:grid-cols-2 px-4 border mt-2 rounded-2xl">
+      <OrderDeliveryDetails data={data} />
+      <OrderItemTable data={data} />
+    </div>
+  );
 }

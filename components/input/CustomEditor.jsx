@@ -53,7 +53,7 @@ export default function CustomEditor({
       <ReactQuill
         id={name}
         theme="snow"
-        className="dark:text-slate-950 "
+        className="dark:text-slate-950 custom-quill "
         defaultValue={editorValue}
         onChange={setEditorValue} // Updates state when the editor content changes
         modules={modules}

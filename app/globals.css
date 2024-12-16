@@ -30,6 +30,21 @@ body {
   padding: 10px; /* Optional: Add some padding to the text editor */
 }
 
+.rendered-html iframe,
+.rendered-html video {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .rendered-html iframe,
+  .rendered-html video {
+    max-width: 800px !important;
+  }
+}
 @keyframes spin {
   from {
     transform: rotate(0deg);

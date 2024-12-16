@@ -4,7 +4,7 @@ import Button from "@/components/button";
 import DeliveryAddress from "@/components/checkout/DeliveryAddress";
 import { Truck } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { redirect, useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { useState, useTransition } from "react";
 import BuyNowProductDetails from "./BuyNowProductDetails";
 export default function BuyNowCheckout({ data }) {
@@ -20,30 +20,25 @@ export default function BuyNowCheckout({ data }) {
       deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
     const form = e.target; // Reference to the form element
     const formData = new FormData(form); // Collect form data
- 
+
     formData.append("deliveryCharge", Number(deliveryCharge));
     if (session?.user?.id) {
       formData.append("userId", session?.user?.id);
     }
 
     formData.append("orderPrice", Number(data?.discountPrice + deliveryCharge));
-    // formData.append("productName", data?.title);
-    // formData.append("productColor", data?.color);
-    // formData.append("productSize", data?.size);
-    // formData.append("quantity", Number(1));
-    // formData.append("productId", data?.id);
-    const products=[
+
+    const products = [
       {
-  productName:data?.title,
-  price:Number(data?.discountPrice),  
-  quantity:Number(1),
-  productColor:data?.color,
-  productSize:data?.size,
-  productId:data?.id
-      }
-    ]
-    formData.append("products",JSON.stringify(products))
-    
+        productName: data?.title,
+        price: Number(data?.discountPrice),
+        quantity: Number(1),
+        productColor: data?.color,
+        productSize: data?.size,
+        productId: data?.id,
+      },
+    ];
+    formData.append("products", JSON.stringify(products));
 
     // formData.append("deliveryArea", deliveryArea);
     setError(null);
@@ -53,7 +48,9 @@ export default function BuyNowCheckout({ data }) {
       const response = await createOrder(formData); // Call server action
 
       if (response.success) {
-        router.push(`/tracking/${response?.data?.orderNo}?p=${response?.data?.phoneNumber}`)
+        router.push(
+          `/tracking/${response?.data?.orderNo}?p=${response?.data?.phoneNumber}&orderSuccess=true`
+        );
         // setSuccess(
         //   `আপনার অর্ডারটি সঠিক ভাভে করা হয়েছে। অর্ডার নাম্বার হলঃ ${response?.data?.orderNo}`
         // );
@@ -63,7 +60,6 @@ export default function BuyNowCheckout({ data }) {
         window.scrollTo(0, 0);
         setError(response.error || "Something went wrong");
       }
-
     });
   };
   return (

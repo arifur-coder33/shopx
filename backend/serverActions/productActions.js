@@ -79,7 +79,7 @@ export async function createProductAction(formData) {
 
 export async function getProductById(id) {
   try {
-    const data = await prisma.product.find({
+    const data = await prisma.product.findUnique({
       where: { id: id },
       include: {
         category: {

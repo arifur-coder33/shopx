@@ -42,7 +42,11 @@ export default async function OrderListTable({ data }) {
                 return (
                   <>
                     {order?.orderItems?.map((orderItem) => (
-                      <Item key={orderItem?.id} data={orderItem} />
+                      <Item
+                        key={orderItem?.id}
+                        data={orderItem}
+                        phoneNumber={order?.phoneNumber}
+                      />
                     ))}
                   </>
                 );
@@ -54,7 +58,8 @@ export default async function OrderListTable({ data }) {
   );
 }
 
-const Item = ({ data }) => {
+const Item = ({ data, phoneNumber }) => {
+  console.log(phoneNumber);
   return (
     <>
       <tr className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
@@ -82,7 +87,7 @@ const Item = ({ data }) => {
         <td className="px-6 py-4">{data?.status}</td>
 
         <td className="px-6 py-4 grid grid-cols-3">
-          <Link href={`/admin/order/view/${data?.orderNo}`}>
+          <Link href={`/admin/order/view/${data?.orderNo}?p=${phoneNumber}`}>
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>
 

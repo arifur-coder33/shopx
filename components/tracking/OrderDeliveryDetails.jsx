@@ -1,0 +1,19 @@
+import { replaceNumbers } from "@/utils/engToBanNumber";
+
+export default function OrderDeliveryDetails({ data }) {
+  return (
+    <>
+      <div className="sm:col-span-full text-center border-b-2 py-4 font-bold text-xl">
+        অর্ডার নংঃ {replaceNumbers(data?.orderNo.toString())}
+      </div>
+      <div className="">
+        <div className="text-xl my-4 font-bold">ডেলিভারি ঠিকানা</div>
+        <div>
+          <p>নামঃ {data?.customerName} </p>
+          <p>মোবাইল নংঃ {data?.phoneNumber}</p>
+          <p> ঠিকানাঃ {data?.deliveryAddress}</p>
+        </div>
+      </div>
+    </>
+  );
+}
