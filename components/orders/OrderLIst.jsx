@@ -1,8 +1,11 @@
+
 import { dateConvertToLocalString } from "@/utils/dateConvert";
 import { Edit, Eye, Trash } from "lucide-react";
 import Link from "next/link";
 
-export default async function OrderListTable({ data }) {
+import OrderStatusUpdate from "./OrderStatusUpdate";
+
+export default  function OrderListTable({ data }) {
   return (
     <>
       <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
@@ -84,7 +87,7 @@ const Item = ({ data, phoneNumber }) => {
         <td className="px-6 py-4">{data?.price}</td>
 
         <td className="px-6 py-4">{data?.quantity}</td>
-        <td className="px-6 py-4">{data?.status}</td>
+        <td className="px-6 py-4"><OrderStatusUpdate status={data?.status}/></td>
 
         <td className="px-6 py-4 grid grid-cols-3">
           <Link href={`/admin/order/view/${data?.orderNo}?p=${phoneNumber}`}>

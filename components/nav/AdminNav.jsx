@@ -17,7 +17,7 @@ export default async function AdminNavBar() {
               <AlignJustify />{" "}
             </div>
             <div className={` md:text-5xl text-3xl font-bold  text-purple`}>
-              <Link href={"/"}>
+              <Link href={"/admin"}>
                 {" "}
                 <KalapanaFont>আমার শপ</KalapanaFont>{" "}
               </Link>

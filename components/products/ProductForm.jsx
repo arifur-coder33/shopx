@@ -13,6 +13,7 @@ import Imagecustom from "../images/ImageCustom";
 import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
+import { ToastContainer, toast } from 'react-toastify';
 export default function ProductForm({ category, data, actionType }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -50,6 +51,7 @@ export default function ProductForm({ category, data, actionType }) {
       console.log(response);
       if (response.success) {
         form.reset(); // Clear the form on success
+        toast("updated Success!")
         router.push("/admin/product");
         setSuccess(response?.message);
       } else {
@@ -194,6 +196,7 @@ export default function ProductForm({ category, data, actionType }) {
           {isPending ? "Saving ......" : "Save"}
         </Button>
       </div>
+ 
     </form>
   );
 }

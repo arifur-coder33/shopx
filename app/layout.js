@@ -1,6 +1,7 @@
 import { Tiro_Bangla } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
+import { ToastContainer } from "react-toastify";
 const tiro_bangla = Tiro_Bangla({
   subsets: ["bengali"],
   display: "swap",
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
       <body className={` ${tiro_bangla.className}  antialiased  theam`}>
         <NextTopLoader showSpinner={false} />
         <div className="">{children}</div>
+        <ToastContainer />
       </body>
     </html>
   );

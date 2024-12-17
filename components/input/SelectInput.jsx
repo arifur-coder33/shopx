@@ -1,3 +1,4 @@
+'use client'
 import { useState } from "react";
 
 export default function SelectInput({
@@ -5,8 +6,13 @@ export default function SelectInput({
   label,
   data,
   value: defaultValue,
+  onChangeEvent
 }) {
   const [value, setValue] = useState(defaultValue || "-");
+  const handleChange=(e)=>{
+    setValue(e.target.value)
+    onChangeEvent(e.target.value)
+  }
   return (
     <>
       <label
@@ -17,7 +23,7 @@ export default function SelectInput({
       </label>
       <select
         defaultValue={value} // Bind the selected value to state
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => handleChange(e)}
         name={name}
         id={name}
         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
