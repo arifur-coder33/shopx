@@ -65,7 +65,7 @@ model Product {
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   orderNo        String @unique
-  orderItems     OrderItem[]
+    orderItems     OrderItem[] 
   userId         String?      @db.ObjectId    // Foreign key for User
   user           User?        @relation(fields: [userId], references: [id]) // Relation to User
   customerName   String
@@ -82,7 +82,7 @@ model Order {
 model OrderItem{
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   orderId         String      @db.ObjectId    
-  order           Order       @relation(fields: [orderId], references: [id]) 
+order           Order   @relation(fields: [orderId], references: [id],onDelete: Cascade) 
   orderNo        String
   orderItemNo    Int 
   productName    String

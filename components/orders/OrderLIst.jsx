@@ -1,11 +1,12 @@
-
 import { dateConvertToLocalString } from "@/utils/dateConvert";
 import { Edit, Eye, Trash } from "lucide-react";
 import Link from "next/link";
 
+import { deleteOrderById } from "@/backend/serverActions/orderActions";
+import DeleteItem from "../common/DeleteItem";
 import OrderStatusUpdate from "./OrderStatusUpdate";
 
-export default  function OrderListTable({ data }) {
+export default function OrderListTable({ data }) {
   return (
     <>
       <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
@@ -48,7 +49,7 @@ export default  function OrderListTable({ data }) {
                       <Item
                         key={orderItem?.id}
                         data={orderItem}
-                        phoneNumber={order?.phoneNumber}
+                        orderData={order}
                       />
                     ))}
                   </>
@@ -61,8 +62,7 @@ export default  function OrderListTable({ data }) {
   );
 }
 
-const Item = ({ data, phoneNumber }) => {
-  console.log(phoneNumber);
+const Item = ({ data, orderData }) => {
   return (
     <>
       <tr className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
@@ -87,15 +87,24 @@ const Item = ({ data, phoneNumber }) => {
         <td className="px-6 py-4">{data?.price}</td>
 
         <td className="px-6 py-4">{data?.quantity}</td>
-        <td className="px-6 py-4"><OrderStatusUpdate status={data?.status}/></td>
+        <td className="px-6 py-4">
+          <OrderStatusUpdate
+            status={orderData?.status}
+            orderId={orderData?.id}
+          />
+        </td>
 
         <td className="px-6 py-4 grid grid-cols-3">
-          <Link href={`/admin/order/view/${data?.orderNo}?p=${phoneNumber}`}>
+          <Link
+            href={`/admin/order/view/${data?.orderNo}?p=${orderData?.phoneNumber}`}
+          >
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>
 
           <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
-          <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
+          <DeleteItem deleteItem={deleteOrderById} id={orderData?.id}>
+            <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
+          </DeleteItem>
         </td>
       </tr>
     </>

@@ -20,7 +20,7 @@ export default function AddCatagoryForm() {
 
     startTransition(async () => {
       const response = await createCategoryAction(formData); // Call server action
-      console.log(response);
+
       if (response.success) {
         setSuccess("Category Added successful!");
         form.reset(); // Clear the form on success

@@ -1,6 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function createOrder(formData) {
   try {
@@ -88,7 +88,32 @@ export async function createOrder(formData) {
 
 export async function getAllOrder(params) {
   try {
+    const { status, orderNo, startDate, endDate } = params || {};
+
+    // Build the where clause dynamically based on provided filters
+    const whereClause = {};
+
+    if (status) {
+      whereClause.status = status; // Filter by order status
+    }
+
+    if (orderNo) {
+      whereClause.orderNo = orderNo; // Filter by order number
+    }
+
+    if (startDate || endDate) {
+      whereClause.createdAt = {};
+      if (startDate) {
+        whereClause.createdAt.gte = new Date(startDate); // Filter orders created after startDate
+      }
+      if (endDate) {
+        whereClause.createdAt.lte = new Date(endDate); // Filter orders created before endDate
+      }
+    }
+
+    // Fetch orders with filters applied
     const data = await prisma.order.findMany({
+      where: whereClause,
       include: {
         orderItems: {
           include: {
@@ -100,7 +125,13 @@ export async function getAllOrder(params) {
           },
         },
       },
+      orderBy: {
+        createdAt: "desc", // Sort by most recent orders
+      },
+      skip: 0, // Start from the first record
+      take: 10, // Limit to 10 orders
     });
+
     console.log(data);
     return { success: true, data: data };
   } catch (error) {
@@ -127,5 +158,55 @@ export async function getOrderByOrderNo(orderNo, phoneNumber) {
     return { success: true, data }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
+  }
+}
+
+export async function deleteOrderById(orderId) {
+  try {
+    // Delete the order by its ID
+    const deletedOrder = await prisma.order.delete({
+      where: {
+        id: orderId,
+      },
+    });
+    revalidatePath("/admin/order");
+    revalidateTag("order");
+    return {
+      success: true,
+      data: "Order and associated items deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to delete order",
+    };
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+export async function updateOrderStatusAction(orderId, status) {
+  try {
+    const result = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: status,
+      },
+    });
+    console.log(result);
+    revalidatePath("/admin/order");
+    revalidateTag("order");
+    return {
+      success: true,
+      message: "Order Status Updated",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || "Failed to Update order",
+    };
+  } finally {
+    await prisma.$disconnect();
   }
 }

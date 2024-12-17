@@ -18,7 +18,7 @@ export default async function ProductEdit({ params }) {
 
   // const data = await getProduct();
   const { data } = await getProductById(id);
-  console.log(data);
+
   return (
     <div className=" p-4">
       <div>Product Edit</div>

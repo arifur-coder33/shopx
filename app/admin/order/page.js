@@ -5,7 +5,7 @@ import OrderListTable from "@/components/orders/OrderLIst";
 
 export default async function ProductListPage() {
   const { success, data, error } = await getAllOrder();
-  console.log(data);
+
   if (!success) {
     return "Some thing went wrong";
   }

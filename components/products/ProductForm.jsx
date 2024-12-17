@@ -9,11 +9,11 @@ import FloatingInput from "@/components/input/FloatingInput";
 import { toBase64 } from "@/utils/toBase64";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "react-toastify";
 import Imagecustom from "../images/ImageCustom";
 import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
-import { ToastContainer, toast } from 'react-toastify';
 export default function ProductForm({ category, data, actionType }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -31,7 +31,7 @@ export default function ProductForm({ category, data, actionType }) {
     const file = fileInput.files[0];
     if (file) {
       const base64Image = await toBase64(file);
-      console.log(base64Image);
+
       formData.append("mainImage", base64Image); // Append the base64 string
     }
 
@@ -48,10 +48,10 @@ export default function ProductForm({ category, data, actionType }) {
               slug: data?.slug,
             })
           : await createProductAction(formData); // Call server action
-      console.log(response);
+
       if (response.success) {
         form.reset(); // Clear the form on success
-        toast("updated Success!")
+        toast("updated Success!");
         router.push("/admin/product");
         setSuccess(response?.message);
       } else {
@@ -61,7 +61,6 @@ export default function ProductForm({ category, data, actionType }) {
     });
   };
   {
-    console.log(data);
   }
   return (
     <form onSubmit={handleSubmit} className="relative">
@@ -196,7 +195,6 @@ export default function ProductForm({ category, data, actionType }) {
           {isPending ? "Saving ......" : "Save"}
         </Button>
       </div>
- 
     </form>
   );
 }

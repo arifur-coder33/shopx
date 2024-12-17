@@ -18,7 +18,7 @@ export default function LoginForm() {
     setLoading(true);
     try {
       const result = await loginWithCreds(formData);
-      console.log(result);
+
       setLoading(false);
       if (result?.message) {
         setError(result.message);

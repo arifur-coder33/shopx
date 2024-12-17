@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useTransition } from 'react';
-import Button from '../button';
-import DefaultInput from '../input/DefaultInput';
-import { registrationAction } from '@/backend/serverActions/authActions';
-import { useRouter } from 'next/navigation'; 
+import { registrationAction } from "@/backend/serverActions/authActions";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import Button from "../button";
+import DefaultInput from "../input/DefaultInput";
 
 export default function RegistrationForm() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const router=useRouter()
+  const router = useRouter();
 
   const handleSubmit = (e) => {
     e.preventDefault(); // Prevent default form submission
@@ -21,27 +21,29 @@ export default function RegistrationForm() {
 
     startTransition(async () => {
       const response = await registrationAction(formData); // Call server action
-      console.log(response)
+
       if (response.success) {
-        setSuccess('Registration successful!');
+        setSuccess("Registration successful!");
         form.reset(); // Clear the form on success
         setTimeout(() => {
-            router.push('/login?msg=sucess')
+          router.push("/login?msg=sucess");
         }, 1000);
-    
       } else {
-        console.log(response.error)
-        setError(response.error || 'Something went wrong');
+        console.log(response.error);
+        setError(response.error || "Something went wrong");
       }
     });
   };
 
   return (
-    <form className='mt-6' onSubmit={handleSubmit}>
-      
-        {error &&  <div className='w-full rounded-md bg-red-200 p-2 text-base text-red-600'>   {error}    </div> }
-         
-   
+    <form className="mt-6" onSubmit={handleSubmit}>
+      {error && (
+        <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">
+          {" "}
+          {error}{" "}
+        </div>
+      )}
+
       <DefaultInput
         name="name"
         label="আপনার নাম"
@@ -78,10 +80,10 @@ export default function RegistrationForm() {
         type="password"
       />
       <Button className="w-full mt-2 py-2">
-        {isPending ? 'রেজিষ্টার হচ্ছে...' : 'রেজিষ্টার করুন'}
+        {isPending ? "রেজিষ্টার হচ্ছে..." : "রেজিষ্টার করুন"}
       </Button>
-     
-      {success && <p style={{ color: 'green' }}>{success}</p>}
+
+      {success && <p style={{ color: "green" }}>{success}</p>}
     </form>
   );
 }
