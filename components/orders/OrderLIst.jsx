@@ -100,8 +100,12 @@ const Item = ({ data, orderData }) => {
           >
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>
+            <Link
+             href={`/admin/order/edit/${data?.orderNo}`}
+            >
+            <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
 
-          <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            </Link>
           <DeleteItem deleteItem={deleteOrderById} id={orderData?.id}>
             <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
           </DeleteItem>
