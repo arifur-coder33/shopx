@@ -65,7 +65,7 @@ model Product {
 model Order {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   orderNo        String @unique
-    orderItems     OrderItem[] 
+  orderItems     OrderItem[] 
   userId         String?      @db.ObjectId    // Foreign key for User
   user           User?        @relation(fields: [userId], references: [id]) // Relation to User
   customerName   String
@@ -73,7 +73,8 @@ model Order {
   orderPrice     Float                       // Price of the product at the time of order
   deliveryCharge Float     
   deliveryArea   String                  // Delivery charge for the order
-  deliveryAddress String                     // Address for product delivery
+  deliveryAddress String 
+  paymentMethod   String?                    // Address for product delivery
   status         OrderStatus @default(PENDING) // Order status enumeration
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
@@ -82,7 +83,7 @@ model Order {
 model OrderItem{
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   orderId         String      @db.ObjectId    
-order           Order   @relation(fields: [orderId], references: [id],onDelete: Cascade) 
+  order           Order   @relation(fields: [orderId], references: [id],onDelete: Cascade) 
   orderNo        String
   orderItemNo    Int 
   productName    String
@@ -109,11 +110,12 @@ model orderCounter {
 
 // Enumeration for order status
 enum OrderStatus {
-  PENDING 
-  PROCESSING 
-  SHIPPED 
-  DELIVERED 
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
   CANCELED
+  RETURNED
 }
 
 // Enumeration for user roles

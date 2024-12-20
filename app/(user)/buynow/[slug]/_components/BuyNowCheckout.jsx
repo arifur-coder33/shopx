@@ -10,6 +10,7 @@ import BuyNowProductDetails from "./BuyNowProductDetails";
 export default function BuyNowCheckout({ data }) {
   const { data: session } = useSession();
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -26,20 +27,20 @@ export default function BuyNowCheckout({ data }) {
       formData.append("userId", session?.user?.id);
     }
 
-    formData.append("orderPrice", Number(data?.discountPrice + deliveryCharge));
-
+    formData.append("paymentMethod", paymentMethod);
     const products = [
       {
         productName: data?.title,
         price: Number(data?.discountPrice),
-        quantity: Number(1),
+        quantity: Number(formData.get("quantity")),
         productColor: data?.color,
         productSize: data?.size,
         productId: data?.id,
       },
     ];
+    formData.delete("quantity");
     formData.append("products", JSON.stringify(products));
-
+    console.log(products);
     // formData.append("deliveryArea", deliveryArea);
     setError(null);
     setSuccess(null);
@@ -75,7 +76,11 @@ export default function BuyNowCheckout({ data }) {
       </div>
       <div className="flex md:flex-nowrap flex-wrap-reverse md:gap-12 gap-3  ">
         <div className="w-full md:w-1/2">
-          <BuyNowProductDetails data={data} deliveryArea={deliveryArea} />
+          <BuyNowProductDetails
+            data={data}
+            deliveryArea={deliveryArea}
+            setPaymentMethod={setPaymentMethod}
+          />
         </div>
         <div className="w-full md:w-1/2">
           <div className=" mx-auto">
@@ -86,7 +91,10 @@ export default function BuyNowCheckout({ data }) {
           </div>
         </div>
       </div>
-      <Button className="w-full z-30 bg-purple p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 ">
+      <Button
+        type={"submit"}
+        className="w-full z-30 bg-purple p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 "
+      >
         {isPending ? "অর্ডার নিশ্চিত হচ্ছে " : "অর্ডার নিশ্চিত করুন"}
       </Button>
     </form>

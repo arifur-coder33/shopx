@@ -35,6 +35,7 @@ export default function OrderStatusUpdate({ orderId, status }) {
         { id: "SHIPPED", name: "SHIPPED" },
         { id: "DELIVERED", name: "DELIVERED" },
         { id: "CANCELED", name: "CANCELED" },
+        { id: "RETURNED", name: "RETURNED" },
       ]}
     />
   );
