@@ -1,8 +1,8 @@
-import CartItem from "@/components/cart/CartItem";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Truck } from "lucide-react";
 import { useState } from "react";
+import CheckoutItem from "./CheckOutItem";
 
 export default function BuyNowProductDetails({
   deliveryArea,
@@ -17,7 +17,7 @@ export default function BuyNowProductDetails({
     insideDhaka,
     outSideDhaka,
     category: { name },
-  } = data;
+  } = data || {};
 
   let deliveryCharge = 0;
   deliveryCharge = deliveryArea === "inside-dhaka" ? insideDhaka : outSideDhaka;
@@ -28,7 +28,8 @@ export default function BuyNowProductDetails({
         <Truck /> <span>অর্ডার বিস্তারিত</span>
       </div>
 
-      <CartItem data={data} removeItem={"hide"} setProductQty={setProductQty} />
+      {/* <CartItem data={data} removeItem={"hide"} setProductQty={setProductQty} /> */}
+      <CheckoutItem data={data} />
 
       <Item label={"পণ্যর মোট মুল্যঃ"} value={regularPrice} />
       <Item label={"ডিস্কাউন্টঃ"} value={regularPrice - discountPrice} />

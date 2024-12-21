@@ -2,40 +2,41 @@
 
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Minus, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Button from "../button";
 export default function IncrementNDcrement({
   style,
   quantity,
-  qtyHandler,
-  addToCart,
-  reduceCartQty,
-  id,
+  incrementHandler,
+  decrementHandler,
 }) {
   const [qty, setQty] = useState(1);
-  useEffect(() => {
-    if (qtyHandler) {
-      qtyHandler(qty);
-    }
-  }, [qty, qtyHandler]);
-  useEffect(() => {
-    if (quantity > 1) {
-      setQty(quantity);
-    }
-  }, [quantity]);
   const increment = () => {
     if (qty < 10) {
-      setQty((prevValue) => prevValue + 1);
-      if (addToCart) {
-        addToCart({ id });
+      const newQty = qty + 1; // Calculate the updated value
+      setQty(newQty); // Update the state
+      if (incrementHandler) {
+        incrementHandler(newQty); // Use the updated value
       }
     }
   };
+  // useEffect(() => {
+  //   if (qtyHandler) {
+  //     qtyHandler(qty);
+  //   }
+  // }, [qty, qtyHandler]);
+  // useEffect(() => {
+  //   if (quantity > 1) {
+  //     setQty(quantity);
+  //   }
+  // }, [quantity]);
+
   const decrement = () => {
     if (qty > 1) {
-      setQty((prevValue) => prevValue - 1);
-      if (reduceCartQty) {
-        reduceCartQty({ id });
+      const newQty = qty + 1; // Calculate the updated value
+      setQty(newQty); // Update the state
+      if (decrementHandler) {
+        decrementHandler(newQty);
       }
     }
   };

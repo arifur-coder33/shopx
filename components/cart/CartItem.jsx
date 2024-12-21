@@ -24,13 +24,13 @@ export default function CartItem({
     if (quantity > 1) {
       setQty(quantity);
     }
-  }, [setQty, quantity]);
+  }, [quantity]);
   useEffect(() => {
     if (setProductQty) {
       setProductQty(qty);
     }
     setTotalPrice(discountPrice * qty);
-  }, [qty, setTotalPrice, discountPrice, setProductQty]);
+  }, [qty, discountPrice]);
 
   return (
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">

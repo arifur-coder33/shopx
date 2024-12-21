@@ -4,7 +4,6 @@ import {
   getProducts,
 } from "@/backend/serverActions/productActions";
 import KalapanaFont from "@/components/KalapanaFont";
-import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import ProductDescription from "@/components/products/productDescription";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
@@ -197,10 +196,10 @@ export default async function ProductPage({ params }) {
                 </span>{" "}
                 টাকা
               </p>
-              <div className="flex flex-row items-center text-center">
+              {/* <div className="flex flex-row items-center text-center">
                 <label htmlFor="qtyinput">পরিমানঃ</label>
                 <IncrementNDcrement />
-              </div>
+              </div> */}
             </div>
           </KalapanaFont>
           <ActionButtons product={data} />
