@@ -9,7 +9,7 @@ import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { unstable_cache } from "next/cache";
-import ActionButtons from "./_components/ActionButtons";
+import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
 
 export async function generateMetadata({ params }) {
@@ -188,21 +188,15 @@ export default async function ProductPage({ params }) {
         <div className="col-span-2">
           <h1 className=" text-xl font-bold">{title}</h1>
           <KalapanaFont>
-            <div className="dark:text-slate-300 text-2xl">
-              <p>
-                মূল্যঃ{" "}
-                <span className="text-5xl text-purple">
-                  {replaceNumbers((discountPrice || 0).toString())}
-                </span>{" "}
-                টাকা
-              </p>
-              {/* <div className="flex flex-row items-center text-center">
-                <label htmlFor="qtyinput">পরিমানঃ</label>
-                <IncrementNDcrement />
-              </div> */}
-            </div>
+            <p className="text-3xl dark:text-slate-300 ">
+              মূল্যঃ{" "}
+              <span className="text-5xl text-purple">
+                {replaceNumbers((discountPrice || 0).toString())}
+              </span>{" "}
+              টাকা
+            </p>
           </KalapanaFont>
-          <ActionButtons product={data} />
+          <BuyNowSection data={data} />
         </div>
       </div>
       <ProductDescription description={description} />

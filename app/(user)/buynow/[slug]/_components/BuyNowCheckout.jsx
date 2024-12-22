@@ -4,10 +4,10 @@ import Button from "@/components/button";
 import DeliveryAddress from "@/components/checkout/DeliveryAddress";
 import { Truck } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
 import { useState, useTransition } from "react";
 import BuyNowProductDetails from "./BuyNowProductDetails";
-import { useSearchParams } from "next/navigation";
 export default function BuyNowCheckout({ data }) {
   const { data: session } = useSession();
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
@@ -66,7 +66,6 @@ export default function BuyNowCheckout({ data }) {
   };
   return (
     <form onSubmit={handleSubmit}>
-     QTy {initialQty}
       <div className="w-full mb-2">
         {success && <p style={{ color: "green" }}>{success}</p>}
         {error && (

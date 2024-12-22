@@ -3,13 +3,14 @@ import DeliveryAreaSelector from "./DeliveryAreaSelector";
 
 export default function DeliveryAddress({ setDeliveryArea }) {
   return (
-    <>
+    <address>
       <FloatingInput
         value=""
         type={"text"}
         label={"আপনার নামঃ"}
         name={"customerName"}
         inputType={"text"}
+        autoComplete="name"
       />
       <FloatingInput
         value=""
@@ -19,6 +20,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         inputType={"text"}
         inputMode={"numeric"}
         pattern={"[0-9]*"}
+        autoComplete="tel"
       />
       <FloatingInput
         value=""
@@ -26,9 +28,10 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         label={"ঠিকানাঃ"}
         name={"deliveryAddress"}
         inputType={"text"}
+        autoComplete="address-line1"
       />
 
       <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} />
-    </>
+    </address>
   );
 }

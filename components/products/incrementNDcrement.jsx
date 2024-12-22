@@ -2,21 +2,24 @@
 
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Minus, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "../button";
 export default function IncrementNDcrement({
   style,
-  initialQty,
+  initialQty = 1,
   incrementHandler,
   decrementHandler,
 }) {
-  const [qty, setQty] = useState(initialQty || 1);
+  const [qty, setQty] = useState(initialQty);
+  useEffect(() => {
+    setQty(initialQty);
+  }, [initialQty]);
   const increment = () => {
     if (qty < 10) {
       const newQty = qty + 1; // Calculate the updated value
       setQty(newQty); // Update the state
       if (incrementHandler) {
-        incrementHandler(newQty); // Use the updated value
+        incrementHandler(newQty, "increment"); // Use the updated value
       }
     }
   };
@@ -36,7 +39,7 @@ export default function IncrementNDcrement({
       const newQty = qty - 1; // Calculate the updated value
       setQty(newQty); // Update the state
       if (decrementHandler) {
-        decrementHandler(newQty);
+        decrementHandler(newQty, "decrement");
       }
     }
   };

@@ -1,13 +1,15 @@
 "use client";
 import { useCart } from "@/context/CartContext";
-import { replaceNumbers } from "@/utils/engToBanNumber";
 import { ShoppingBag } from "lucide-react";
 
+import { replaceNumbers } from "@/utils/engToBanNumber";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 import CartItem from "./CartItem";
+import CartItems from "./CartItems";
 export default function CartPage({ setIsOpen }) {
   const { cartItems, totalCartPrice, addToCart, reduceCartQty } = useCart();
+
   return (
     <div className="relative  h-full ">
       <div className="flex flex-row text-purple dark:text-slate-200 font-bold border-b-2 justify-center">
@@ -18,14 +20,7 @@ export default function CartPage({ setIsOpen }) {
       </div>
       {cartItems.length > 0 ? (
         <>
-          {cartItems.map((item) => (
-            <CartItem
-              key={item.id}
-              data={item}
-              addToCart={addToCart}
-              reduceCartQty={reduceCartQty}
-            />
-          ))}
+          <CartItems />
           <div className="text-white text-center w-full bg-gray-500 dark:bg-slate-800 p-2 absolute left-0 bottom-0 rounded-lg  ">
             <p className="text-[13px]">
               আপনার ব্যাগে মোট{" "}
@@ -51,5 +46,24 @@ export default function CartPage({ setIsOpen }) {
         </p>
       )}
     </div>
+  );
+}
+
+function Item({ data, i }) {
+  const { cartItems, totalCartPrice, addToCart, reduceCartQty } = useCart();
+  const qtyHandler = (qty, action) => {
+    if (action === "increment") {
+      addToCart(data);
+    } else if (action === "decrement") {
+      reduceCartQty(data);
+    }
+  };
+
+  return (
+    <CartItem
+      data={data}
+      productQty={data?.quantity}
+      setProductQy={qtyHandler}
+    />
   );
 }

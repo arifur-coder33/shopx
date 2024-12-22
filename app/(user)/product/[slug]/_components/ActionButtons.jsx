@@ -1,7 +1,7 @@
 import AddToCartButton from "@/components/products/addToCartButton";
 import BuyNowButton from "@/components/products/buyNowButton";
 
-export default function ActionButtons({ product }) {
+export default function ActionButtons({ product, productQty }) {
   return (
     <div className="grid grid-cols-2 z-30 gap-2 mt-4 fixed bottom-1 left-0 w-full sm:static">
       {/* Add to cart button  */}
@@ -11,7 +11,7 @@ export default function ActionButtons({ product }) {
       {/* buy now button  */}
       <div className="relative ">
         <BuyNowButton
-          slug={product?.slug}
+          slug={`${product?.slug}?qty=${productQty}`}
           bgcolor="bg-cyan-500"
           className={
             " w-full hover:bg-cyan-600 hover:border-b-cyan-900 text-white  border-b-4  border-cyan-800  py-2 text-4xl "
