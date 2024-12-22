@@ -12,7 +12,6 @@ function Item({ data }) {
   const { addToCart, reduceCartQty } = useCart();
   const qtyHandler = (qty, action) => {
     if (action === "increment") {
-      console.log(qty);
       addToCart(data);
     } else if (action === "decrement") {
       reduceCartQty(data);
