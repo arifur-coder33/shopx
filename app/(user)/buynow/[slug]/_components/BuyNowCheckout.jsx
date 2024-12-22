@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "nextjs-toploader/app";
 import { useState, useTransition } from "react";
 import BuyNowProductDetails from "./BuyNowProductDetails";
+import { useSearchParams } from "next/navigation";
 export default function BuyNowCheckout({ data }) {
   const { data: session } = useSession();
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
@@ -14,6 +15,8 @@ export default function BuyNowCheckout({ data }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const searchParams = useSearchParams();
+  const initialQty = searchParams.get("qty");
   const router = useRouter();
   const handleSubmit = (e) => {
     e.preventDefault(); // Prevent default form submission
@@ -52,9 +55,7 @@ export default function BuyNowCheckout({ data }) {
         router.push(
           `/tracking/${response?.data?.orderNo}?p=${response?.data?.phoneNumber}&orderSuccess=true`
         );
-        // setSuccess(
-        //   `আপনার অর্ডারটি সঠিক ভাভে করা হয়েছে। অর্ডার নাম্বার হলঃ ${response?.data?.orderNo}`
-        // );
+
         // form.reset(); // Clear the form on success
       } else {
         console.log(response.error);
@@ -65,6 +66,7 @@ export default function BuyNowCheckout({ data }) {
   };
   return (
     <form onSubmit={handleSubmit}>
+     QTy {initialQty}
       <div className="w-full mb-2">
         {success && <p style={{ color: "green" }}>{success}</p>}
         {error && (
@@ -78,6 +80,7 @@ export default function BuyNowCheckout({ data }) {
         <div className="w-full md:w-1/2">
           <BuyNowProductDetails
             data={data}
+            initialQty={initialQty}
             deliveryArea={deliveryArea}
             setPaymentMethod={setPaymentMethod}
           />

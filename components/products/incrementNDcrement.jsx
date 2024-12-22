@@ -6,11 +6,11 @@ import { useState } from "react";
 import Button from "../button";
 export default function IncrementNDcrement({
   style,
-  quantity,
+  initialQty,
   incrementHandler,
   decrementHandler,
 }) {
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(initialQty || 1);
   const increment = () => {
     if (qty < 10) {
       const newQty = qty + 1; // Calculate the updated value
@@ -33,7 +33,7 @@ export default function IncrementNDcrement({
 
   const decrement = () => {
     if (qty > 1) {
-      const newQty = qty + 1; // Calculate the updated value
+      const newQty = qty - 1; // Calculate the updated value
       setQty(newQty); // Update the state
       if (decrementHandler) {
         decrementHandler(newQty);

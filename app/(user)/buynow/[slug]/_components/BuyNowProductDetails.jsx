@@ -8,6 +8,7 @@ export default function BuyNowProductDetails({
   deliveryArea,
   data,
   setPaymentMethod,
+  initialQty
 }) {
   const {
     regularPrice,
@@ -21,7 +22,7 @@ export default function BuyNowProductDetails({
 
   let deliveryCharge = 0;
   deliveryCharge = deliveryArea === "inside-dhaka" ? insideDhaka : outSideDhaka;
-  const [productQty, setProductQty] = useState(1);
+  const [productQty, setProductQty] = useState(Number(initialQty));
   return (
     <>
       <div className="w-full rounded-sm flex flex-row gap-1 font-bold border-b-slate-400  border-b-2 dark:border-b-2 dark:border-b-slate-600 bg-slate-300 dark:bg-slate-800 p-2">
@@ -29,11 +30,11 @@ export default function BuyNowProductDetails({
       </div>
 
       {/* <CartItem data={data} removeItem={"hide"} setProductQty={setProductQty} /> */}
-      <CheckoutItem data={data} />
-
-      <Item label={"পণ্যর মোট মুল্যঃ"} value={regularPrice} />
-      <Item label={"ডিস্কাউন্টঃ"} value={regularPrice - discountPrice} />
-      <Item label={"ডেলিভারি চার্জঃ"} value={deliveryCharge} />
+      <CheckoutItem data={data} productQty={productQty} setProductQy={setProductQty}/>
+      <Item label={"পণ্যর রেগুলার মোট মুল্যঃ"} value={regularPrice * productQty} />
+      <Item label={"পণ্যর ডিস্কাউন্ট মোট মুল্যঃ"} value={discountPrice * productQty} />
+      <Item label={"ডিস্কাউন্টঃ (-)"} value={(regularPrice - discountPrice)*productQty} />
+      <Item label={"ডেলিভারি চার্জঃ (+)"} value={deliveryCharge} />
       <input
         hidden
         name="orderPrice"
