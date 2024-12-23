@@ -5,6 +5,7 @@ import { Truck } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import CartItem from "../cart/CartItem";
 import Imagecustom from "../images/ImageCustom";
+import CartItems from "../cart/CartItems";
 export default function CheckoutProductDetails({
  
 
@@ -24,23 +25,12 @@ export default function CheckoutProductDetails({
       <div className="w-full rounded-sm flex flex-row gap-1 font-bold border-b-slate-400  border-b-2 dark:border-b-2 dark:border-b-slate-600 bg-slate-300 dark:bg-slate-800 p-2">
         <Truck /> <span>অর্ডার বিস্তারিত</span>
       </div>
-      {/* <Suspense fallback={<p className="bg-red-500 h-64 w-64"> Loading ..........</p>}> */}
-      {/* {!orderItems.length > 0 ? (
-        <Democart />
-      ) : (
-        <>
-          {orderItems.map((item) => (
-            <CartItem key={item.id} data={item} removeItem={"hide"} />
-          ))}
-        </>
-      )} */}
 
       <Suspense
         fallback={<p className="bg-red-500 h-64 w-64"> Loading ..........</p>}
       >
-        {cartItems.map((item) => (
-          <CartItem key={item.id} data={item} removeItem={"hide"} />
-        ))}
+     
+        <CartItems/>
       </Suspense>
       <Item label={"পণ্যর মোট মুল্যঃ"} value={totalCartRegularPrice} />
       <Item label={"ডিস্কাউন্টঃ"} value={totalCartRegularPrice-totalCartPrice} />
