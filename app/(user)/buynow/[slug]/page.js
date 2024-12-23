@@ -30,7 +30,6 @@ export default async function ProductPage({ params }) {
 
   return (
     <div className="pt-4">
-  
       <BuyNowCheckout data={data} />
     </div>
   );

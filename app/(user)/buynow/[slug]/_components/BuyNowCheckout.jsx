@@ -1,14 +1,10 @@
 "use client";
-import { createOrder } from "@/backend/serverActions/orderActions";
-import Button from "@/components/button";
-import DeliveryAddress from "@/components/checkout/DeliveryAddress";
-import { Truck } from "lucide-react";
+import OrderForm from "@/components/checkout/OrderForm";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
 import { useState, useTransition } from "react";
 import BuyNowProductDetails from "./BuyNowProductDetails";
-import OrderForm from "@/components/checkout/OrderForm";
 export default function BuyNowCheckout({ data }) {
   const { data: session } = useSession();
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
@@ -19,60 +15,19 @@ export default function BuyNowCheckout({ data }) {
   const searchParams = useSearchParams();
   const initialQty = searchParams.get("qty");
   const router = useRouter();
-  const handleSubmit = (e) => {
-    e.preventDefault(); // Prevent default form submission
-    const deliveryCharge =
-      deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
-    const form = e.target; // Reference to the form element
-    const formData = new FormData(form); // Collect form data
 
-    formData.append("deliveryCharge", Number(deliveryCharge));
-    if (session?.user?.id) {
-      formData.append("userId", session?.user?.id);
-    }
-
-    formData.append("paymentMethod", paymentMethod);
-    const products = [
-      {
-        productName: data?.title,
-        price: Number(data?.discountPrice),
-        quantity: Number(formData.get("quantity")),
-        productColor: data?.color,
-        productSize: data?.size,
-        productId: data?.id,
-      },
-    ];
-    formData.delete("quantity");
-    formData.append("products", JSON.stringify(products));
-    console.log(products);
-    // formData.append("deliveryArea", deliveryArea);
-    setError(null);
-    setSuccess(null);
-
-    startTransition(async () => {
-      const response = await createOrder(formData); // Call server action
-
-      if (response.success) {
-        router.push(
-          `/tracking/${response?.data?.orderNo}?p=${response?.data?.phoneNumber}&orderSuccess=true`
-        );
-
-        // form.reset(); // Clear the form on success
-      } else {
-        console.log(response.error);
-        window.scrollTo(0, 0);
-        setError(response.error || "Something went wrong");
-      }
-    });
-  };
   return (
-    <OrderForm>
-          <BuyNowProductDetails
-            data={data}
-            initialQty={initialQty}
-            deliveryArea={deliveryArea}
-            setPaymentMethod={setPaymentMethod}
-          />
+    <OrderForm
+      deliveryArea={deliveryArea}
+      setDeliveryArea={setDeliveryArea}
+      data={data}
+    >
+      <BuyNowProductDetails
+        data={data}
+        initialQty={initialQty}
+        deliveryArea={deliveryArea}
+        setPaymentMethod={setPaymentMethod}
+      />
     </OrderForm>
     // <form onSubmit={handleSubmit}>
     //   <div className="w-full mb-2">
