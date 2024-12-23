@@ -5,15 +5,17 @@ import DeliveryAddress from "./DeliveryAddress";
 import { createOrder } from "@/backend/serverActions/orderActions";
 
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "nextjs-toploader/app";
+
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 export default function OrderForm({
-  deliveryArea,
   setDeliveryArea,
   children,
-  data,
+
+  products,
+  buyNow,
+  deliveryCharge,
 }) {
   const { data: session } = useSession();
 
@@ -21,32 +23,23 @@ export default function OrderForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const searchParams = useSearchParams();
-  const initialQty = searchParams.get("qty");
+
   const router = useRouter();
   const handleSubmit = (e) => {
     e.preventDefault(); // Prevent default form submission
-    const deliveryCharge =
-      deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
+
     const form = e.target; // Reference to the form element
     const formData = new FormData(form); // Collect form data
-
+    if (buyNow) {
+      products[0].quantity = Number(formData.get("quantity"));
+    }
     formData.append("deliveryCharge", Number(deliveryCharge));
     if (session?.user?.id) {
       formData.append("userId", session?.user?.id);
     }
 
     formData.append("paymentMethod", paymentMethod);
-    const products = [
-      {
-        productName: data?.title,
-        price: Number(data?.discountPrice),
-        quantity: Number(formData.get("quantity")),
-        productColor: data?.color,
-        productSize: data?.size,
-        productId: data?.id,
-      },
-    ];
+
     formData.delete("quantity");
     formData.append("products", JSON.stringify(products));
     console.log(products);

@@ -6,7 +6,6 @@ import CheckOutSubTotal from "./CheckOutSubtotal";
 export default function BuyNowProductDetails({
   deliveryArea,
   data,
-  setPaymentMethod,
   initialQty = 1,
 }) {
   const {
