@@ -26,6 +26,7 @@ export default function BuyNowCheckout({ data }) {
       setDeliveryArea={setDeliveryArea}
       products={products}
       deliveryCharge={deliveryCharge}
+      buyNow={true}
     >
       <BuyNowProductDetails
         data={data}

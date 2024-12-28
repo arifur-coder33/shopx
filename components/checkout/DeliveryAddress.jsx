@@ -19,7 +19,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         name={"phoneNumber"}
         inputType={"text"}
         inputMode={"numeric"}
-        pattern={"[0-9]*"}
+      
         autoComplete="tel"
       />
       <FloatingInput

@@ -1,7 +1,8 @@
 import CartItem from "@/components/cart/CartItem";
 import { Truck } from "lucide-react";
 import { useState } from "react";
-import CheckOutSubTotal from "./CheckOutSubtotal";
+import CheckOutSubTotal from "./CheckOutSubTotal";
+
 
 export default function BuyNowProductDetails({
   deliveryArea,
