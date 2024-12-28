@@ -1,5 +1,6 @@
 import NavBar from "@/components/NavBar";
 import { CartProvider } from "@/context/CartContext";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SessionProvider } from "next-auth/react";
 export const metadata = {
   title: " আমার শপ",
@@ -8,12 +9,15 @@ export const metadata = {
 
 export default function UserLayout({ children }) {
   return (
-    <SessionProvider>
-      <CartProvider>
-        <NavBar  />
+    <>
+      <SessionProvider>
+        <CartProvider>
+          <NavBar />
 
-        <div className="max-w-7xl mx-auto p-2">{children}</div>
-      </CartProvider>
-    </SessionProvider>
+          <div className="max-w-7xl mx-auto p-2">{children}</div>
+        </CartProvider>
+      </SessionProvider>
+      <SpeedInsights />
+    </>
   );
 }
