@@ -42,7 +42,7 @@ export default function AddCatagoryForm() {
 
       <FloatingInput label={"Category Name"} name={"name"} type={"text"} />
 
-      <Button className="w-full mt-2 py-2">
+      <Button type={"submit"} className="w-full mt-2 py-2">
         {isPending ? "Adding ......" : "save "}
       </Button>
     </form>

@@ -155,6 +155,7 @@ export async function getOrderByOrderNo(orderNo, phoneNumber) {
         },
       },
     });
+    console.log(data);
     return { success: true, data }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error

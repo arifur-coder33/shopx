@@ -79,7 +79,7 @@ export default function RegistrationForm() {
         required
         type="password"
       />
-      <Button className="w-full mt-2 py-2">
+      <Button type={"submit"} className="w-full mt-2 py-2">
         {isPending ? "রেজিষ্টার হচ্ছে..." : "রেজিষ্টার করুন"}
       </Button>
 

@@ -14,22 +14,23 @@ export default function LoginForm() {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
+    console.log(`form submit ${formData}`);
     setError("");
     setLoading(true);
+
     try {
       const result = await loginWithCreds(formData);
 
-      setLoading(false);
       if (result?.message) {
         setError(result.message);
-      }
-      if (!result?.message) {
+      } else {
         router.push("/");
       }
-
-      // Redirect or success logic
     } catch (error) {
-      console.log("");
+      console.error("Login error:", error);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false); // Ensure loading is reset
     }
   }
 
@@ -57,7 +58,7 @@ export default function LoginForm() {
         type="password"
       />
 
-      <Button disabled={loading} className="w-full mt-2 py-2">
+      <Button type={"submit"} disabled={loading} className="w-full mt-2 py-2">
         {loading ? "লগইন হচ্ছে..." : "লগইন করুন"}
       </Button>
     </form>

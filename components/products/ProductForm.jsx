@@ -185,10 +185,15 @@ export default function ProductForm({ category, data, actionType }) {
           />
         </div>
 
-        <Button disabled={isPending} className="w-full mt-2 py-2 col-span-full">
+        <Button
+          type={"submit"}
+          disabled={isPending}
+          className="w-full mt-2 py-2 col-span-full"
+        >
           {isPending ? "Adding ......" : "Save"}
         </Button>
         <Button
+          type={"submit"}
           disabled={isPending}
           className=" mt-2 p-2 absolute md:-top-12 -top-14 right-0"
         >
