@@ -5,6 +5,8 @@ import Link from "next/link";
 import KalapanaFont from "./KalapanaFont";
 import ThemeToggle from "./TheamToggle";
 import Cart from "./Cart";
+import Imagecustom from "./images/ImageCustom";
+import Image from "next/image";
 
 
 export default async function NavBar() {
@@ -14,8 +16,18 @@ export default async function NavBar() {
         <div className="mx-auto flex flex-row justify-between items-center max-w-7xl">
           <div className={` md:text-5xl text-3xl font-bold  text-purple`}>
             <Link href={"/"}>
-              {" "}
-              <KalapanaFont>আমার শপ</KalapanaFont>{" "}
+                {/* <Imagecustom
+                   
+                    className=" rounded-md "
+                    placeholder="blur"
+                    src={'logo.png'}
+                            sizes="100px"
+                    h={100}
+                    w={100}
+                    alt={'logo'}
+                  /> */}
+                <Image src={'https://res.cloudinary.com/bdmart24/image/upload/logo.png'} height={100} width={150} alt="logo"/>
+              {/* <KalapanaFont>বিডিশপ২৪</KalapanaFont>{" "} */}
             </Link>
           </div>
           <div className="flex flex-row justify-end gap-1 items-center">

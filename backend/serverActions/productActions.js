@@ -25,6 +25,7 @@ export async function createProductAction(formData) {
         image: data?.mainImage,
         slug,
         tag: data?.seoKeyWord,
+        perifix:'_mainImage'
       });
 
       console.log(uploadResult);

@@ -69,6 +69,7 @@ const Item = ({ data }) => {
         <td className="px-6 py-4">{data?.discountPrice}</td>
         <td className="px-6 py-4">
           <Link
+          prefetch={false}
             href={`/admin/product/edit/${data?.id}`}
             className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
           >
