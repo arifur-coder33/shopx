@@ -62,7 +62,7 @@ export async function generateMetadata({ params }) {
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
 
   return {
-    title: `${title} - Buy Online at ${price} TK`,
+    title: `${title} - মাত্র ${price} টাকায়`,
     description:
       seoDescription ||
       description ||
@@ -76,7 +76,7 @@ export async function generateMetadata({ params }) {
       "Best quality products",
     ],
     openGraph: {
-      title: `${title} - Buy Online at ${price} TK`,
+      title: `${title} - মাত্র ${price} টাকায়`,
       description:
         seoDescription ||
         description ||
@@ -186,9 +186,9 @@ export default async function ProductPage({ params }) {
           />
         </div>
         <div className="col-span-2">
-          <h1 className=" text-xl font-bold">{title}</h1>
+          <h1 className=" text-4xl font-bold border-b-2">{title}</h1>
           <KalapanaFont>
-            <p className="text-3xl dark:text-slate-300 ">
+            <p className="text-2xl dark:text-slate-300 ">
               মূল্যঃ{" "}
               <span className="text-5xl text-purple">
                 {replaceNumbers((discountPrice || 0).toString())}
