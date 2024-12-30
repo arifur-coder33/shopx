@@ -53,7 +53,7 @@ export async function generateMetadata({ params }) {
     cloudinaryMainImage(mainImage) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const ogImageUrl =
-    convertImageToOG_cloudinary(imageUrl, "t_og-image") ||
+    convertImageToOG_cloudinary(imageUrl, "to_og") ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
   const price = discountPrice || regularPrice;
   // const availability = data.stock > 0 ? "InStock" : "OutOfStock";
@@ -85,7 +85,7 @@ export async function generateMetadata({ params }) {
 
       images: [
         {
-          url: convertImageToOG_cloudinary(imageUrl, "t_og-image"),
+          url: convertImageToOG_cloudinary(imageUrl, "to_og"),
           alt: title,
         },
       ],
@@ -185,16 +185,26 @@ export default async function ProductPage({ params }) {
             imageGallery={imageGallery}
           />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-2 mt-2">
           <h1 className=" text-4xl font-bold border-b-2">{title}</h1>
           <KalapanaFont>
-            <p className="text-2xl dark:text-slate-300 ">
+            <p className="text-2xl dark:text-slate-300 mt-4 relative">
               মূল্যঃ{" "}
-              <span className="text-3xl md:text-5xl text-purple">
+              <span className="text-4xl md:text-5xl text-purple">
                 {replaceNumbers((discountPrice || 0).toString())}
               </span>{" "}
-              টাকা <del className="price-del text-xl"> {replaceNumbers((regularPrice || 0).toString())}</del>
-              <span className="bg-slate-900 text-slate-100 dark:bg-slate-200 dark:text-slate-900 px-2 ml-2 text-base md:text-2xl ">বাঁচলো {replaceNumbers((regularPrice-discountPrice).toString())} টাকা</span>
+              টাকা{" "}
+              <del className="price-del text-xl">
+                {" "}
+                {replaceNumbers((regularPrice || 0).toString())}
+              </del>
+              <span className="leading-[16px] md:leading-8 p-2  bg-orange-500 text-slate-100  px-2 ml-2 text-xl md:text-3xl border-dotted border-4 dark:border-slate-900 border-slate-100 -rotate-[30deg] absolute right-0 -top-4 text-center rounded-full sm:h-28 sm:w-28 w-[80px] h-[80px] ">
+                বাঁচলো{" "}
+                <span className="font-bold">
+                  {replaceNumbers((regularPrice - discountPrice).toString())}
+                </span>{" "}
+                <span className="text-base"> টাকা</span>
+              </span>
             </p>
           </KalapanaFont>
           <BuyNowSection data={data} />
