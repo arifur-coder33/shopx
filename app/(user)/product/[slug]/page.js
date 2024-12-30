@@ -194,7 +194,7 @@ export default async function ProductPage({ params }) {
                 {replaceNumbers((discountPrice || 0).toString())}
               </span>{" "}
               টাকা <del className="price-del text-xl"> {replaceNumbers((regularPrice || 0).toString())}</del>
-              <span className="bg-slate-900 text-slate-100 px-2 ml-2 text-base ">বাঁচলো {replaceNumbers((regularPrice-discountPrice).toString())} টাকা</span>
+              <span className="bg-slate-900 text-slate-100 dark:bg-slate-200 dark:text-slate-900 px-2 ml-2 text-base md-text-2xl ">বাঁচলো {replaceNumbers((regularPrice-discountPrice).toString())} টাকা</span>
             </p>
           </KalapanaFont>
           <BuyNowSection data={data} />
