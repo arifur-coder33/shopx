@@ -96,7 +96,7 @@ const Item = ({ data, orderData }) => {
 
         <td className="px-6 py-4 grid grid-cols-3">
           <Link
-            href={`/admin/order/view/${data?.orderNo}?p=${orderData?.phoneNumber}`}
+            href={`/admin/order/view/${data?.orderNo}?p=${encodeURIComponent(orderData?.phoneNumber)}`}
           >
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>

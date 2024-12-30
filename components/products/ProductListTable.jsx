@@ -1,7 +1,9 @@
-import { getProducts } from "@/backend/serverActions/productActions";
+import { deleteProductById, getProducts } from "@/backend/serverActions/productActions";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import Imagecustom from "../images/ImageCustom";
+import DeleteItem from "../common/DeleteItem";
+import { Edit, Eye, Trash } from "lucide-react";
 
 const getData = unstable_cache(
   async () => {
@@ -67,7 +69,7 @@ const Item = ({ data }) => {
         <td className="px-6 py-4">{data?.color}</td>
         <td className="px-6 py-4">{data?.category?.name}</td>
         <td className="px-6 py-4">{data?.discountPrice}</td>
-        <td className="px-6 py-4">
+        {/* <td className="px-6 py-4">
           <Link
           prefetch={false}
             href={`/admin/product/edit/${data?.id}`}
@@ -75,6 +77,22 @@ const Item = ({ data }) => {
           >
             Edit
           </Link>
+        </td> */}
+        <td className="px-6 py-4 grid grid-cols-3">
+          <Link
+            href={`/product/${encodeURIComponent(data?.slug)}`}
+          >
+            <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+          </Link>
+            <Link
+               href={`/admin/product/edit/${data?.id}`}
+            >
+            <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+
+            </Link>
+          <DeleteItem deleteItem={deleteProductById} id={data?.id}>
+            <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
+          </DeleteItem>
         </td>
       </tr>
     </>

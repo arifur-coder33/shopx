@@ -52,7 +52,7 @@ export default function OrderForm({
 
       if (response.success) {
         router.push(
-          `/tracking/${response?.data?.orderNo}?p=${response?.data?.phoneNumber}&orderSuccess=true`
+          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(response?.data?.phoneNumber)}&orderSuccess=true`
         );
 
         // form.reset(); // Clear the form on success

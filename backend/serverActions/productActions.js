@@ -11,8 +11,8 @@ export async function createProductAction(formData) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
     let slug = data?.slug
-      ? data?.slug.split(" ").join("-")
-      : data?.title.split(" ").join("-");
+      ? data.slug.trim().toLowerCase().split(" ").join("-")
+      :data.title.trim().toLowerCase().split(" ").join("-")
     const result = await prisma.$transaction(async (tx) => {
       const checkSlug = await tx.product.findUnique({
         where: { slug: slug },
@@ -134,21 +134,10 @@ export const getProductBySlug = async (slug) => {
 export const updateProductAction = async ({ productId, formData, slug }) => {
   const data = Object.fromEntries(formData.entries());
   let UpdatedData;
-  if (data?.mainImage) {
-    const uploadResult = await cloudinaryUpload({
-      image: data?.mainImage,
-      slug: slug,
-      tag: data?.seoKeyWord,
-    });
-    console.log(uploadResult);
-    UpdatedData = {
-      ...data,
-      mainImage: uploadResult.display_name + "." + uploadResult.format,
-    };
-  }
+
 
   UpdatedData = {
-    ...UpdatedData,
+    ...data,
     regularPrice: data?.regularPrice && Number(data?.regularPrice),
     discountPrice: data?.discountPrice && Number(data?.discountPrice),
     stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
@@ -160,7 +149,18 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       connect: { id: data?.category },
     },
   };
-
+  if (data?.mainImage) {
+    const uploadResult = await cloudinaryUpload({
+      image: data?.mainImage,
+      slug: slug,
+      tag: data?.seoKeyWord,
+    });
+    UpdatedData = {
+      ...UpdatedData,
+      mainImage: uploadResult.display_name + "." + uploadResult.format,
+    };
+  }
+console.log(UpdatedData)
   try {
     const update = await prisma.product.update({
       where: { id: productId },
@@ -186,3 +186,33 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
     };
   }
 };
+
+export async function deleteProductById(id) {
+  try {
+    // Delete the order by its ID
+    const deletedOrder = await prisma.product.delete({
+      where: {
+        id: id,
+      },
+    });
+    revalidatePath("/");
+    revalidatePath("/admin/product");
+    revalidatePath(`/product/${deletedOrder?.slug}`);
+    revalidatePath(`/buynow/${deletedOrder?.slug}`);
+    revalidateTag("products");
+    revalidateTag(`product-${deletedOrder?.slug}`);
+    revalidateTag(`product-${id}`);
+    return {
+      success: true,
+      data: " deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting the product:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to delete ",
+    };
+  } finally {
+    await prisma.$disconnect();
+  }
+}

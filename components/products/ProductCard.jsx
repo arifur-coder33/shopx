@@ -11,7 +11,7 @@ export default function ProductCard({
 }) {
   return (
     <div className="product-card   ">
-      <Link href={`/product/${slug}`}>
+      <Link href={`/product/${encodeURIComponent(slug)}`}>
         <div className="relative">
           <Imagecustom
             sizes="(max-width: 480px) 300px, (max-width: 768px) 300px, 300px"
