@@ -4,7 +4,7 @@ export const dynamic = "force-static"; // Ensures the page is statically generat
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
 import prisma from "@/lib/prisma";
-import { unstable_cache } from "next/cache";
+
 import HeroSection from "./_components/HeroSection";
 
 export async function generateMetadata() {
