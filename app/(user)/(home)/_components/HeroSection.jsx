@@ -14,47 +14,16 @@ const imageLoader = ({ src, width, quality }) => {
 };
 export default function HeroSection() {
   return (
-    <div className="">
-      {/* <Image
-        alt="banner"
-        src={
-          "https://res.cloudinary.com/bdmart24/image/upload/v1735469701/banner_hero.avif"
-        }
-        className=" rounded-3xl"
-        width={1280}
-        height={500}
-        sizes="(max-width: 480px) 300px, 
-               (max-width: 1024px) 900px, 
-               1280px"
-        priority
-        placeholder="blur"
-        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAFA3PEY8MlBGQUZaVVBfeMiCeG5uePWvuZHI////////////////////////////////////////////////////2wBDAVVaWnhpeOuCguv/////////////////////////////////////////////////////////////////////////wAARCADDAfQDASIAAhEBAxEB/8QAGAABAAMBAAAAAAAAAAAAAAAAAAECAwT/xAAsEAEBAAIBBAEEAQMEAwAAAAAAAQIRAxIhMUFRIjJhcYETM5EEI0JSscHR/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAH/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwDpARQAAAAAAAAAAAAC3U2AI6po6oCRHVEdc2CwjqnyTKUEgAAAAAAAAAAAFupujm5OS5Xt4BfLn19s/wAs8+TLKavj8KAJWnJlJraiZN+BS23yhbovwi42egJdXcunRx8nV9OXn/y5ky6ojsFcMurH8+1gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARqfBqfCQEdM+DpnwkBGp8Gp27eEgAAAAAAAAAAAKc2XTh280GfNyb+mfyxAAF8cd96KY4b71tjh2VjXHwIdM9w12SAyz45fWqwssvd2M88JYDPgy1lp0OTvhnPw6pdzYJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAc3NlvP9Om+Lpx3zQQAKmeWmLOLzLU3/AIEabmPknLPUVw4+q7yv8NLxzXaAmcmNWZdOlsaC9uowztyrbL7WW9TdBX+n273u14vskvplbvxuteLLqwBcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABxuxyck1nZPkFQBUzwmdsiTsa33BpeTpnZE5PnavTatjxWiJtsuspZtp0+E9O++XdYD0zz49zUXyskTLsGWOHTvVWwnT/K4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACMrqbRrL/t3/AF2TlNzSN5f9e/7A6tSbnf4h1zVtlmvRqyy+e2qjKZZS3XrUgJ657lk+UzLd1qz9oylsmp7TZerHt4BEz7Te7s6533ua+UYy/TueNmUu78WaBPXrzjl3WZ/VNXLdk/MaAAAAAAAAAObm/uV0uXkt6rL6oKACtMfsqMfJhZN7T9O+1Ea4SNFJOnv6Xl2AADOXqtt8QnLjb7TMJLfi+k6xk8QETLK5+Pp+V1evGe1pZfAAUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABW5yX3/AITcpNfn4U7y37p+u8TN42WzzPXoFuqa3vwTKW67/wAxWy3eWvjt86LerUks777gnrn5/wALeZ+FcPtvb3TC3Ull8AmYSXf/ALSAAAAAAAAAKcufRh+b4c3tpz5byk+GQLWXarTCy5TftTKayoqGmWGsMcp5ZtfOGW/Qi8z6uO/iLyfTLOzLjxtwy/S3DdzQNS3UVw+EcsuWGp5BTPl9RSdeV/8AqvfG/k3vzQa3C9+rOSqceVmf4TrGek4T6t61AbZXWv2lnzXWMv5Xl3NgkJ3AAAAAAAAAAAAAAAAAAAAAAAAAAAAABF3s3deASItvwbvwCRHf4Jbd9gSIlvwbvwCRXd+EzfsEgAAAAAM+TkmPbzWjm5f7lgKW7u6gBUpt2qAN8ZP6WTB0cV3hYIcF3LE8MnT4Zcd1coYZWXtQa71nVrdT8K8nfGZT+VZl2AsmS2PHjrvETJfHKUD+nj8J6YkBjz/bJ+SZf7N+Yrz3eU+FMb9OUB1YXeMSrxz6IsAAAAAAAAAAAAAAAAAAAAAAAAAAAACLv0d0gI7n1fCQEdzd147pARN+zukBH1E37SAAAAAAAOfP6eXK+/TocvLn15b9AqgBQABvw/bWDXjvYRGHtRpxe08eO7ZfkFuHKXHVZZzozsicJ08mv4X58e0y/gGXVVpyaZpk7wV06zy77kjHPKzLUu9fLoyvTjb8RyCL8uXV038KE8VOu0B0476IsifbEgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbNxGpvZqAncNxGoagJ3BGomSQAAAAAAAAEZeK5PFsrsc/NjrLfqgyBOrRUCdWIAacfhmtjlqA24Z9O08f32o4s506OLLvZREcuOs5lPbTUzw18nJ9phZrQOe4WXVTjN8mM/LfPHc37jLi+rk38QF+a/Rr3WPTuyRpJ15WtMcNAwzx6Z2904pvJpynDhqbvkGviAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACMspjO7O5XL9A0uUntXLLHKa1tWQsBnMNeYvItKnW/AKXFlnjp0X8s8puAxE3ygVMulpe6idg2l3DG6yZ432tsR0Ms50b1PuXwu4nKdU1QRhNRa3U2rhfVRnd3QKyXPJqjGaiQBEylukgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwzu86mRGf31OPkGmMTYmeAFLNIl1V8ptSgvZLGWcs/TTGpymwcmXlDXPD3GdlgIAFTLpPVpEmwG/HdWNWPHLqNhGfJenKflWXeSOa/7knrSJKDoL4RPCaCli2N3EIx+8FwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAc2d/3Mv2tjVM/wC5l+1saDbG9lmeNaQBXKLAM/a0qMppEoJsZ5YtVbAc9mqhplGYqcfJfJj5L5B08Wuhdlw3s1Ec/P8A3P4Th5h/qJ3iOPvYDoKIoCv/ADi6n/OAuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADl5P7mX7TiALxpiALAArl4UgAtD0AM8mV8gBPJfICt+H01ARj/AKjxFeHyAOgvmAAr/wA4ALAAAAAAAAAAAAAA/9k="
-      /> */}
-
-      <Image
-        src={
-          "https://res.cloudinary.com/bdmart24/image/upload/v1735469701/banner_hero.avif"
-        }
-        alt="banner"
-        width={1280}
-        height={500}
-        className="rounded-3xl"
-        priority
-        style="color: transparent;"
-        sizes="(max-width: 480px) 100vw, (max-width: 1024px) 900px, 1280px"
-      />
-      {/* <Imagecustom
-                  sizes="(max-width: 480px) 300px, 
-                  (max-width: 1024px) 900px, 
-                  1280px"
-           priority={true}
-                  className=" rounded-md "
-                  placeholder="blur"
-                  src={'banner_hero.webp'}
-                  w={1280}
-                  h={500}
-                  alt={'banner_hero'}
-                /> */}
-    </div>
+    <Image
+      src={
+        "https://res.cloudinary.com/bdmart24/image/upload/v1735469701/banner_hero.avif"
+      }
+      alt="banner"
+      width={1280}
+      height={500}
+      className="rounded-3xl"
+      priority
+      sizes="(max-width: 480px) 100vw, (max-width: 1024px) 900px, 1280px"
+    />
   );
 }
