@@ -190,10 +190,11 @@ export default async function ProductPage({ params }) {
           <KalapanaFont>
             <p className="text-2xl dark:text-slate-300 ">
               মূল্যঃ{" "}
-              <span className="text-5xl text-purple">
+              <span className="text-3xl md:text-5xl text-purple">
                 {replaceNumbers((discountPrice || 0).toString())}
               </span>{" "}
-              টাকা
+              টাকা <del className="price-del text-xl"> {replaceNumbers((regularPrice || 0).toString())}</del>
+              <span className="bg-slate-900 text-slate-100 px-2 ml-2 text-base ">বাঁচলো {replaceNumbers((regularPrice-discountPrice).toString())} টাকা</span>
             </p>
           </KalapanaFont>
           <BuyNowSection data={data} />

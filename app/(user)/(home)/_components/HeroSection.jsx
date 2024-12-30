@@ -18,7 +18,7 @@ export default function HeroSection() {
     <div className="">
       <Image
         alt="banner"
-        src={'https://res.cloudinary.com/bdmart24/image/upload/v1735469701/banner_hero.webp'}
+        src={'https://res.cloudinary.com/bdmart24/image/upload/v1735469701/banner_hero.jpg'}
         className=" rounded-3xl"
         width={1280}
         height={500}
