@@ -10,8 +10,8 @@ const tiro_bangla = Tiro_Bangla({
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL),
-  title: "ShopX - Your Online Store",
-  description: "ShopX - The best place to shop online.",
+  title: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE,
+  description: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE,
   icons: {
     // Single icon definition for favicon
     icon: "/favicon.ico",
@@ -19,19 +19,19 @@ export const metadata = {
     shortcut: "/favicon.ico", // Fallback for shortcut icon
   },
   manifest: "/site.webmanifest",
-  appleMobileWebAppTitle: "ShopX",
+  appleMobileWebAppTitle: process.env.NEXT_SHOP_NAME,
   openGraph: {
-    title: "ShopX - Your Online Store",
+    title: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE,
     description: "ShopX - The best place to shop online.",
     url: process.env.NEXT_PUBLIC_SITE_URL,
     // Add your actual website URL here
-    site_name: "ShopX",
+    site_name: process.env.NEXT_SHOP_NAME,
     images: [
       {
         url: "/images/site_logo_og.png", // Provide the image URL for OpenGraph
         width: 1200,
         height: 630,
-        alt: "ShopX - Your Online Store",
+        alt: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE
       },
     ],
   },

@@ -28,6 +28,7 @@ body {
 .ql-editor {
   background-color: white;
   padding: 10px; /* Optional: Add some padding to the text editor */
+  
 }
 
 .rendered-html iframe,

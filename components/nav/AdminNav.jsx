@@ -7,6 +7,7 @@ import Logout from "@/components/auth/Logout";
 import KalapanaFont from "@/components/KalapanaFont";
 import ThemeToggle from "@/components/TheamToggle";
 import UserName from "@/components/auth/UserName";
+import Logo from "@/components/common/Logo";
 export default async function AdminNavBar() {
   return (
     <>
@@ -19,7 +20,7 @@ export default async function AdminNavBar() {
             <div className={` md:text-5xl text-3xl font-bold  text-purple`}>
               <Link href={"/admin"}>
                 {" "}
-                <KalapanaFont>আমার শপ</KalapanaFont>{" "}
+            <Logo/>
               </Link>
             </div>
           </div>

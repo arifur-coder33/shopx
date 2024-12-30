@@ -7,6 +7,7 @@ import ThemeToggle from "./TheamToggle";
 import Cart from "./Cart";
 import Imagecustom from "./images/ImageCustom";
 import Image from "next/image";
+import Logo from "@/components/common/Logo";
 
 
 export default async function NavBar() {
@@ -26,7 +27,7 @@ export default async function NavBar() {
                     w={100}
                     alt={'logo'}
                   /> */}
-                <Image src={'https://res.cloudinary.com/bdmart24/image/upload/logo.png'} height={100} width={150} alt="logo"/>
+              <Logo/>
               {/* <KalapanaFont>বিডিশপ২৪</KalapanaFont>{" "} */}
             </Link>
           </div>
