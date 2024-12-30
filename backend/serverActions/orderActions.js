@@ -78,6 +78,7 @@ export async function createOrder(formData) {
 
       return order;
     });
+    revalidatePath("/admin/order");
     revalidateTag("orders");
     return { success: true, data: result }; // Return success with order data
   } catch (error) {
