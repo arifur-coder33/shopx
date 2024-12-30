@@ -53,7 +53,7 @@ export async function generateMetadata({ params }) {
     cloudinaryMainImage(mainImage) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const ogImageUrl =
-    convertImageToOG_cloudinary(imageUrl, "to_og") ||
+    convertImageToOG_cloudinary(imageUrl, "t_to_og") ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
   const price = discountPrice || regularPrice;
   // const availability = data.stock > 0 ? "InStock" : "OutOfStock";
@@ -85,7 +85,7 @@ export async function generateMetadata({ params }) {
 
       images: [
         {
-          url: convertImageToOG_cloudinary(imageUrl, "to_og"),
+          url: convertImageToOG_cloudinary(imageUrl, "t_to_og"),
           alt: title,
         },
       ],
