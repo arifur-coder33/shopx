@@ -1,5 +1,5 @@
 import { GetUserList } from "@/backend/serverActions/authActions"
-import UserListTable from "@/app/admin/user/_components/UserListtable"
+import UserListTable from "@/app/admin/user/_components/UserListTable"
 
 export default async function UserListPage(){
     const {data}=await GetUserList()
