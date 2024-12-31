@@ -92,7 +92,7 @@ const Item = ({ data,index }) => {
        {data?.status}
         </td>
 
-        <td className="px-6 py-4 grid grid-cols-3">
+        <td className="px-6 py-4 flex flex-row gap-2">
           <Link
             href={`/admin/user/view/${data?.id}}`}
           >
