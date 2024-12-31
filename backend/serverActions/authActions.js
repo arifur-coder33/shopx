@@ -148,3 +148,42 @@ export async function registrationAction(formData) {
 export async function logout(params) {
   await signOut();
 }
+
+
+export async function GetUserList() {
+  try {
+    const data = await prisma.user.findMany();
+
+    return { success: true, data };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || "Failed to delete ",
+    }
+  }
+}
+
+export async function deleteUserById(id) {
+  try {
+    // Delete the order by its ID
+    const deletedOrder = await prisma.user.delete({
+      where: {
+        id: id,
+      },
+    });
+    revalidatePath("/admin/users");
+
+    return {
+      success: true,
+      data: " deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting the product:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to delete ",
+    };
+  } finally {
+    await prisma.$disconnect();
+  }
+}

@@ -160,7 +160,7 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       mainImage: uploadResult.display_name + "." + uploadResult.format,
     };
   }
-console.log(UpdatedData)
+
   try {
     const update = await prisma.product.update({
       where: { id: productId },
