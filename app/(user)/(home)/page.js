@@ -23,24 +23,12 @@ export async function generateMetadata() {
       {
         "@type": "ListItem",
         position: 2,
-        name: "Electronics",
-        item: `${siteUrl}/category/electronics`,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Machinary",
-        item: `${siteUrl}/category/machinary`,
+        name: "Machinery",
+        item: `${siteUrl}/category/machinery`,
       },
       {
         "@type": "ListItem",
         position: 3,
-        name: "Fashion",
-        item: `${siteUrl}/category/fashion`,
-      },
-      {
-        "@type": "ListItem",
-        position: 4,
         name: "Fashion",
         item: `${siteUrl}/category/fashion`,
       },
@@ -59,13 +47,15 @@ export async function generateMetadata() {
   };
 
   return {
-    title: `Home - ${process.env.NEXT_SHOP_NAME} `,
+    title: `বিডি মার্ট 24 - bdmart24 -  আপনার বিশ্বস্ত অনলাইন শপ`,
     description:
-      "Discover top products across various categories. Shop now for exclusive discounts on electronics, fashion, home essentials, and more.",
+      "বিডি মার্ট 24 - bdmart24-এ স্বাগতম! আমাদের সাইটে আপনি মেশিনারি পণ্য, ফ্যাশন, গ্যাজেট এবং আরও অনেক কিছু পাবেন। আজই শপিং করুন এবং অদ্বিতীয় ডিসকাউন্ট উপভোগ করুন।",
+    keywords:
+      "বিডি মার্ট 24 - bdmart24, মেশিনারি পণ্য, ফ্যাশন পণ্য, ইলেকট্রনিক্স, গ্যাজেট, শপিং, অনলাইন শপ, ডিসকাউন্ট, বিডি শপ, বাংলাদেশ, bdmart24, machinery products, fashion items, electronics, gadgets, shopping, online store, discount, BD shop, Bangladesh",
     openGraph: {
-      title: `Home - ${process.env.NEXT_SHOP_NAME} `,
+      title: `বিডি মার্ট 24 - bdmart24 - আপনার বিশ্বস্ত অনলাইন শপ`,
       description:
-        "Discover top products across various categories. Shop now for exclusive discounts on electronics, fashion, home essentials, and more.",
+        "বিডি মার্ট 24 - bdmart24-এ স্বাগতম! আমাদের সাইটে আপনি মেশিনারি পণ্য, ফ্যাশন, গ্যাজেট এবং আরও অনেক কিছু পাবেন। আজই শপিং করুন এবং অদ্বিতীয় ডিসকাউন্ট উপভোগ করুন।",
       url: siteUrl,
       type: "website",
       images: [
@@ -73,16 +63,16 @@ export async function generateMetadata() {
           url: `${siteUrl}/images/site_logo_og.png`,
           width: 1200,
           height: 630,
-          alt: "Your E-Commerce Website Banner",
+          alt: "বিডি মার্ট 24 - bdmart24 - আপনার বিশ্বস্ত অনলাইন শপ",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
       site: siteUrl,
-      title: `Home - ${process.env.NEXT_SHOP_NAME}  - Your E-Commerce Website`,
+      title: `বিডি মার্ট 24 - bdmart24 - মেশিনারি এবং ফ্যাশন পণ্য | আপনার বিশ্বস্ত অনলাইন শপ`,
       description:
-        "Discover top products across various categories. Shop now for exclusive discounts on electronics, fashion, home essentials, and more.",
+        "বিডি মার্ট 24 - bdmart24-এ স্বাগতম! আমাদের সাইটে আপনি মেশিনারি পণ্য, ফ্যাশন, গ্যাজেট এবং আরও অনেক কিছু পাবেন। আজই শপিং করুন এবং অদ্বিতীয় ডিসকাউন্ট উপভোগ করুন।",
     },
     alternates: {
       canonical: siteUrl,
@@ -90,6 +80,7 @@ export async function generateMetadata() {
     structuredData: [breadcrumbJsonLd, searchJsonLd], // Include Breadcrumb and Search JSON-LD
   };
 }
+
 
 const getProducts = await prisma.product.findMany();
 
