@@ -1,37 +1,20 @@
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import { cloudinaryMainImage, cloudinaryBlurImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-export default function ProductMainImage({ image, title, style }) {
-  return (
-    // <CldImage
-    //   src={image}
-    //   width="400"
-    //   height="400"
-    //   alt="Description of my image"
-    // />
-    <>
-      <Image
-        sizes="400px"
-        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
-        placeholder="blur"
-        width={400}
-        height={400}
-        alt={title}
-        src={cloudinaryMainImage(image)}
-        priority
-      />
-    </>
 
-    // <Image
-    // src="/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=75"
-    // sizes="(max-width: 480px) 300px, (max-width: 768px) 500px, 650px"
-    // loader={customLoader}
-    // className="rounded-md"
-    // placeholder="blur"
-    // blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-    // width={650}
-    // height={650}
-    // alt="image"
-    // priority
-    // />
+export default function ProductMainImage({ image, title }) {
+  const mainImageUrl = cloudinaryMainImage(image);
+  const blurImageUrl = cloudinaryBlurImage(image);
+
+  return (
+    <Image
+      src={mainImageUrl}
+      alt={title}
+      width={400}
+      height={400}
+      placeholder="blur"
+      blurDataURL={blurImageUrl} // Low-quality placeholder image
+      sizes="(max-width: 768px) 300px, (max-width: 1200px) 400px, 800px"
+      priority
+    />
   );
 }
