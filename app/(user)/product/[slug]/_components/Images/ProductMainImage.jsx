@@ -2,7 +2,7 @@ import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
 
 export default function ProductMainImage({ image, title }) {
-  const mainImageUrl = cloudinaryMainImage(image,600,600);
+  const mainImageUrl = cloudinaryMainImage(image,800,800);
 
 
   return (
