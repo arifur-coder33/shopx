@@ -1,5 +1,9 @@
+# *
 User-agent: *
-Disallow: /admin
-Disallow: /api
 Allow: /
+
+# Host
+Host: https://www.bdmart24.online
+
+# Sitemaps
 Sitemap: https://www.bdmart24.online/sitemap.xml
