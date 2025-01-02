@@ -21,7 +21,7 @@ export default function CartItem({
           width={75}
           height={75}
           alt={title}
-          src={cloudinaryMainImage(mainImage)}
+          src={cloudinaryMainImage(mainImage,100,100)}
           priority
         />
       </div>

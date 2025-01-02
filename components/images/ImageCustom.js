@@ -12,7 +12,7 @@ export default function Imagecustom({
 }) {
   return (
     <Image
-      src={cloudinaryMainImage(src)}
+      src={cloudinaryMainImage(src,w,h)}
       sizes={sizes}
       // loader={customLoader}
       className={`rounded-md  ${style}`}

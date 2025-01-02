@@ -2,7 +2,7 @@ import { cloudinaryMainImage, cloudinaryBlurImage } from "@/utils/cloudinaryUrl"
 import Image from "next/image";
 
 export default function ProductMainImage({ image, title }) {
-  const mainImageUrl = cloudinaryMainImage(image);
+  const mainImageUrl = cloudinaryMainImage(image,400,400);
   const blurImageUrl = cloudinaryBlurImage(image);
 
   return (
