@@ -50,7 +50,7 @@ export async function generateMetadata({ params }) {
   } = data;
 
   const imageUrl =
-    cloudinaryMainImage(mainImage) ||
+    cloudinaryMainImage(mainImage,1200,630) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const ogImageUrl =
     convertImageToOG_cloudinary(imageUrl, "t_to_og") ||

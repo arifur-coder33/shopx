@@ -6,6 +6,9 @@ import { GoogleTagManager,GoogleAnalytics } from '@next/third-parties/google'
 export const metadata = {
   title: " আমার শপ",
   description: "ঘরে বসে পন্য অর্ডার করুন",
+    links: [
+    { rel: "preconnect", href: "https://res.cloudinary.com" },
+  ],
 };
 
 export default function UserLayout({ children }) {
