@@ -1,7 +1,7 @@
 import { Tiro_Bangla } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
-import "./globals.css";
 import { ToastContainer } from "react-toastify";
+import "./globals.css";
 const tiro_bangla = Tiro_Bangla({
   subsets: ["bengali"],
   display: "swap",
@@ -10,8 +10,8 @@ const tiro_bangla = Tiro_Bangla({
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL),
-  title: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE,
-  description: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE,
+  title: process.env.NEXT_SHOP_NAME + "-" + process.env.NEXT_SHOP_TITLE,
+  description: process.env.NEXT_SHOP_NAME + "-" + process.env.NEXT_SHOP_TITLE,
   icons: {
     // Single icon definition for favicon
     icon: "/favicon.ico",
@@ -21,7 +21,7 @@ export const metadata = {
   manifest: "/site.webmanifest",
   appleMobileWebAppTitle: process.env.NEXT_SHOP_NAME,
   openGraph: {
-    title: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE,
+    title: process.env.NEXT_SHOP_NAME + "-" + process.env.NEXT_SHOP_TITLE,
     description: "ShopX - The best place to shop online.",
     url: process.env.NEXT_PUBLIC_SITE_URL,
     // Add your actual website URL here
@@ -31,7 +31,7 @@ export const metadata = {
         url: "/images/site_logo_og.png", // Provide the image URL for OpenGraph
         width: 1200,
         height: 630,
-        alt: process.env.NEXT_SHOP_NAME+"-"+process.env.NEXT_SHOP_TITLE
+        alt: process.env.NEXT_SHOP_NAME + "-" + process.env.NEXT_SHOP_TITLE,
       },
     ],
   },

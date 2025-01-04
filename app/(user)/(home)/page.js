@@ -72,7 +72,7 @@ export async function generateMetadata() {
       site: siteUrl,
       title: `বিডিমার্ট24  - আপনার বিশ্বস্ত অনলাইন শপ`,
       description:
-      "এখানে আপনি মেশিনারি পণ্য, ফ্যাশন, গ্যাজেট এবং আরও অনেক কিছু পাবেন। কোন টাকা অ্যাডভাঞ্চ আজই অর্ডার করুন এবং ডিসকাউন্ট উপভোগ করুন।",
+        "এখানে আপনি মেশিনারি পণ্য, ফ্যাশন, গ্যাজেট এবং আরও অনেক কিছু পাবেন। কোন টাকা অ্যাডভাঞ্চ আজই অর্ডার করুন এবং ডিসকাউন্ট উপভোগ করুন।",
     },
     alternates: {
       canonical: siteUrl,
@@ -81,8 +81,16 @@ export async function generateMetadata() {
   };
 }
 
-
-const getProducts = await prisma.product.findMany();
+const getProducts = await prisma.product.findMany({
+  select: {
+    id: true,
+    title: true,
+    regularPrice: true,
+    discountPrice: true,
+    slug: true,
+    mainImage: true,
+  },
+});
 
 // const getProducts = unstable_cache(
 //   async () => {
