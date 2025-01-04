@@ -15,15 +15,14 @@ const imageLoader = ({ src, width, quality }) => {
 export default function HeroSection() {
   return (
     <Image
-      src={
-        "https://res.cloudinary.com/bdmart24/image/upload/v1735469701/banner_hero.avif"
-      }
+      src="https://res.cloudinary.com/bdmart24/image/upload/f_auto,q_auto,w_1024/v1735469701/banner_hero.avif"
       alt="banner"
       width={1280}
       height={500}
       className="rounded-3xl"
       priority
       sizes="(max-width: 480px) 100vw, (max-width: 1024px) 900px, 1280px"
+      // placeholder="blur"
     />
   );
 }
