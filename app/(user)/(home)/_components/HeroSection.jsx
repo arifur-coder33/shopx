@@ -20,9 +20,11 @@ export default function HeroSection() {
       width={1280}
       height={500}
       className="rounded-3xl"
+      layout="intrinsic"
       priority
       sizes="(max-width: 480px) 100vw, (max-width: 1024px) 900px, 1280px"
-      // placeholder="blur"
+      blurDataURL="https://res.cloudinary.com/bdmart24/image/upload/f_auto,q_auto,w_1024/v1735469701/banner_hero.avif"
+      placeholder="blur"
     />
   );
 }
