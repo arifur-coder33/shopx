@@ -48,6 +48,7 @@ export async function generateMetadata({ params }) {
     id,
   } = data;
 
+  console.log(id);
   const imageUrl =
     cloudinaryMainImage(mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
@@ -58,8 +59,8 @@ export async function generateMetadata({ params }) {
       "t_to_og"
     ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
 
-  const price = Number(discountPrice) || Number(regularPrice);
-  const availability = "in stock";
+  const price = Number(discountPrice);
+  const availability = "in stock"; // Ensure this field is included and valid
   const brandName = data.brand || process.env.NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
 
@@ -96,10 +97,10 @@ export async function generateMetadata({ params }) {
         availability: availability,
         condition: "new",
         price: {
-          amount: Number(price),
+          amount: price,
           currency: "BDT",
         },
-        retailer_item_id: slug,
+        retailer_item_id: id, // Ensure 'id' is being passed correctly here
         item_group_id: category?.name,
       },
     },
@@ -121,12 +122,11 @@ export async function generateMetadata({ params }) {
     alternates: {
       canonical: url,
       languages: {
-        "en-US": url,
-        "bn-BD": `${url}?lang=bn`,
+        "bn-BD": `${url}`,
       },
     },
     other: {
-      "product:price:amount": Number(price),
+      "product:price:amount": price,
       "product:price:currency": "BDT",
       "product:availability": availability,
       "product:brand": brandName,
@@ -149,7 +149,7 @@ export async function generateMetadata({ params }) {
       offers: [
         {
           "@type": "Offer",
-          price: Number(price),
+          price: price,
           priceCurrency: "BDT",
           availability: `https://schema.org/${availability}`,
           itemCondition: "https://schema.org/NewCondition",
