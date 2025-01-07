@@ -60,7 +60,7 @@ export async function generateMetadata({ params }) {
       "t_to_og"
     ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
 
-  const price = discountPrice || regularPrice;
+  const price = Number(discountPrice) || Number(regularPrice);
   const availability = "in stock";
   const brandName = data.brand || process.env.NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
