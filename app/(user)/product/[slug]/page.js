@@ -61,7 +61,7 @@ export async function generateMetadata({ params }) {
     ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
 
   const price = discountPrice || regularPrice;
-  const availability = "InStock";
+  const availability = "in stock";
   const brandName = data.brand || process.env.NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
 
@@ -79,7 +79,11 @@ export async function generateMetadata({ params }) {
       "Affordable price",
       "Best quality products",
     ],
+    id: id,
+    price: price,
     openGraph: {
+      id: id,
+      price: price,
       title: `${title} - মাত্র ${price} টাকায়`,
       description:
         seoDescription ||
@@ -88,7 +92,7 @@ export async function generateMetadata({ params }) {
       url,
       images: [
         {
-          url: ogImageUrl, // 1200x630 for OG image
+          url: imageUrl, // 1200x630 for OG image
           alt: title,
         },
       ],
@@ -126,6 +130,8 @@ export async function generateMetadata({ params }) {
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Product",
+      id: id,
+      price: price,
       name: title,
       description: description || `${title}`,
       image: [imageUrl],
