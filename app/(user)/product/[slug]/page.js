@@ -96,10 +96,10 @@ export async function generateMetadata({ params }) {
         availability: availability,
         condition: "new",
         price: {
-          amount: price,
+          amount: Number(price),
           currency: "BDT",
         },
-        retailer_item_id: id,
+        retailer_item_id: slug,
         item_group_id: category?.name,
       },
     },
@@ -126,7 +126,7 @@ export async function generateMetadata({ params }) {
       },
     },
     other: {
-      "product:price:amount": price.toString(),
+      "product:price:amount": Number(price),
       "product:price:currency": "BDT",
       "product:availability": availability,
       "product:brand": brandName,
@@ -136,7 +136,7 @@ export async function generateMetadata({ params }) {
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Product",
-      productID: id,
+      productID: slug,
       name: title,
       description: description || `${title}`,
       url,
@@ -149,7 +149,7 @@ export async function generateMetadata({ params }) {
       offers: [
         {
           "@type": "Offer",
-          price: price,
+          price: Number(price),
           priceCurrency: "BDT",
           availability: `https://schema.org/${availability}`,
           itemCondition: "https://schema.org/NewCondition",
