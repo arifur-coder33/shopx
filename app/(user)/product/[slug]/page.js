@@ -48,12 +48,10 @@ export async function generateMetadata({ params }) {
     id,
   } = data;
 
-  // Generate the image URL for Facebook preview (500x500 px)
   const imageUrl =
     cloudinaryMainImage(mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
 
-  // Generate OpenGraph image for Facebook share (1200x630 px)
   const ogImageUrl =
     convertImageToOG_cloudinary(
       cloudinaryMainImage(mainImage, 1200, 630),
@@ -79,11 +77,8 @@ export async function generateMetadata({ params }) {
       "Affordable price",
       "Best quality products",
     ],
-    id: id,
-    price: price,
+
     openGraph: {
-      id: id,
-      price: price,
       title: `${title} - মাত্র ${price} টাকায়`,
       description:
         seoDescription ||
@@ -96,6 +91,17 @@ export async function generateMetadata({ params }) {
           alt: title,
         },
       ],
+      product: {
+        brand: brandName,
+        availability: availability,
+        condition: "new",
+        price: {
+          amount: price,
+          currency: "BDT",
+        },
+        retailer_item_id: id,
+        item_group_id: category?.name,
+      },
     },
     twitter: {
       card: "summary_large_image",
@@ -130,23 +136,33 @@ export async function generateMetadata({ params }) {
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Product",
-      id: id,
-      price: price,
+      productID: id,
       name: title,
       description: description || `${title}`,
+      url,
       image: [imageUrl],
       brand: {
         "@type": "Brand",
         name: brandName,
       },
       sku: id || "N/A",
-      offers: {
-        "@type": "Offer",
-        price: price,
-        priceCurrency: "BDT",
-        availability: `https://schema.org/${availability}`,
-        url,
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          price: price,
+          priceCurrency: "BDT",
+          availability: `https://schema.org/${availability}`,
+          itemCondition: "https://schema.org/NewCondition",
+          url,
+        },
+      ],
+      additionalProperty: [
+        {
+          "@type": "PropertyValue",
+          propertyID: "item_group_id",
+          value: category?.name || "General",
+        },
+      ],
     },
   };
 }
