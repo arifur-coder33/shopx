@@ -28,7 +28,13 @@ const nextConfig = {
         hostname: "res.cloudinary.com",
         port: "",
       },
+      {
+        protocol: "https",
+        hostname: "facebook.com",
+        port: "",
+      },
     ],
+
     deviceSizes: [320, 420, 768, 1024, 1200],
     imageSizes: [400, 800],
   },
