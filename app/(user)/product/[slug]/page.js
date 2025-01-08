@@ -7,7 +7,6 @@ import ProductDescription from "@/components/products/productDescription";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
-import { unstable_cache } from "next/cache";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
 
@@ -59,7 +58,11 @@ export async function generateMetadata({ params }) {
       "t_to_og"
     ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
 
-  const price = Number(discountPrice);
+  const price = new Intl.NumberFormat("en-BD", {
+    style: "currency",
+    currency: "BDT",
+  }).format(Number(discountPrice));
+
   const availability = "in stock"; // Ensure this field is included and valid
   const brandName = data.brand || process.env.NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
@@ -94,13 +97,13 @@ export async function generateMetadata({ params }) {
       ],
       product: {
         brand: brandName,
-        availability: availability,
+        availability: "in stock",
         condition: "new",
         price: {
           amount: price,
           currency: "BDT",
         },
-        retailer_item_id: id, // Ensure 'id' is being passed correctly here
+        retailer_item_id: id || "1111", // Ensure 'id' is being passed correctly here
         item_group_id: category?.name,
       },
     },
@@ -121,14 +124,11 @@ export async function generateMetadata({ params }) {
     robots: "index, follow",
     alternates: {
       canonical: url,
-      languages: {
-        "bn-BD": `${url}`,
-      },
     },
     other: {
       "product:price:amount": price,
       "product:price:currency": "BDT",
-      "product:availability": availability,
+      "product:availability": "in stock",
       "product:brand": brandName,
       "product:category": category?.name || "General",
       "product:sku": id || "N/A",
@@ -136,7 +136,7 @@ export async function generateMetadata({ params }) {
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Product",
-      productID: slug,
+      productID: id,
       name: title,
       description: description || `${title}`,
       url,
@@ -187,7 +187,7 @@ export default async function ProductPage({ params }) {
   //   { revalidate: 60, tags: [`product-${slug}`] }
   // );
 
-  const  {data} = await getProductBySlug(slug)
+  const { data } = await getProductBySlug(slug);
 
   const {
     id,
