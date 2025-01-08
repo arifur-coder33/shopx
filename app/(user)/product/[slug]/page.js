@@ -178,16 +178,16 @@ export default async function ProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;
 
-  const getProduct = unstable_cache(
-    async () => {
-      const data = await getProductBySlug(slug);
-      return data?.data;
-    },
-    [slug],
-    { revalidate: 60, tags: [`product-${slug}`] }
-  );
+  // const getProduct = unstable_cache(
+  //   async () => {
+  //     const data = await getProductBySlug(slug);
+  //     return data?.data;
+  //   },
+  //   [slug],
+  //   { revalidate: 60, tags: [`product-${slug}`] }
+  // );
 
-  const data = await getProduct();
+  const  {data} = await getProductBySlug(slug)
 
   const {
     id,
