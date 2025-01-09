@@ -99,12 +99,12 @@ export async function generateMetadata({ params }) {
         brand: brandName,
         availability: "in stock",
         condition: "new",
+        retailer_item_id: id || "1111", // Ensure 'id' is being passed correctly here
+        item_group_id: category?.name,
         price: {
           amount: price,
           currency: "BDT",
         },
-        retailer_item_id: id || "1111", // Ensure 'id' is being passed correctly here
-        item_group_id: category?.name,
       },
     },
     twitter: {
