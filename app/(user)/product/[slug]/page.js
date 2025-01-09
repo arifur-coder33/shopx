@@ -1,4 +1,3 @@
-export const dynamic = "force-static";
 import {
   getProductBySlug,
   getProducts,
@@ -8,7 +7,6 @@ import ProductDescription from "@/components/products/productDescription";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
-import { unstable_cache } from "next/cache";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
 
@@ -49,15 +47,23 @@ export async function generateMetadata({ params }) {
     id,
   } = data;
 
+  console.log(id);
   const imageUrl =
-    cloudinaryMainImage(mainImage,1200,630) ||
+    cloudinaryMainImage(mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
+
   const ogImageUrl =
-    convertImageToOG_cloudinary(imageUrl, "t_to_og") ||
-    `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
-  const price = discountPrice || regularPrice;
-  // const availability = data.stock > 0 ? "InStock" : "OutOfStock";
-  const availability = "InStock";
+    convertImageToOG_cloudinary(
+      cloudinaryMainImage(mainImage, 1200, 630),
+      "t_to_og"
+    ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
+
+  const price = new Intl.NumberFormat("en-BD", {
+    style: "currency",
+    currency: "BDT",
+  }).format(Number(discountPrice));
+
+  const availability = "in stock"; // Ensure this field is included and valid
   const brandName = data.brand || process.env.NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
 
@@ -75,6 +81,7 @@ export async function generateMetadata({ params }) {
       "Affordable price",
       "Best quality products",
     ],
+
     openGraph: {
       title: `${title} - মাত্র ${price} টাকায়`,
       description:
@@ -82,13 +89,23 @@ export async function generateMetadata({ params }) {
         description ||
         `Shop ${title} from ${category?.name} at the best price.`,
       url,
-
       images: [
         {
-          url: convertImageToOG_cloudinary(imageUrl, "t_to_og"),
+          url: imageUrl, // 1200x630 for OG image
           alt: title,
         },
       ],
+      product: {
+        brand: brandName,
+        availability: "in stock",
+        condition: "new",
+        retailer_item_id: id || "1111", // Ensure 'id' is being passed correctly here
+        item_group_id: category?.name,
+        price: {
+          amount: price,
+          currency: "BDT",
+        },
+      },
     },
     twitter: {
       card: "summary_large_image",
@@ -99,7 +116,7 @@ export async function generateMetadata({ params }) {
         `${title} is a premium product available for purchase.`,
       images: [
         {
-          url: ogImageUrl,
+          url: ogImageUrl, // 1200x630 for OG image
           alt: title,
         },
       ],
@@ -107,15 +124,11 @@ export async function generateMetadata({ params }) {
     robots: "index, follow",
     alternates: {
       canonical: url,
-      languages: {
-        "en-US": url,
-        "bn-BD": `${url}?lang=bn`,
-      },
     },
     other: {
-      "product:price:amount": price.toString(),
+      "product:price:amount": price,
       "product:price:currency": "BDT",
-      "product:availability": availability,
+      "product:availability": "in stock",
       "product:brand": brandName,
       "product:category": category?.name || "General",
       "product:sku": id || "N/A",
@@ -123,21 +136,33 @@ export async function generateMetadata({ params }) {
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Product",
+      productID: id,
       name: title,
-      description: description || `${title} is a high-quality product.`,
+      description: description || `${title}`,
+      url,
       image: [imageUrl],
       brand: {
         "@type": "Brand",
         name: brandName,
       },
       sku: id || "N/A",
-      offers: {
-        "@type": "Offer",
-        price: price,
-        priceCurrency: "BDT",
-        availability: `https://schema.org/${availability}`,
-        url,
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          price: price,
+          priceCurrency: "BDT",
+          availability: `https://schema.org/${availability}`,
+          itemCondition: "https://schema.org/NewCondition",
+          url,
+        },
+      ],
+      additionalProperty: [
+        {
+          "@type": "PropertyValue",
+          propertyID: "item_group_id",
+          value: category?.name || "General",
+        },
+      ],
     },
   };
 }
@@ -153,16 +178,16 @@ export default async function ProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;
 
-  const getProduct = unstable_cache(
-    async () => {
-      const data = await getProductBySlug(slug);
-      return data?.data;
-    },
-    [slug],
-    { revalidate: 60, tags: [`product-${slug}`] } // Use string array for tags
-  );
+  // const getProduct = unstable_cache(
+  //   async () => {
+  //     const data = await getProductBySlug(slug);
+  //     return data?.data;
+  //   },
+  //   [slug],
+  //   { revalidate: 60, tags: [`product-${slug}`] }
+  // );
 
-  const data = await getProduct();
+  const { data } = await getProductBySlug(slug);
 
   const {
     id,
@@ -186,7 +211,7 @@ export default async function ProductPage({ params }) {
           />
         </div>
         <div className="col-span-2 mt-2">
-          <h1 className=" text-4xl font-bold border-b-2">{title}</h1>
+          <h1 className="text-4xl font-bold border-b-2">{title}</h1>
           <KalapanaFont>
             <p className="text-2xl dark:text-slate-300 mt-4 relative">
               মূল্যঃ{" "}
@@ -195,10 +220,9 @@ export default async function ProductPage({ params }) {
               </span>{" "}
               টাকা{" "}
               <del className="price-del text-xl">
-                {" "}
                 {replaceNumbers((regularPrice || 0).toString())}
               </del>
-              <span className="leading-[16px] md:leading-8 p-2  bg-orange-500 text-slate-100  px-2 ml-2 text-xl md:text-3xl border-dotted border-4 dark:border-slate-900 border-slate-100 -rotate-[30deg] absolute right-0 -top-4 text-center rounded-full sm:h-28 sm:w-28 w-[80px] h-[80px] ">
+              <span className="leading-[16px] md:leading-8 p-2 bg-orange-500 text-slate-100 px-2 ml-2 text-xl md:text-3xl border-dotted border-4 dark:border-slate-900 border-slate-100 -rotate-[30deg] absolute right-0 -top-4 text-center rounded-full sm:h-28 sm:w-28 w-[80px] h-[80px]">
                 বাঁচলো{" "}
                 <span className="font-bold">
                   {replaceNumbers((regularPrice - discountPrice).toString())}

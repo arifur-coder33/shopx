@@ -97,7 +97,7 @@ export async function getProductById(id) {
   }
 }
 
-export const getProducts = unstable_cache(
+export const getProducts = 
   async () => {
     const data = await prisma.product.findMany({
       include: {
@@ -107,10 +107,7 @@ export const getProducts = unstable_cache(
     });
 
     return { success: true, data };
-  },
-  ["products"],
-  { revalidate: 3600, tags: ["products"] }
-);
+  };
 
 export const getProductBySlug = async (slug) => {
   try {
