@@ -1,34 +1,26 @@
-import { customLoader } from "@/components/images/Images-Loader";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-
-export function ProductImageGallery({image,title}) {
-    return (
-    <>
-      {/* <Image
-        src={
-          "/photo-1556637640-2c80d3201be8?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=75&q=50"
-        }
-        loader={customLoader}
-        className=" rounded-md md:w-[75px]"
-        placeholder="blur"
-        blurDataURL="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-        width={50}
-        height={50}
-        alt="image"
-      /> */}
-
-<Image
-          sizes="45px"
-          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
-          width={50}
-          height={50}
-          alt={title}
-          src={image}
-      
-        />
-      
-    </>
-
-      
-    );
-  }
+export function ProductImageGallery({ imageGallery, title }) {
+  if (imageGallery?.length === 0) return;
+  return (
+    <div className="flex gap-2 flex-col">
+      Image gallery
+      {imageGallery?.length > 0 &&
+        imageGallery.map((image) => {
+          return (
+            <Image
+              key={image}
+              src={cloudinaryMainImage(image, 800, 800)}
+              alt={title}
+              width={800}
+              height={800}
+              placeholder="blur"
+              blurDataURL={image}
+              sizes="(max-width: 768px) 100vh, (max-width: 1200px) 800px, 800px"
+              loading="lazy"
+            />
+          );
+        })}
+    </div>
+  );
+}

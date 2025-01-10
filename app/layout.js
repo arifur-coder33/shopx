@@ -1,6 +1,5 @@
 import { Tiro_Bangla } from "next/font/google";
 import Image from "next/image";
-import Script from "next/script";
 import NextTopLoader from "nextjs-toploader";
 import { ToastContainer } from "react-toastify";
 import "./globals.css";
@@ -46,7 +45,7 @@ export default function RootLayout({ children }) {
         <NextTopLoader showSpinner={false} />
         <div className="">{children}</div>
         <ToastContainer />
-        <Script
+        {/* <Script
           id="facebook-pixel"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
@@ -63,7 +62,7 @@ export default function RootLayout({ children }) {
               fbq('track', 'PageView');
             `,
           }}
-        />
+        /> */}
         <noscript>
           <Image
             height="1"

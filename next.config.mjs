@@ -38,6 +38,11 @@ const nextConfig = {
     deviceSizes: [320, 420, 768, 1024, 1200],
     imageSizes: [400, 800],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "3mb",
+    },
+  },
 };
 
 export default nextConfig;

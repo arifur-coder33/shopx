@@ -9,6 +9,7 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
+import { ProductImageGallery } from "./_components/Images/ProductImagegallery";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -188,7 +189,7 @@ export default async function ProductPage({ params }) {
   // );
 
   const { data } = await getProductBySlug(slug);
-
+  console.log(data);
   const {
     id,
     title,
@@ -235,6 +236,7 @@ export default async function ProductPage({ params }) {
         </div>
       </div>
       <ProductDescription description={description} />
+      <ProductImageGallery imageGallery={imageGallery} title={title} />
     </div>
   );
 }
