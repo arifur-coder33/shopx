@@ -2,48 +2,59 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { cloudinaryDestroy, cloudinaryUpload } from "../utils/cloudinary";
+import {
+  cloudinaryDestroy,
+  cloudinaryUpload,
+  deleteMultipleFile,
+} from "../utils/cloudinary";
+import { newSlug } from "../utils/generateSlug";
 
 export async function createProductAction(formData) {
   try {
     // Parse and validate form data
     let data = Object.fromEntries(formData.entries());
-    if (!data?.title || !data?.regularPrice || !formData.get("mainImage")) {
+    if (
+      !data?.title ||
+      !data?.regularPrice ||
+      !formData.get("mainImage").size > 0
+    ) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
 
     // Generate or refine slug
-    let slug = data?.slug
-      ? data.slug.trim().toLowerCase().split(" ").join("-")
-      : data.title.trim().toLowerCase().split(" ").join("-");
-    const checkSlug = await prisma.product.findUnique({
-      where: { slug: slug },
-    });
-    if (checkSlug) {
-      slug = data.slug + "-" + Math.floor(Math.random() * 10);
-    }
+    const slug = await newSlug(data?.slug || data?.title);
 
     // Handle main image
     const mainImageFile = formData.get("mainImage");
-    let mainImageUpload
+    let mainImageUpload;
     if (mainImageFile) {
-      mainImageUpload =await cloudinaryUpload({image:mainImageFile,tag:data?.seoKeyWord,slug,perifix:"_mainImage"})
+      mainImageUpload = await cloudinaryUpload({
+        image: mainImageFile,
+        tag: data?.seoKeyWord,
+        slug,
+        perifix: "_mainImage",
+      });
     }
 
-    //Image Gallery Upload 
-    let imageGalleryUploads=[]
+    //Image Gallery Upload
+    let imageGalleryUploads = [];
     const imageGalleryFiles = formData.getAll("imageGallery");
     const validFiles = imageGalleryFiles.filter((file) => file.size > 0);
-    if (validFiles.length>0) {
+    if (validFiles.length > 0) {
       await Promise.all(
         imageGalleryFiles.map(async (file, index) => {
-         const upload= await cloudinaryUpload({image:file,tag:data?.seoKeyWord,slug:`${slug}_${index + 1}`,perifix:"_galleryImage"})
-         const formate= `${upload.display_name}.${upload.format}`
-         imageGalleryUploads.push(formate)
+          const upload = await cloudinaryUpload({
+            image: file,
+            tag: data?.seoKeyWord,
+            slug: `${slug}_${index + 1}`,
+            perifix: "_galleryImage",
+          });
+          const formate = `${upload.display_name}.${upload.format}`;
+          imageGalleryUploads.push(formate);
         })
       );
     }
-  
+
     const preparedData = {
       ...data,
       slug: slug,
@@ -72,7 +83,7 @@ export async function createProductAction(formData) {
     return { success: true, result }; // Return success
   } catch (error) {
     console.error(error.message);
-    return { success: false, error: error.message }; // Return structured error
+    return { success: false, message: error.message }; // Return structured error
   } finally {
     await prisma.$disconnect();
   }
@@ -132,6 +143,14 @@ export const getProductBySlug = async (slug) => {
 
 export const updateProductAction = async ({ productId, formData, slug }) => {
   const data = Object.fromEntries(formData.entries());
+  const product = await prisma.product.findUnique({
+    where: {
+      id: productId,
+    },
+  });
+  if (!product) {
+    throw new Error("Product Not found");
+  }
   let UpdatedData;
 
   UpdatedData = {
@@ -148,27 +167,64 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
     },
   };
 
-  // if (data?.mainImage) {
-  //   const mainImageBuffer = Buffer.from(await data?.mainImage.arrayBuffer());
-  //   const mainImageBase64 = mainImageBuffer.toString("base64");
-  //   const uploadResult = await cloudinaryUpload({
-  //     image: `data:${data?.mainImage.type};base64,${mainImageBase64}`,
-  //     slug,
-  //     tag: data?.seoKeyWord,
-  //     perifix: "_mainImage",
-  //   });
+  if (product?.slug !== data?.slug) {
+    // Generate or refine slug
+    const slug = await newSlug(data?.slug || data?.title);
+    console.log(slug);
+    UpdatedData = {
+      ...UpdatedData,
+      slug: slug,
+    };
+  }
+  const mainImageFile = formData.get("mainImage");
 
-  //   UpdatedData = {
-  //     ...UpdatedData,
-  //     mainImage: uploadResult.display_name + "." + uploadResult.format,
-  //   };
-  // }
+  if (mainImageFile) {
+    const upload = await cloudinaryUpload({
+      image: mainImageFile,
+      tag: data?.seoKeyWord,
+      slug,
+      perifix: "_mainImage",
+    });
+    const mainImage = `${upload.display_name}.${upload.format}`;
+    UpdatedData = {
+      ...UpdatedData,
+      mainImage,
+    };
+  }
+
+  //Image Gallery Upload
+  let imageGalleryUploads = [];
+  const imageGalleryFiles = formData.getAll("imageGallery");
+  const validFiles = imageGalleryFiles.filter((file) => file.size > 0);
+
+  if (validFiles.length > 0) {
+    await Promise.all(
+      imageGalleryFiles.map(async (file, index) => {
+        const upload = await cloudinaryUpload({
+          image: file,
+          tag: data?.seoKeyWord,
+          slug: `${slug}_${index + 1}`,
+          perifix: "_galleryImage",
+        });
+        const formate = `${upload.display_name}.${upload.format}`;
+        imageGalleryUploads.push(formate);
+      })
+    );
+  }
+  if (imageGalleryUploads?.length > 0) {
+    UpdatedData = {
+      ...UpdatedData,
+      imageGallery: imageGalleryUploads,
+    };
+  }
 
   try {
     const update = await prisma.product.update({
       where: { id: productId },
       data: UpdatedData,
     });
+
+    console.log(update);
 
     revalidatePath("/");
     revalidatePath("/admin/product");
@@ -184,7 +240,7 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
     };
   } catch (error) {
     return {
-    success:false,
+      success: false,
       message: error?.message || "আবার চেস্টা করুন।",
     };
   }
@@ -206,32 +262,33 @@ export async function deleteProductById(id) {
       throw new Error("Product not found");
     }
 
-    // Delete images from Cloudinary
-    const mainImageId = product.mainImage.split(".")[0]; // Extract the public ID (without file extension)
-    await cloudinaryDestroy(mainImageId);
-
-    if (
-      Array.isArray(product.imageGallery) &&
-      product.imageGallery.length > 0
-    ) {
-      const galleryImageIds = product.imageGallery.map(
-        (image) => image.split(".")[0]
-      ); // Extract public IDs
-      await Promise.all(galleryImageIds.map((id) => cloudinaryDestroy(id)));
+    // Delete main image
+    if (product.mainImage) {
+      const mainImageId = product.mainImage.split(".")[0];
+      await cloudinaryDestroy(mainImageId);
     }
 
-    // Delete the product from the database
+    // Delete gallery images
+
+    if (product.imageGallery && product.imageGallery?.length > 0) {
+      await deleteMultipleFile(product.imageGallery);
+    }
+
+    // Delete product from the database
     const deletedProduct = await prisma.product.delete({
       where: { id },
     });
 
     // Revalidate paths and tags
+    if (deletedProduct?.slug) {
+      revalidatePath(`/product/${deletedProduct.slug}`);
+      revalidatePath(`/buynow/${deletedProduct.slug}`);
+      revalidateTag(`product-${deletedProduct.slug}`);
+    }
+
     revalidatePath("/");
     revalidatePath("/admin/product");
-    revalidatePath(`/product/${deletedProduct?.slug}`);
-    revalidatePath(`/buynow/${deletedProduct?.slug}`);
     revalidateTag("products");
-    revalidateTag(`product-${deletedProduct?.slug}`);
     revalidateTag(`product-${id}`);
 
     return {

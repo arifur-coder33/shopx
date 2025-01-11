@@ -16,7 +16,6 @@ import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
 
 export default function ProductForm({ category, data, actionType }) {
-  console.log(data)
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -58,37 +57,40 @@ export default function ProductForm({ category, data, actionType }) {
 
     // Append description
     const fileInput = form.querySelector('input[name="mainImage"]');
-        const mainImage = fileInput.files[0];
-      
-if (actionType==="edit" ) {
- if(!mainImage) formData.delete("mainImage")
-  if (uplodedImageGallery.length==0) formData.delete("imageGallery")
-}
+    const mainImage = fileInput.files[0];
+
+    if (actionType === "edit") {
+      if (!mainImage) formData.delete("mainImage");
+      if (uplodedImageGallery.length == 0) formData.delete("imageGallery");
+    }
     formData.append("description", editorValue);
 
     setError(null);
     setSuccess(null);
 
     startTransition(async () => {
-      console.log(actionType);
-      const response =
-        actionType === "edit"
-          ? await updateProductAction({
-              productId: data?.id,
-              formData,
-              slug: data?.slug,
-            })
-          : await createProductAction(formData);
+      try {
+        const response =
+          actionType === "edit"
+            ? await updateProductAction({
+                productId: data?.id,
+                formData,
+                slug: data?.slug,
+              })
+            : await createProductAction(formData);
 
-      if (response.success) {
-        setSuccess("Product saved successfully");
+        if (response.success) {
+          setSuccess("Product saved successfully");
 
-        toast.success("Product saved successfully!");
-        router.push("/admin/product");
-        form.reset();
-      } else {
-        console.log(response.message);
-        setError(response.message || "Something went wrong");
+          toast.success("Product saved successfully!");
+          router.push("/admin/product");
+          form.reset();
+        } else {
+          console.log(response.message);
+          setError(response.message || "Something went wrong");
+        }
+      } catch (error) {
+        setError(error.message || "Something went wrong");
       }
     });
   };

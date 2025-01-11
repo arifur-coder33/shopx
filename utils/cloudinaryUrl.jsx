@@ -3,7 +3,6 @@
 // }
 
 export function cloudinaryMainImage(imageName, width, height) {
-  console.log( `https://res.cloudinary.com/shopzarif/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/shopzy/${imageName}`);
   return `https://res.cloudinary.com/shopzarif/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/shopzy/${imageName}`;
 }
 
