@@ -16,6 +16,7 @@ import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
 
 export default function ProductForm({ category, data, actionType }) {
+  console.log(data)
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -56,6 +57,13 @@ export default function ProductForm({ category, data, actionType }) {
     // formData.append("imageGallery", JSON.stringify(imageGallery));
 
     // Append description
+    const fileInput = form.querySelector('input[name="mainImage"]');
+        const mainImage = fileInput.files[0];
+      
+if (actionType==="edit" ) {
+ if(!mainImage) formData.delete("mainImage")
+  if (uplodedImageGallery.length==0) formData.delete("imageGallery")
+}
     formData.append("description", editorValue);
 
     setError(null);

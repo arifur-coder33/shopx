@@ -25,31 +25,25 @@ export async function createProductAction(formData) {
 
     // Handle main image
     const mainImageFile = formData.get("mainImage");
-    const mainImageBuffer = Buffer.from(await mainImageFile.arrayBuffer());
-    const mainImageBase64 = mainImageBuffer.toString("base64");
-    const mainImageUpload = await cloudinaryUpload({
-      image: `data:${mainImageFile.type};base64,${mainImageBase64}`,
-      slug,
-      tag: data?.seoKeyWord,
-      perifix: "_mainImage",
-    });
+    let mainImageUpload
+    if (mainImageFile) {
+      mainImageUpload =await cloudinaryUpload({image:mainImageFile,tag:data?.seoKeyWord,slug,perifix:"_mainImage"})
+    }
 
-    // Handle image gallery
+    //Image Gallery Upload 
+    let imageGalleryUploads=[]
     const imageGalleryFiles = formData.getAll("imageGallery");
-    const imageGalleryUploads = await Promise.all(
-      imageGalleryFiles.map(async (file, index) => {
-        const galleryBuffer = Buffer.from(await file.arrayBuffer());
-        const galleryBase64 = galleryBuffer.toString("base64");
-        return await cloudinaryUpload({
-          image: `data:${file.type};base64,${galleryBase64}`,
-          slug: `${slug}_${index + 1}`,
-          tag: data?.seoKeyWord,
-          perifix: "_galleryImage",
-        });
-      })
-    );
-
-    // Prepare data for Prisma
+    const validFiles = imageGalleryFiles.filter((file) => file.size > 0);
+    if (validFiles.length>0) {
+      await Promise.all(
+        imageGalleryFiles.map(async (file, index) => {
+         const upload= await cloudinaryUpload({image:file,tag:data?.seoKeyWord,slug:`${slug}_${index + 1}`,perifix:"_galleryImage"})
+         const formate= `${upload.display_name}.${upload.format}`
+         imageGalleryUploads.push(formate)
+        })
+      );
+    }
+  
     const preparedData = {
       ...data,
       slug: slug,
@@ -57,9 +51,7 @@ export async function createProductAction(formData) {
         connect: { id: data?.category },
       },
       mainImage: `${mainImageUpload.display_name}.${mainImageUpload.format}`,
-      imageGallery: imageGalleryUploads.map(
-        (img) => `${img.display_name}.${img.format}`
-      ),
+      imageGallery: imageGalleryUploads,
       regularPrice: data?.regularPrice && Number(data?.regularPrice),
       discountPrice: data?.discountPrice && Number(data?.discountPrice),
       stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
@@ -73,7 +65,6 @@ export async function createProductAction(formData) {
       });
     });
 
-    // Revalidate paths and tags
     revalidatePath("/admin/product");
     revalidatePath("/");
     revalidateTag("products");
@@ -156,21 +147,22 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       connect: { id: data?.category },
     },
   };
-  if (data?.mainImage) {
-    const mainImageBuffer = Buffer.from(await data?.mainImage.arrayBuffer());
-    const mainImageBase64 = mainImageBuffer.toString("base64");
-    const uploadResult = await cloudinaryUpload({
-      image: `data:${mainImageFile.type};base64,${mainImageBase64}`,
-      slug,
-      tag: data?.seoKeyWord,
-      perifix: "_mainImage",
-    });
 
-    UpdatedData = {
-      ...UpdatedData,
-      mainImage: uploadResult.display_name + "." + uploadResult.format,
-    };
-  }
+  // if (data?.mainImage) {
+  //   const mainImageBuffer = Buffer.from(await data?.mainImage.arrayBuffer());
+  //   const mainImageBase64 = mainImageBuffer.toString("base64");
+  //   const uploadResult = await cloudinaryUpload({
+  //     image: `data:${data?.mainImage.type};base64,${mainImageBase64}`,
+  //     slug,
+  //     tag: data?.seoKeyWord,
+  //     perifix: "_mainImage",
+  //   });
+
+  //   UpdatedData = {
+  //     ...UpdatedData,
+  //     mainImage: uploadResult.display_name + "." + uploadResult.format,
+  //   };
+  // }
 
   try {
     const update = await prisma.product.update({
@@ -192,7 +184,7 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
     };
   } catch (error) {
     return {
-      SubmitEvent: false,
+    success:false,
       message: error?.message || "আবার চেস্টা করুন।",
     };
   }

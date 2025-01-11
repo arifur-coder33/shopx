@@ -1,5 +1,5 @@
 import { Tiro_Bangla } from "next/font/google";
-import Image from "next/image";
+
 import NextTopLoader from "nextjs-toploader";
 import { ToastContainer } from "react-toastify";
 import "./globals.css";
@@ -64,7 +64,7 @@ export default function RootLayout({ children }) {
           }}
         /> */}
         <noscript>
-          <Image
+          <img
             height="1"
             width="1"
             style={{ display: "none" }}
