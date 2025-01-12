@@ -20,11 +20,12 @@ export default function ProductForm({ category, data, actionType }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editorValue, setEditorValue] = useState(data?.description);
-  const [mainImage, setMainImage] = useState(data?.mainImage); 
-  const [uploadedMainimage, setUploadedMainImage] = useState(); 
+  const [mainImage, setMainImage] = useState(data?.mainImage);
+  const [uploadedMainimage, setUploadedMainImage] = useState();
   const [imageGallery, setImageGallery] = useState(data?.imageGallery || []);
   const [uplodedImageGallery, setUplodedImageGallery] = useState([]);
   const router = useRouter();
+  const uploadedImageLength = uplodedImageGallery?.length * 100;
   const handleImageGalleryChange = async (files) => {
     if (files.length > 6) {
       toast.error("You can upload a maximum of 6 images.");
@@ -40,28 +41,15 @@ export default function ProductForm({ category, data, actionType }) {
     setUplodedImageGallery(images);
   };
 
-  const handlemainImagechange=async (file)=>{
-    console.log(URL.createObjectURL(file))
-    setUploadedMainImage(URL.createObjectURL(file))
-  }
+  const handlemainImagechange = async (file) => {
+    console.log(URL.createObjectURL(file));
+    setUploadedMainImage(URL.createObjectURL(file));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-
-    // Process main image
-    // const fileInput = form.querySelector('input[name="mainImage"]');
-    // const mainImage = fileInput.files[0];
-    // if (mainImage) {
-    //   const base64Image = await toBase64(mainImage);
-    //   formData.append("mainImage", base64Image);
-    // }
-
-    // // Process image gallery
-    // formData.append("imageGallery", JSON.stringify(imageGallery));
-
-    // Append description
     const fileInput = form.querySelector('input[name="mainImage"]');
     const mainImage = fileInput.files[0];
 
@@ -92,7 +80,6 @@ export default function ProductForm({ category, data, actionType }) {
           router.push("/admin/product");
           form.reset();
         } else {
-          
           setError(response.message || "Something went wrong");
         }
       } catch (error) {
@@ -187,35 +174,35 @@ export default function ProductForm({ category, data, actionType }) {
           colSpan={"full"}
           onChange={(e) => handlemainImagechange(e.target.files[0])}
         />
-        
-        {mainImage && <>
-        
-          <div  className="col-span-full relative ">
-          <Imagecustom
-           
-            w={100}
-            h={100}
-            src={mainImage}
-            alt="Main Image"
-          />
-            <p className="border-2 bg-slate-900 absolute bottom-0 left-0 text-[14px] opacity-70 w-[100px]"><span className="text-white">Old image</span></p>
-           </div>
-              
-        </>
-           }
-      
 
-           {uploadedMainimage && <div  className="col-span-full">
-            <Image
-          className="rounded-xl"
-  
-            width={100}
-            height={100}
-            src={uploadedMainimage}
-            alt={`Gallery Image `}
-          />
-          <p className="border-2 ">New Main image</p>
-           </div>}
+        <div className="flex gap-6 col-span-full">
+          {uploadedMainimage && (
+            <div className=" relative">
+              <Image
+                className="rounded-xl"
+                width={100}
+                height={100}
+                src={uploadedMainimage}
+                alt={`Gallery Image `}
+              />
+              <p className="border-2 text-center bg-slate-900 absolute bottom-0 left-0 text-[14px] opacity-70 w-[100px]">
+                <span className="text-white">New image</span>
+              </p>
+            </div>
+          )}
+
+          {mainImage && (
+            <>
+              <div className="relative ">
+                <Imagecustom w={100} h={100} src={mainImage} alt="Main Image" />
+                <p className="border-2 text-center bg-slate-900 absolute bottom-0 left-0 text-[14px] opacity-70 w-[100px]">
+                  <span className="text-white">Old image</span>
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+
         <FloatingInput
           label={"Image Gallery"}
           name={"imageGallery"}
@@ -226,26 +213,30 @@ export default function ProductForm({ category, data, actionType }) {
         />
 
         {uplodedImageGallery.length > 0 && (
-       <>
-          <div className="col-span-full flex flex-auto gap-2">
-        
-        {uplodedImageGallery.map((image, index) => (
-          <Image
-          className="rounded-xl"
-            key={index}
-            width={100}
-            height={100}
-            src={image}
-            alt={`Gallery Image ${index + 1}`}
-          />
-        ))}
-           
-      </div>
-      <p className="border-2 col-span-full ">New image gallery</p>
-       </>
+          <div className="relative">
+            <div className="col-span-full flex flex-auto gap-2">
+              {uplodedImageGallery.map((image, index) => (
+                <Image
+                  className="rounded-xl"
+                  key={index}
+                  width={100}
+                  height={100}
+                  src={image}
+                  alt={`Gallery Image ${index + 1}`}
+                />
+              ))}
+            </div>
+            <p
+              className={`border-2 text-center bg-slate-900 absolute bottom-0 left-0 text-[14px] opacity-70 ${
+                "w-[" + uploadedImageLength + "px]"
+              }`}
+            >
+              <span className="text-white">New image gallerye</span>
+            </p>
+          </div>
         )}
         {imageGallery.length > 0 && (
-          <div className="col-span-full flex flex-auto gap-2">
+          <div className="col-span-full flex flex-auto gap-2 relative">
             {imageGallery.map((image, index) => (
               <Imagecustom
                 key={index}
@@ -254,10 +245,14 @@ export default function ProductForm({ category, data, actionType }) {
                 src={image}
                 alt={`Gallery Image ${index + 1}`}
               />
-
-              
             ))}
-               <p className="border-2 ">Old image</p>
+            <p
+              className={`border-2 text-center bg-slate-900 absolute bottom-0 left-0 text-[14px] opacity-70 ${
+                "w-[" + imageGallery.length * 100 + "px]"
+              }`}
+            >
+              <span className="text-white">Old image gallerye</span>
+            </p>
           </div>
         )}
         <FloatingInput

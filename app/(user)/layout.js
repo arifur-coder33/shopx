@@ -18,8 +18,8 @@ export default function UserLayout({ children }) {
         <CartProvider>
           <NavBar />
 
-          <div className="max-w-7xl mx-auto p-2">{children}</div>
-          <Footer/>
+          <div className="max-w-7xl mx-auto p-2 min-h-screen">{children}</div>
+          <Footer />
         </CartProvider>
       </SessionProvider>
       <SpeedInsights />
