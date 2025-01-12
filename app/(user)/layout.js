@@ -1,3 +1,4 @@
+import Footer from "@/components/footer/Footer";
 import NavBar from "@/components/NavBar";
 import { CartProvider } from "@/context/CartContext";
 import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
@@ -18,6 +19,7 @@ export default function UserLayout({ children }) {
           <NavBar />
 
           <div className="max-w-7xl mx-auto p-2">{children}</div>
+          <Footer/>
         </CartProvider>
       </SessionProvider>
       <SpeedInsights />

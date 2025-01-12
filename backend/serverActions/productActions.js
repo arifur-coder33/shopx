@@ -170,7 +170,6 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
   if (product?.slug !== data?.slug) {
     // Generate or refine slug
     const slug = await newSlug(data?.slug || data?.title);
-    console.log(slug);
     UpdatedData = {
       ...UpdatedData,
       slug: slug,
@@ -185,6 +184,13 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       slug,
       perifix: "_mainImage",
     });
+console.log('update main image')
+    console.log(upload)
+    /// Delete previous photo 
+    if (product?.mainImage) {
+      await cloudinaryDestroy(product?.mainImage);
+    }
+   
     const mainImage = `${upload.display_name}.${upload.format}`;
     UpdatedData = {
       ...UpdatedData,
@@ -208,6 +214,10 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
         });
         const formate = `${upload.display_name}.${upload.format}`;
         imageGalleryUploads.push(formate);
+/// Delete Previous image gallery
+        if (product.imageGallery && product.imageGallery?.length > 0) {
+          await deleteMultipleFile(product.imageGallery);
+        }
       })
     );
   }
@@ -262,20 +272,19 @@ export async function deleteProductById(id) {
       throw new Error("Product not found");
     }
 
-    // Delete main image
-    if (product.mainImage) {
-      const mainImageId = product.mainImage.split(".")[0];
-      await cloudinaryDestroy(mainImageId);
-    }
+// Delete main image
+if (product?.mainImage) {
+   await cloudinaryDestroy(product?.mainImage);
+
+}
 
     // Delete gallery images
-
     if (product.imageGallery && product.imageGallery?.length > 0) {
       await deleteMultipleFile(product.imageGallery);
     }
 
     // Delete product from the database
-    const deletedProduct = await prisma.product.delete({
+    const deletedProduct = await prisma?.product?.delete({
       where: { id },
     });
 
@@ -296,10 +305,9 @@ export async function deleteProductById(id) {
       data: "Product deleted successfully, including its images.",
     };
   } catch (error) {
-    console.error("Error deleting the product:", error);
     return {
       success: false,
-      message: error.message || "Failed to delete the product.",
+      message: error instanceof Error ? error.message : "Failed to delete the product.",
     };
   } finally {
     await prisma.$disconnect();

@@ -1,13 +1,64 @@
+
 import AdminNavBar from "@/components/nav/AdminNav";
+import NavItem from "@/components/nav/NavItem";
 import { SessionProvider } from "next-auth/react";
-import Link from "next/link";
+
 import { Suspense } from "react";
+import { notFound } from 'next/navigation'
+
 export const metadata = {
   title: "Admin | আমার শপ",
   description: "ঘরে বসে পন্য অর্ডার করুন",
 };
 
 export default function AdminLayout({ children }) {
+  const adminNavbarList=[
+    {
+      name:"Dashboard",
+      slug:'/'
+    },
+    {
+      name:"Order List",
+      slug:'order'
+    },
+    {
+      name:"Product List",
+      slug:'product'
+    },
+    {
+      name:"Add Product",
+      slug:'product/add'
+    },
+    {
+      name:"Category List",
+      slug:'category'
+    },
+    {
+      name:"Add Category",
+      slug:'category/add'
+    },
+    {
+      name:"User List",
+      slug:'user'
+    },
+    {
+      name:"Site Setting",
+      slug:'setting'
+    },
+    {
+      name:"Banner",
+      slug:'banner'
+    },
+    {
+      name:"Offer",
+      slug:'offer'
+    },
+    {
+      name:"Site Seo",
+      slug:'seo'
+    },
+  ]
+  const isNotFound = !children;
   return (
     <>
       <SessionProvider>
@@ -17,26 +68,15 @@ export default function AdminLayout({ children }) {
           {/* side bar  */}
             <div className="md:w-64 w-36 hidden md:block absolute top-0 left-0 shrink">
               <div className="md:w-64 w-36 flex flex-col min-h-screen bg-slate-950 absolute top-0 left-0 ">
-                <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
-                  <Link href={"/admin/product/add"}>Add Product</Link>
-                </div>
-                <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
-                  <Link href={"/admin/product"}>Product List</Link>
-                </div>
-                <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
-                  <Link href={"/admin/category/add"}>Add Category</Link>
-                </div>
-                <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
-                  <Link href={"/admin/order"}>Order</Link>
-                </div>
-                <div className="bg-slate-800 p-2 text-slate-200 border-b-2 border-slate-700 ">
-                  <Link href={"/admin/user"}>User</Link>
-                </div>
+              {adminNavbarList.length>0 && adminNavbarList?.map((list)=><NavItem key={list?.slug} item={list} />)}
+               
               </div>
             </div>
             {/* main content */}
             <div className="flex-1 shrink overflow-y overflow-x-auto ml-64 bg-slate-300 min-h-screen">
-              <Suspense fallback="loading...........">{children}</Suspense>
+              <Suspense fallback="loading...........">
+              {isNotFound ? notFound() : children}
+              </Suspense>
             </div>
           </div>
         </div>
@@ -45,3 +85,4 @@ export default function AdminLayout({ children }) {
     </>
   );
 }
+

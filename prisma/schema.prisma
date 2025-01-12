@@ -104,7 +104,39 @@ model orderCounter {
 }
 
 
+model siteSetting {
+id              String @id @default(auto()) @map("_id") @db.ObjectId
+name   String?
+slogan  String?
+logo   String?
+phoneNumber1 String?
+phoneNumber2 String?
+adress1 String?
+adress2 String?
+googleMap String?
+email String?
+fbLink  String?
+youTubeLink String?
+createdAt      DateTime    @default(now()) // Timestamp for order placement
+updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
 
+}
+
+model notice{
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  notice String?
+  createdAt      DateTime    @default(now()) // Timestamp for order placement
+  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
+}
+
+
+model banner{
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  image String?
+  name String?
+  createdAt      DateTime    @default(now()) // Timestamp for order placement
+  updatedAt      DateTime    @updatedAt  
+}
 // Review and rating model for products
 
 

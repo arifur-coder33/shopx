@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export default function ProductListHeader({ headerName }) {
+export default function ProductListHeader({ headerName, linkName, link }) {
   return (
     <>
       <div
@@ -12,14 +12,14 @@ export default function ProductListHeader({ headerName }) {
       "
       >
         <div className="">{headerName}</div>
-        <Link
+     {link &&    <Link
           className="underline  hover:text-green-500
           text-sm sm:text-md lg:text-xl
         "
-          href="/"
+          href={link}
         >
-          এই ক্যাটাগরির সব দেখুন
-        </Link>
+          {linkName}
+        </Link>}
       </div>
     </>
   );
