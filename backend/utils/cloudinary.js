@@ -6,7 +6,7 @@ export async function cloudinaryUpload({ image, tag, slug, perifix }) {
   const uploadResult = await cloudinary.uploader.upload(formatimage, {
     folder: process.env.CLOUDINARY_FOLDER,
     public_id: slug + perifix +"_"+ Date.now(),
-    tags: [tag],
+    tags: [process.env?.NEXT_SHOP_NAME,...tag],
   });
 
   return uploadResult;

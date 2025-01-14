@@ -16,7 +16,7 @@ export default function Logo() {
         blurDataURL="https://res.cloudinary.com/bdmart24/image/upload/w_50,h_50,f_auto,q_auto,dpr_auto/v1735555899/logo_fkajgn.png"
         alt="logo"
       />
-      <KalapanaFont> বিডি মার্ট২৪</KalapanaFont>
+      <KalapanaFont> বিডি মার্ট24</KalapanaFont>
     </div>
   );
 }

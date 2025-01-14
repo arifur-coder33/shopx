@@ -125,6 +125,8 @@ updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 model notice{
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   notice String?
+  start   DateTime?
+  end   DateTime?
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
 }
