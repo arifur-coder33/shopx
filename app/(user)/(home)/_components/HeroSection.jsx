@@ -1,16 +1,20 @@
-import Image from "next/image";
+import { getBanner } from "@/backend/serverActions/bannerAction";
+import Imagecustom from "@/components/images/ImageCustom";
 
-export default function HeroSection() {
+
+export default async function HeroSection() {
+  const {data}=await getBanner()
+
+  if (!data?.image) return
   return (
-    <Image
-      src="https://res.cloudinary.com/bdmart24/image/upload/f_auto,q_auto,w_1280/v1735469701/banner_hero.avif"
-      alt="banner"
-      width={1280}
-      height={500}
-      priority
-      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw,1280px"
-      blurDataURL="https://res.cloudinary.com/bdmart24/image/upload/e_blur:200/q_1,w_1024,h_500/v1735469701/banner_hero.jpg"
-      placeholder="blur"
-    />
+         <Imagecustom
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw,1280px"
+                  className=" rounded-md "
+                  src={data?.image}
+                  w={1280}
+                  h={500}
+                  alt={data?.name || 'banner'}
+                  priority
+                />
   );
 }

@@ -82,7 +82,8 @@ export async function createProductAction(formData) {
 
     return { success: true, result }; // Return success
   } catch (error) {
-    console.error(error.message);
+   
+
     return { success: false, message: error.message }; // Return structured error
   } finally {
     await prisma.$disconnect();
@@ -103,7 +104,7 @@ export async function getProductById(id) {
     });
     return { success: true, data }; // Return success with product data
   } catch (error) {
-    console.log(error.message);
+
     return { success: false, error: error.message }; // Return structured error
   }
 }
@@ -121,8 +122,8 @@ export const getProducts = async () => {
 
 export const getProductBySlug = async (slug) => {
   try {
-    console.log("bacekd");
-    console.log(slug);
+   
+   
     const data = await prisma.product.findUnique({
       where: { slug },
       include: {
@@ -133,10 +134,10 @@ export const getProductBySlug = async (slug) => {
         },
       },
     });
-    console.log(data);
+ 
     return { success: true, data }; // Return success with product data
   } catch (error) {
-    console.log(error.message);
+ 
     return { success: false, error: error.message }; // Return structured error
   }
 };
@@ -184,8 +185,8 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       slug,
       perifix: "_mainImage",
     });
-console.log('update main image')
-    console.log(upload)
+
+   
     /// Delete previous photo 
     if (product?.mainImage) {
       await cloudinaryDestroy(product?.mainImage);
@@ -234,7 +235,7 @@ console.log('update main image')
       data: UpdatedData,
     });
 
-    console.log(update);
+   
 
     revalidatePath("/");
     revalidatePath("/admin/product");

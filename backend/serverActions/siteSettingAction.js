@@ -7,9 +7,9 @@ import {
 
 } from "../utils/cloudinary";
 
-export async function getSiteSetting() {
+export async function getSiteSetting(params) {
   try {
-    const data = await prisma.siteSetting.findFirst();
+    const data = await prisma.siteSetting.findFirst({   ...params});
     return { success: true, data: data };
   } catch (error) {
     return { success: false, message: error.message };

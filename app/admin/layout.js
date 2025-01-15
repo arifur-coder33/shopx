@@ -63,17 +63,17 @@ export default function AdminLayout({ children }) {
     <>
       <SessionProvider>
         <AdminNavBar />
-        <div className="max-w-7xl mx-auto p-2">
+        <div className="max-w-7xl mx-auto ">
           <div className="flex flex-row relative">
           {/* side bar  */}
-            <div className="sm:w-64 w-36 hidden sm:block absolute top-0 left-0 shrink">
+            <div className="sm:w-64 w-36 hidden sm:block fixed shrink">
               <div className="sm:w-64 w-36 flex flex-col min-h-screen bg-slate-950 absolute top-0 left-0 ">
               {adminNavbarList.length>0 && adminNavbarList?.map((list)=><NavItem key={list?.slug} item={list} />)}
                
               </div>
             </div>
             {/* main content */}
-            <div className="flex-1 shrink overflow-y overflow-x-auto sm:ml-64 bg-slate-300 min-h-screen">
+            <div className="flex-1 shrink overflow-y overflow-x-auto sm:ml-64 bg-slate-300 min-h-screen ">
               <Suspense fallback="loading...........">
               {isNotFound ? notFound() : children}
               </Suspense>

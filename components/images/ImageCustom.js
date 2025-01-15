@@ -22,6 +22,7 @@ export default function Imagecustom({
       height={h}
       alt={alt ? alt : "image"}
       priority={priority}
+       layout="responsive"
     />
   );
 }

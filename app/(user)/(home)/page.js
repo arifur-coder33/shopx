@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 
 import HeroSection from "./_components/HeroSection";
 
+
 export async function generateMetadata() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
@@ -104,6 +105,7 @@ export default async function Home() {
 
   return (
     <>
+
       <HeroSection />
 
       <ProductList headerName={"টপ প্রোডাক্ট"}>

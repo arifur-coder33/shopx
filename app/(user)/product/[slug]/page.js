@@ -48,7 +48,7 @@ export async function generateMetadata({ params }) {
     id,
   } = data;
 
-  console.log(id);
+
   const imageUrl =
     cloudinaryMainImage(mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
@@ -92,7 +92,7 @@ export async function generateMetadata({ params }) {
       url,
       images: [
         {
-          url: imageUrl, // 1200x630 for OG image
+          url: ogImageUrl, // 1200x630 for OG image
           alt: title,
         },
       ],
@@ -189,7 +189,6 @@ export default async function ProductPage({ params }) {
   // );
 
   const { data } = await getProductBySlug(slug);
-  console.log(data);
   const {
     id,
     title,
