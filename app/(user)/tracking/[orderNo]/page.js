@@ -23,6 +23,10 @@ export default async function OrderTrackingPage({ params, searchParams }) {
 
       <div className="grid sm:grid-cols-2 px-4 border mt-2 rounded-2xl">
         <OrderDeliveryDetails data={data} />
+        <div className="mx-2 my-2  col-span-full  ">
+          Status:{" "}
+          <span className="bg-orange-500 p-2 rounded-2xl">{data?.status}</span>
+        </div>
         <OrderItemTable data={data} />
       </div>
     </div>

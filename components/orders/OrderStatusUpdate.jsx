@@ -4,12 +4,12 @@ import SelectInput from "@/components/input/SelectInput";
 import { toast } from "react-toastify";
 
 export default function OrderStatusUpdate({ orderId, status }) {
-  console.log(status);
   const updateOrderStatusHandler = async (e) => {
-    const confirmByUser = confirm(`Do you want to update ${e}`);
+    console.log(e.target.value);
+    const confirmByUser = confirm(`Do you want to update ${e.target.value}`);
     if (confirmByUser) {
       try {
-        const data = await updateOrderStatusAction(orderId, e);
+        const data = await updateOrderStatusAction(orderId, e.target.value);
         console.log(data);
         if (data?.success) {
           toast.success(data?.message);
@@ -27,8 +27,8 @@ export default function OrderStatusUpdate({ orderId, status }) {
 
   return (
     <SelectInput
-      onChangeEvent={updateOrderStatusHandler}
-      value={status}
+      onChange={updateOrderStatusHandler}
+      defaultValue={status}
       data={[
         { id: "PENDING", name: "PENDING" },
         { id: "PROCESSING", name: "PROCESSING" },

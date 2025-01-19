@@ -133,7 +133,6 @@ export async function getAllOrder(params) {
       take: 10, // Limit to 10 orders
     });
 
-    console.log(data);
     return { success: true, data: data };
   } catch (error) {
     return { success: false, error: error.message };
@@ -189,6 +188,8 @@ export async function deleteOrderById(orderId) {
 }
 
 export async function updateOrderStatusAction(orderId, status) {
+  console.log(`order id : ${orderId}`);
+  console.log(`order status : ${status}`);
   try {
     const result = await prisma.order.update({
       where: { id: orderId },

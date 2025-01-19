@@ -63,7 +63,7 @@ export default function RootLayout({ children }) {
             `,
           }}
         /> */}
-        <noscript>
+        {/* <noscript>
           <img
             height="1"
             width="1"
@@ -71,7 +71,7 @@ export default function RootLayout({ children }) {
             src="https://www.facebook.com/tr?id=609873341726381&ev=PageView&noscript=1"
             alt="Facebook Pixel"
           />
-        </noscript>
+        </noscript> */}
       </body>
     </html>
   );
