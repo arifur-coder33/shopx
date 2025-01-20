@@ -9,10 +9,11 @@ export default function Imagecustom({
   alt,
   priority,
   sizes,
+  quality,
 }) {
   return (
     <Image
-      src={cloudinaryMainImage(src,w,h)}
+      src={cloudinaryMainImage(src, w, h)}
       sizes={sizes}
       // loader={customLoader}
       className={`rounded-md  ${style}`}
@@ -22,7 +23,7 @@ export default function Imagecustom({
       height={h}
       alt={alt ? alt : "image"}
       priority={priority}
-       layout="responsive"
+      quality={quality}
     />
   );
 }
