@@ -6,6 +6,7 @@ import ProductList from "@/components/products/productList";
 import prisma from "@/lib/prisma";
 
 import HeroSection from "./_components/HeroSection";
+import CategoryWiseProductList from "./_components/CategoryWiseProductList";
 
 
 export async function generateMetadata() {
@@ -107,21 +108,7 @@ export default async function Home() {
     <>
 
       <HeroSection />
-
-      <ProductList headerName={"টপ প্রোডাক্ট"}>
-        {data?.length > 0 &&
-          data?.map((product) => (
-            <ProductCard
-              key={product?.id}
-              productId={product?.slug}
-              productName={product?.title}
-              regularPrice={product?.regularPrice}
-              discountPrice={product?.discountPrice}
-              imageSrc={product?.mainImage}
-              slug={product?.slug}
-            />
-          ))}
-      </ProductList>
+      <CategoryWiseProductList/>
     </>
   );
 }

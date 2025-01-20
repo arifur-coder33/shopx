@@ -52,9 +52,27 @@ export async function getAllCategoryWithproduct(){
         _count: {
           select: { products: true },
         }, 
+        products: {
+          where: {
+            isActive: true, 
+          },
+          orderBy: 
+          [ { isFeatured: "desc" },
+           { createdAt: "desc"} ]
+          ,
+          take: 10,
+          select: {
+            id: true,
+            title: true,
+            regularPrice: true,
+            discountPrice: true,
+            slug: true,
+            mainImage: true,
+          },
+        }
       },
     });
-    return { success: true, data };
+    return { success: true, data:data };
   } catch (error) {
     return { success: false, error: error.message };
   }
