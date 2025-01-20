@@ -4,7 +4,7 @@ export default function ProductListHeader({ headerName, linkName, link }) {
   return (
     <>
       <div
-        className="flex justify-between border-y-2 my-2 drop-shadow-sm items-center px-2
+        className="flex justify-between  my-2 drop-shadow-sm items-center px-2 py-1
         bg-gradient-to-l from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-950 
         
         x-2
@@ -16,9 +16,9 @@ export default function ProductListHeader({ headerName, linkName, link }) {
           className="underline  hover:text-green-500
           text-sm sm:text-md lg:text-xl
         "
-          href={link}
+          href={`/category/${link}`}
         >
-          {linkName}
+          {linkName || 'এই ক্যাটাগরির সব দেখুন'}
         </Link>}
       </div>
     </>
