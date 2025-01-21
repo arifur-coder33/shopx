@@ -7,14 +7,16 @@ export default async function HeroSection() {
 
   if (!data?.image) return
   return (
-         <Imagecustom
+ 
+           <Imagecustom
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw,1280px"
-                  className=" rounded-md "
+                  style="border-2 border-b-8 rounded-3xl border-orange-500 "
                   src={data?.image}
                   w={1280}
                   h={500}
                   alt={data?.name || 'banner'}
                   priority
                 />
+      
   );
 }

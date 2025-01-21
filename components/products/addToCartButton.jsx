@@ -12,7 +12,7 @@ export default function AddToCartButton(props) {
   };
   return (
     <Button
-      className={`bg-purple border-b-4 border-b-purple-700 px-2`}
+      className={`bg-emerald-400 border-b-4 border-b-emerald-700 px-2`}
       onClick={handleAddToCart}
       {...props}
     >
