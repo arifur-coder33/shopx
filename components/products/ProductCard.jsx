@@ -39,7 +39,7 @@ export default function ProductCard({
 
         <BuyNowButton
           slug={slug}
-          className="px-2 border-b-4 w-full bg-sky-500 border-sky-800 hover:bg-sky-400 hover:border-sky-700 py-1 "
+          className="px-2 border-b-4 w-full  border-orange-800  hover:border-orange-700 py-1 "
         />
       </div>
     </div>

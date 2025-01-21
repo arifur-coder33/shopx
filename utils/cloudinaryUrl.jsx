@@ -1,10 +1,10 @@
-// export function cloudinaryMainImage(imageName, width, height) {
-//   return `https://res.cloudinary.com/bdmart24/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/bdmart24/${imageName}`;
-// }
-
 export function cloudinaryMainImage(imageName, width, height) {
-  return `https://res.cloudinary.com/shopzarif/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/shopzy/${imageName}`;
+  return `https://res.cloudinary.com/bdmart24/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/bdmart24/${imageName}`;
 }
+
+// export function cloudinaryMainImage(imageName, width, height) {
+//   return `https://res.cloudinary.com/shopzarif/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/shopzy/${imageName}`;
+// }
 
 // https://res.cloudinary.com/shopzarif/image/upload
 export function cloudinaryBlurImage(imageName) {

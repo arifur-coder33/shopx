@@ -12,13 +12,13 @@ export default function ActionButtons({ product, productQty }) {
       <div className="relative ">
         <BuyNowButton
           slug={`${product?.slug}?qty=${productQty}`}
-          bgcolor="bg-cyan-500"
+          bgcolor="bg-purple"
           className={
-            " w-full hover:bg-cyan-600 hover:border-b-cyan-900 text-white  border-b-4  border-cyan-800  py-2 text-4xl "
+            " w-full hover:bg-orange-600 hover:border-b-orange-900 text-white  border-b-4  border-orange-800  py-2 text-4xl "
           }
         />
 
-        <span className="animate-ping absolute -top-1 z-0 -left-1 h-3 w-3 rounded-full bg-purple-500 opacity-90"></span>
+        <span className="animate-ping absolute -top-1 z-0 -left-1 h-3 w-3 rounded-full bg-purple opacity-90"></span>
       </div>
     </div>
   );
