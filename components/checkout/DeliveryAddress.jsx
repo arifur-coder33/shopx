@@ -23,7 +23,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         autoComplete="tel"
       />
       <FloatingInput
-        defaultvalue=""
+        defaultValue=""
         type={"text"}
         label={"ঠিকানাঃ"}
         name={"deliveryAddress"}

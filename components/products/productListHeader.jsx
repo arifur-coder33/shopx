@@ -13,14 +13,14 @@ export default function ProductListHeader({ headerName, linkName, link }) {
       >
         <div className="">{headerName}</div>
      {link &&    <Link
-          className="underline  hover:text-green-500
+          className="border-b-2 border-b-green-500  hover:text-green-500
           text-sm sm:text-md lg:text-xl
         "
             href={`/category/${encodeURIComponent(link)}`}
           >
             {linkName || "এই ক্যাটাগরির সব দেখুন"}
           </Link>
-        )}
+        }
       </div>
     </>
   );
