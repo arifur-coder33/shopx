@@ -5,7 +5,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
   return (
     <address>
       <FloatingInput
-        defaultvalue=""
+        defaultValue=""
         type={"text"}
         label={"আপনার নামঃ"}
         name={"customerName"}
@@ -13,7 +13,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         autoComplete="name"
       />
       <FloatingInput
-        defaultvalue=""
+        defaultValue=""
         type={"text"}
         label={"আপনার ফোন নাম্বারঃ"}
         name={"phoneNumber"}
