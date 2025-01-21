@@ -46,10 +46,11 @@ export async function siteSettingUpdate(formData) {
       data: preparedData,
     });
     revalidatePath("/admin/setting");
+    revalidatePath("/");
     return { success: true, result };
   }
   if (getSetting) {
-    console.log("enter1");
+
 
     console.log(getSetting);
     const result = await prisma.siteSetting.update({
@@ -57,6 +58,7 @@ export async function siteSettingUpdate(formData) {
       data: preparedData,
     });
     revalidatePath("/admin/setting");
+    revalidatePath("/");
     return { success: true, result };
   }
 }
