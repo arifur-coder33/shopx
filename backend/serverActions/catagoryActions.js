@@ -27,9 +27,8 @@ export async function createCategoryAction(formData) {
     const details = await prisma.category.create({
       data: data,
     });
-revalidatePath('/admin/product/add')
+    revalidatePath("/admin/product/add");
     return { success: true, details }; // Return success with user data
-    
   } catch (error) {
     console.log(error.message);
     return { success: false, error: error.message }; // Return structured error
@@ -45,21 +44,18 @@ export async function getCategory() {
   }
 }
 
-export async function getAllCategoryWithproduct(){
+export async function getAllCategoryWithproduct() {
   try {
-    const data=await prisma.category.findMany({
+    const data = await prisma.category.findMany({
       include: {
         _count: {
           select: { products: true },
-        }, 
+        },
         products: {
           where: {
-            isActive: true, 
+            isActive: true,
           },
-          orderBy: 
-          [ { isFeatured: "desc" },
-           { createdAt: "desc"} ]
-          ,
+          orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
           take: 10,
           select: {
             id: true,
@@ -69,25 +65,28 @@ export async function getAllCategoryWithproduct(){
             slug: true,
             mainImage: true,
           },
-        }
+        },
       },
     });
-    return { success: true, data:data };
+    return { success: true, data: data };
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
 
-export async function getCategoryWithproduct(slug){
+export async function getCategoryWithproduct(slug) {
+  console.log("slugf data");
+  console.log(slug);
+  const decodedSlug = decodeURIComponent(slug);
   try {
-    const data=await prisma.category.findUnique({
-      where:{
-        slug
+    const data = await prisma.category.findUnique({
+      where: {
+        slug: decodedSlug,
       },
       include: {
         _count: {
           select: { products: true },
-        }, 
+        },
         products: {
           select: {
             id: true,
@@ -97,7 +96,7 @@ export async function getCategoryWithproduct(slug){
             slug: true,
             mainImage: true,
           },
-        }
+        },
       },
     });
     return { success: true, data };
