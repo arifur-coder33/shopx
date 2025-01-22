@@ -214,7 +214,7 @@ export default async function ProductPage({ params }) {
     "@type": "Product",
     name: title,
     description: description,
-    image: product.image,
+    image: mainImage,
     url: url,
     sku: id,
     brand: "bdmart24",
