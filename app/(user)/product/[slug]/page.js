@@ -7,6 +7,7 @@ import ProductDescription from "@/components/products/productDescription";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
+import { htmlToText } from "html-to-text";
 import Script from "next/script";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
@@ -85,7 +86,7 @@ export async function generateMetadata({ params }) {
 
     openGraph: {
       title: `${title} - মাত্র ${price} টাকায়`,
-      description: description,
+      description: seoDescription || htmlToText(description),
       url,
       images: [
         {
@@ -148,7 +149,7 @@ export async function generateMetadata({ params }) {
       "@type": "Product",
       productID: id,
       name: title,
-      description: description || `${title}`,
+      description: htmlToText(description) || `${title}`,
       url,
       image: [imageUrl],
       brand: {
@@ -209,18 +210,21 @@ export default async function ProductPage({ params }) {
     category: { name },
   } = data;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
+  const imageUrl =
+    cloudinaryMainImage(mainImage, 800, 800) ||
+    `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const schema = {
     "@context": "http://schema.org",
     "@type": "Product",
     name: title,
-    description: description,
-    image: mainImage,
+    description: htmlToText(description),
+    image: imageUrl,
     url: url,
     sku: id,
     brand: "bdmart24",
     offers: {
       "@type": "Offer",
-      price: discountPrice,
+      price: discountPrice || regularPrice,
       priceCurrency: "BDT",
       availability: "http://schema.org/InStock",
     },
