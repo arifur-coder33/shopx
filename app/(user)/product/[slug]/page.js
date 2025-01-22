@@ -7,6 +7,7 @@ import ProductDescription from "@/components/products/productDescription";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
+import Script from "next/script";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
 import { ProductImageGallery } from "./_components/Images/ProductImagegallery";
@@ -48,7 +49,6 @@ export async function generateMetadata({ params }) {
     id,
   } = data;
 
-
   const imageUrl =
     cloudinaryMainImage(mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
@@ -85,14 +85,13 @@ export async function generateMetadata({ params }) {
 
     openGraph: {
       title: `${title} - মাত্র ${price} টাকায়`,
-      description:
-        seoDescription ||
-        description ||
-        `Shop ${title} from ${category?.name} at the best price.`,
+      description: description,
       url,
       images: [
         {
-          url: ogImageUrl, // 1200x630 for OG image
+          url: imageUrl, // 1200x630 for OG image
+          width: 800,
+          height: 600,
           alt: title,
         },
       ],
@@ -108,6 +107,16 @@ export async function generateMetadata({ params }) {
         },
       },
     },
+    additionalMetaTags: [
+      {
+        property: "product:price:amount",
+        content: discountPrice,
+      },
+      {
+        property: "product:price:currency",
+        content: "BDT",
+      },
+    ],
     twitter: {
       card: "summary_large_image",
       title: `${title} - Buy Online at ${price} TK`,
@@ -199,6 +208,23 @@ export default async function ProductPage({ params }) {
     mainImage,
     category: { name },
   } = data;
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
+  const schema = {
+    "@context": "http://schema.org",
+    "@type": "Product",
+    name: title,
+    description: description,
+    image: product.image,
+    url: url,
+    sku: id,
+    brand: "bdmart24",
+    offers: {
+      "@type": "Offer",
+      price: discountPrice,
+      priceCurrency: "BDT",
+      availability: "http://schema.org/InStock",
+    },
+  };
 
   return (
     <div className="mb-16">
@@ -236,6 +262,11 @@ export default async function ProductPage({ params }) {
       </div>
       <ProductDescription description={description} />
       <ProductImageGallery imageGallery={imageGallery} title={title} />
+      <Script
+        id="jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
     </div>
   );
 }
