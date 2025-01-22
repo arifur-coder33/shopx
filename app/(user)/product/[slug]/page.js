@@ -226,6 +226,14 @@ export default async function ProductPage({ params }) {
     },
   };
 
+  const schemaEvent = {
+    content_name: title,
+    content_ids: [id],
+    content_type: "product",
+    value: discountPrice,
+    currency: "BDT",
+  };
+
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
@@ -266,6 +274,16 @@ export default async function ProductPage({ params }) {
         id="jsonld"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <Script
+        id="eventSchema"
+        dangerouslySetInnerHTML={{
+          __html: `
+            if (typeof fbq !== 'undefined') {
+              fbq('track', 'ViewContent', ${JSON.stringify(schemaEvent)});
+            }
+          `,
+        }}
       />
     </div>
   );
