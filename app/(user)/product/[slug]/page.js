@@ -91,7 +91,7 @@ export async function generateMetadata({ params }) {
         {
           url: imageUrl, // 1200x630 for OG image
           width: 800,
-          height: 600,
+          height: 800,
           alt: title,
         },
       ],
