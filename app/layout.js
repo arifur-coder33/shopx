@@ -1,5 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 import { Tiro_Bangla } from "next/font/google";
 
+import Script from "next/script";
 import NextTopLoader from "nextjs-toploader";
 import { ToastContainer } from "react-toastify";
 import "./globals.css";
@@ -45,7 +47,7 @@ export default function RootLayout({ children }) {
         <NextTopLoader showSpinner={false} />
         <div className="">{children}</div>
         <ToastContainer />
-        {/* <Script
+        <Script
           id="facebook-pixel"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
@@ -62,8 +64,8 @@ export default function RootLayout({ children }) {
               fbq('track', 'PageView');
             `,
           }}
-        /> */}
-        {/* <noscript>
+        />
+        <noscript>
           <img
             height="1"
             width="1"
@@ -71,7 +73,7 @@ export default function RootLayout({ children }) {
             src="https://www.facebook.com/tr?id=609873341726381&ev=PageView&noscript=1"
             alt="Facebook Pixel"
           />
-        </noscript> */}
+        </noscript>
       </body>
     </html>
   );
