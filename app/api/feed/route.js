@@ -1,21 +1,24 @@
-// `/app/api/feed/route.js`
-import { prisma } from "@/lib/prisma"; // Your Prisma client path
+import prisma from "@/lib/prisma";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import { htmlToText } from "html-to-text";
 
-export async function GET(req, res) {
+
+export async function GET(req) {
   const products = await prisma.product.findMany({
     where: { isActive: true }, // Only include active products
   });
 
+    
   const rows = products.map((product) => ({
     id: product.id,
     title: product.title,
-    description: product.description || "",
-    link: `${process?.env?.NEXT_PUBLIC_SITE_URL}/product/${product.slug}`,
-    image_link: product.mainImage,
-    availability:  "in_stock" ,
+    description: htmlToText(product.description) || "",
+    link: `${process?.env?.NEXT_PUBLIC_SITE_URL}/${product.slug}`,
+    image_link: cloudinaryMainImage(product?.mainImage, 800, 800),
+    availability: "in_stock",
     price: `${product.regularPrice} BDT`,
     sale_price: product.discountPrice ? `${product.discountPrice} BDT` : "",
-    brand: "BDMART24", // Replace with your brand name
+    brand: "bdmart24", // Replace with your brand name
     condition: "new", // All products marked as new
     custom_label_0: product.isFeatured ? "featured" : "standard",
   }));
@@ -35,13 +38,23 @@ export async function GET(req, res) {
   ];
 
   const csvContent =
-    [csvHeaders.join(",")].concat(
-      rows.map((row) =>
-        csvHeaders.map((header) => JSON.stringify(row[header] || "")).join(",")
+    [csvHeaders.join(",")]
+      .concat(
+        rows.map((row) =>
+          csvHeaders.map((header) => JSON.stringify(row[header] || "")).join(",")
+        )
       )
-    ).join("\n");
+      .join("\n");
 
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=google-merchant-feed.csv");
-  res.status(200).send(csvContent);
+  // Prepend BOM for proper encoding of Bengali text
+  const utf8BOM = "\uFEFF";
+  const csvWithBOM = utf8BOM + csvContent;
+
+  // Create a Response object with the CSV content
+  return new Response(csvWithBOM, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": "attachment; filename=google-merchant-feed.csv",
+    },
+  });
 }
