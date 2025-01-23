@@ -90,9 +90,9 @@ export async function generateMetadata({ params }) {
       url,
       images: [
         {
-          url: imageUrl, // 1200x630 for OG image
-          width: 800,
-          height: 800,
+          url: ogImageUrl, // 1200x630 for OG image
+          // width: 800,
+          // height: 800,
           alt: title,
         },
       ],
@@ -207,12 +207,15 @@ export default async function ProductPage({ params }) {
     discountPrice,
     description,
     mainImage,
+ 
     category: { name },
   } = data;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
   const imageUrl =
     cloudinaryMainImage(mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
+
+  //for facebook product schema listing
   const schema = {
     "@context": "http://schema.org",
     "@type": "Product",
@@ -229,14 +232,39 @@ export default async function ProductPage({ params }) {
       availability: "http://schema.org/InStock",
     },
   };
-
+ /// facebook event track
   const schemaEvent = {
     content_name: title,
     content_ids: [id],
     content_type: "product",
+    content_category:name,
     value: discountPrice,
     currency: "BDT",
   };
+
+  /// google product Listing 
+const schemaGoogle={
+  "@context": "https://schema.org/",
+  "@type": "Product",
+  "name": title,
+  "description": htmlToText(description),
+  "image":imageUrl,
+  "url": discountPrice,
+  "sku": id,
+  "brand": {
+    "@type": "Brand",
+    "name": "BDMART24"
+  },
+ 
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "BDT",
+    "price": discountPrice,
+    "itemCondition": "https://schema.org/NewCondition",
+    "availability": "https://schema.org/InStock"
+  }
+}
+
 
   return (
     <div className="mb-16">
@@ -285,9 +313,17 @@ export default async function ProductPage({ params }) {
           __html: `
             if (typeof fbq !== 'undefined') {
               fbq('track', 'ViewContent', ${JSON.stringify(schemaEvent)});
-            }
+            }else {
+        console.warn('Meta Pixel is not loaded.');
+      }
           `,
         }}
+      />
+
+<Script
+        id="jsonldforGoogle"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGoogle) }}
       />
     </div>
   );
