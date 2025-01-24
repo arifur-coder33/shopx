@@ -4,9 +4,9 @@ export async function cloudinaryUpload({ image, tag, slug, perifix }) {
   const base64 = imagebuffer.toString("base64");
   const formatimage = `data:${image.type};base64,${base64}`;
   const uploadResult = await cloudinary.uploader.upload(formatimage, {
-    folder: process.env.CLOUDINARY_FOLDER,
-    public_id: slug + perifix +"_"+ Date.now(),
-    tags: [process.env?.NEXT_SHOP_NAME,...tag],
+    folder: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
+    public_id: slug + perifix + "_" + Date.now(),
+    tags: [process.env?.NEXT_SHOP_NAME, ...tag],
   });
 
   return uploadResult;
@@ -14,20 +14,17 @@ export async function cloudinaryUpload({ image, tag, slug, perifix }) {
 
 export async function cloudinaryDestroy(publicId) {
   const getPublicId = publicId.split(".")[0];
-  const folderName = process.env.CLOUDINARY_FOLDER;
+  const folderName = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
   const resourcePath = `${folderName}/${getPublicId}`;
   try {
- 
     // Check if the resource exists
     const resource = await cloudinary.api.resource(resourcePath);
-    console.log(resource)
+    console.log(resource);
     if (resource.placeholder) {
       console.log("Resource is a placeholder. No real asset exists.");
       return null;
     }
-    const deleteResult = await cloudinary.uploader.destroy(
-      resourcePath
-    );
+    const deleteResult = await cloudinary.uploader.destroy(resourcePath);
     console.log(deleteResult);
     if (deleteResult.result === "ok") {
       console.log("Image deleted successfully:", deleteResult);

@@ -1,5 +1,6 @@
 "use client";
 import { useCart } from "@/context/CartContext";
+import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
@@ -8,7 +9,14 @@ export default function AddToCartButton(props) {
 
   const handleAddToCart = () => {
     // addToCart({ name: "Iphone 16 pro", price: 16500, id:product?.id });
+
     addToCart(product);
+    trackFacebookEvent("AddToCart", {
+      content_type: "product",
+      content_id: product.id,
+      value: product.discountPrice || product?.regularPrice,
+      currency: "BDT",
+    });
   };
   return (
     <Button

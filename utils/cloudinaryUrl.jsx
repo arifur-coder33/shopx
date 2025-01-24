@@ -1,5 +1,5 @@
 export function cloudinaryMainImage(imageName, width, height) {
-  return `https://res.cloudinary.com/bdmart24/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/bdmart24/${imageName}`;
+  return `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/w_${width},h_${height},f_auto,q_auto,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${imageName}`;
 }
 
 // export function cloudinaryMainImage(imageName, width, height) {

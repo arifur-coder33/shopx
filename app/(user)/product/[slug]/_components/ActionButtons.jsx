@@ -11,6 +11,7 @@ export default function ActionButtons({ product, productQty }) {
       {/* buy now button  */}
       <div className="relative ">
         <BuyNowButton
+          product={product}
           slug={`${product?.slug}?qty=${productQty}`}
           bgcolor="bg-purple"
           className={

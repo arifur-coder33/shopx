@@ -6,6 +6,7 @@ import { createOrder } from "@/backend/serverActions/orderActions";
 
 import { useSession } from "next-auth/react";
 
+import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import PaymentMethodSelector from "./PaymentMethodSelector";
@@ -51,13 +52,42 @@ export default function OrderForm({
       const response = await createOrder(formData); // Call server action
 
       if (response.success) {
+        trackFacebookEvent("Purchase", {
+          content_type: "product",
+          content_ids: products.map((product) => product.id),
+          value: products.reduce(
+            (total, product) =>
+              total +
+              product.quantity *
+                (product.discountPrice || product.regularPrice),
+            0
+          ),
+          currency: "BDT", // Bangladeshi Taka
+        });
+
         router.push(
-          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(response?.data?.phoneNumber)}&orderSuccess=true`
+          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
+            response?.data?.phoneNumber
+          )}&orderSuccess=true`
         );
 
         // form.reset(); // Clear the form on success
       } else {
         console.log(response.error);
+        // Track the "FailedOrder" event
+        trackFacebookEvent("FailedOrder", {
+          content_type: "product",
+          content_ids: products.map((product) => product.id),
+          value: products.reduce(
+            (total, product) =>
+              total +
+              product.quantity *
+                (product.discountPrice || product.regularPrice),
+            0
+          ),
+          currency: "BDT",
+          reason: response.error || "Unknown error",
+        });
         window.scrollTo(0, 0);
         setError(response.error || "Something went wrong");
       }

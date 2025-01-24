@@ -237,7 +237,10 @@ export default async function ProductPage({ params }) {
     value: discountPrice,
     currency: "BDT",
   };
-
+  if (typeof window !== "undefined" && typeof fbq !== "undefined") {
+    fbq("track", "ViewContent", schemaEvent);
+    console.log("Page View Event fire");
+  }
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
@@ -279,7 +282,7 @@ export default async function ProductPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
-      <Script
+      {/* <Script
         id="eventSchema"
         dangerouslySetInnerHTML={{
           __html: `
@@ -288,7 +291,7 @@ export default async function ProductPage({ params }) {
             }
           `,
         }}
-      />
+      /> */}
     </div>
   );
 }
