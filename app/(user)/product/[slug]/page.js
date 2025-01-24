@@ -9,6 +9,7 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
 import Script from "next/script";
+import FacebookEventTrac from "../_components/FacebookEventTrack";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
 import { ProductImageGallery } from "./_components/Images/ProductImagegallery";
@@ -242,11 +243,6 @@ export default async function ProductPage({ params }) {
     currency: "BDT",
   };
 
-  // Fire the event when the component renders
-  if (typeof window !== "undefined" && typeof fbq !== "undefined") {
-    fbq("track", "ViewContent", schemaEvent);
-    console.log("facebook event fire");
-  }
   /// google product Listing
   const schemaGoogle = {
     "@context": "https://schema.org/",
@@ -306,6 +302,7 @@ export default async function ProductPage({ params }) {
       </div>
       <ProductDescription description={description} />
       <ProductImageGallery imageGallery={imageGallery} title={title} />
+      <FacebookEventTrac product={data} />
       <Script
         id="jsonld"
         type="application/ld+json"

@@ -54,12 +54,9 @@ export default function OrderForm({
       if (response.success) {
         trackFacebookEvent("Purchase", {
           content_type: "product",
-          content_ids: products.map((product) => product.id),
+          content_ids: products.map((product) => product.productId),
           value: products.reduce(
-            (total, product) =>
-              total +
-              product.quantity *
-                (product.discountPrice || product.regularPrice),
+            (total, product) => total + product.quantity * product.price,
             0
           ),
           currency: "BDT", // Bangladeshi Taka
@@ -75,14 +72,12 @@ export default function OrderForm({
       } else {
         console.log(response.error);
         // Track the "FailedOrder" event
+        console.log(products);
         trackFacebookEvent("FailedOrder", {
           content_type: "product",
-          content_ids: products.map((product) => product.id),
+          content_ids: products.map((product) => product.productId),
           value: products.reduce(
-            (total, product) =>
-              total +
-              product.quantity *
-                (product.discountPrice || product.regularPrice),
+            (total, product) => total + product.quantity * product.price,
             0
           ),
           currency: "BDT",
