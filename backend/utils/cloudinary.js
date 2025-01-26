@@ -3,6 +3,7 @@ export async function cloudinaryUpload({ image, tag, slug, perifix }) {
   const imagebuffer = Buffer.from(await image.arrayBuffer());
   const base64 = imagebuffer.toString("base64");
   const formatimage = `data:${image.type};base64,${base64}`;
+  console.log(process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER)
   const uploadResult = await cloudinary.uploader.upload(formatimage, {
     folder: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
     public_id: slug + perifix + "_" + Date.now(),

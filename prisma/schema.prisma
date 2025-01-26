@@ -34,9 +34,15 @@ model Category {
   updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
 }
 
+model ProductCodeCounter{
+    id  String @id @default(auto()) @map("_id") @db.ObjectId
+    lastProductCode Int
+}
+
 // Product model with extended features
 model Product {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  productCode    String?  @unique   
   title          String                       // Product title
   slug           String      @unique         // Unique slug for URL identification
   description    String?                     // Optional detailed description
@@ -55,10 +61,14 @@ model Product {
   size           String?                     // Product size
   insideDhaka    Float?                      // Optional delivery charge inside Dhaka
   outSideDhaka   Float?                      // Optional delivery charge outside Dhaka
-  weight         Float?                       // Product weight for shipping purposes
+  weight         Float?  
+  hasVariations    Boolean? @default(false)               // Product weight for shipping purposes
   orders         OrderItem[]                    // One-to-many relationship with Order
   createdAt      DateTime    @default(now()) // Timestamp for product creation
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
+}
+model ProductVariation{
+    id             String      @id @default(auto()) @map("_id") @db.ObjectId
 }
 
 // Order model with extended features
@@ -102,7 +112,6 @@ model orderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   lastOrderNumber Int
 }
-
 
 model siteSetting {
 id              String @id @default(auto()) @map("_id") @db.ObjectId
