@@ -68,7 +68,12 @@ export async function getAllCategoryWithproduct() {
         },
       },
     });
-    return { success: true, data: data };
+    // Filter categories that have at least one product
+    const filteredData = data.filter(
+      (category) => category._count.products > 0
+    );
+
+    return { success: true, data: filteredData };
   } catch (error) {
     return { success: false, error: error.message };
   }
