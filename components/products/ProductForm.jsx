@@ -125,7 +125,7 @@ export default function ProductForm({ category, data, actionType }) {
         />
         <div className="md:col-span-2">
           <SelectInput
-            value={data?.categoryId}
+            defaultValue={data?.categoryId}
             label={"Category"}
             name={"category"}
             type={"text"}

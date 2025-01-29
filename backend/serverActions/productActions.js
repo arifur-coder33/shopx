@@ -82,8 +82,6 @@ export async function createProductAction(formData) {
 
     return { success: true, result }; // Return success
   } catch (error) {
-   
-
     return { success: false, message: error.message }; // Return structured error
   } finally {
     await prisma.$disconnect();
@@ -104,7 +102,6 @@ export async function getProductById(id) {
     });
     return { success: true, data }; // Return success with product data
   } catch (error) {
-
     return { success: false, error: error.message }; // Return structured error
   }
 }
@@ -122,8 +119,6 @@ export const getProducts = async () => {
 
 export const getProductBySlug = async (slug) => {
   try {
-   
-   
     const data = await prisma.product.findUnique({
       where: { slug },
       include: {
@@ -134,16 +129,16 @@ export const getProductBySlug = async (slug) => {
         },
       },
     });
- 
+
     return { success: true, data }; // Return success with product data
   } catch (error) {
- 
     return { success: false, error: error.message }; // Return structured error
   }
 };
 
 export const updateProductAction = async ({ productId, formData, slug }) => {
   const data = Object.fromEntries(formData.entries());
+  console.log(data);
   const product = await prisma.product.findUnique({
     where: {
       id: productId,
@@ -156,6 +151,8 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
 
   UpdatedData = {
     ...data,
+    isActive: data?.isActive ? true : false,
+    isFeatured: data?.isFeatured ? true : false,
     regularPrice: data?.regularPrice && Number(data?.regularPrice),
     discountPrice: data?.discountPrice && Number(data?.discountPrice),
     stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
@@ -186,12 +183,11 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       perifix: "_mainImage",
     });
 
-   
-    /// Delete previous photo 
+    /// Delete previous photo
     if (product?.mainImage) {
       await cloudinaryDestroy(product?.mainImage);
     }
-   
+
     const mainImage = `${upload.display_name}.${upload.format}`;
     UpdatedData = {
       ...UpdatedData,
@@ -215,7 +211,7 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
         });
         const formate = `${upload.display_name}.${upload.format}`;
         imageGalleryUploads.push(formate);
-/// Delete Previous image gallery
+        /// Delete Previous image gallery
         if (product.imageGallery && product.imageGallery?.length > 0) {
           await deleteMultipleFile(product.imageGallery);
         }
@@ -234,8 +230,6 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
       where: { id: productId },
       data: UpdatedData,
     });
-
-   
 
     revalidatePath("/");
     revalidatePath("/admin/product");
@@ -273,11 +267,10 @@ export async function deleteProductById(id) {
       throw new Error("Product not found");
     }
 
-// Delete main image
-if (product?.mainImage) {
-   await cloudinaryDestroy(product?.mainImage);
-
-}
+    // Delete main image
+    if (product?.mainImage) {
+      await cloudinaryDestroy(product?.mainImage);
+    }
 
     // Delete gallery images
     if (product.imageGallery && product.imageGallery?.length > 0) {
@@ -308,7 +301,10 @@ if (product?.mainImage) {
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Failed to delete the product.",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to delete the product.",
     };
   } finally {
     await prisma.$disconnect();
