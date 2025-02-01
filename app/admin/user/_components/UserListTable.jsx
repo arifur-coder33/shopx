@@ -17,26 +17,26 @@ export default function UserListTable({ data }) {
                 Sl No.
               </th>
               <th scope="col" className="px-6 py-3">
-               photo
+                photo
               </th>
               {/* <th scope="col" className="px-6 py-3">
                 Image
               </th> */}
               <th scope="col" className="px-6 py-3">
-                 name
+                name
               </th>
               <th scope="col" className="px-6 py-3">
-                 email
+                email
               </th>
               <th scope="col" className="px-6 py-3">
-                 Phone Number
+                Phone Number
               </th>
 
               <th scope="col" className="px-6 py-3">
-              Joning date
+                Joning date
               </th>
               <th scope="col" className="px-6 py-3">
-              Role
+                Role
               </th>
               <th scope="col" className="px-6 py-3">
                 Status
@@ -48,12 +48,9 @@ export default function UserListTable({ data }) {
           </thead>
           <tbody>
             {data?.length > 0 &&
-              data?.map((item,i) =><Item
-              key={data?.id}
-              data={item}
-              index={i+1}
-             
-            />)}
+              data?.map((item, i) => (
+                <Item key={i} data={item} index={i + 1} />
+              ))}
           </tbody>
         </table>
       </div>
@@ -61,18 +58,16 @@ export default function UserListTable({ data }) {
   );
 }
 
-const Item = ({ data,index }) => {
+const Item = ({ data, index }) => {
   return (
     <>
       <tr className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-        <td className="px-6 py-4">
-         {index}
-        </td>
+        <td className="px-6 py-4">{index}</td>
         <th
           scope="row"
           className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
         >
-        -
+          -
         </th>
         {/* <td className="px-6 py-4">
           <Imagecustom src={data?.images[0]} w={50} h={50} alt={data?.title} />
@@ -85,25 +80,21 @@ const Item = ({ data,index }) => {
         </th>
         <td className="px-6 py-4">{data?.email}</td>
         <td className="px-6 py-4">{data?.phone}</td>
-        <td className="px-6 py-4"> {dateConvertToLocalString(data?.createdAt)}</td>
-
-        <td className="px-6 py-4">{data?.role}</td>
         <td className="px-6 py-4">
-       {data?.status}
+          {" "}
+          {dateConvertToLocalString(data?.createdAt)}
         </td>
 
+        <td className="px-6 py-4">{data?.role}</td>
+        <td className="px-6 py-4">{data?.status}</td>
+
         <td className="px-6 py-4 flex flex-row gap-2">
-          <Link
-            href={`/admin/user/view/${data?.id}}`}
-          >
+          <Link href={`/admin/user/view/${data?.id}}`}>
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>
-            <Link
-             href={`/admin/user/edit/${data?.id}`}
-            >
+          <Link href={`/admin/user/edit/${data?.id}`}>
             <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
-
-            </Link>
+          </Link>
           <DeleteItem deleteItem={deleteUserById} id={data?.id}>
             <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
           </DeleteItem>

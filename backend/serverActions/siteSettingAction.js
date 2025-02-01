@@ -6,7 +6,7 @@ import { cloudinaryDestroy, cloudinaryUpload } from "../utils/cloudinary";
 export async function getSiteSetting(params) {
   try {
     const data = await prisma.siteSetting.findFirst({ ...params });
-    console.log(data);
+
     return { success: true, data: data };
   } catch (error) {
     return { success: false, message: error.message };
@@ -21,7 +21,7 @@ export async function siteSettingUpdate(formData) {
 
   // Handle  image
   const singleImage = formData.get("logo");
-  console.log(singleImage);
+
   const getSetting = await prisma.siteSetting.findFirst();
   if (singleImage && singleImage?.size > 1) {
     const singleUploadedImage = await cloudinaryUpload({
@@ -50,9 +50,6 @@ export async function siteSettingUpdate(formData) {
     return { success: true, result };
   }
   if (getSetting) {
-
-
-    console.log(getSetting);
     const result = await prisma.siteSetting.update({
       where: { id: getSetting?.id },
       data: preparedData,
