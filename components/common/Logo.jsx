@@ -8,7 +8,7 @@ export default async function Logo() {
       name: true,
     },
   });
-  console.log(data);
+
   return (
     <div className="flex flex-row items-center text-3xl text-orange-600">
       {" "}

@@ -25,21 +25,27 @@ model User {
 
 // Category model for organizing products
 model Category {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  name        String                      // Category name
-  slug        String      @unique         // Unique slug for URL identification
-  description String?                     // Optional category description
-  banner       String?                     // banner image for the category
-  thumbnail   String?                     // Thumbnail image for previews
-  subCategories Category[] @relation("ParentChild") // Self-referencing relation for subcategories
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  name            String                      // Category name
+  slug            String      @unique         // Unique slug for URL identification
+  description     String?                     // Optional category description
+  image           String?                     // Main image for the category
+  thumbnail       String?                     // Thumbnail image for previews
+
+  // Self-referencing relation for subcategories
+  subCategories   Category[] @relation("ParentChild")
+
+  // Self-referencing relation for parent category
   parentCategory  Category?  @relation("ParentChild", fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  parentCategoryId String? @db.ObjectId   // Nullable field for subcategories
-  isVariation Boolean    @default(false)  // Flag to check if variations exist
-  variations  VariationValue[]                       // Array of variations
-  
-  products    Product[]                   // One-to-many relationship with Product
-  createdAt   DateTime    @default(now()) // Timestamp for category creation
-  updatedAt   DateTime    @updatedAt      // Auto-updated timestamp
+
+  parentCategoryId String?   @db.ObjectId   // Nullable field for subcategories
+
+  isVariation     Boolean    @default(false)  // Flag to check if variations exist
+  variations      VariationValue[]                        // Array of variations
+  products        Product[]                   // One-to-many relationship with Product
+
+  createdAt       DateTime   @default(now())  // Timestamp for category creation
+  updatedAt       DateTime   @updatedAt      // Auto-updated timestamp
 }
 
 // Variation Model (Size, Color, etc.)
@@ -55,10 +61,10 @@ model VariationValue {
   variationId String  @db.ObjectId
   variation   Variation @relation(fields: [variationId], references: [id])
   categoryId  String?  @db.ObjectId  // Can be nullable if the variation is global
-  category       Category?    @relation(fields: [categoryId], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id])
   value       String[]   // Example: "XL", "Red", "L"
-  image       String?
-  
+  // Many-to-Many Relationship using Join Table
+  products ProductVariationValue[]
 }
 
 model ProductCodeCounter{
@@ -78,31 +84,43 @@ model Product {
   regularPrice   Float                       // Regular price of the product
   discountPrice  Float?                      // Optional discount price
   stockQuantity  Int         @default(0)    // Stock quantity for inventory tracking
+  weight Float?
   mainImage     String
   seoKeyWord     String?
   seoDescription String?
   imageGallery   String[]                  // Array of image URLs
   isFeatured     Boolean?    @default(false) // Indicates if the product is featured
   isActive       Boolean?     @default(true)  // Marks if the product is active
-  hasVariations    Boolean? @default(false)  
-  variations     ProductVariation[]
-  variationAttrivutes VariationValue[]   // here i want to relation with VariationValue
   insideDhaka    Float?                      // Optional delivery charge inside Dhaka
   outSideDhaka   Float?                      // Optional delivery charge outside Dhaka
-  weight         Float?  
-              // Product weight for shipping purposes
+  hasVariations    Boolean? @default(false)           
+  variationItems ProductVariationValue[]   /// size, color, etc   // Many-to-Many Relationship using Join Table 
+  variations ProductVariation[] 
   orders         OrderItem[]                    // One-to-many relationship with Order
   createdAt      DateTime    @default(now()) // Timestamp for product creation
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
 model ProductVariation{
-    id             String      @id @default(auto()) @map("_id") @db.ObjectId
-    productId         String?      @db.ObjectId    // Foreign key for User
-    product           Product?        @relation(fields: [productId], references: [id]) // Relation to User
-    variations       Json?   /// {{color:red,size:xl,id:red-xl}}
-    weight          Float?
-    price           Float?
-    stockQty        Float?
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  productId     String?      @db.ObjectId    // Foreign key for Category
+  product       Product?    @relation(fields: [productId], references: [id]) // Relation to Category
+  sku          String
+  weight Float?
+  price  Float?
+  image String?
+  variations Json
+}
+
+
+// **Join Table for Many-to-Many Relationship**
+model ProductVariationValue {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  productId    String      @db.ObjectId
+  variationValueId String @db.ObjectId
+
+  // Relations
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variationValue VariationValue @relation(fields: [variationValueId], references: [id], onDelete: Cascade)
 }
 
 // Order model with extended features
