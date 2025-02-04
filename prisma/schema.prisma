@@ -29,7 +29,7 @@ model Category {
   name            String                      // Category name
   slug            String      @unique         // Unique slug for URL identification
   description     String?                     // Optional category description
-  image           String?                     // Main image for the category
+  banner           String?                     // Banner image for the category
   thumbnail       String?                     // Thumbnail image for previews
 
   // Self-referencing relation for subcategories
@@ -75,7 +75,7 @@ model ProductCodeCounter{
 // Product model with extended features
 model Product {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  productCode    String?  @unique   
+  productCode    String? 
   title          String                       // Product title
   slug           String      @unique         // Unique slug for URL identification
   description    String?                     // Optional detailed description

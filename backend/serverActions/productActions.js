@@ -13,6 +13,7 @@ export async function createProductAction(formData) {
   try {
     // Parse and validate form data
     let data = Object.fromEntries(formData.entries());
+    console.log(data);
     if (
       !data?.title ||
       !data?.regularPrice ||
@@ -54,9 +55,22 @@ export async function createProductAction(formData) {
         })
       );
     }
+    let productCode = await prisma.ProductCodeCounter.findFirst();
 
+    // If the counter doesn't exist, initialize it
+    if (!productCode) {
+      productCode = await prisma.ProductCodeCounter.create({
+        data: { lastProductCode: 1000 },
+      });
+    }
+
+    // Increment the order number
+    const newProductCode = productCode.lastOrderNumber + 1;
     const preparedData = {
       ...data,
+      productCode: newProductCode,
+      isActive: data?.isActive ? true : false,
+      isFeatured: data?.isFeatured ? true : false,
       slug: slug,
       category: {
         connect: { id: data?.category },
@@ -68,7 +82,7 @@ export async function createProductAction(formData) {
       stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
       insideDhaka: data?.insideDhaka && Number(data?.insideDhaka),
       outSideDhaka: data?.outSideDhaka && Number(data?.outSideDhaka),
-      weight: data?.weight && Number(data?.weight),
+      weight: data?.weight ? Number(data?.weight) : null,
     };
     const result = await prisma.$transaction(async (tx) => {
       return await tx.product.create({
@@ -147,6 +161,7 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
   if (!product) {
     throw new Error("Product Not found");
   }
+
   let UpdatedData;
 
   UpdatedData = {
@@ -158,7 +173,7 @@ export const updateProductAction = async ({ productId, formData, slug }) => {
     stockQuantity: data?.stockQuantity && Number(data?.stockQuantity),
     insideDhaka: data?.insideDhaka && Number(data?.insideDhaka),
     outSideDhaka: data?.outSideDhaka && Number(data?.outSideDhaka),
-    weight: data?.weight && Number(data?.weight),
+    weight: data?.weight ? Number(data?.weight) : null,
 
     category: {
       connect: { id: data?.category },
