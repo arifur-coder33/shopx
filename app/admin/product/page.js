@@ -1,6 +1,7 @@
 export const dynamic = "force-static";
 import { getCategory } from "@/backend/serverActions/catagoryActions";
-import ModalButton from "@/components/modal/ModalBUtton";
+import ModalButton from "@/components/modal/ModalButton";
+
 import ProductForm from "@/components/products/ProductForm";
 import ProductListTable from "@/components/products/ProductListTable";
 
