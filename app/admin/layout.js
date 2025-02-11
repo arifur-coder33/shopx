@@ -1,8 +1,8 @@
 import AdminNavBar from "@/components/nav/AdminNav";
 import NavItem from "@/components/nav/NavItem";
+import { ModalProvider } from "@/context/ModalContext";
 import { SessionProvider } from "next-auth/react";
 
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 export const metadata = {
@@ -76,7 +76,7 @@ export default function AdminLayout({ children }) {
             {/* main content */}
             <div className="flex-1 shrink overflow-y overflow-x-auto sm:ml-64  min-h-screen ">
               <Suspense fallback="loading...........">
-                {isNotFound ? notFound() : children}
+                <ModalProvider>{children}</ModalProvider>
               </Suspense>
             </div>
           </div>

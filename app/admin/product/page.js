@@ -6,9 +6,10 @@ import ProductListTable from "@/components/products/ProductListTable";
 
 export default async function ProductListPage() {
   const data = await getCategory();
+
   return (
     <div>
-      <ModalButton>
+      <ModalButton buttonName={"Add Product"}>
         <ProductForm category={data?.data} actionType={"add"} />
       </ModalButton>
       <ProductListTable />

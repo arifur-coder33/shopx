@@ -1,9 +1,15 @@
-import { deleteProductById, getProducts } from "@/backend/serverActions/productActions";
+import { getCategory } from "@/backend/serverActions/catagoryActions";
+import {
+  deleteProductById,
+  getProducts,
+} from "@/backend/serverActions/productActions";
+import { Edit, Eye, Trash } from "lucide-react";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
-import Imagecustom from "../images/ImageCustom";
 import DeleteItem from "../common/DeleteItem";
-import { Edit, Eye, Trash } from "lucide-react";
+import Imagecustom from "../images/ImageCustom";
+import ModalButton from "../modal/ModalBUtton";
+import ProductForm from "./ProductForm";
 
 const getData = unstable_cache(
   async () => {
@@ -14,6 +20,7 @@ const getData = unstable_cache(
   ["products"],
   { revalidate: 3600, tags: ["products"] }
 );
+
 export default async function ProductListTable() {
   const { data } = await getData();
 
@@ -53,7 +60,8 @@ export default async function ProductListTable() {
   );
 }
 
-const Item = ({ data }) => {
+const Item = async ({ data }) => {
+  const getCat = await getCategory();
   return (
     <>
       <tr className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
@@ -79,17 +87,23 @@ const Item = ({ data }) => {
           </Link>
         </td> */}
         <td className="px-6 py-4 grid grid-cols-3">
-          <Link
-            href={`/product/${encodeURIComponent(data?.slug)}`}
-          >
+          <Link href={`/product/${encodeURIComponent(data?.slug)}`}>
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>
-            <Link
-               href={`/admin/product/edit/${data?.id}`}
-            >
+          <Link href={`/admin/product/edit/${data?.id}`}>
             <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
-
-            </Link>
+          </Link>
+          <ModalButton
+            buttonName={
+              <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            }
+          >
+            <ProductForm
+              actionType={"edit"}
+              category={getCat?.data}
+              data={data}
+            />
+          </ModalButton>
           <DeleteItem deleteItem={deleteProductById} id={data?.id}>
             <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
           </DeleteItem>
