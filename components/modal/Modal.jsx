@@ -1,16 +1,22 @@
-"use client"; // This is a client component
+"use client";
 
 import { useEffect, useState } from "react";
 
 const Modal = ({ isOpen, onClose, children, isLoading }) => {
   const [isClient, setIsClient] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    if (isOpen) {
+      setTimeout(() => setIsAnimating(true), 50); // Start animation slightly after render
+    } else {
+      setIsAnimating(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
-  if (!isClient) return null; // Prevents hydration mismatch
+  if (!isClient) return null; // Prevent hydration mismatch
 
   return (
     <div
@@ -20,8 +26,8 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
     >
       <div
         className={`bg-white rounded shadow-lg p-4 md:p-6 lg:p-8 m-4 relative transition-all duration-500 ease-in-out transform ${
-          isLoading ? "scale-75 opacity-80" : "scale-100 opacity-100"
-        }`}
+          isAnimating ? "scale-100 opacity-100" : "scale-0 opacity-50 "
+        } ${isLoading ? "scale-50 opacity-80" : "scale-100 opacity-100"}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
