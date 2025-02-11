@@ -8,7 +8,7 @@ import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import DeleteItem from "../common/DeleteItem";
 import Imagecustom from "../images/ImageCustom";
-import ModalButton from "../modal/ModalBUtton";
+import ModalButton from "../modal/ModalButton";
 import ProductForm from "./ProductForm";
 
 const getData = unstable_cache(
