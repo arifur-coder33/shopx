@@ -1,10 +1,9 @@
-
+import { getAllCategoryWithproduct } from "@/backend/serverActions/catagoryActions";
+import { Edit, Eye, Trash } from "lucide-react";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
-import Imagecustom from "../images/ImageCustom";
 import DeleteItem from "../common/DeleteItem";
-import { Edit, Eye, Trash } from "lucide-react";
-import { getAllCategoryWithproduct } from "@/backend/serverActions/catagoryActions";
+import Imagecustom from "../images/ImageCustom";
 
 const getData = unstable_cache(
   async () => {
@@ -17,7 +16,6 @@ const getData = unstable_cache(
 );
 export default async function CategoryListTable() {
   const { data } = await getData();
-
 
   return (
     <>
@@ -68,17 +66,13 @@ const Item = ({ data }) => {
         <td className="px-6 py-4">{data?.slug}</td>
         <td className="px-6 py-4">{data?._count.products}</td>
         <td className="px-6 py-4 grid grid-cols-3">
-          <Link
-            href={`/category/${encodeURIComponent(data?.slug)}`}
-          >
+          <Link href={`/category/${encodeURIComponent(data?.slug)}`}>
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>
-            <Link
-               href={`/admin/category/edit/${data?.id}`}
-            >
+          <Link href={`/admin/category/edit/${data?.id}`}>
             <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+          </Link>
 
-            </Link>
           <DeleteItem deleteItem={""} id={data?.id}>
             <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
           </DeleteItem>

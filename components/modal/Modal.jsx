@@ -27,7 +27,7 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
       <div
         className={`bg-white rounded shadow-lg p-4 md:p-6 lg:p-8 m-4 relative transition-all duration-500 ease-in-out transform ${
           isAnimating ? "scale-100 opacity-100" : "scale-0 opacity-50 "
-        } ${isLoading ? "scale-50 opacity-80" : "scale-100 opacity-100"}`}
+        } `}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

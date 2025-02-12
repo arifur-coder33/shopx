@@ -1,7 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Footer from "@/components/footer/Footer";
 import NavBar from "@/components/NavBar";
-import { CartProvider } from "@/context/CartContext";
 import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SessionProvider } from "next-auth/react";
@@ -18,12 +17,12 @@ export default function UserLayout({ children }) {
     <>
       <GoogleTagManager gtmId={process.env.GoogleTagMangerID} />
       <SessionProvider>
-        <CartProvider>
-          <NavBar />
+        {/* <CartProvider> */}
+        <NavBar />
 
-          <div className="max-w-7xl mx-auto p-2 min-h-screen">{children}</div>
-          <Footer />
-        </CartProvider>
+        <div className="max-w-7xl mx-auto p-2 min-h-screen">{children}</div>
+        <Footer />
+        {/* </CartProvider> */}
       </SessionProvider>
       <SpeedInsights />
       <GoogleAnalytics gaId={process.env.GoogleAnalyticsID} />

@@ -1,9 +1,10 @@
+import ProductPageData from "@/app/(user)/product/[slug]/_components/ProductPageData";
 import { getCategory } from "@/backend/serverActions/catagoryActions";
 import {
   deleteProductById,
   getProducts,
 } from "@/backend/serverActions/productActions";
-import { Edit, Eye, Trash } from "lucide-react";
+import { Edit, Eye, Trash, View } from "lucide-react";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import DeleteItem from "../common/DeleteItem";
@@ -64,8 +65,8 @@ const Item = async ({ data }) => {
   const getCat = await getCategory();
   return (
     <>
-      <tr className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-        <td className="px-6 py-4">
+      <tr className=" odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
+        <td className="px-2">
           <Imagecustom src={data?.mainImage} w={50} h={50} alt={data?.title} />
         </td>
         <th
@@ -74,9 +75,9 @@ const Item = async ({ data }) => {
         >
           {data.title}
         </th>
-        <td className="px-6 py-4">{data?.color}</td>
-        <td className="px-6 py-4">{data?.category?.name}</td>
-        <td className="px-6 py-4">{data?.discountPrice}</td>
+        <td className="">{data?.color}</td>
+        <td className="">{data?.category?.name}</td>
+        <td className="">{data?.discountPrice}</td>
         {/* <td className="px-6 py-4">
           <Link
           prefetch={false}
@@ -86,13 +87,21 @@ const Item = async ({ data }) => {
             Edit
           </Link>
         </td> */}
-        <td className="px-6 py-4 grid grid-cols-3">
+        <td className=" flex flex-row ">
+          <ModalButton
+            buttonName={
+              <View className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            }
+          >
+            <ProductPageData data={data} />
+          </ModalButton>
           <Link href={`/product/${encodeURIComponent(data?.slug)}`}>
             <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
           </Link>
-          <Link href={`/admin/product/edit/${data?.id}`}>
+
+          {/* <Link href={`/admin/product/edit/${data?.id}`}>
             <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
-          </Link>
+          </Link> */}
           <ModalButton
             buttonName={
               <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
