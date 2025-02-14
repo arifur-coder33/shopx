@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import Imagecustom from "../images/ImageCustom";
 import SelectInput from "../input/SelectInput";
-export default function AddCatagoryForm({ data, category }) {
+export default function CategoryForm({ data, category }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);

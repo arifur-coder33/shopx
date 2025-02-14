@@ -325,3 +325,22 @@ export async function deleteProductById(id) {
     await prisma.$disconnect();
   }
 }
+
+export const updateProductStatus = async ({ id, value }) => {
+  console.log(id, value);
+  try {
+    const data = await prisma.product.update({
+      where: { id },
+      data: { isActive: value },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/admin/product");
+    revalidateTag("products");
+    revalidateTag(`product-${id}`);
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};

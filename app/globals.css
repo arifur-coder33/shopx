@@ -23,12 +23,15 @@ body {
   background-color: #f0f0f0; /* Change this to the desired color */
   border-bottom: 2px solid #ccc; /* Optional: Add a border to separate the toolbar */
 }
+.ql-snow .ql-tooltip {
+  background-color: aqua !important;
+  transform: translateX(50%) translateY(-10%) !important;
+}
 
 /* Keep the background color of the editor area as white (or any other color) */
 .ql-editor {
   background-color: white;
   padding: 10px; /* Optional: Add some padding to the text editor */
-  
 }
 
 .rendered-html iframe,

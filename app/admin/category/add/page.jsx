@@ -1,6 +1,6 @@
 export const dynamic = "force-static";
 import { getCategory } from "@/backend/serverActions/catagoryActions";
-import AddCatagoryForm from "@/components/catagory/AddCategoryForm";
+import CategoryForm from "@/components/catagory/CategoryForm";
 
 export default async function CategoryAddPage() {
   const { data } = await getCategory();
@@ -8,7 +8,7 @@ export default async function CategoryAddPage() {
     <div className=" p-4">
       <div>Add New Category</div>
       <div className="w-full ">
-        <AddCatagoryForm category={data} />
+        <CategoryForm category={data} />
       </div>
     </div>
   );
