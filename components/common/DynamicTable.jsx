@@ -11,15 +11,17 @@ import ModalButton from "../modal/ModalButton";
 import OrderStatusUpdate from "../orders/OrderStatusUpdate";
 import ProductForm from "../products/ProductForm";
 import DeleteItem from "./DeleteItem";
+import SearchableDropdown from "../input/SearchableDropdown";
+import DynamicForm from "./DynamicForm";
 
-export default function DynamicTable({ data, tableProperties }) {
+export default function DynamicTable({ data,fields, tableProperties,updateAction }) {
   // Check if data exists and if tableProperties is passed
   if (!data?.length || !tableProperties) {
     return <p>No products available.</p>;
   }
 
   // Function to render a dynamic field type based on its property
-  const renderDynamicField = (item, prop, fieldType, action) => {
+  const renderDynamicField = (item, prop, fieldType, action,options) => {
     switch (fieldType) {
       case "image":
         // Ensure the image is a valid URL or fallback
@@ -30,14 +32,17 @@ export default function DynamicTable({ data, tableProperties }) {
         );
       case "dropdown":
         return (
-          <OrderStatusUpdate
-            orderId={item?.id}
-            status={item?.[prop]} // Assuming `status` is a string value
-          />
+          // <OrderStatusUpdate
+          //   orderId={item?.id}
+          //   status={item?.[prop].id} // Assuming `status` is a string value
+          //   options={options}
+            
+          // />
+          <SearchableDropdown options={options} defaultId={item?.[prop].id} itemId={item?.id}/>
         );
       case "checkbox":
         return (
-          <CheckBox value={item?.[prop]} action={action} id={item?.id} />
+          <CheckBox value={item?.[prop]} action={action} id={item?.id}  />
           //   <input
           //     type="checkbox"
           //     checked={item?.[prop]}
@@ -95,7 +100,8 @@ export default function DynamicTable({ data, tableProperties }) {
                       item,
                       column.field,
                       column.type,
-                      column.action
+                      column.action,
+                      column.options
                     )}
                   </td>
                 ))}
@@ -115,11 +121,18 @@ export default function DynamicTable({ data, tableProperties }) {
                       <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
                     }
                   >
-                    <ProductForm
+                            <DynamicForm
+                              fields={fields}
+                              actionType={"edit"}
+                              updateAction={updateAction}
+                              data={item}
+                             
+                            />
+                    {/* <ProductForm
                       actionType="edit"
                       category={item?.category}
                       data={item}
-                    />
+                    /> */}
                   </ModalButton>
                   <DeleteItem deleteItem={deleteProductById} id={item?.id}>
                     <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />

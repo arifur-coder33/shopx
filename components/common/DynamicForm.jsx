@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
+import SearchableDropdown from "../input/SearchableDropdown";
 
 export default function DynamicForm({
   category,
@@ -124,7 +125,7 @@ export default function DynamicForm({
               );
             case "text":
             case "number":
-            case "file":
+           
               return (
                 <FloatingInput
                   index={index}
@@ -143,13 +144,14 @@ export default function DynamicForm({
             case "select":
               return (
                 <div className="md:col-span-2" key={field.name}>
-                  <SelectInput
+                  <SearchableDropdown options={field.data}  name={field.name} label={field.label} defaultId={data?.[field.name].id}/>
+                  {/* <SelectInput
                     index={index}
                     defaultValue={data?.[field.name]}
                     label={field.label}
                     name={field.name}
                     data={field.data}
-                  />
+                  /> */}
                 </div>
               );
             case "editor":

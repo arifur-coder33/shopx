@@ -5,6 +5,7 @@ import { getCategory } from "@/backend/serverActions/catagoryActions";
 import {
   createProductAction,
   getProducts,
+  updateProductAction,
   updateProductStatus,
 } from "@/backend/serverActions/productActions";
 import DynamicForm from "@/components/common/DynamicForm";
@@ -15,6 +16,7 @@ import ModalButton from "@/components/modal/ModalButton";
 export default async function ProductListPage() {
   const categoryData = await getCategory();
   const productData = await getProducts();
+
   const fields = [
     {
       type: "checkbox",
@@ -74,9 +76,9 @@ export default async function ProductListPage() {
   const tableProperties = [
     { label: "Image", field: "mainImage", type: "image" },
     { label: "Product Name", field: "title", type: "text" },
-    // { label: "Category", field: "category", type: "text" }, // Assuming category has a 'name' property
+    { label: "Category", field: "category",type: "dropdown", options: categoryData?.data, }, // Assuming category has a 'name' property
     { label: "Price", field: "discountPrice", type: "text" },
-    { label: "Status", field: "status", type: "dropdown" }, // Example of dropdown
+    // { label: "Status", field: "status", type: "dropdown", options: categoryData?.data, }, // Example of dropdown
     {
       label: "Is Active",
       field: "isActive",
@@ -100,6 +102,8 @@ export default async function ProductListPage() {
       <DynamicTable
         data={productData?.data}
         tableProperties={tableProperties}
+        fields={fields}
+        submitAction={updateProductAction}
       />
     </div>
   );
