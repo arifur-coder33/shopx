@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { Tiro_Bangla } from "next/font/google";
 
+import { CartProvider } from "@/context/CartContext";
 import NextTopLoader from "nextjs-toploader";
 import { ToastContainer } from "react-toastify";
 import "./globals.css";
@@ -44,7 +45,9 @@ export default function RootLayout({ children }) {
     <html lang="bn">
       <body className={` ${tiro_bangla.className}  antialiased  theam`}>
         <NextTopLoader showSpinner={false} />
-        <div className="">{children}</div>
+        <CartProvider>
+          <div className="">{children}</div>
+        </CartProvider>
         <ToastContainer />
       </body>
     </html>

@@ -6,16 +6,17 @@ import {
 } from "@/backend/serverActions/productActions";
 import Button from "@/components/button";
 import FloatingInput from "@/components/input/FloatingInput";
+import { useModalContext } from "@/context/ModalContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import Imagecustom from "../images/ImageCustom";
 import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
 import SelectInput from "../input/SelectInput";
-
 export default function ProductForm({ category, data, actionType }) {
+  const { closeModal } = useModalContext();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -26,6 +27,12 @@ export default function ProductForm({ category, data, actionType }) {
   const [uplodedImageGallery, setUplodedImageGallery] = useState([]);
   const router = useRouter();
   const uploadedImageLength = uplodedImageGallery?.length * 100;
+  console.log(mainImage);
+  useEffect(() => {
+    if (success) {
+      closeModal();
+    }
+  }, [success, closeModal]);
   const handleImageGalleryChange = async (files) => {
     if (files.length > 6) {
       toast.error("You can upload a maximum of 6 images.");
@@ -75,7 +82,6 @@ export default function ProductForm({ category, data, actionType }) {
 
         if (response.success) {
           setSuccess("Product saved successfully");
-
           toast.success("Product saved successfully!");
           router.push("/admin/product");
           form.reset();
