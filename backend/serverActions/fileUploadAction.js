@@ -1,0 +1,75 @@
+"use server";
+
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { cloudinaryUpload } from "../utils/cloudinary";
+import { newSlug } from "../utils/generateSlug";
+
+export async function uploadImagesAction(formData) {
+  try {
+    let imageGalleryUploads = [];
+    const imageGalleryFiles = formData.getAll("imageGallery");
+    const validFiles = imageGalleryFiles.filter((file) => file.size > 0);
+    console.log(imageGalleryFiles);
+    if (validFiles.length > 0) {
+      imageGalleryUploads = await Promise.all(
+        validFiles.map(async (file, index) => {
+          try {
+            const fileName = file.name;
+            const slug =
+              fileName.substring(0, fileName.lastIndexOf(".")) || fileName;
+
+            if (!file) {
+              console.error("No file found");
+              return null;
+            }
+            const imageSlug = await newSlug(slug);
+            // Ensure file is valid and properly passed to Cloudinary
+            const upload = await cloudinaryUpload({
+              image: file,
+              tag: imageSlug,
+              slug: `${imageSlug}_${index + 1}`,
+              perifix: "_galleryImage",
+            });
+
+            if (!upload || !upload.secure_url) {
+              console.error("Cloudinary upload returned invalid data", upload);
+              return null;
+            }
+
+            return {
+              url: upload.secure_url,
+              host: "cloudinary",
+              name: `${upload.display_name}.${upload.format}`,
+            };
+          } catch (uploadError) {
+            console.error("Cloudinary upload failed:", uploadError);
+            return null;
+          }
+        })
+      );
+
+      imageGalleryUploads = imageGalleryUploads.filter((img) => img !== null);
+    }
+    console.log(imageGalleryUploads);
+    if (imageGalleryUploads.length > 0) {
+      await prisma.media.createMany({
+        data: imageGalleryUploads,
+      });
+    }
+    revalidatePath("/admin/media");
+    return { success: true, data: imageGalleryUploads };
+  } catch (error) {
+    console.error("Image upload failed:", error);
+    return {
+      success: false,
+      message: "Image upload failed. Please try again.",
+    };
+  }
+}
+
+export async function getAllMedia(params) {
+  const data = await prisma.media.findMany();
+
+  return { success: true, data };
+}

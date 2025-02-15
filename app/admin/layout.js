@@ -41,6 +41,10 @@ export default function AdminLayout({ children }) {
       slug: "user",
     },
     {
+      name: "Media",
+      slug: "media",
+    },
+    {
       name: "Site Setting",
       slug: "setting",
     },

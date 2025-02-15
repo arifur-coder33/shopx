@@ -165,6 +165,14 @@ model orderCounter {
   lastOrderNumber Int
 }
 
+model Media {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  url       String
+  name      String
+  host      String
+  createdAt DateTime @default(now())
+}
+
 model siteSetting {
 id              String @id @default(auto()) @map("_id") @db.ObjectId
 name   String?
