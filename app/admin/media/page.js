@@ -1,8 +1,6 @@
 import { getAllMedia } from "@/backend/serverActions/fileUploadAction";
 import Imagecustom from "@/components/images/ImageCustom";
-import FileUploader from "@/components/input/FileUploader";
-import MediaSelector from "@/components/input/MediaSelector";
-import ModalButton from "@/components/modal/ModalButton";
+import MediaModal from "@/components/input/MediaModal";
 
 export default async function MediaPage() {
   const { data } = await getAllMedia();
@@ -18,10 +16,11 @@ export default async function MediaPage() {
             alt={item?.name}
           />
         ))}
-      <ModalButton buttonName={"Upload File"}>
+      {/* <ModalButton buttonName={"Upload File"}>
         <FileUploader multiple={true} />
-      </ModalButton>
-      <MediaSelector multipleSelect={true} inputName="mediaIds" />
+      </ModalButton> */}
+      {/* <MediaSelector multipleSelect={true} inputName="mediaIds" /> */}
+      <MediaModal multipleSelect={true} />
     </div>
   );
 }

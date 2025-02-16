@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { cloudinaryUpload } from "../utils/cloudinary";
 import { newSlug } from "../utils/generateSlug";
 
@@ -58,6 +58,7 @@ export async function uploadImagesAction(formData) {
       });
     }
     revalidatePath("/admin/media");
+    revalidateTag("media"); // ✅ Instead of revalidatePath()
     return { success: true, data: imageGalleryUploads };
   } catch (error) {
     console.error("Image upload failed:", error);
