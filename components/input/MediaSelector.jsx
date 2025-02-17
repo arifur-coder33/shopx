@@ -21,8 +21,8 @@ export default function MediaSelector({
       const newData = data.map((item) => ({ ...item, isSelected: false }));
       setMedia(newData || []);
     }
-    if (isOpen) fetchMedia(); // Fetch media only when the modal is open
-  }, [isOpen]);
+    fetchMedia(); // Fetch media only when the modal is open
+  }, []);
   console.log(media);
   // Handle selecting/deselecting media
   const handleSelect = (item) => {
@@ -77,7 +77,6 @@ export default function MediaSelector({
                 }`}
                 onClick={() => handleSelect(item)}
               >
-                {isSelected ? "Selected" : "Not Selected"}
                 <Imagecustom
                   src={item.name} // Use item.url instead of item.name
                   h={100}

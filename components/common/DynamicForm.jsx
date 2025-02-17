@@ -8,7 +8,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
-import SelectInput from "../input/SelectInput";
+import FileInput from "../input/FileInput";
 import SearchableDropdown from "../input/SearchableDropdown";
 
 export default function DynamicForm({
@@ -125,7 +125,6 @@ export default function DynamicForm({
               );
             case "text":
             case "number":
-           
               return (
                 <FloatingInput
                   index={index}
@@ -144,7 +143,12 @@ export default function DynamicForm({
             case "select":
               return (
                 <div className="md:col-span-2" key={field.name}>
-                  <SearchableDropdown options={field.data}  name={field.name} label={field.label} defaultId={data?.[field.name].id}/>
+                  <SearchableDropdown
+                    options={field.data}
+                    name={field.name}
+                    label={field.label}
+                    defaultId={data?.[field.name].id}
+                  />
                   {/* <SelectInput
                     index={index}
                     defaultValue={data?.[field.name]}
@@ -164,6 +168,15 @@ export default function DynamicForm({
                     setEditorValue={setEditorValue}
                   />
                 </div>
+              );
+
+            case "file":
+              return (
+                <FileInput
+                  label={field.label}
+                  name={field.name}
+                  multipleSelect={true}
+                />
               );
             default:
               return null;
