@@ -25,5 +25,9 @@ import { useModalContext } from "@/context/ModalContext";
 export default function ModalButton({ children, buttonName }) {
   const { openModal } = useModalContext();
 
-  return <button onClick={() => openModal(children)}>{buttonName}</button>;
+  return (
+    <div className="cursor-pointer" onClick={() => openModal(children)}>
+      {buttonName}
+    </div>
+  );
 }

@@ -71,12 +71,24 @@ export default async function ProductListPage() {
       colSpan: "2",
     },
     { type: "file", label: "Main Image", name: "mainImage", colSpan: "full" },
+    {
+      type: "file",
+      label: "Product Gallery",
+      multiple: true,
+      name: "gallery",
+      colSpan: "full",
+    },
     { type: "editor", label: "Description", name: "description" },
   ];
   const tableProperties = [
     { label: "Image", field: "mainImage", type: "image" },
     { label: "Product Name", field: "title", type: "text" },
-    { label: "Category", field: "category",type: "dropdown", options: categoryData?.data, }, // Assuming category has a 'name' property
+    {
+      label: "Category",
+      field: "category",
+      type: "dropdown",
+      options: categoryData?.data,
+    }, // Assuming category has a 'name' property
     { label: "Price", field: "discountPrice", type: "text" },
     // { label: "Status", field: "status", type: "dropdown", options: categoryData?.data, }, // Example of dropdown
     {

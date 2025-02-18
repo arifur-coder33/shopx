@@ -74,3 +74,15 @@ export async function getAllMedia(params) {
 
   return { success: true, data };
 }
+
+export async function getAllMediaByIds(params) {
+  const data = await prisma.media.findMany({
+    where: {
+      id: {
+        in: params, // Assuming params.ids is an array of media IDs
+      },
+    },
+  });
+
+  return { success: true, data };
+}

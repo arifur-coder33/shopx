@@ -55,7 +55,7 @@ export const useModalContext = () => {
 
 export const ModalProvider = ({ children }) => {
   const [modals, setModals] = useState([]);
-
+  const [props, setProps] = useState({});
   const openModal = (modalContent) => {
     setModals((prev) => [...prev, modalContent]); // Push new modal content
   };

@@ -2,9 +2,11 @@
 import { getAllMedia } from "@/backend/serverActions/fileUploadAction";
 import Button from "@/components/button";
 import Imagecustom from "@/components/images/ImageCustom";
+import FileUploader from "@/components/input/FileUploader";
 import { useModalContext } from "@/context/ModalContext";
+import { UploadCloudIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import ModalButton from "../modal/ModalButton";
 export default function MediaSelector({
   multipleSelect = false,
   inputName = "selectedMedia",
@@ -13,7 +15,7 @@ export default function MediaSelector({
   const [media, setMedia] = useState([]);
   const [selectedMedia, setSelectedMedia] = useState([]);
   const { closeModal, isOpen } = useModalContext();
-
+  const [newUpload, setNewUpload] = useState();
   // Fetch media when the modal opens
   useEffect(() => {
     async function fetchMedia() {
@@ -22,7 +24,7 @@ export default function MediaSelector({
       setMedia(newData || []);
     }
     fetchMedia(); // Fetch media only when the modal is open
-  }, []);
+  }, [newUpload]);
   console.log(media);
   // Handle selecting/deselecting media
   const handleSelect = (item) => {
@@ -51,7 +53,8 @@ export default function MediaSelector({
   // Handle confirming the selection
   const handleConfirm = () => {
     const selectedIds = selectedMedia.map((m) => m.id).join(",");
-    if (onSelect) onSelect(selectedIds); // Pass selected IDs to the parent
+    console.log(selectedIds);
+    if (onSelect) onSelect(selectedMedia); // Pass selected IDs to the parent
     document.getElementById(inputName).value = selectedIds; // Update hidden input
     closeModal(); // Close the modal
   };
@@ -59,10 +62,19 @@ export default function MediaSelector({
   return (
     <div>
       {/* Hidden Input Field for Form Submission */}
+      <ModalButton
+        buttonName={
+          <div className="flex flex-col items-center hover:shadow-xl bg-gray-200 w-fit rounded-md p-1">
+            <UploadCloudIcon /> <span>Upload New</span>
+          </div>
+        }
+      >
+        <FileUploader onUpload={setNewUpload} multiple={true} />
+      </ModalButton>
       <input
         type="hidden"
         id={inputName}
-        name={inputName}
+        name={"inputName"}
         value={selectedMedia.map((m) => m.id).join(",")}
       />
       <div className="p-4">

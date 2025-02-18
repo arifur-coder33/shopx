@@ -5,7 +5,6 @@ import FloatingInput from "@/components/input/FloatingInput";
 import { useModalContext } from "@/context/ModalContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { toast } from "react-toastify";
 import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
 import FileInput from "../input/FileInput";
@@ -24,13 +23,7 @@ export default function DynamicForm({
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editorValue, setEditorValue] = useState(data?.description);
-  const [mainImage, setMainImage] = useState(data?.mainImage);
-  const [uploadedMainimage, setUploadedMainImage] = useState();
-  const [imageGallery, setImageGallery] = useState(data?.imageGallery || []);
-  const [uplodedImageGallery, setUplodedImageGallery] = useState([]);
   const router = useRouter();
-
-  const uploadedImageLength = uplodedImageGallery?.length * 100;
 
   useEffect(() => {
     if (success) {
@@ -38,65 +31,48 @@ export default function DynamicForm({
     }
   }, [success, closeModal]);
 
-  const handleImageGalleryChange = async (files) => {
-    if (files.length > 6) {
-      toast.error("You can upload a maximum of 6 images.");
-      return;
-    }
-
-    const images = [];
-    for (const file of files) {
-      // Create object URL for preview
-      const objectUrl = URL.createObjectURL(file);
-      images.push(objectUrl);
-    }
-    setUplodedImageGallery(images);
-  };
-
-  const handleMainImageChange = async (file) => {
-    setUploadedMainImage(URL.createObjectURL(file));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    const fileInput = form.querySelector('input[name="mainImage"]');
-    const mainImage = fileInput.files[0];
+    let newData = Object.fromEntries(formData.entries());
+    console.log(newData);
+    // const fileInput = form.querySelector('input[name="mainImage"]');
+    // const mainImage = fileInput.files[0];
 
-    if (actionType === "edit") {
-      if (!mainImage) formData.delete("mainImage");
-      if (uplodedImageGallery.length === 0) formData.delete("imageGallery");
-    }
+    // if (actionType === "edit") {
+    //   if (!mainImage) formData.delete("mainImage");
+    //   if (uplodedImageGallery.length === 0) formData.delete("imageGallery");
+    // }
 
-    formData.append("description", editorValue);
+    // formData.append("description", editorValue);
 
-    setError(null);
-    setSuccess(null);
+    // setError(null);
+    // setSuccess(null);
 
-    startTransition(async () => {
-      try {
-        const response =
-          actionType === "edit"
-            ? await updateAction({
-                productId: data?.id,
-                formData,
-                slug: data?.slug,
-              })
-            : await createAction(formData);
+    // startTransition(async () => {
+    //   try {
+    //     const response =
+    //       actionType === "edit"
+    //         ? await updateAction({
+    //             productId: data?.id,
+    //             formData,
+    //             slug: data?.slug,
+    //           })
+    //         : await createAction(formData);
 
-        if (response.success) {
-          setSuccess("Product saved successfully");
-          toast.success("Product saved successfully!");
-          router.push("/admin/product");
-          form.reset();
-        } else {
-          setError(response.message || "Something went wrong");
-        }
-      } catch (error) {
-        setError(error.message || "Something went wrong");
-      }
-    });
+    //     if (response.success) {
+    //       setSuccess("Product saved successfully");
+    //       toast.success("Product saved successfully!");
+    //       router.push("/admin/product");
+    //       form.reset();
+    //     } else {
+    //       setError(response.message || "Something went wrong");
+    //     }
+    //   } catch (error) {
+    //     setError(error.message || "Something went wrong");
+    //   }
+    // });
   };
 
   return (
@@ -173,9 +149,10 @@ export default function DynamicForm({
             case "file":
               return (
                 <FileInput
+                  key={field.name}
                   label={field.label}
                   name={field.name}
-                  multipleSelect={true}
+                  multipleSelect={field.multiple}
                 />
               );
             default:

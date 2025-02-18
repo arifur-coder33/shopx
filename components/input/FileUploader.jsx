@@ -50,6 +50,9 @@ export default function ImageUploader({ multiple = false, onUpload }) {
         setImages([]);
         setSuccess(true);
         toast.success("Product saved successfully!");
+        if (onUpload) {
+          onUpload(new Date());
+        }
       }
     } catch (error) {
       console.error("Upload failed:", error);
