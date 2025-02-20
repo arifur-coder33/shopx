@@ -28,7 +28,7 @@ export default function FileInput({ name, label, multipleSelect, colSpan }) {
           <input hidden name={name} value={inputValue} type="text" readOnly />
           <ModalButton
             buttonName={
-              <label className="cursor-pointer text-center flex flex-col items-center">
+              <label className="cursor-pointer text-center flex flex-col items-center rounded-md border-2">
                 <ImagePlus className="w-16 h-16 text-gray-500" />
               </label>
             }

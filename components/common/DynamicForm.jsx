@@ -22,7 +22,7 @@ export default function DynamicForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [editorValue, setEditorValue] = useState(data?.description);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -37,13 +37,9 @@ export default function DynamicForm({
     const formData = new FormData(form);
     let newData = Object.fromEntries(formData.entries());
     console.log(newData);
+
     // const fileInput = form.querySelector('input[name="mainImage"]');
     // const mainImage = fileInput.files[0];
-
-    // if (actionType === "edit") {
-    //   if (!mainImage) formData.delete("mainImage");
-    //   if (uplodedImageGallery.length === 0) formData.delete("imageGallery");
-    // }
 
     // formData.append("description", editorValue);
 
@@ -140,8 +136,7 @@ export default function DynamicForm({
                   <CustomEditor
                     label={field.label}
                     name={field.name}
-                    editorValue={editorValue}
-                    setEditorValue={setEditorValue}
+                    defaultValue={data?.[field.name]}
                   />
                 </div>
               );

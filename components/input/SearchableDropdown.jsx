@@ -1,7 +1,12 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function SearchableDropdown({ name, options = [], defaultId ,label}) {
+export default function SearchableDropdown({
+  name,
+  options = [],
+  defaultId,
+  label,
+}) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -57,18 +62,20 @@ export default function SearchableDropdown({ name, options = [], defaultId ,labe
 
   return (
     <div className="relative w-64" ref={dropdownRef}>
-           <label
+      <label
         // htmlFor={uniqueId}
         className="cursor-pointer block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-      >{label} </label>
+      >
+        {label}{" "}
+      </label>
       {/* Input Field */}
+      <input hidden name={name} type="text" defaultValue={selected?.id} />
       <div className="relative">
-   
         <input
           type="text"
           className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder={selected ? selected.name : "Select an option"}
-          value={query}
+          defaultValue={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}
           readOnly={options.length === 0} // Make readonly if no options

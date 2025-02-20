@@ -8,6 +8,7 @@ import {
   updateProductAction,
   updateProductStatus,
 } from "@/backend/serverActions/productActions";
+import AddItem from "@/components/common/AddItem";
 import DynamicForm from "@/components/common/DynamicForm";
 import DynamicTable from "@/components/common/DynamicTable";
 
@@ -31,6 +32,7 @@ export default async function ProductListPage() {
       name: "isFeatured",
       colSpan: "1",
     },
+    { type: "file", label: "Main Image", name: "thumbnail", colSpan: "full" },
     { type: "text", label: "Product Name", name: "title", colSpan: "full" },
     { type: "text", label: "Product Slug", name: "slug", colSpan: "full" },
     {
@@ -70,12 +72,24 @@ export default async function ProductListPage() {
       name: "weight",
       colSpan: "2",
     },
-    { type: "file", label: "Main Image", name: "mainImage", colSpan: "full" },
+
     {
       type: "file",
       label: "Product Gallery",
       multiple: true,
       name: "gallery",
+      colSpan: "full",
+    },
+    {
+      type: "text",
+      label: "Product Tag",
+      name: "seoKeyWord",
+      colSpan: "full",
+    },
+    {
+      type: "text",
+      label: "Seo Description",
+      name: "seoDescription",
       colSpan: "full",
     },
     { type: "editor", label: "Description", name: "description" },
@@ -101,7 +115,7 @@ export default async function ProductListPage() {
   ];
   return (
     <div className="p-4">
-      <ModalButton buttonName={"Add Product"}>
+      <ModalButton buttonName={<AddItem />}>
         <DynamicForm
           fields={fields}
           actionType={"add"}

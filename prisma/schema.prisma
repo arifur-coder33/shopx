@@ -72,34 +72,68 @@ model ProductCodeCounter{
     lastProductCode Int
 }
 
-// Product model with extended features
+model Media {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  url       String
+  name      String
+  host      String
+  
+  // Reverse relations
+  productsAsThumbnail Product? @relation(name: "Thumbnail")  // One-to-One Reverse Relation
+  productGallery ProductGallery[]  // Explicit Many-to-Many Relation
+
+  createdAt DateTime @default(now())
+}
+
 model Product {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   productCode    String? 
-  title          String                       // Product title
-  slug           String      @unique         // Unique slug for URL identification
-  description    String?                     // Optional detailed description
-  categoryId     String?      @db.ObjectId    // Foreign key for Category
+  title          String                        // Product title
+  slug           String      @unique           // Unique slug for URL identification
+  description    String?                        // Optional detailed description
+  categoryId     String?      @db.ObjectId      // Foreign key for Category
   category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
-  regularPrice   Float                       // Regular price of the product
-  discountPrice  Float?                      // Optional discount price
-  stockQuantity  Int         @default(0)    // Stock quantity for inventory tracking
-  weight Float?
-  mainImage     String
+  regularPrice   Float                         // Regular price of the product
+  discountPrice  Float?                         // Optional discount price
+  stockQuantity  Int         @default(0)        // Stock quantity for inventory tracking
+  weight         Float?
+
+  // One-to-One: Thumbnail Image
+  thumbnailId    String?      @unique @db.ObjectId
+  thumbnail      Media?     @relation(name: "Thumbnail", fields: [thumbnailId], references: [id])
+
+  // Many-to-Many: Gallery (Using Join Table)
+  gallery ProductGallery[]
+
   seoKeyWord     String?
   seoDescription String?
-  imageGallery   String[]                  // Array of image URLs
-  isFeatured     Boolean?    @default(false) // Indicates if the product is featured
-  isActive       Boolean?     @default(true)  // Marks if the product is active
-  insideDhaka    Float?                      // Optional delivery charge inside Dhaka
-  outSideDhaka   Float?                      // Optional delivery charge outside Dhaka
+
+  isFeatured     Boolean?    @default(false)     // Indicates if the product is featured
+  isActive       Boolean?    @default(true)      // Marks if the product is active
+  insideDhaka    Float?                          // Optional delivery charge inside Dhaka
+  outSideDhaka   Float?                          // Optional delivery charge outside Dhaka
+
   hasVariations    Boolean? @default(false)           
-  variationItems ProductVariationValue[]   /// size, color, etc   // Many-to-Many Relationship using Join Table 
-  variations ProductVariation[] 
-  orders         OrderItem[]                    // One-to-many relationship with Order
-  createdAt      DateTime    @default(now()) // Timestamp for product creation
-  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
+  variationItems   ProductVariationValue[]       // Many-to-Many Relationship using Join Table 
+  variations      ProductVariation[] 
+  orders         OrderItem[]                     // One-to-many relationship with Order
+
+  createdAt      DateTime    @default(now())     // Timestamp for product creation
+  updatedAt      DateTime    @updatedAt          // Auto-updated timestamp
 }
+
+model ProductGallery {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  productId  String @db.ObjectId
+  mediaId    String @db.ObjectId
+
+  product    Product @relation(fields: [productId], references: [id])
+  media      Media @relation(fields: [mediaId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+
 model ProductVariation{
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   productId     String?      @db.ObjectId    // Foreign key for Category
@@ -165,13 +199,7 @@ model orderCounter {
   lastOrderNumber Int
 }
 
-model Media {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  url       String
-  name      String
-  host      String
-  createdAt DateTime @default(now())
-}
+
 
 model siteSetting {
 id              String @id @default(auto()) @map("_id") @db.ObjectId
