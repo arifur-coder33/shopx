@@ -12,7 +12,7 @@ export default function ProductCard({ product }) {
               sizes="(max-width: 480px) 300px, (max-width: 768px) 300px, 300px"
               className=" rounded-md "
               placeholder="blur"
-              src={product?.mainImage}
+              src={product?.mainImage || product?.thumbnail?.name}
               w={300}
               h={300}
               alt={product?.title}

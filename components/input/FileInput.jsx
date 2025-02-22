@@ -1,19 +1,33 @@
 "use client";
 import { ImagePlus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import Imagecustom from "../images/ImageCustom";
 import ModalButton from "../modal/ModalButton";
 import MediaSelector from "./MediaSelector";
 
-export default function FileInput({ name, label, multipleSelect, colSpan }) {
-  const [images, setImages] = useState([]);
+export default function FileInput({
+  name,
+  label,
+  defaultValue,
+  multipleSelect,
+  colSpan,
+}) {
+  const [images, setImages] = useState(
+    multipleSelect ? defaultValue || [] : defaultValue ? [defaultValue] : []
+  );
   const [inputValue, setInputValue] = useState("");
-
+  console.log(images);
   const onSelect = (selectedImages) => {
     setImages(selectedImages);
     setInputValue(selectedImages.map((img) => img.id).join(","));
   };
-
+  useEffect(() => {
+    setInputValue(
+      images?.length > 0 ? images.map((img) => img.id).join(",") : []
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const removeImage = (id) => {
     const filteredImages = images.filter((image) => image.id !== id);
     setImages(filteredImages);
@@ -40,19 +54,19 @@ export default function FileInput({ name, label, multipleSelect, colSpan }) {
           </ModalButton>
         </div>
 
-        {images.length > 0 &&
-          images.map((image) => (
-            <div key={image.id} className="relative col-span-1 ">
+        {images?.length > 0 &&
+          images?.map((image) => (
+            <div key={image?.id} className="relative col-span-1 ">
               <Imagecustom
                 className="rounded-md"
                 placeholder="blur"
-                src={image.name}
+                src={image?.name}
                 w={200}
                 h={200}
-                alt={image.name}
+                alt={image?.name}
               />
               <button
-                onClick={() => removeImage(image.id)}
+                onClick={() => removeImage(image?.id)}
                 className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-700"
               >
                 <X size={16} />

@@ -47,7 +47,7 @@ export default function CustomEditor({ defaultValue, label, name }) {
       <label htmlFor={name} className="block  text-sm font-medium">
         {label}
       </label>
-      <input type="hidden" name={name} value={editorValue} />
+      <input type="hidden" name={name} defaultValue={editorValue} />
       <ReactQuill
         id={name}
         theme="snow"

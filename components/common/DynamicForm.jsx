@@ -38,37 +38,32 @@ export default function DynamicForm({
     let newData = Object.fromEntries(formData.entries());
     console.log(newData);
 
-    // const fileInput = form.querySelector('input[name="mainImage"]');
-    // const mainImage = fileInput.files[0];
+    setError(null);
+    setSuccess(null);
 
-    // formData.append("description", editorValue);
+    startTransition(async () => {
+      try {
+        const response =
+          actionType === "edit"
+            ? await updateAction({
+                productId: data?.id,
+                formData,
+                slug: data?.slug,
+              })
+            : await createAction(formData);
 
-    // setError(null);
-    // setSuccess(null);
-
-    // startTransition(async () => {
-    //   try {
-    //     const response =
-    //       actionType === "edit"
-    //         ? await updateAction({
-    //             productId: data?.id,
-    //             formData,
-    //             slug: data?.slug,
-    //           })
-    //         : await createAction(formData);
-
-    //     if (response.success) {
-    //       setSuccess("Product saved successfully");
-    //       toast.success("Product saved successfully!");
-    //       router.push("/admin/product");
-    //       form.reset();
-    //     } else {
-    //       setError(response.message || "Something went wrong");
-    //     }
-    //   } catch (error) {
-    //     setError(error.message || "Something went wrong");
-    //   }
-    // });
+        if (response.success) {
+          setSuccess("Product saved successfully");
+          toast.success("Product saved successfully!");
+          router.push("/admin/product");
+          form.reset();
+        } else {
+          setError(response.message || "Something went wrong");
+        }
+      } catch (error) {
+        setError(error.message || "Something went wrong");
+      }
+    });
   };
 
   return (
@@ -147,6 +142,7 @@ export default function DynamicForm({
                   key={field.name}
                   label={field.label}
                   name={field.name}
+                  defaultValue={data?.[field.name]}
                   multipleSelect={field.multiple}
                 />
               );

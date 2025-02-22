@@ -17,7 +17,7 @@ import ModalButton from "@/components/modal/ModalButton";
 export default async function ProductListPage() {
   const categoryData = await getCategory();
   const productData = await getProducts();
-
+  console.log(productData);
   const fields = [
     {
       type: "checkbox",
@@ -95,7 +95,7 @@ export default async function ProductListPage() {
     { type: "editor", label: "Description", name: "description" },
   ];
   const tableProperties = [
-    { label: "Image", field: "mainImage", type: "image" },
+    { label: "Image", field: "thumbnail", type: "image", alt: "title" },
     { label: "Product Name", field: "title", type: "text" },
     {
       label: "Category",
@@ -119,7 +119,7 @@ export default async function ProductListPage() {
         <DynamicForm
           fields={fields}
           actionType={"add"}
-          submitAction={createProductAction}
+          createAction={createProductAction}
           perifix="modal"
         />
       </ModalButton>
@@ -129,7 +129,7 @@ export default async function ProductListPage() {
         data={productData?.data}
         tableProperties={tableProperties}
         fields={fields}
-        submitAction={updateProductAction}
+        updateAction={updateProductAction}
       />
     </div>
   );

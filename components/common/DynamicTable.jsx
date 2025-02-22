@@ -7,26 +7,40 @@ import ProductPageData from "@/app/(user)/product/[slug]/_components/ProductPage
 import { deleteProductById } from "@/backend/serverActions/productActions";
 import Imagecustom from "../images/ImageCustom";
 import CheckBox from "../input/CheckBox";
-import ModalButton from "../modal/ModalButton";
-import OrderStatusUpdate from "../orders/OrderStatusUpdate";
-import ProductForm from "../products/ProductForm";
-import DeleteItem from "./DeleteItem";
 import SearchableDropdown from "../input/SearchableDropdown";
+import ModalButton from "../modal/ModalButton";
+import DeleteItem from "./DeleteItem";
 import DynamicForm from "./DynamicForm";
 
-export default function DynamicTable({ data,fields, tableProperties,updateAction }) {
+export default function DynamicTable({
+  data,
+  fields,
+  tableProperties,
+  updateAction,
+}) {
   // Check if data exists and if tableProperties is passed
   if (!data?.length || !tableProperties) {
     return <p>No products available.</p>;
   }
 
   // Function to render a dynamic field type based on its property
-  const renderDynamicField = (item, prop, fieldType, action,options) => {
-    switch (fieldType) {
+  const renderDynamicField = (
+    { item, column },
+    prop,
+    fieldType,
+    action,
+    options
+  ) => {
+    switch (column?.type) {
       case "image":
         // Ensure the image is a valid URL or fallback
         return item?.[prop] ? (
-          <Imagecustom src={item?.[prop]} w={50} h={50} alt={item?.title} />
+          <Imagecustom
+            src={item?.[column?.field]?.name}
+            w={50}
+            h={50}
+            alt={item?.[column?.alt]}
+          />
         ) : (
           <span>No Image</span>
         );
@@ -36,13 +50,21 @@ export default function DynamicTable({ data,fields, tableProperties,updateAction
           //   orderId={item?.id}
           //   status={item?.[prop].id} // Assuming `status` is a string value
           //   options={options}
-            
+
           // />
-          <SearchableDropdown options={options} defaultId={item?.[prop].id} itemId={item?.id}/>
+          <SearchableDropdown
+            options={column?.options}
+            defaultId={item?.[column?.field]?.id}
+            itemId={item?.id}
+          />
         );
       case "checkbox":
         return (
-          <CheckBox value={item?.[prop]} action={action} id={item?.id}  />
+          <CheckBox
+            value={item?.[column?.field]}
+            action={column?.action}
+            id={item?.id}
+          />
           //   <input
           //     type="checkbox"
           //     checked={item?.[prop]}
@@ -50,17 +72,17 @@ export default function DynamicTable({ data,fields, tableProperties,updateAction
           //   />
         );
       case "date":
-        return item?.[prop] ? (
-          <span>{new Date(item?.[prop]).toLocaleDateString()}</span>
+        return item?.[column?.field] ? (
+          <span>{new Date(item?.[column?.field]).toLocaleDateString()}</span>
         ) : (
           <span>No Date</span>
         );
       case "category":
         // For category, if it's an object with a 'name' field
-        return item?.[prop]?.name || "No Category";
+        return item?.[column?.field]?.name || "No Category";
       default:
-        return item?.[prop] ? (
-          <span>{item?.[prop]}</span>
+        return item?.[column?.field] ? (
+          <span>{item?.[column?.field]}</span>
         ) : (
           <span>No Data</span>
         );
@@ -97,7 +119,7 @@ export default function DynamicTable({ data,fields, tableProperties,updateAction
                 {tableProperties.map((column) => (
                   <td key={column.field} className="px-6 py-4">
                     {renderDynamicField(
-                      item,
+                      { item, column },
                       column.field,
                       column.type,
                       column.action,
@@ -121,13 +143,12 @@ export default function DynamicTable({ data,fields, tableProperties,updateAction
                       <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
                     }
                   >
-                            <DynamicForm
-                              fields={fields}
-                              actionType={"edit"}
-                              updateAction={updateAction}
-                              data={item}
-                             
-                            />
+                    <DynamicForm
+                      fields={fields}
+                      actionType={"edit"}
+                      updateAction={updateAction}
+                      data={item}
+                    />
                     {/* <ProductForm
                       actionType="edit"
                       category={item?.category}

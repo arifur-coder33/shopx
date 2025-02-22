@@ -64,15 +64,39 @@ export async function getAllCategoryWithproduct() {
             discountPrice: true,
             slug: true,
             mainImage: true,
+            thumbnail: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            gallery: {
+              select: {
+                media: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
-    // Filter categories that have at least one product
-    const filteredData = data.filter(
-      (category) => category._count.products > 0
-    );
 
+    // Filter categories that have at least one product
+    const filteredData = data
+      .filter((category) => category._count.products > 0)
+      .map((category) => ({
+        ...category,
+        products: category.products.map((product) => ({
+          ...product,
+          gallery: product.gallery.map((g) => g.media), // Extract only media
+        })),
+      }));
+
+    console.log(filteredData);
     return { success: true, data: filteredData };
   } catch (error) {
     return { success: false, error: error.message };
