@@ -17,7 +17,7 @@ export default function FileInput({
     multipleSelect ? defaultValue || [] : defaultValue ? [defaultValue] : []
   );
   const [inputValue, setInputValue] = useState("");
-  console.log(images);
+
   const onSelect = (selectedImages) => {
     setImages(selectedImages);
     setInputValue(selectedImages.map((img) => img.id).join(","));

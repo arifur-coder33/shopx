@@ -4,7 +4,6 @@ import { Edit, Eye, Trash, View } from "lucide-react";
 import Link from "next/link";
 
 import ProductPageData from "@/app/(user)/product/[slug]/_components/ProductPageData";
-import { deleteProductById } from "@/backend/serverActions/productActions";
 import Imagecustom from "../images/ImageCustom";
 import CheckBox from "../input/CheckBox";
 import SearchableDropdown from "../input/SearchableDropdown";
@@ -17,6 +16,7 @@ export default function DynamicTable({
   fields,
   tableProperties,
   updateAction,
+  deleteAction,
 }) {
   // Check if data exists and if tableProperties is passed
   if (!data?.length || !tableProperties) {
@@ -34,9 +34,9 @@ export default function DynamicTable({
     switch (column?.type) {
       case "image":
         // Ensure the image is a valid URL or fallback
-        return item?.[prop] ? (
+        return item?.[prop] || item?.mainImage ? (
           <Imagecustom
-            src={item?.[column?.field]?.name}
+            src={item?.[column?.field]?.name || item?.mainImage}
             w={50}
             h={50}
             alt={item?.[column?.alt]}
@@ -155,7 +155,7 @@ export default function DynamicTable({
                       data={item}
                     /> */}
                   </ModalButton>
-                  <DeleteItem deleteItem={deleteProductById} id={item?.id}>
+                  <DeleteItem deleteItem={deleteAction} id={item?.id}>
                     <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />
                   </DeleteItem>
                 </td>

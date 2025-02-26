@@ -5,10 +5,12 @@ import FloatingInput from "@/components/input/FloatingInput";
 import { useModalContext } from "@/context/ModalContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { toast } from "react-toastify";
 import CheckBox from "../input/CheckBox";
 import CustomEditor from "../input/CustomEditor";
 import FileInput from "../input/FileInput";
 import SearchableDropdown from "../input/SearchableDropdown";
+import TagInput from "../input/TagInput";
 
 export default function DynamicForm({
   category,
@@ -55,9 +57,11 @@ export default function DynamicForm({
         if (response.success) {
           setSuccess("Product saved successfully");
           toast.success("Product saved successfully!");
-          router.push("/admin/product");
+
           form.reset();
         } else {
+          window.scrollTo(0, 0);
+          toast.warn(response.message || "Something went wrong");
           setError(response.message || "Something went wrong");
         }
       } catch (error) {
@@ -105,6 +109,16 @@ export default function DynamicForm({
                   onChange={
                     field.name === "mainImage" ? handleMainImageChange : null
                   }
+                />
+              );
+            case "tag":
+              return (
+                <TagInput
+                  key={field.name}
+                  name={field.name}
+                  label={field.label}
+                  defaultValue={data?.[field.name]}
+                  colSpan={field.colSpan}
                 />
               );
             case "select":

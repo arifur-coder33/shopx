@@ -4,6 +4,7 @@ export const dynamic = "force-static";
 import { getCategory } from "@/backend/serverActions/catagoryActions";
 import {
   createProductAction,
+  deleteProductById,
   getProducts,
   updateProductAction,
   updateProductStatus,
@@ -81,7 +82,7 @@ export default async function ProductListPage() {
       colSpan: "full",
     },
     {
-      type: "text",
+      type: "tag",
       label: "Product Tag",
       name: "seoKeyWord",
       colSpan: "full",
@@ -95,6 +96,12 @@ export default async function ProductListPage() {
     { type: "editor", label: "Description", name: "description" },
   ];
   const tableProperties = [
+    {
+      label: "Is Active",
+      field: "isActive",
+      type: "checkbox",
+      action: updateProductStatus,
+    },
     { label: "Image", field: "thumbnail", type: "image", alt: "title" },
     { label: "Product Name", field: "title", type: "text" },
     {
@@ -105,12 +112,7 @@ export default async function ProductListPage() {
     }, // Assuming category has a 'name' property
     { label: "Price", field: "discountPrice", type: "text" },
     // { label: "Status", field: "status", type: "dropdown", options: categoryData?.data, }, // Example of dropdown
-    {
-      label: "Is Active",
-      field: "isActive",
-      type: "checkbox",
-      action: updateProductStatus,
-    },
+
     { label: "Created At", field: "createdAt", type: "date" },
   ];
   return (
@@ -130,6 +132,7 @@ export default async function ProductListPage() {
         tableProperties={tableProperties}
         fields={fields}
         updateAction={updateProductAction}
+        deleteAction={deleteProductById}
       />
     </div>
   );

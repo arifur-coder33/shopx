@@ -200,6 +200,9 @@ export default async function ProductPage({ params }) {
   // );
 
   const { data } = await getProductBySlug(slug);
+  console.log("product data from client");
+  console.log(data);
+  console.log("product data from client end");
   const {
     id,
     title,
@@ -208,12 +211,14 @@ export default async function ProductPage({ params }) {
     discountPrice,
     description,
     mainImage,
+    thumbnail,
+    gallery,
 
     category: { name },
   } = data;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
   const imageUrl =
-    cloudinaryMainImage(mainImage, 800, 800) ||
+    cloudinaryMainImage(thumbnail || mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
 
   //for facebook product schema listing
@@ -272,7 +277,7 @@ export default async function ProductPage({ params }) {
         <div className="col-span-3">
           <Images
             title={title}
-            mainImage={mainImage}
+            mainImage={thumbnail || mainImage}
             imageGallery={imageGallery}
           />
         </div>
@@ -301,7 +306,10 @@ export default async function ProductPage({ params }) {
         </div>
       </div>
       <ProductDescription description={description} />
-      <ProductImageGallery imageGallery={imageGallery} title={title} />
+      <ProductImageGallery
+        imageGallery={gallery || imageGallery}
+        title={title}
+      />
       <FacebookEventTrac product={data} />
       <Script
         id="jsonld"

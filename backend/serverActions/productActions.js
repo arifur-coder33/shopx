@@ -219,7 +219,6 @@ export const getProducts = async () => {
       gallery: product.gallery.map((g) => g.media), // Extract only media details
     }));
 
-    console.log(transformedData);
     return { success: true, data: transformedData };
   } catch (error) {
     return { success: false, error: error.message };
@@ -236,10 +235,29 @@ export const getProductBySlug = async (slug) => {
             name: true, // Include only the category name
           },
         },
+        thumbnail: {
+          select: {
+            name: true,
+          },
+        },
+        gallery: {
+          select: {
+            media: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
+    const transformedData = {
+      ...data,
+      thumbnail: data?.thumbnail?.name,
+      gallery: data.gallery.map((g) => g.media?.name),
+    };
 
-    return { success: true, data }; // Return success with product data
+    return { success: true, data: transformedData }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
   }
@@ -467,8 +485,8 @@ export async function deleteProductById(id) {
     }
 
     // Delete gallery images
-    if (product.imageGallery && product.imageGallery?.length > 0) {
-      await deleteMultipleFile(product.imageGallery);
+    if (product?.imageGallery && product.imageGallery?.length > 0) {
+      await deleteMultipleFile(product?.imageGallery);
     }
 
     // Delete product from the database
