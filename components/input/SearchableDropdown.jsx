@@ -82,6 +82,7 @@ export default function SearchableDropdown({
         />
         {/* Anchor Button (Click to Show Full List) */}
         <button
+          type="button"
           className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
           onClick={() => options.length > 0 && setIsOpen(!isOpen)} // Toggle dropdown only if options exist
           disabled={options.length === 0}

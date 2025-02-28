@@ -18,7 +18,8 @@ export default function DynamicForm({
   actionType,
   createAction,
   updateAction,
-  fields,
+  fromFields,
+  children,
 }) {
   const { closeModal } = useModalContext();
   const [isPending, startTransition] = useTransition();
@@ -48,15 +49,15 @@ export default function DynamicForm({
         const response =
           actionType === "edit"
             ? await updateAction({
-                productId: data?.id,
+                id: data?.id,
                 formData,
                 slug: data?.slug,
               })
             : await createAction(formData);
 
         if (response.success) {
-          setSuccess("Product saved successfully");
-          toast.success("Product saved successfully!");
+          setSuccess("Data saved successfully");
+          toast.success("Data saved successfully!");
 
           form.reset();
         } else {
@@ -79,7 +80,7 @@ export default function DynamicForm({
         </div>
       )}
       <div className="md:grid md:grid-cols-6 gap-2">
-        {fields?.map((field, index) => {
+        {fromFields?.map((field, index) => {
           switch (field.type) {
             case "checkbox":
               return (
@@ -164,6 +165,7 @@ export default function DynamicForm({
               return null;
           }
         })}
+        {children}
         <Button
           type="submit"
           disabled={isPending}

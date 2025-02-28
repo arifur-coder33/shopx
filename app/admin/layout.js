@@ -36,6 +36,11 @@ export default function AdminLayout({ children }) {
       name: "Add Category",
       slug: "category/add",
     },
+
+    {
+      name: "Variation",
+      slug: "variation",
+    },
     {
       name: "User List",
       slug: "user",

@@ -2,14 +2,20 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { newSlug } from "../utils/generateSlug";
 
 export async function createCategoryAction(formData) {
-  const formDataObj = Object.fromEntries(formData.entries());
+  const data = Object.fromEntries(formData.entries());
   console.log("enter");
   try {
-    let data = {
-      name: formData.get("name"),
-      slug: formData.get("name").toLowerCase().split(" ").join("-"),
+    const slug = await newSlug(data?.slug || data?.name);
+
+    const preparedData = {
+      ...data,
+      slug: slug,
+      thumbnail: { connect: { id: data?.thumbnail } },
+      banner: { connect: { id: data?.banner } },
+      parentCategory: { connect: { id: data?.parentCategory } },
     };
     if (!data?.name) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
@@ -17,18 +23,19 @@ export async function createCategoryAction(formData) {
     const checkSlug = await prisma.category.findUnique({
       where: { slug: data?.slug },
     });
-    console.log(checkSlug);
+
     if (checkSlug) {
-      throw new Error("Already Availabe ");
+      throw new Error("This category Already Availabe ");
     }
 
     // }
 
     const details = await prisma.category.create({
-      data: data,
+      data: preparedData,
     });
-    revalidatePath("/admin/product/add");
-    return { success: true, details }; // Return success with user data
+    console.log(details);
+    revalidatePath("/admin/category");
+    return { success: true, data: details }; // Return success with user data
   } catch (error) {
     console.log(error.message);
     return { success: false, error: error.message }; // Return structured error
@@ -37,7 +44,23 @@ export async function createCategoryAction(formData) {
 
 export async function getCategory() {
   try {
-    const data = await prisma.category.findMany();
+    const data = await prisma.category.findMany({
+      include: {
+        parentCategory: true,
+        thumbnail: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        banner: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -131,5 +154,69 @@ export async function getCategoryWithproduct(slug) {
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+}
+
+export async function updateCategoryAction(formData) {
+  const formDataObj = Object.fromEntries(formData.entries());
+  console.log("enter");
+  try {
+    let data = {
+      name: formData.get("name"),
+      slug: formData.get("name").toLowerCase().split(" ").join("-"),
+    };
+    if (!data?.name) {
+      throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
+    }
+    const checkSlug = await prisma.category.findUnique({
+      where: { slug: data?.slug },
+    });
+    console.log(checkSlug);
+    if (checkSlug) {
+      throw new Error("Already Availabe ");
+    }
+
+    // }
+
+    const details = await prisma.category.create({
+      data: data,
+    });
+    revalidatePath("/admin/product/add");
+    return { success: true, details }; // Return success with user data
+  } catch (error) {
+    console.log(error.message);
+    return { success: false, error: error.message }; // Return structured error
+  }
+}
+
+export async function deleteCategoryAction(formData) {
+  const formDataObj = Object.fromEntries(formData.entries());
+  console.log("enter");
+  try {
+    let data = {
+      name: formData.get("name"),
+      slug: formData.get("name").toLowerCase().split(" ").join("-"),
+    };
+    if (!data?.name) {
+      throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
+    }
+    const checkSlug = await prisma.category.findUnique({
+      where: { slug: data?.slug },
+    });
+    console.log(checkSlug);
+    if (checkSlug) {
+      throw new Error("Already Availabe ");
+    }
+
+    // }
+
+    const details = await prisma.category.create({
+      data: data,
+    });
+    revalidatePath("/admin/product/add");
+    return { success: true, details }; // Return success with user data
+  } catch (error) {
+    console.log(error.message);
+    return { success: false, error: error.message }; // Return structured error
   }
 }

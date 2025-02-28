@@ -19,7 +19,7 @@ export default async function ProductListPage() {
   const categoryData = await getCategory();
   const productData = await getProducts();
   console.log(productData);
-  const fields = [
+  const fromFields = [
     {
       type: "checkbox",
       label: "Is Active",
@@ -119,7 +119,7 @@ export default async function ProductListPage() {
     <div className="p-4">
       <ModalButton buttonName={<AddItem />}>
         <DynamicForm
-          fields={fields}
+          fromFields={fromFields}
           actionType={"add"}
           createAction={createProductAction}
           perifix="modal"
@@ -130,7 +130,7 @@ export default async function ProductListPage() {
       <DynamicTable
         data={productData?.data}
         tableProperties={tableProperties}
-        fields={fields}
+        fromFields={fromFields}
         updateAction={updateProductAction}
         deleteAction={deleteProductById}
       />
