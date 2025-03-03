@@ -61,6 +61,8 @@ export async function createProductAction(formData) {
       category: {
         connect: { id: data?.category },
       },
+      isActive: Boolean(data?.isActive),
+      isFeatured: Boolean(data?.isFeatured),
       mainImage: `${mainImageUpload.display_name}.${mainImageUpload.format}`,
       imageGallery: imageGalleryUploads,
       regularPrice: data?.regularPrice && Number(data?.regularPrice),
