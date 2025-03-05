@@ -16,6 +16,8 @@ export async function generateStaticParams() {
 }
 
 export default async function ProductPage({ params }) {
+  const datas = await getProductsSlug();
+  console.log(datas);
   const { slug } = await params;
 
   const getProduct = unstable_cache(

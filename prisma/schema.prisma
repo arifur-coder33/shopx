@@ -42,7 +42,7 @@ model ProductCodeCounter{
 // Product model with extended features
 model Product {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  productCode    String?  @unique   
+  productCode    String?   
   title          String                       // Product title
   slug           String      @unique         // Unique slug for URL identification
   description    String?                     // Optional detailed description
