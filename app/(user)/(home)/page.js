@@ -93,7 +93,6 @@ export async function generateMetadata() {
 //   { revalidate: 0.1, tags: ["products"] }
 // );
 export default async function Home() {
-  const data = await prisma.product.findMany();
 
   return (
     <>
