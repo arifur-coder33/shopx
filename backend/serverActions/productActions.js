@@ -115,7 +115,8 @@ export const getProducts = async () => {
     },
     //     });
   });
-
+  console.log("from sercer get all products");
+  console.log(data);
   return { success: true, data };
 };
 

@@ -4,7 +4,6 @@ import {
   getProductsSlug,
 } from "@/backend/serverActions/productActions";
 
-import { unstable_cache } from "next/cache";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
 
 export async function generateStaticParams() {
@@ -16,24 +15,22 @@ export async function generateStaticParams() {
 }
 
 export default async function ProductPage({ params }) {
-  const datas = await getProductsSlug();
-  console.log(datas);
   const { slug } = await params;
+  const data = await getProductBySlug(slug);
+  // const getProduct = unstable_cache(
+  //   async () => {
+  //     const data = await getProductBySlug(slug);
+  //     return data?.data;
+  //   },
+  //   [slug],
+  //   { revalidate: 60, tags: [`product-${slug}`] } // Use string array for tags
+  // );
 
-  const getProduct = unstable_cache(
-    async () => {
-      const data = await getProductBySlug(slug);
-      return data?.data;
-    },
-    [slug],
-    { revalidate: 60, tags: [`product-${slug}`] } // Use string array for tags
-  );
-
-  const data = await getProduct();
+  // const data = await getProduct();
 
   return (
     <div className="pt-4">
-      <BuyNowCheckout data={data} />
+      <BuyNowCheckout data={data?.data} />
     </div>
   );
 }
