@@ -1,19 +1,18 @@
 export const dynamic = "force-static";
 import {
   getProductBySlug,
-  getProducts,
+  getProductsSlug,
 } from "@/backend/serverActions/productActions";
 
 import { unstable_cache } from "next/cache";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
 
 export async function generateStaticParams() {
-  const data = await getProducts();
+  const data = await getProductsSlug();
 
   return data?.data?.map((product) => ({
     slug: product?.slug,
   }));
-
 }
 
 export default async function ProductPage({ params }) {

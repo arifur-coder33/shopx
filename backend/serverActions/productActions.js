@@ -119,6 +119,19 @@ export const getProducts = async () => {
   return { success: true, data };
 };
 
+export const getProductsSlug = async () => {
+  const data = await prisma?.product?.findMany({
+    where: {
+      isActive: true,
+    },
+    select: {
+      slug: true,
+    },
+    //     });
+  });
+
+  return { success: true, data };
+};
 export const getProductBySlug = async (slug) => {
   try {
     const data = await prisma.product.findUnique({
