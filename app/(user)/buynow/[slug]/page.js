@@ -9,9 +9,11 @@ import BuyNowCheckout from "./_components/BuyNowCheckout";
 
 export async function generateStaticParams() {
   const data = await getProducts();
-  return data?.data.map((product) => ({
-    slug: product.slug,
+
+  return data?.data?.map((product) => ({
+    slug: product?.slug,
   }));
+
 }
 
 export default async function ProductPage({ params }) {

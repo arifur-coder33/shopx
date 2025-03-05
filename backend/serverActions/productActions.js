@@ -109,7 +109,7 @@ export async function getProductById(id) {
 }
 
 export const getProducts = async () => {
-  const data = await prisma.product.findMany({
+  const data = await prisma?.product?.findMany({
     include: {
       category: {},
     },
