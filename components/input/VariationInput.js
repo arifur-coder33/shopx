@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import SearchableDropdown from "./SearchableDropdown";
 
 const variationsList = [
   { id: "454545", name: "Size" },
@@ -58,7 +59,7 @@ export default function VariationInput() {
           key={index}
           style={{ display: "flex", gap: "8px", marginBottom: "8px" }}
         >
-          <select
+          {/* <select
             value={row.variation}
             onChange={(e) => handleVariationChange(index, e.target.value)}
             style={{
@@ -78,7 +79,13 @@ export default function VariationInput() {
                 {name}
               </option>
             ))}
-          </select>
+          </select> */}
+          <SearchableDropdown
+            options={variationsList}
+            name={"variation"}
+            label={"Assign Variation"}
+            defaultId={data?.[field.name].id}
+          />
           <input
             placeholder="Enter values (comma-separated)"
             value={row.values}

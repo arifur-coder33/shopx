@@ -1,4 +1,7 @@
 "use server";
+
+import { revalidatePath } from "next/cache";
+
 export async function createVariationAction(formData) {
   const data = Object.fromEntries(formData.entries());
 
@@ -9,7 +12,7 @@ export async function createVariationAction(formData) {
     if (!data?.name) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
-    const checkSlug = await prisma.variation.findUnique({
+    const checkSlug = await prisma.variationName.findUnique({
       where: { name: data?.name },
     });
 
@@ -19,11 +22,12 @@ export async function createVariationAction(formData) {
 
     // }
 
-    const details = await prisma.variation.create({
+    const details = await prisma.variationName.create({
       data: preparedData,
     });
     console.log(details);
     revalidatePath("/admin/variation");
+
     return { success: true, data: details }; // Return success with user data
   } catch (error) {
     console.log(error.message);
@@ -33,7 +37,7 @@ export async function createVariationAction(formData) {
 
 export async function getVariations() {
   try {
-    const data = await prisma.variation.findMany();
+    const data = await prisma.variationName.findMany();
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -50,7 +54,7 @@ export async function updateVariationAction(formData) {
     if (!data?.name) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
-    const checkSlug = await prisma.variation.findUnique({
+    const checkSlug = await prisma.variationName.findUnique({
       where: { name: data?.name },
     });
 
@@ -60,7 +64,7 @@ export async function updateVariationAction(formData) {
 
     // }
 
-    const details = await prisma.variation.create({
+    const details = await prisma.variationName.create({
       data: preparedData,
     });
     console.log(details);
@@ -72,32 +76,13 @@ export async function updateVariationAction(formData) {
   }
 }
 
-export async function deleteVariationAction(formData) {
-  const data = Object.fromEntries(formData.entries());
-
+export async function deleteVariationAction(id) {
   try {
-    const preparedData = {
-      ...data,
-    };
-    if (!data?.name) {
-      throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
-    }
-    const checkSlug = await prisma.variation.findUnique({
-      where: { name: data?.name },
+    const deleteItem = await prisma?.variationName?.delete({
+      where: { id },
     });
-
-    if (checkSlug) {
-      throw new Error("This Already Availabe ");
-    }
-
-    // }
-
-    const details = await prisma.variation.create({
-      data: preparedData,
-    });
-    console.log(details);
     revalidatePath("/admin/variation");
-    return { success: true, data: details }; // Return success with user data
+    return { success: true, data: "Successfuully deleted" }; // Return success with user data
   } catch (error) {
     console.log(error.message);
     return { success: false, error: error.message }; // Return structured error

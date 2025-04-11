@@ -54,7 +54,7 @@ export default function DynamicForm({
                 slug: data?.slug,
               })
             : await createAction(formData);
-
+        console.log(response);
         if (response.success) {
           setSuccess("Data saved successfully");
           toast.success("Data saved successfully!");

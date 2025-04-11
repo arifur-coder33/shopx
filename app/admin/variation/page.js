@@ -10,7 +10,6 @@ import {
 import AddItem from "@/components/common/AddItem";
 import DynamicForm from "@/components/common/DynamicForm";
 import DynamicTable from "@/components/common/DynamicTable";
-import VariationInput from "@/components/input/VariationInput";
 
 import ModalButton from "@/components/modal/ModalButton";
 
@@ -34,18 +33,16 @@ export default async function VariationtPage() {
           actionType={"add"}
           createAction={createAction}
           perifix="modal"
-        >
-          <VariationInput />
-        </DynamicForm>
+        />
       </ModalButton>
-      <div>Product Add</div>
+      <div>Add Product Variation</div>
 
       <DynamicTable
         data={tableData}
         tableProperties={tableProperties}
         fromFields={fromFields}
-        updateAction={deleteVariationAction}
-        deleteAction={updateVariationAction}
+        updateAction={updateVariationAction}
+        deleteAction={deleteVariationAction}
       />
     </div>
   );
