@@ -2,23 +2,19 @@ export const dynamic = "force-static";
 
 // Example of using dynamic form in the page
 import {
-  createCategoryAction as createAction,
   deleteCategoryAction,
   getCategory,
   updateCategoryAction,
 } from "@/backend/serverActions/catagoryActions";
-import AddItem from "@/components/common/AddItem";
-import DynamicForm from "@/components/common/DynamicForm";
 import DynamicTable from "@/components/common/DynamicTable";
-import VariationInput from "@/components/input/VariationInput";
 
-import ModalButton from "@/components/modal/ModalButton";
+import LazyModalButton from "@/components/modal/LazyModalButton";
 
 export default async function ProductListPage() {
   const getTableData = await getCategory();
 
   const tableData = await getTableData?.data;
-  console.log(tableData);
+
   const fromFields = [
     { type: "file", label: "Thumbnail", name: "thumbnail", colSpan: "4" },
     { type: "text", label: "Category Name", name: "name", colSpan: "2" },
@@ -59,18 +55,8 @@ export default async function ProductListPage() {
   ];
   return (
     <div className="p-4">
-      <ModalButton buttonName={<AddItem />}>
-        <DynamicForm
-          fromFields={fromFields}
-          actionType={"add"}
-          createAction={createAction}
-          perifix="modal"
-        >
-          <VariationInput />
-        </DynamicForm>
-      </ModalButton>
+      <LazyModalButton componentKey={"CategoryForm"} />
       <div>Product Add</div>
-
       <DynamicTable
         data={tableData}
         tableProperties={tableProperties}

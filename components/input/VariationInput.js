@@ -1,16 +1,24 @@
 "use client";
-import { useState } from "react";
+import { getVariations } from "@/backend/serverActions/variantionAction";
+import { useEffect, useState } from "react";
 import SearchableDropdown from "./SearchableDropdown";
 
-const variationsList = [
-  { id: "454545", name: "Size" },
-  { id: "656565", name: "Color" },
-  { id: "767676", name: "Material" },
-]; // Example variations with IDs
+// const variationsList = [
+//   { id: "454545", name: "Size" },
+//   { id: "656565", name: "Color" },
+//   { id: "767676", name: "Material" },
+// ]; // Example variations with IDs
 
 export default function VariationInput() {
   const [rows, setRows] = useState([{ variation: "", values: "" }]);
-
+  const [variationsList, setVariationsList] = useState([]);
+  useEffect(() => {
+    async function getVariationsList() {
+      const data = await getVariations();
+      setVariationsList(data?.data);
+    }
+    getVariationsList();
+  }, []);
   const handleVariationChange = (index, value) => {
     setRows((prev) => {
       const updatedRows = [...prev];
@@ -84,7 +92,7 @@ export default function VariationInput() {
             options={variationsList}
             name={"variation"}
             label={"Assign Variation"}
-            defaultId={data?.[field.name].id}
+            // defaultId={data?.[field.name].id}
           />
           <input
             placeholder="Enter values (comma-separated)"

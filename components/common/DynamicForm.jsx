@@ -1,16 +1,19 @@
 "use client";
 
-import Button from "@/components/button";
-import FloatingInput from "@/components/input/FloatingInput";
 import { useModalContext } from "@/context/ModalContext";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
-import CheckBox from "../input/CheckBox";
-import CustomEditor from "../input/CustomEditor";
-import FileInput from "../input/FileInput";
-import SearchableDropdown from "../input/SearchableDropdown";
-import TagInput from "../input/TagInput";
+
+// Dynamically imported components
+const Button = dynamic(() => import("@/components/button"));
+const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
+const CheckBox = dynamic(() => import("../input/CheckBox"));
+const CustomEditor = dynamic(() => import("../input/CustomEditor"));
+const FileInput = dynamic(() => import("../input/FileInput"));
+const SearchableDropdown = dynamic(() => import("../input/SearchableDropdown"));
+const TagInput = dynamic(() => import("../input/TagInput"));
 
 export default function DynamicForm({
   category,
@@ -25,7 +28,7 @@ export default function DynamicForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
+  console.log("loaded category form");
   const router = useRouter();
 
   useEffect(() => {
@@ -127,9 +130,11 @@ export default function DynamicForm({
                 <div className="md:col-span-2" key={field.name}>
                   <SearchableDropdown
                     options={field.data}
+                    loadOptions={field.loadOptions}
                     name={field.name}
                     label={field.label}
                     defaultId={data?.[field.name].id}
+                    AddForm={field.addForm}
                   />
                   {/* <SelectInput
                     index={index}
