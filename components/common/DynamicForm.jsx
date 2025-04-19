@@ -9,10 +9,15 @@ import { toast } from "react-toastify";
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
 const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
-const CheckBox = dynamic(() => import("../input/CheckBox"));
-const CustomEditor = dynamic(() => import("../input/CustomEditor"));
-const FileInput = dynamic(() => import("../input/FileInput"));
-const SearchableDropdown = dynamic(() => import("../input/SearchableDropdown"));
+const CheckBox = dynamic(() => import("../input/CheckBox"), { ssr: false });
+const CustomEditor = dynamic(() => import("../input/CustomEditor"), {
+  ssr: false,
+});
+const FileInput = dynamic(() => import("../input/FileInput"), { ssr: false });
+const SearchableDropdown = dynamic(
+  () => import("../input/SearchableDropdown"),
+  { ssr: false }
+);
 const TagInput = dynamic(() => import("../input/TagInput"));
 
 export default function DynamicForm({
@@ -129,8 +134,7 @@ export default function DynamicForm({
               return (
                 <div className="md:col-span-2" key={field.name}>
                   <SearchableDropdown
-                    options={field.data}
-                    loadOptions={field.loadOptions}
+                    dropDownLists={field.dropDownLists}
                     name={field.name}
                     label={field.label}
                     defaultId={data?.[field.name].id}

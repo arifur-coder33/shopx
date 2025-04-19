@@ -56,7 +56,7 @@ export default async function ProductListPage() {
   return (
     <div className="p-4">
       <LazyModalButton componentKey={"CategoryForm"} />
-      <div>Product Add</div>
+
       <DynamicTable
         data={tableData}
         tableProperties={tableProperties}

@@ -49,6 +49,11 @@ export default function VariationInput() {
       value: row.values.split(",").map((val) => val.trim()),
     }));
 
+  const loadVariations = async () => {
+    const getData = await getVariations();
+    return getData?.data || [];
+  };
+
   return (
     <div
       style={{
@@ -89,10 +94,11 @@ export default function VariationInput() {
             ))}
           </select> */}
           <SearchableDropdown
-            options={variationsList}
+            dropDownLists={loadVariations}
             name={"variation"}
             label={"Assign Variation"}
             // defaultId={data?.[field.name].id}
+            addForm={"VariationForm"}
           />
           <input
             placeholder="Enter values (comma-separated)"

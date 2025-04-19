@@ -1,41 +1,58 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import LazyModalButton from "../modal/LazyModalButton";
+
+import { useModalContext } from "@/context/ModalContext";
 
 export default function SearchableDropdown({
   name,
-  // options = [],
   defaultId,
   label,
-  AddForm,
-  loadOptions,
+  addForm,
+  dropDownLists,
 }) {
+  const { closeModal } = useModalContext();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState("bottom");
-  const [fetchedOptions, setFetchedOptions] = useState([]);
+  const [fetchedDropDownList, setFetchedDropDownList] = useState([]);
   const dropdownRef = useRef(null);
-  console.log(fetchedOptions, "fetchedOptions");
+
   // Set default selection based on ID
   useEffect(() => {
-    if (defaultId && fetchedOptions.length > 0) {
-      const defaultItem = fetchedOptions.find((item) => item.id === defaultId);
+    if (defaultId && fetchedDropDownList.length > 0) {
+      const defaultItem = fetchedDropDownList.find(
+        (item) => item.id === defaultId
+      );
       setSelected(defaultItem || null);
     }
-  }, [defaultId, fetchedOptions]);
+  }, [defaultId, fetchedDropDownList]);
+
+  useEffect(() => {
+    const loaddata = async () => {
+      if (dropDownLists) {
+        const loaded = await dropDownLists();
+        setFetchedDropDownList(loaded);
+        setQuery(""); // Clear query when loading new data
+      }
+    };
+    loaddata();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closeModal]);
 
   const handleFocus = async () => {
-    if (fetchedOptions.length === 0 && loadOptions) {
-      const loaded = await loadOptions();
-      setFetchedOptions(loaded);
+    if (fetchedDropDownList.length === 0 && dropDownLists) {
+      const loaded = await dropDownLists();
+      setFetchedDropDownList(loaded);
     }
     setIsOpen(true);
   };
 
   const filteredOptions =
     query === ""
-      ? fetchedOptions
-      : fetchedOptions.filter((item) =>
+      ? fetchedDropDownList
+      : fetchedDropDownList.filter((item) =>
           item.name.toLowerCase().includes(query.toLowerCase())
         );
 
@@ -72,7 +89,7 @@ export default function SearchableDropdown({
   }, [isOpen]);
 
   return (
-    <div className="relative w-64" ref={dropdownRef}>
+    <div className="relative w-64 " ref={dropdownRef}>
       <label
         // htmlFor={uniqueId}
         className="cursor-pointer block mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -81,10 +98,10 @@ export default function SearchableDropdown({
       </label>
       {/* Input Field */}
       <input hidden name={name} type="text" defaultValue={selected?.id} />
-      <div className="relative">
+      <div className="relative ">
         <input
           type="text"
-          className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="z-10 w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 "
           placeholder={selected ? selected.name : "Select an option"}
           value={query || (selected ? selected.name : "")}
           onChange={(e) => {
@@ -92,23 +109,23 @@ export default function SearchableDropdown({
             setSelected(null); // Optional: clear selected when typing
           }}
           onFocus={handleFocus}
-          readOnly={fetchedOptions.length === 0} // Make readonly if no options
+          readOnly={fetchedDropDownList.length === 0} // Make readonly if no options
         />
         {/* Anchor Button (Click to Show Full List) */}
         <button
           type="button"
           className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-          onClick={() => fetchedOptions.length > 0 && setIsOpen(!isOpen)} // Toggle dropdown only if options exist
-          disabled={fetchedOptions.length === 0}
+          onClick={() => fetchedDropDownList.length > 0 && setIsOpen(!isOpen)} // Toggle dropdown only if options exist
+          disabled={fetchedDropDownList.length === 0}
         >
           ▼
         </button>
       </div>
 
       {/* Dropdown List */}
-      {isOpen && fetchedOptions.length > 0 && (
+      {isOpen && fetchedDropDownList.length > 0 && (
         <ul
-          className={`absolute w-full border border-gray-300 bg-white rounded-md shadow-md z-10 max-h-40 overflow-auto ${
+          className={`z-20 absolute w-full borde p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40 overflow-auto ${
             dropdownPosition === "bottom" ? "top-full mt-1" : ""
           } ${dropdownPosition === "top" ? "bottom-full mb-1" : ""} ${
             dropdownPosition === "left" ? "right-0" : ""
@@ -135,9 +152,9 @@ export default function SearchableDropdown({
           ) : (
             <>
               <li className="px-3 py-2 text-gray-500">No results found</li>
-              {AddForm && (
-                <li className="px-3 py-2 text-gray-200 bg-blue-500 text-center ">
-                  <AddForm />
+              {addForm && (
+                <li className="px-3 py-2 text-gray-200 bg-blue-500">
+                  <LazyModalButton componentKey={addForm} />
                 </li>
               )}
             </>
