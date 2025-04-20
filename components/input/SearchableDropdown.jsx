@@ -8,11 +8,11 @@ export default function SearchableDropdown({
   name,
   defaultId,
   label,
-  addForm,
+  addForm, /// Add form to open when no results found
   dropDownLists,
-  loadLists,
-  onSelect,
-  index,
+  loadLists, // Function to load dropdown lists
+  onSelect, //
+  index, //the index from dropdown component if it map as array
 }) {
   const { closeModal } = useModalContext();
   const [query, setQuery] = useState("");

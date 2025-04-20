@@ -12,7 +12,9 @@ import SearchableDropdown from "./SearchableDropdown";
 export default function VariationInput() {
   const [rows, setRows] = useState([{ variation: "", values: "" }]);
   const [variationsList, setVariationsList] = useState([]);
-  const [selectedVariation, setSelectedVariation] = useState([]);
+  const [selectedVariation, setSelectedVariation] = useState([
+    { variation: "", values: "" },
+  ]);
   // useEffect(() => {
   //   async function getVariationsList() {
   //     const data = await getVariations();
@@ -66,6 +68,7 @@ export default function VariationInput() {
   const assignedVariations = rows.map((row) => row.variation);
   const allVariationsAssigned =
     assignedVariations.length >= variationsList.length;
+
   const variationValues = rows
     .filter((row) => row.variation && row.values)
     .map((row) => ({
