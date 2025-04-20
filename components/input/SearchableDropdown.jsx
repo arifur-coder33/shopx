@@ -10,6 +10,9 @@ export default function SearchableDropdown({
   label,
   addForm,
   dropDownLists,
+  loadLists,
+  onSelect,
+  index,
 }) {
   const { closeModal } = useModalContext();
   const [query, setQuery] = useState("");
@@ -30,21 +33,30 @@ export default function SearchableDropdown({
   }, [defaultId, fetchedDropDownList]);
 
   useEffect(() => {
-    const loaddata = async () => {
-      if (dropDownLists) {
-        const loaded = await dropDownLists();
-        setFetchedDropDownList(loaded);
-        setQuery(""); // Clear query when loading new data
-      }
-    };
-    loaddata();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [closeModal]);
+    if (dropDownLists?.length > 0) {
+      setFetchedDropDownList(dropDownLists);
+    }
+  }, [dropDownLists]);
+
+  // useEffect(() => {
+  //   const loaddata = async () => {
+  //     if (dropDownLists) {
+  //       const loaded = await dropDownLists();
+  //       setFetchedDropDownList(loaded);
+  //       setQuery(""); // Clear query when loading new data
+  //     }
+  //   };
+  //   loaddata();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [closeModal]);
 
   const handleFocus = async () => {
     if (fetchedDropDownList.length === 0 && dropDownLists) {
-      const loaded = await dropDownLists();
-      setFetchedDropDownList(loaded);
+      // const loaded = await dropDownLists();
+      // setFetchedDropDownList(loaded);
+      if (loadLists) {
+        await loadLists();
+      }
     }
     setIsOpen(true);
   };
@@ -132,7 +144,7 @@ export default function SearchableDropdown({
           } ${dropdownPosition === "right" ? "left-0" : ""}`}
         >
           {filteredOptions.length > 0 ? (
-            filteredOptions.map((item) => (
+            filteredOptions.map((item, idex) => (
               <li
                 key={item.id}
                 className={`cursor-pointer px-3 py-2 ${
@@ -144,6 +156,7 @@ export default function SearchableDropdown({
                   setSelected(item);
                   setQuery(""); // Clear query but keep selection
                   setIsOpen(false); // Close dropdown
+                  onSelect && onSelect(item, index); // Call onSelect if provided
                 }}
               >
                 {item.name}
