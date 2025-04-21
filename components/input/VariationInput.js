@@ -22,6 +22,7 @@ export default function VariationInput() {
   //   }
   //   getVariationsList();
   // }, []);
+  console.log(rows);
   console.log(variationsList);
   console.log(selectedVariation);
   const onSelect = (item, index) => {
@@ -43,8 +44,26 @@ export default function VariationInput() {
 
       return updated;
     });
+    handleVariationChange(index, item.name); // Update the variation name in the rows state
   };
 
+  const handleRemove = (index) => {
+    setRows((prev) => {
+      const updatedRows = [...prev];
+      updatedRows.splice(index, 1);
+      return updatedRows;
+    });
+    setSelectedVariation((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
+    setVariationsList((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
   const handleVariationChange = (index, value) => {
     setRows((prev) => {
       const updatedRows = [...prev];
@@ -131,7 +150,7 @@ export default function VariationInput() {
             )}
             name={"variation"}
             label={"Assign Variation"}
-            // defaultId={data?.[field.name].id}
+            defaultId={selectedVariation[index]}
             addForm={"VariationForm"}
           />
           <input
@@ -145,6 +164,13 @@ export default function VariationInput() {
               borderRadius: "4px",
             }}
           />
+          <button
+            onClick={() => handleRemove(index)}
+            type="button"
+            className="text-red-500"
+          >
+            x
+          </button>
         </div>
       ))}
       <button

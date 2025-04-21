@@ -24,13 +24,13 @@ export default function SearchableDropdown({
 
   // Set default selection based on ID
   useEffect(() => {
-    if (defaultId && fetchedDropDownList.length > 0) {
-      const defaultItem = fetchedDropDownList.find(
-        (item) => item.id === defaultId
-      );
-      setSelected(defaultItem || null);
+    if (defaultId?.id) {
+      // const defaultItem = fetchedDropDownList.find(
+      //   (item) => item.id === defaultId
+      // );
+      setSelected(defaultId || null);
     }
-  }, [defaultId, fetchedDropDownList]);
+  }, [defaultId]);
 
   useEffect(() => {
     if (dropDownLists?.length > 0) {
@@ -106,7 +106,7 @@ export default function SearchableDropdown({
         // htmlFor={uniqueId}
         className="cursor-pointer block mb-2 text-sm font-medium text-gray-900 dark:text-white"
       >
-        {label}{" "}
+        {label}
       </label>
       {/* Input Field */}
       <input hidden name={name} type="text" defaultValue={selected?.id} />
