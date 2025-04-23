@@ -22,9 +22,7 @@ export default function VariationInput() {
   //   }
   //   getVariationsList();
   // }, []);
-  console.log(rows);
-  console.log(variationsList);
-  console.log(selectedVariation);
+
   const onSelect = (item, index) => {
     setSelectedVariation((prev) => {
       const updated = [...prev];
@@ -44,7 +42,7 @@ export default function VariationInput() {
 
       return updated;
     });
-    handleVariationChange(index, item.name); // Update the variation name in the rows state
+    handleVariationChange(index, item); // Update the variation name in the rows state
   };
 
   const handleRemove = (index) => {
@@ -84,9 +82,13 @@ export default function VariationInput() {
     setRows((prev) => [...prev, { variation: "", values: "" }]);
   };
 
-  const assignedVariations = rows.map((row) => row.variation);
+  const assignedVariations = rows.map((row) => row?.variation);
   const allVariationsAssigned =
     assignedVariations.length >= variationsList.length;
+  const allValuesAssigned = rows.every((row) => row.values.trim() !== "");
+  const allVariationsSelected = assignedVariations.every(
+    (row) => row.name !== ""
+  );
 
   const variationValues = rows
     .filter((row) => row.variation && row.values)
@@ -148,9 +150,9 @@ export default function VariationInput() {
               (item) =>
                 !selectedVariation.some((selected) => selected?.id === item.id)
             )}
-            name={"variation"}
+            name={""}
             label={"Assign Variation"}
-            defaultId={selectedVariation[index]}
+            defaultId={rows[index]?.variation}
             addForm={"VariationForm"}
           />
           <input
@@ -176,14 +178,26 @@ export default function VariationInput() {
       <button
         type="button"
         onClick={addRow}
-        disabled={allVariationsAssigned}
+        disabled={
+          allVariationsAssigned || !allValuesAssigned || !allVariationsSelected
+        }
         style={{
           padding: "8px 12px",
-          background: allVariationsAssigned ? "#ccc" : "#007bff",
+          background:
+            allVariationsAssigned ||
+            !allValuesAssigned ||
+            !allVariationsSelected
+              ? "#ccc"
+              : "#007bff",
           color: "#fff",
           border: "none",
           borderRadius: "4px",
-          cursor: allVariationsAssigned ? "not-allowed" : "pointer",
+          cursor:
+            allVariationsAssigned ||
+            !allValuesAssigned ||
+            !allVariationsSelected
+              ? "not-allowed"
+              : "pointer",
           marginTop: "8px",
         }}
       >
@@ -192,7 +206,7 @@ export default function VariationInput() {
       <input
         type="hidden"
         name="variationValues"
-        value={JSON.stringify(variationValues)}
+        value={JSON.stringify(rows)}
       />
     </div>
   );

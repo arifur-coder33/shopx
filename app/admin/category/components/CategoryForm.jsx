@@ -28,7 +28,6 @@ export default function CategoryForm() {
     return getTableData?.data || [];
   };
 
-  console.log(tableData, "tableData");
   const fromFields = [
     { type: "file", label: "Thumbnail", name: "thumbnail", colSpan: "4" },
     { type: "text", label: "Category Name", name: "name", colSpan: "2" },

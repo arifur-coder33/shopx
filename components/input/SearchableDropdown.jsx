@@ -24,13 +24,11 @@ export default function SearchableDropdown({
 
   // Set default selection based on ID
   useEffect(() => {
-    if (defaultId?.id) {
-      // const defaultItem = fetchedDropDownList.find(
-      //   (item) => item.id === defaultId
-      // );
-      setSelected(defaultId || null);
+    if (defaultId && fetchedDropDownList.length > 0) {
+      const found = fetchedDropDownList.find((item) => item.id === defaultId);
+      if (found) setSelected(found);
     }
-  }, [defaultId]);
+  }, [defaultId, fetchedDropDownList]);
 
   useEffect(() => {
     if (dropDownLists?.length > 0) {
@@ -38,17 +36,12 @@ export default function SearchableDropdown({
     }
   }, [dropDownLists]);
 
-  // useEffect(() => {
-  //   const loaddata = async () => {
-  //     if (dropDownLists) {
-  //       const loaded = await dropDownLists();
-  //       setFetchedDropDownList(loaded);
-  //       setQuery(""); // Clear query when loading new data
-  //     }
-  //   };
-  //   loaddata();
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [closeModal]);
+  useEffect(() => {
+    if (typeof loadLists === "function") {
+      loadLists(); // re-fetch on modal close
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closeModal]);
 
   const handleFocus = async () => {
     if (fetchedDropDownList.length === 0 && dropDownLists) {
@@ -109,7 +102,13 @@ export default function SearchableDropdown({
         {label}
       </label>
       {/* Input Field */}
-      <input hidden name={name} type="text" defaultValue={selected?.id} />
+      <input
+        hidden
+        name={name}
+        type="text"
+        defaultValue={selected?.id || ""}
+        readOnly
+      />
       <div className="relative ">
         <input
           type="text"

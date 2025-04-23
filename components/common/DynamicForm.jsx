@@ -33,7 +33,7 @@ export default function DynamicForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  console.log("loaded category form");
+
   const router = useRouter();
 
   useEffect(() => {
