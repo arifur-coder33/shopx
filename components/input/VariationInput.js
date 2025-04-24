@@ -117,6 +117,7 @@ export default function VariationInput() {
         Assign Variations
       </h2>
       {rows.map((row, index) => (
+        // console.log("row", index, rows[index]?.variation),
         <div
           key={index}
           style={{ display: "flex", gap: "8px", marginBottom: "8px" }}
@@ -178,26 +179,14 @@ export default function VariationInput() {
       <button
         type="button"
         onClick={addRow}
-        disabled={
-          allVariationsAssigned || !allValuesAssigned || !allVariationsSelected
-        }
+        disabled={allVariationsAssigned}
         style={{
           padding: "8px 12px",
-          background:
-            allVariationsAssigned ||
-            !allValuesAssigned ||
-            !allVariationsSelected
-              ? "#ccc"
-              : "#007bff",
+          background: allVariationsAssigned ? "#ccc" : "#007bff",
           color: "#fff",
           border: "none",
           borderRadius: "4px",
-          cursor:
-            allVariationsAssigned ||
-            !allValuesAssigned ||
-            !allVariationsSelected
-              ? "not-allowed"
-              : "pointer",
+          cursor: allVariationsAssigned ? "not-allowed" : "pointer",
           marginTop: "8px",
         }}
       >

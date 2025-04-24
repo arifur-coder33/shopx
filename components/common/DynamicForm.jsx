@@ -134,10 +134,11 @@ export default function DynamicForm({
               return (
                 <div className="md:col-span-2" key={field.name}>
                   <SearchableDropdown
+                    loadLists={field.loadLists}
                     dropDownLists={field.dropDownLists}
                     name={field.name}
                     label={field.label}
-                    defaultId={data?.[field.name].id}
+                    defaultId={data?.[field.name]}
                     AddForm={field.addForm}
                   />
                   {/* <SelectInput

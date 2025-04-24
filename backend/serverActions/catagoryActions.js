@@ -61,6 +61,7 @@ export async function getCategory() {
         },
       },
     });
+    console.log("called");
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error

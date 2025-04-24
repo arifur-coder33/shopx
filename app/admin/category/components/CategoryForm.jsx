@@ -22,10 +22,12 @@ const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
 
 export default function CategoryForm() {
   const [tableData, setTableData] = useState([]);
+  const [dropdownList, setDropDownList] = useState([]);
 
-  const loadCategoryDropDownList = async () => {
-    const getTableData = await getCategory();
-    return getTableData?.data || [];
+  const loadDropDownLists = async () => {
+    const getData = await getCategory();
+    setDropDownList(getData?.data || []);
+    // return getData?.data || [];
   };
 
   const fromFields = [
@@ -42,7 +44,8 @@ export default function CategoryForm() {
       label: "Parent Category",
       name: "parentCategory",
       colSpan: "3",
-      dropDownLists: loadCategoryDropDownList,
+      loadLists: loadDropDownLists,
+      dropDownLists: dropdownList,
       addForm: "",
     },
     { type: "file", label: "Category Banner", name: "banner", colSpan: "full" },

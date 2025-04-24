@@ -23,12 +23,14 @@ export default function SearchableDropdown({
   const dropdownRef = useRef(null);
 
   // Set default selection based on ID
+  console.log("dropDownLists", dropDownLists);
   useEffect(() => {
-    if (defaultId && fetchedDropDownList.length > 0) {
-      const found = fetchedDropDownList.find((item) => item.id === defaultId);
-      if (found) setSelected(found);
+    if (defaultId?.id) {
+      setSelected(defaultId);
+    } else {
+      setSelected(null);
     }
-  }, [defaultId, fetchedDropDownList]);
+  }, [defaultId]);
 
   useEffect(() => {
     if (dropDownLists?.length > 0) {
@@ -37,14 +39,14 @@ export default function SearchableDropdown({
   }, [dropDownLists]);
 
   useEffect(() => {
-    if (typeof loadLists === "function") {
+    if (typeof loadLists === "function" && closeModal) {
       loadLists(); // re-fetch on modal close
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [closeModal]);
 
   const handleFocus = async () => {
-    if (fetchedDropDownList.length === 0 && dropDownLists) {
+    if (fetchedDropDownList.length === 0 && dropDownLists.length === 0) {
       // const loaded = await dropDownLists();
       // setFetchedDropDownList(loaded);
       if (loadLists) {
