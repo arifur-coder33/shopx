@@ -23,7 +23,7 @@ export default function SearchableDropdown({
   const dropdownRef = useRef(null);
 
   // Set default selection based on ID
-  console.log("dropDownLists", dropDownLists);
+
   useEffect(() => {
     if (defaultId?.id) {
       setSelected(defaultId);
@@ -46,7 +46,7 @@ export default function SearchableDropdown({
   }, [closeModal]);
 
   const handleFocus = async () => {
-    if (fetchedDropDownList.length === 0) {
+    if (fetchedDropDownList.length === 0 && dropDownLists.length === 0) {
       // const loaded = await dropDownLists();
       // setFetchedDropDownList(loaded);
       if (loadLists) {

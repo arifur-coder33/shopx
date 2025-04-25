@@ -15,19 +15,33 @@ export default function TagInput({
 
   const [tags, setTags] = useState([]);
   const [inputValue, setInputValue] = useState("");
-
+  console.log("defaultValue", defaultValue);
   useEffect(() => {
-    if (defaultValue) {
+    if (defaultValue.length > 0) {
       setTags(
         defaultValue
           .split(",")
           .map((tag) => tag.trim())
           .filter((tag) => tag !== "")
       );
+    } else {
+      setTags([]);
     }
   }, [defaultValue]);
+  useEffect(() => {
+    if (inputValue.trim() === "") return;
+
+    const timer = setTimeout(() => {
+      // Simulate Enter key
+      handleKeyDown({ key: "Enter", preventDefault: () => {} });
+    }, 2000); // 2 seconds
+
+    return () => clearTimeout(timer); // Clear timer on input change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputValue]);
 
   const handleInputChange = (e) => {
+    console.log("inputValue", e.target.value);
     setInputValue(e.target.value);
   };
 
@@ -84,12 +98,12 @@ export default function TagInput({
         {tags.map((tag, index) => (
           <span
             key={`tag-${index}`}
-            className="inline-flex items-center rounded-full bg-blue-500 text-white text-sm font-medium py-1 px-2"
+            className=" inline-flex items-center rounded-full bg-blue-500 text-white text-sm font-medium py-1 px-2"
           >
             {tag}
             <button
               type="button"
-              className="ml-1 hover:text-blue-200 focus:outline-none"
+              className="ml-1 text-red-400 bg-rd hover:text-red-500 focus:outline-none "
               onClick={() => removeTag(tag)}
             >
               ×
@@ -111,7 +125,9 @@ export default function TagInput({
           name={name}
           placeholder=""
           value={inputValue}
-          onChange={handleInputChange}
+          onChange={(event) => {
+            handleInputChange(event);
+          }}
           onKeyDown={handleKeyDown}
         />
         <label

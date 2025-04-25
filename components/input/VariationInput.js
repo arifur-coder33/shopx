@@ -2,6 +2,7 @@
 import { getVariations } from "@/backend/serverActions/variantionAction";
 import { useState } from "react";
 import SearchableDropdown from "./SearchableDropdown";
+import TagInput from "./TagInput";
 
 // const variationsList = [
 //   { id: "454545", name: "Size" },
@@ -71,6 +72,8 @@ export default function VariationInput() {
   };
 
   const handleValueChange = (index, value) => {
+    console.log("value", value);
+    console.log("index", index);
     setRows((prev) => {
       const updatedRows = [...prev];
       updatedRows[index].values = value;
@@ -103,16 +106,16 @@ export default function VariationInput() {
     // return getData?.data || [];
   };
 
-console.log(variationsList)
   return (
     <div
       style={{
         padding: "16px",
         border: "1px solid #ddd",
         borderRadius: "8px",
-        maxWidth: "500px",
+
         margin: "auto",
       }}
+      className="w-full"
     >
       <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "8px" }}>
         Assign Variations
@@ -154,10 +157,11 @@ console.log(variationsList)
             )}
             name={""}
             label={"Assign Variation"}
-            defaultId={rows[index]?.variation}
+            // defaultId={rows[index]?.variation}
+            defaultId={row.variation}
             addForm={"VariationForm"}
           />
-          <input
+          {/* <input
             placeholder="Enter values (comma-separated)"
             value={row.values}
             onChange={(e) => handleValueChange(index, e.target.value)}
@@ -167,6 +171,13 @@ console.log(variationsList)
               border: "1px solid #ccc",
               borderRadius: "4px",
             }}
+          /> */}
+          <TagInput
+            onChange={(e) => handleValueChange(index, e)}
+            defaultValue={row.values}
+            name={"name"}
+            label={"values"}
+            colSpan={"full"}
           />
           <button
             onClick={() => handleRemove(index)}

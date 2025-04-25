@@ -175,7 +175,7 @@ export default function DynamicForm({
               return null;
           }
         })}
-        {children}
+        <div className="col-span-full">{children}</div>
         <Button
           type="submit"
           disabled={isPending}
