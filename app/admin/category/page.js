@@ -18,7 +18,7 @@ export default async function ProductListPage() {
   const getTableData = await getCategory();
 
   const tableData = await getTableData?.data;
-  console.log(tableData);
+
   const fromFields = [
     { type: "file", label: "Thumbnail", name: "thumbnail", colSpan: "4" },
     { type: "text", label: "Category Name", name: "name", colSpan: "2" },
