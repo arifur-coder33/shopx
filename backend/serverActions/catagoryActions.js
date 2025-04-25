@@ -7,6 +7,8 @@ import { newSlug } from "../utils/generateSlug";
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
   console.log("enter");
+
+  console.log(data)
   try {
     const slug = await newSlug(data?.slug || data?.name);
 
@@ -61,6 +63,7 @@ export async function getCategory() {
         },
       },
     });
+    console.log("called");
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error

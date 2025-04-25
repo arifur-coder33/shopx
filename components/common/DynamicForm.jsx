@@ -1,16 +1,24 @@
 "use client";
 
-import Button from "@/components/button";
-import FloatingInput from "@/components/input/FloatingInput";
 import { useModalContext } from "@/context/ModalContext";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
-import CheckBox from "../input/CheckBox";
-import CustomEditor from "../input/CustomEditor";
-import FileInput from "../input/FileInput";
-import SearchableDropdown from "../input/SearchableDropdown";
-import TagInput from "../input/TagInput";
+
+// Dynamically imported components
+const Button = dynamic(() => import("@/components/button"));
+const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
+const CheckBox = dynamic(() => import("../input/CheckBox"), { ssr: false });
+const CustomEditor = dynamic(() => import("../input/CustomEditor"), {
+  ssr: false,
+});
+const FileInput = dynamic(() => import("../input/FileInput"), { ssr: false });
+const SearchableDropdown = dynamic(
+  () => import("../input/SearchableDropdown"),
+  { ssr: false }
+);
+const TagInput = dynamic(() => import("../input/TagInput"));
 
 export default function DynamicForm({
   category,
@@ -54,7 +62,7 @@ export default function DynamicForm({
                 slug: data?.slug,
               })
             : await createAction(formData);
-
+        console.log(response);
         if (response.success) {
           setSuccess("Data saved successfully");
           toast.success("Data saved successfully!");
@@ -126,10 +134,12 @@ export default function DynamicForm({
               return (
                 <div className="md:col-span-2" key={field.name}>
                   <SearchableDropdown
-                    options={field.data}
+                    loadLists={field.loadLists}
+                    dropDownLists={field.dropDownLists}
                     name={field.name}
                     label={field.label}
-                    defaultId={data?.[field.name].id}
+                    defaultId={data?.[field.name]}
+                    AddForm={field.addForm}
                   />
                   {/* <SelectInput
                     index={index}

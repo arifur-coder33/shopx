@@ -33,7 +33,7 @@ export default function FileInput({
     setImages(filteredImages);
     setInputValue(filteredImages.map((img) => img.id).join(","));
   };
-  console.log(inputValue);
+
   return (
     <div className="col-span-full w-full">
       <div className="grid grid-cols-6  md:grid-cols-12 items-center  gap-4">

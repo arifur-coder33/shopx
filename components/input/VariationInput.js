@@ -1,15 +1,67 @@
 "use client";
+import { getVariations } from "@/backend/serverActions/variantionAction";
 import { useState } from "react";
+import SearchableDropdown from "./SearchableDropdown";
 
-const variationsList = [
-  { id: "454545", name: "Size" },
-  { id: "656565", name: "Color" },
-  { id: "767676", name: "Material" },
-]; // Example variations with IDs
+// const variationsList = [
+//   { id: "454545", name: "Size" },
+//   { id: "656565", name: "Color" },
+//   { id: "767676", name: "Material" },
+// ]; // Example variations with IDs
 
 export default function VariationInput() {
   const [rows, setRows] = useState([{ variation: "", values: "" }]);
+  const [variationsList, setVariationsList] = useState([]);
+  const [selectedVariation, setSelectedVariation] = useState([
+    { variation: "", values: "" },
+  ]);
+  // useEffect(() => {
+  //   async function getVariationsList() {
+  //     const data = await getVariations();
+  //     setVariationsList(data?.data);
+  //   }
+  //   getVariationsList();
+  // }, []);
 
+  const onSelect = (item, index) => {
+    setSelectedVariation((prev) => {
+      const updated = [...prev];
+
+      // যদি index পূর্বে না থাকে (মানে array ছোট হয়)
+      if (index >= updated.length) {
+        // index পর্যন্ত ফাঁকা জায়গা পূরণ করো (undefined দিয়ে)
+        while (updated.length < index) {
+          updated.push(undefined);
+        }
+        // তারপর নতুন item বসাও
+        updated.push(item);
+      } else {
+        // index আগে থেকেই থাকলে update করো
+        updated[index] = item;
+      }
+
+      return updated;
+    });
+    handleVariationChange(index, item); // Update the variation name in the rows state
+  };
+
+  const handleRemove = (index) => {
+    setRows((prev) => {
+      const updatedRows = [...prev];
+      updatedRows.splice(index, 1);
+      return updatedRows;
+    });
+    setSelectedVariation((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
+    setVariationsList((prev) => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
   const handleVariationChange = (index, value) => {
     setRows((prev) => {
       const updatedRows = [...prev];
@@ -30,9 +82,14 @@ export default function VariationInput() {
     setRows((prev) => [...prev, { variation: "", values: "" }]);
   };
 
-  const assignedVariations = rows.map((row) => row.variation);
+  const assignedVariations = rows.map((row) => row?.variation);
   const allVariationsAssigned =
     assignedVariations.length >= variationsList.length;
+  const allValuesAssigned = rows.every((row) => row.values.trim() !== "");
+  const allVariationsSelected = assignedVariations.every(
+    (row) => row.name !== ""
+  );
+
   const variationValues = rows
     .filter((row) => row.variation && row.values)
     .map((row) => ({
@@ -40,6 +97,13 @@ export default function VariationInput() {
       value: row.values.split(",").map((val) => val.trim()),
     }));
 
+  const loadVariations = async () => {
+    const getData = await getVariations();
+    setVariationsList(getData?.data || []);
+    // return getData?.data || [];
+  };
+
+console.log(variationsList)
   return (
     <div
       style={{
@@ -54,11 +118,12 @@ export default function VariationInput() {
         Assign Variations
       </h2>
       {rows.map((row, index) => (
+        // console.log("row", index, rows[index]?.variation),
         <div
           key={index}
           style={{ display: "flex", gap: "8px", marginBottom: "8px" }}
         >
-          <select
+          {/* <select
             value={row.variation}
             onChange={(e) => handleVariationChange(index, e.target.value)}
             style={{
@@ -78,7 +143,20 @@ export default function VariationInput() {
                 {name}
               </option>
             ))}
-          </select>
+          </select> */}
+          <SearchableDropdown
+            index={index}
+            onSelect={onSelect}
+            loadLists={loadVariations}
+            dropDownLists={variationsList.filter(
+              (item) =>
+                !selectedVariation.some((selected) => selected?.id === item.id)
+            )}
+            name={""}
+            label={"Assign Variation"}
+            defaultId={rows[index]?.variation}
+            addForm={"VariationForm"}
+          />
           <input
             placeholder="Enter values (comma-separated)"
             value={row.values}
@@ -90,6 +168,13 @@ export default function VariationInput() {
               borderRadius: "4px",
             }}
           />
+          <button
+            onClick={() => handleRemove(index)}
+            type="button"
+            className="text-red-500"
+          >
+            x
+          </button>
         </div>
       ))}
       <button
@@ -111,7 +196,7 @@ export default function VariationInput() {
       <input
         type="hidden"
         name="variationValues"
-        value={JSON.stringify(variationValues)}
+        value={JSON.stringify(rows)}
       />
     </div>
   );

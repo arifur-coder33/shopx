@@ -20,12 +20,12 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20 transition-opacity duration-300 ease-in-out ${
+      className={`fixed  inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70  transition-opacity duration-300 ease-in-out ${
         isOpen ? "opacity-100" : "opacity-0"
       }`}
     >
       <div
-        className={`bg-white rounded shadow-lg p-4 md:p-6 lg:p-8 m-4 relative transition-all duration-500 ease-in-out transform ${
+        className={` bg-white max-w-6xl dark:bg-slate-900 rounded border-2 shadow-xl shadow-black dark:shadow-slate-500 p-4 md:p-6 lg:p-8 m-4 relative transition-all duration-500 ease-in-out transform ${
           isAnimating ? "scale-100 opacity-100" : "scale-0 opacity-50 "
         } `}
         onClick={(e) => e.stopPropagation()}

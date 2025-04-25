@@ -51,7 +51,7 @@ banner      Media?     @relation(fields: [bannerId], references: [id], name: "ca
 }
 
 // Variation Model (Size, Color, etc.)
-model Variation {
+model VariationName {
   id     String  @id @default(auto()) @map("_id") @db.ObjectId
   name   String  @unique               
   values VariationValue[] // Example: "Size", "Color"
@@ -61,10 +61,10 @@ model Variation {
 model VariationValue {
   id          String  @id @default(auto()) @map("_id") @db.ObjectId
   variationId String  @db.ObjectId
-  variation   Variation @relation(fields: [variationId], references: [id])
+  variation   VariationName @relation(fields: [variationId], references: [id])
   categoryId  String?  @db.ObjectId  // Can be nullable if the variation is global
   category    Category? @relation(fields: [categoryId], references: [id])
-  value       String   // Example: "XL", "Red", "L"
+  value       String  // Example: "XL", "Red", "L"
   // Many-to-Many Relationship using Join Table
   products ProductVariationValue[]
 }
@@ -82,7 +82,7 @@ model Media {
   categoryThumbnail Category[] @relation(name: "categoryThumbnail")
   categoryBanner Category[] @relation(name: "categoryBanner")
   // Reverse relations
-  productsAsThumbnail Product? @relation(name: "Thumbnail")  // One-to-One Reverse Relation
+  productsAsThumbnail Product[]  
   productGallery ProductGallery[]  // Explicit Many-to-Many Relation
 
   createdAt DateTime @default(now())
@@ -103,8 +103,8 @@ model Product {
   mainImage   String?
 imageGallery    String[]
   // One-to-One: Thumbnail Image
-  thumbnailId    String?      @unique @db.ObjectId
-  thumbnail      Media?     @relation(name: "Thumbnail", fields: [thumbnailId], references: [id])
+  thumbnailId    String?    @db.ObjectId
+  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
 
   // Many-to-Many: Gallery (Using Join Table)
   gallery ProductGallery[]
