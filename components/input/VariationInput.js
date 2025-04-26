@@ -10,12 +10,13 @@ import TagInput from "./TagInput";
 //   { id: "767676", name: "Material" },
 // ]; // Example variations with IDs
 
-export default function VariationInput() {
+export default function VariationInput({colSpan,defaultValue}) {
   const [rows, setRows] = useState([{ variation: "", values: "" }]);
   const [variationsList, setVariationsList] = useState([]);
   const [selectedVariation, setSelectedVariation] = useState([
     { variation: "", values: "" },
   ]);
+  console.log(defaultValue)
   // useEffect(() => {
   //   async function getVariationsList() {
   //     const data = await getVariations();
@@ -113,12 +114,12 @@ export default function VariationInput() {
         border: "1px solid #ddd",
         borderRadius: "8px",
 
-        margin: "auto",
+ 
       }}
-      className="w-full"
+      className={` col-span-${colSpan}`}
     >
       <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "8px" }}>
-        Assign Variations
+        Assign Variations {colSpan}
       </h2>
       {rows.map((row, index) => (
         // console.log("row", index, rows[index]?.variation),
@@ -175,7 +176,7 @@ export default function VariationInput() {
           <TagInput
             onChange={(e) => handleValueChange(index, e)}
             defaultValue={row.values}
-            name={"name"}
+            name={""}
             label={"values"}
             colSpan={"full"}
           />

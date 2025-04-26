@@ -5,6 +5,7 @@ import {
 } from "@/backend/serverActions/catagoryActions";
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { categoryFormFields } from "./categoryFormFields";
 
 // Dynamically import components
 const VariationInput = dynamic(
@@ -30,32 +31,7 @@ export default function CategoryForm() {
     // return getData?.data || [];
   };
 
-  const fromFields = [
-    { type: "file", label: "Thumbnail", name: "thumbnail", colSpan: "4" },
-    { type: "text", label: "Category Name", name: "name", colSpan: "2" },
-    {
-      type: "text",
-      label: "Category Slug in english",
-      name: "slug",
-      colSpan: "2",
-    },
-    {
-      type: "select",
-      label: "Parent Category",
-      name: "parentCategory",
-      colSpan: "3",
-      loadLists: loadDropDownLists,
-      dropDownLists: dropdownList,
-      addForm: "",
-    },
-    { type: "file", label: "Category Banner", name: "banner", colSpan: "full" },
-    {
-      type: "checkbox",
-      label: "Has Vairant",
-      name: "isVariation",
-      colSpan: "1",
-    },
-  ];
+  const fromFields = categoryFormFields({dropdownList,loadDropDownLists})
 
   return (
     <DynamicForm
@@ -64,7 +40,7 @@ export default function CategoryForm() {
       createAction={createAction}
       perifix="modal"
     >
-      <VariationInput />
+      {/* <VariationInput /> */}
     </DynamicForm>
   );
 }

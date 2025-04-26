@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
+import VariationInput from "../input/VariationInput";
 
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
@@ -70,11 +71,12 @@ export default function DynamicForm({
           form.reset();
         } else {
           window.scrollTo(0, 0);
-          toast.warn(response.message || "Something went wrong");
-          setError(response.message || "Something went wrong");
+          toast.warn(response.error?.message || "Something went wrong");
+          setError(response.error?.message || "Something went wrong");
         }
       } catch (error) {
-        setError(error.message || "Something went wrong");
+        console.log(error)
+        setError(error || "Something went wrong");
       }
     });
   };
@@ -140,6 +142,7 @@ export default function DynamicForm({
                     label={field.label}
                     defaultId={data?.[field.name]}
                     AddForm={field.addForm}
+                    colSpan={field.colSpan}
                   />
                   {/* <SelectInput
                     index={index}
@@ -157,6 +160,7 @@ export default function DynamicForm({
                     label={field.label}
                     name={field.name}
                     defaultValue={data?.[field.name]}
+                    colSpan={field?.colSpan}
                   />
                 </div>
               );
@@ -171,6 +175,17 @@ export default function DynamicForm({
                   multipleSelect={field.multiple}
                 />
               );
+              case "variation":
+                return (
+                  <VariationInput
+                    key={field.name}
+                    label={field.label}
+                    name={field.name}
+                    defaultValue={data?.[field.name]}
+                    colSpan={field?.colSpan}
+                   
+                  />
+                );
             default:
               return null;
           }

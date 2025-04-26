@@ -134,6 +134,7 @@ export default function DynamicTable({
         <tbody>
           {data?.length > 0 &&
             data.map((item) => (
+             
               <tr key={item?.id} className="border-b dark:border-gray-700">
                 {/* Dynamically render table data based on tableProperties */}
                 {tableProperties.map((column) => (

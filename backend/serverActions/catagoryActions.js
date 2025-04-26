@@ -13,17 +13,20 @@ export async function createCategoryAction(formData) {
     const slug = await newSlug(data?.slug || data?.name);
 
     const preparedData = {
-      ...data,
+      name:data?.name,
+      description:data?.description,
       slug: slug,
       thumbnail: { connect: { id: data?.thumbnail } },
       banner: { connect: { id: data?.banner } },
-      parentCategory: { connect: { id: data?.parentCategory } },
+      ...(data?.parentCategory
+        ? { parentCategory: { connect: { id: data?.parentCategory } } }
+        : {}), // <-- only connect if parentCategory exists
     };
     if (!data?.name) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
     const checkSlug = await prisma.category.findUnique({
-      where: { slug: data?.slug },
+      where: { slug: slug },
     });
 
     if (checkSlug) {
@@ -32,15 +35,34 @@ export async function createCategoryAction(formData) {
 
     // }
 
-    const details = await prisma.category.create({
+    const category = await prisma.category.create({
       data: preparedData,
     });
-    console.log(details);
+
+    if (data?.variationValues) {
+      const parseVariation=JSON.parse(data?.variationValues)
+
+      for(const variationItem of parseVariation){
+        const variationId=variationItem?.variation?.id
+        const values=variationItem?.values?.split(",")?.map((v)=>v?.trim())
+
+        for(const value of values){
+            await prisma.VariationValue.create({
+              data:{
+                variation:{connect:{id:variationId}},
+                category:{connect:{id:category.id}},
+                value:value
+              }
+            })
+        }
+      }
+    }
+    console.log(category);
     revalidatePath("/admin/category");
-    return { success: true, data: details }; // Return success with user data
+    return { success: true, data: category }; // Return success with user data
   } catch (error) {
     console.log(error.message);
-    return { success: false, error: error.message }; // Return structured error
+    return { success: false, error: error }; // Return structured error
   }
 }
 
@@ -61,9 +83,14 @@ export async function getCategory() {
             name: true,
           },
         },
+        variations:{
+          include:{
+            variation:true
+          }
+        }
       },
     });
-    console.log("called");
+   
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error

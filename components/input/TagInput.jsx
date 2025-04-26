@@ -15,7 +15,7 @@ export default function TagInput({
 
   const [tags, setTags] = useState([]);
   const [inputValue, setInputValue] = useState("");
-  console.log("defaultValue", defaultValue);
+
   useEffect(() => {
     if (defaultValue.length > 0) {
       setTags(

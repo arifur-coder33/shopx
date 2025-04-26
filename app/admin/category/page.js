@@ -7,7 +7,7 @@ import {
   updateCategoryAction,
 } from "@/backend/serverActions/catagoryActions";
 import DynamicTable from "@/components/common/DynamicTable";
-
+import { categoryFormFields } from "./components/categoryFormFields";
 import LazyModalButton from "@/components/modal/LazyModalButton";
 
 export default async function ProductListPage() {
@@ -15,30 +15,8 @@ export default async function ProductListPage() {
 
   const tableData = await getTableData?.data;
 
-  const fromFields = [
-    { type: "file", label: "Thumbnail", name: "thumbnail", colSpan: "4" },
-    { type: "text", label: "Category Name", name: "name", colSpan: "2" },
-    {
-      type: "text",
-      label: "Category Slug in english",
-      name: "slug",
-      colSpan: "2",
-    },
-    {
-      type: "select",
-      label: "Parent Category",
-      name: "parentCategory",
-      colSpan: "3",
-      data: tableData,
-    },
-    { type: "file", label: "Category Banner", name: "banner", colSpan: "full" },
-    {
-      type: "checkbox",
-      label: "Has Vairant",
-      name: "isVariation",
-      colSpan: "1",
-    },
-  ];
+  const fromFields = categoryFormFields({dropdownList:tableData})
+    
   const tableProperties = [
     { label: "Thumbnail", field: "thumbnail", type: "image", alt: "name" },
     { label: "Name", field: "name", type: "text" },
@@ -55,7 +33,7 @@ export default async function ProductListPage() {
   ];
   return (
     <div className="p-4">
-      <LazyModalButton componentKey={"CategoryForm"} />
+      <LazyModalButton  componentKey={"CategoryForm"} />
 
       <DynamicTable
         data={tableData}
