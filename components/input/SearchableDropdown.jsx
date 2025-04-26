@@ -14,13 +14,14 @@ export default function SearchableDropdown({
   onSelect, //
   index, //the index from dropdown component if it map as array
 }) {
-  const { closeModal } = useModalContext();
+  const { modalClosed, setModalClosed } = useModalContext();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState("bottom");
   const [fetchedDropDownList, setFetchedDropDownList] = useState([]);
   const dropdownRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
   // Set default selection based on ID
 
@@ -39,18 +40,23 @@ export default function SearchableDropdown({
   }, [dropDownLists]);
 
   useEffect(() => {
-    if (typeof loadLists === "function" && closeModal) {
+    if (typeof loadLists === "function" && modalClosed) {
       loadLists(); // re-fetch on modal close
     }
+    setQuery(""); // Clear query when modal closes
+    setModalClosed(false); // Reset modalClosed state after fetching
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [closeModal]);
+  }, [modalClosed]);
 
   const handleFocus = async () => {
     if (fetchedDropDownList.length === 0 && dropDownLists.length === 0) {
       // const loaded = await dropDownLists();
       // setFetchedDropDownList(loaded);
+
       if (loadLists) {
+        setLoading(true);
         await loadLists();
+        setLoading(false);
       }
     }
     setIsOpen(true);
@@ -112,11 +118,20 @@ export default function SearchableDropdown({
         readOnly
       />
       <div className="relative ">
+        {" "}
         <input
           type="text"
           className="z-10 w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 "
-          placeholder={selected ? selected.name : "Select an option"}
-          value={query || (selected ? selected.name : "")}
+          placeholder={
+            loading
+              ? "Loading..."
+              : selected
+              ? selected.name
+              : "Select an option"
+          }
+          value={
+            loading ? "Loading..." : query || (selected ? selected.name : "")
+          }
           onChange={(e) => {
             setQuery(e.target.value);
             setSelected(null); // Optional: clear selected when typing

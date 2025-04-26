@@ -75,7 +75,7 @@ export default function DynamicForm({
           setError(response.error?.message || "Something went wrong");
         }
       } catch (error) {
-        console.log(error)
+        console.log(error);
         setError(error || "Something went wrong");
       }
     });
@@ -175,17 +175,17 @@ export default function DynamicForm({
                   multipleSelect={field.multiple}
                 />
               );
-              case "variation":
-                return (
-                  <VariationInput
-                    key={field.name}
-                    label={field.label}
-                    name={field.name}
-                    defaultValue={data?.[field.name]}
-                    colSpan={field?.colSpan}
-                   
-                  />
-                );
+            case "variation":
+              return (
+                <VariationInput
+                  key={field.name}
+                  label={field.label}
+                  name={field.name}
+                  defaultValue={data?.[field.name]}
+                  colSpan={field?.colSpan}
+                  labelNote={field.labelNote}
+                />
+              );
             default:
               return null;
           }

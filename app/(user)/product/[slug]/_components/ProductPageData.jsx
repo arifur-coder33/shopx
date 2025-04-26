@@ -14,8 +14,6 @@ export default function ProductPageData({ data }) {
     discountPrice,
     description,
     mainImage,
-
-    category: { name },
   } = data;
   return (
     <>

@@ -56,16 +56,21 @@ export const useModalContext = () => {
 export const ModalProvider = ({ children }) => {
   const [modals, setModals] = useState([]);
   const [props, setProps] = useState({});
+  const [modalClosed, setModalClosed] = useState(false); // ✅ NEW
   const openModal = (modalContent) => {
     setModals((prev) => [...prev, modalContent]); // Push new modal content
+    setModalClosed(false); // When opening, reset
   };
 
   const closeModal = () => {
     setModals((prev) => prev.slice(0, -1)); // Remove the last modal
+    setModalClosed(true); // ✅ When closing, trigger
   };
 
   return (
-    <ModalContext.Provider value={{ modals, openModal, closeModal }}>
+    <ModalContext.Provider
+      value={{ modals, openModal, closeModal, modalClosed, setModalClosed }}
+    >
       {children}
 
       {/* Render all modals */}

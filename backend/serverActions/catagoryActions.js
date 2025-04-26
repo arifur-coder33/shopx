@@ -6,15 +6,13 @@ import { newSlug } from "../utils/generateSlug";
 
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
-  console.log("enter");
 
-  console.log(data)
   try {
     const slug = await newSlug(data?.slug || data?.name);
 
     const preparedData = {
-      name:data?.name,
-      description:data?.description,
+      name: data?.name,
+      description: data?.description,
       slug: slug,
       thumbnail: { connect: { id: data?.thumbnail } },
       banner: { connect: { id: data?.banner } },
@@ -39,29 +37,26 @@ export async function createCategoryAction(formData) {
       data: preparedData,
     });
 
-    if (data?.variationValues) {
-      const parseVariation=JSON.parse(data?.variationValues)
+    if (data?.variations) {
+      const parseVariation = JSON.parse(data?.variations);
 
-      for(const variationItem of parseVariation){
-        const variationId=variationItem?.variation?.id
-        const values=variationItem?.values?.split(",")?.map((v)=>v?.trim())
+      for (const variationItem of parseVariation) {
+        const variationId = variationItem?.variation?.id;
+        const value = variationItem?.value.trim();
 
-        for(const value of values){
-            await prisma.VariationValue.create({
-              data:{
-                variation:{connect:{id:variationId}},
-                category:{connect:{id:category.id}},
-                value:value
-              }
-            })
-        }
+        await prisma.VariationValue.create({
+          data: {
+            variation: { connect: { id: variationId } },
+            category: { connect: { id: category.id } },
+            value: value,
+          },
+        });
       }
     }
-    console.log(category);
+
     revalidatePath("/admin/category");
     return { success: true, data: category }; // Return success with user data
   } catch (error) {
-    console.log(error.message);
     return { success: false, error: error }; // Return structured error
   }
 }
@@ -83,14 +78,14 @@ export async function getCategory() {
             name: true,
           },
         },
-        variations:{
-          include:{
-            variation:true
-          }
-        }
+        variations: {
+          include: {
+            variation: true,
+          },
+        },
       },
     });
-   
+
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -149,7 +144,6 @@ export async function getAllCategoryWithproduct() {
         })),
       }));
 
-    console.log(filteredData);
     return { success: true, data: filteredData };
   } catch (error) {
     return { success: false, error: error.message };
@@ -157,8 +151,6 @@ export async function getAllCategoryWithproduct() {
 }
 
 export async function getCategoryWithproduct(slug) {
-  console.log("slugf data");
-  console.log(slug);
   const decodedSlug = decodeURIComponent(slug);
   try {
     const data = await prisma.category.findUnique({
@@ -189,7 +181,7 @@ export async function getCategoryWithproduct(slug) {
 
 export async function updateCategoryAction(formData) {
   const formDataObj = Object.fromEntries(formData.entries());
-  console.log("enter");
+
   try {
     let data = {
       name: formData.get("name"),
@@ -201,7 +193,7 @@ export async function updateCategoryAction(formData) {
     const checkSlug = await prisma.category.findUnique({
       where: { slug: data?.slug },
     });
-    console.log(checkSlug);
+
     if (checkSlug) {
       throw new Error("Already Availabe ");
     }
@@ -214,14 +206,13 @@ export async function updateCategoryAction(formData) {
     revalidatePath("/admin/product/add");
     return { success: true, details }; // Return success with user data
   } catch (error) {
-    console.log(error.message);
     return { success: false, error: error.message }; // Return structured error
   }
 }
 
 export async function deleteCategoryAction(formData) {
   const formDataObj = Object.fromEntries(formData.entries());
-  console.log("enter");
+
   try {
     let data = {
       name: formData.get("name"),
@@ -233,7 +224,7 @@ export async function deleteCategoryAction(formData) {
     const checkSlug = await prisma.category.findUnique({
       where: { slug: data?.slug },
     });
-    console.log(checkSlug);
+
     if (checkSlug) {
       throw new Error("Already Availabe ");
     }
@@ -246,7 +237,6 @@ export async function deleteCategoryAction(formData) {
     revalidatePath("/admin/product/add");
     return { success: true, details }; // Return success with user data
   } catch (error) {
-    console.log(error.message);
     return { success: false, error: error.message }; // Return structured error
   }
 }

@@ -1,8 +1,8 @@
 "use client";
 import { getVariations } from "@/backend/serverActions/variantionAction";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import FloatingInput from "./FloatingInput";
 import SearchableDropdown from "./SearchableDropdown";
-import TagInput from "./TagInput";
 
 // const variationsList = [
 //   { id: "454545", name: "Size" },
@@ -10,13 +10,20 @@ import TagInput from "./TagInput";
 //   { id: "767676", name: "Material" },
 // ]; // Example variations with IDs
 
-export default function VariationInput({colSpan,defaultValue}) {
-  const [rows, setRows] = useState([{ variation: "", values: "" }]);
+export default function VariationInput({
+  colSpan,
+  defaultValue,
+  label,
+  labelNote,
+  name,
+}) {
+  const [rows, setRows] = useState([{ variation: "", value: "" }]);
   const [variationsList, setVariationsList] = useState([]);
   const [selectedVariation, setSelectedVariation] = useState([
-    { variation: "", values: "" },
+    { variation: "", value: "" },
   ]);
-  console.log(defaultValue)
+  console.log("row", rows);
+  console.log(defaultValue);
   // useEffect(() => {
   //   async function getVariationsList() {
   //     const data = await getVariations();
@@ -24,7 +31,13 @@ export default function VariationInput({colSpan,defaultValue}) {
   //   }
   //   getVariationsList();
   // }, []);
-
+  useEffect(() => {
+    if (defaultValue) {
+      setRows(defaultValue);
+      // setSelectedVariation(defaultValue.map((item) => item.variation));
+      // setVariationsList(defaultValue.map((item) => item.variation));
+    }
+  }, [defaultValue]);
   const onSelect = (item, index) => {
     setSelectedVariation((prev) => {
       const updated = [...prev];
@@ -73,32 +86,22 @@ export default function VariationInput({colSpan,defaultValue}) {
   };
 
   const handleValueChange = (index, value) => {
-    console.log("value", value);
-    console.log("index", index);
     setRows((prev) => {
       const updatedRows = [...prev];
-      updatedRows[index].values = value;
+      updatedRows[index].value = value;
       return updatedRows;
     });
   };
 
   const addRow = () => {
-    setRows((prev) => [...prev, { variation: "", values: "" }]);
+    setRows((prev) => [...prev, { variation: "", value: "" }]);
   };
 
-  const assignedVariations = rows.map((row) => row?.variation);
-  const allVariationsAssigned =
-    assignedVariations.length >= variationsList.length;
-  const allValuesAssigned = rows.every((row) => row.values.trim() !== "");
-  const allVariationsSelected = assignedVariations.every(
-    (row) => row.name !== ""
-  );
-
   const variationValues = rows
-    .filter((row) => row.variation && row.values)
+    .filter((row) => row.variation && row.value)
     .map((row) => ({
       variationId: variationsList.find((v) => v.name === row.variation)?.id,
-      value: row.values.split(",").map((val) => val.trim()),
+      value: row.value.split(",").map((val) => val.trim()),
     }));
 
   const loadVariations = async () => {
@@ -113,73 +116,37 @@ export default function VariationInput({colSpan,defaultValue}) {
         padding: "16px",
         border: "1px solid #ddd",
         borderRadius: "8px",
-
- 
       }}
       className={` col-span-${colSpan}`}
     >
       <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "8px" }}>
-        Assign Variations {colSpan}
+        {label}
       </h2>
+      <p className="text-sm text-slate-500">{labelNote}</p>
       {rows.map((row, index) => (
         // console.log("row", index, rows[index]?.variation),
         <div
           key={index}
-          style={{ display: "flex", gap: "8px", marginBottom: "8px" }}
+          className="flex flex-row gap-2 items-center align-baseline"
         >
-          {/* <select
-            value={row.variation}
-            onChange={(e) => handleVariationChange(index, e.target.value)}
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          >
-            <option value="">Select Variation</option>
-            {variationsList.map(({ id, name }) => (
-              <option
-                key={id}
-                value={name}
-                disabled={assignedVariations.includes(name)}
-              >
-                {name}
-              </option>
-            ))}
-          </select> */}
           <SearchableDropdown
             index={index}
             onSelect={onSelect}
             loadLists={loadVariations}
-            dropDownLists={variationsList.filter(
-              (item) =>
-                !selectedVariation.some((selected) => selected?.id === item.id)
-            )}
+            dropDownLists={variationsList}
             name={""}
-            label={"Assign Variation"}
+            label={" "}
             // defaultId={rows[index]?.variation}
             defaultId={row.variation}
             addForm={"VariationForm"}
           />
-          {/* <input
-            placeholder="Enter values (comma-separated)"
-            value={row.values}
+
+          <FloatingInput
+            label={"Variation Value"}
             onChange={(e) => handleValueChange(index, e.target.value)}
-            style={{
-              flex: 2,
-              padding: "8px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          /> */}
-          <TagInput
-            onChange={(e) => handleValueChange(index, e)}
-            defaultValue={row.values}
-            name={""}
-            label={"values"}
-            colSpan={"full"}
+            defaultValue={row.value}
           />
+
           <button
             onClick={() => handleRemove(index)}
             type="button"
@@ -192,14 +159,13 @@ export default function VariationInput({colSpan,defaultValue}) {
       <button
         type="button"
         onClick={addRow}
-        disabled={allVariationsAssigned}
         style={{
           padding: "8px 12px",
-          background: allVariationsAssigned ? "#ccc" : "#007bff",
+          background: "#007bff",
           color: "#fff",
           border: "none",
           borderRadius: "4px",
-          cursor: allVariationsAssigned ? "not-allowed" : "pointer",
+          cursor: "pointer",
           marginTop: "8px",
         }}
       >
@@ -207,8 +173,10 @@ export default function VariationInput({colSpan,defaultValue}) {
       </button>
       <input
         type="hidden"
-        name="variationValues"
-        value={JSON.stringify(rows)}
+        name={name}
+        value={JSON.stringify(
+          rows.filter((v) => v.variation !== "" && v.value.trim() !== "")
+        )} // Filter out empty variations
       />
     </div>
   );
