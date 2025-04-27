@@ -10,9 +10,9 @@ export default function DeleteItem({ deleteItem, id, children }) {
         const data = await deleteItem(id);
         console.log(data);
         if (data.success) {
-          toast.success(data?.data);
+          toast.success(data?.data || "Deleted!");
         } else {
-          toast.warning("Something went Wrong.");
+          toast.warning(data?.error || "Something went Wrong.");
         }
       }
       return;

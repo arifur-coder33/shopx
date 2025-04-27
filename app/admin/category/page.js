@@ -39,8 +39,8 @@ export default async function ProductListPage() {
         data={tableData}
         tableProperties={tableProperties}
         fromFields={fromFields}
-        updateAction={deleteCategoryAction}
-        deleteAction={updateCategoryAction}
+        updateAction={updateCategoryAction}
+        deleteAction={deleteCategoryAction}
       />
     </div>
   );

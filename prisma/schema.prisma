@@ -63,7 +63,7 @@ model VariationValue {
   variationId String  @db.ObjectId
   variation   VariationName @relation(fields: [variationId], references: [id])
   categoryId  String?  @db.ObjectId  // Can be nullable if the variation is global
-  category    Category? @relation(fields: [categoryId], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   value       String  // Example: "XL", "Red", "L"
   // Many-to-Many Relationship using Join Table
   products ProductVariationValue[]
