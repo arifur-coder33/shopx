@@ -1,5 +1,6 @@
 export const componentsMap = {
   CategoryForm: () => import("@/app/admin/category/components/CategoryForm"),
   VariationForm: () => import("@/app/admin/variation/components/VariationForm"),
+  ProductForm: () => import("@/app/admin/product/components/productForm"),
   // Add more here as needed
 };

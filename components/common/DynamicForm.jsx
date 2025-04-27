@@ -71,8 +71,8 @@ export default function DynamicForm({
           form.reset();
         } else {
           window.scrollTo(0, 0);
-          toast.warn(response.error?.message || "Something went wrong");
-          setError(response.error?.message || "Something went wrong");
+          toast.warn(response.error || "Something went wrong");
+          setError(response.error || "Something went wrong");
         }
       } catch (error) {
         console.log(error);

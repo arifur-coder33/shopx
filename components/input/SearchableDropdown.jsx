@@ -22,7 +22,7 @@ export default function SearchableDropdown({
   const [fetchedDropDownList, setFetchedDropDownList] = useState([]);
   const dropdownRef = useRef(null);
   const [loading, setLoading] = useState(false);
-
+  console.log("fetchedDropDownList", fetchedDropDownList);
   // Set default selection based on ID
 
   useEffect(() => {
@@ -55,7 +55,9 @@ export default function SearchableDropdown({
 
       if (loadLists) {
         setLoading(true);
-        await loadLists();
+        const data = await loadLists();
+        console.log("data", data);
+        setFetchedDropDownList(data);
         setLoading(false);
       }
     }
@@ -137,21 +139,21 @@ export default function SearchableDropdown({
             setSelected(null); // Optional: clear selected when typing
           }}
           onFocus={handleFocus}
-          readOnly={fetchedDropDownList.length === 0} // Make readonly if no options
+          readOnly={fetchedDropDownList?.length === 0} // Make readonly if no options
         />
         {/* Anchor Button (Click to Show Full List) */}
         <button
           type="button"
           className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-          onClick={() => fetchedDropDownList.length > 0 && setIsOpen(!isOpen)} // Toggle dropdown only if options exist
-          disabled={fetchedDropDownList.length === 0}
+          onClick={() => fetchedDropDownList?.length > 0 && setIsOpen(!isOpen)} // Toggle dropdown only if options exist
+          disabled={fetchedDropDownList?.length === 0}
         >
           ▼
         </button>
       </div>
 
       {/* Dropdown List */}
-      {isOpen && fetchedDropDownList.length > 0 && (
+      {isOpen && fetchedDropDownList?.length > 0 && (
         <ul
           className={`z-20 absolute w-full borde p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40 overflow-auto ${
             dropdownPosition === "bottom" ? "top-full mt-1" : ""
