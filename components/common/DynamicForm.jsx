@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import VariationInput from "../input/VariationInput";
 
+
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
 const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
@@ -14,6 +15,7 @@ const CheckBox = dynamic(() => import("../input/CheckBox"), { ssr: false });
 const CustomEditor = dynamic(() => import("../input/CustomEditor"), {
   ssr: false,
 });
+const ProductVariationInput=dynamic(()=>import("@/components/input/ProductVariation"))
 const FileInput = dynamic(() => import("../input/FileInput"), { ssr: false });
 const SearchableDropdown = dynamic(
   () => import("../input/SearchableDropdown"),
@@ -175,9 +177,20 @@ export default function DynamicForm({
                   multipleSelect={field.multiple}
                 />
               );
-            case "variation":
+            case "variation": 
               return (
                 <VariationInput
+                  key={field.name}
+                  label={field.label}
+                  name={field.name}
+                  defaultValue={data?.[field.name]}
+                  colSpan={field?.colSpan}
+                  labelNote={field.labelNote}
+                />
+              );
+              case "productVariation": 
+              return (
+                <ProductVariationInput
                   key={field.name}
                   label={field.label}
                   name={field.name}

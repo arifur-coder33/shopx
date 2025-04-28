@@ -73,7 +73,7 @@ export default function DynamicTable({
 
           // />
           <SearchableDropdown
-            dropDownLists={column?.options}
+            dropDownLists={column?.dropDownLists}
             defaultId={item?.[column?.field]}
             itemId={item?.id}
           />
@@ -97,9 +97,9 @@ export default function DynamicTable({
         ) : (
           <span>No Date</span>
         );
-      case "category":
+      case "object":
         // For category, if it's an object with a 'name' field
-        return item?.[column?.field]?.name || "No Category";
+        return item?.[column?.field]?.[column?.objectPropertyName] || "No data";
       default:
         return item?.[column?.field] ? (
           <span>{item?.[column?.field]}</span>

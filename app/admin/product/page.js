@@ -17,7 +17,9 @@ export default async function ProductListPage() {
   const categoryData = await getCategory();
   const productData = await getProducts();
   console.log(productData);
+const onChangeCategoryHandler=({productId,Category})=>{
 
+}
   const tableProperties = [
     {
       label: "Is Active",
@@ -27,12 +29,8 @@ export default async function ProductListPage() {
     },
     { label: "Image", field: "thumbnail", type: "image", alt: "title" },
     { label: "Product Name", field: "title", type: "text" },
-    {
-      label: "Category",
-      field: "category",
-      type: "dropdown",
-      options: categoryData?.data,
-    }, // Assuming category has a 'name' property
+    { label: "Category", field: "category", type: "object" ,objectPropertyName:"name" },
+ 
     { label: "Price", field: "discountPrice", type: "text" },
     // { label: "Status", field: "status", type: "dropdown", options: categoryData?.data, }, // Example of dropdown
 

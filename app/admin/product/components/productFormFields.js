@@ -78,4 +78,10 @@ export const productFormFields = ({
     colSpan: "full",
   },
   { type: "editor", label: "Description", name: "description" },
+  {
+    type: "productVariation",
+    label: "Add Product variation",
+    name: "productVariation",
+    colSpan: "full",
+  },
 ];
