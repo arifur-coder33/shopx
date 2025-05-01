@@ -214,6 +214,7 @@ export async function deleteCategoryAction(id) {
 }
 
 export async function getCategory() {
+  console.log(" category backend call");
   try {
     const data = await prisma.category.findMany({
       include: {

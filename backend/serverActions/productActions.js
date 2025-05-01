@@ -225,6 +225,60 @@ export const getProducts = async () => {
   }
 };
 
+export const getProductsOnScroll = async ({ page = 1, limit = 5 }) => {
+  try {
+    // Calculate the offset based on the page and limit
+    const offset = (page - 1) * limit;
+
+    // Fetch paginated data
+    const data = await prisma.product.findMany({
+      skip: offset, // Skip the previous pages
+      take: limit, // Limit the number of items per page
+      include: {
+        category: true,
+        thumbnail: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        gallery: {
+          include: {
+            media: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    console.log("Fetched products:", data);
+    // Transform the gallery field to extract only media details
+    const transformedData = data.map((product) => ({
+      ...product,
+      gallery: product.gallery.map((g) => g.media), // Extract only media details
+    }));
+
+    // Get the total count of products for pagination metadata
+    const totalCount = await prisma.product.count();
+
+    return {
+      success: true,
+      data: transformedData,
+      meta: {
+        totalCount, // Total number of products
+        totalPages: Math.ceil(totalCount / limit), // Total number of pages
+        currentPage: page, // Current page
+        limit, // Items per page
+      },
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 export const getProductBySlug = async (slug) => {
   try {
     const data = await prisma.product.findUnique({
@@ -378,7 +432,7 @@ export const getProductBySlug = async (slug) => {
 //     };
 //   }
 // };
-export async function updateProductAction({ productId, formData, slug }) {
+export async function updateProductAction({ id: productId, formData, slug }) {
   try {
     let data = Object.fromEntries(formData.entries());
 
@@ -541,5 +595,3 @@ export const updateProductStatus = async ({ id, value }) => {
     return { success: false, message: error.message };
   }
 };
-
-

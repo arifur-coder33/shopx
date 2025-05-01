@@ -13,7 +13,7 @@ var numbers = {
 
 export function replaceNumbers(input) {
   var output = [];
-  for (var i = 0; i < input.length; ++i) {
+  for (var i = 0; i < input?.length; ++i) {
     if (numbers.hasOwnProperty(input[i])) {
       output.push(numbers[input[i]]);
     } else {

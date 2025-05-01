@@ -12,7 +12,7 @@ export default function CustomEditor({ defaultValue, label, name }) {
     toolbar: [
       ["bold", "italic", "underline", "strike"], // toggled buttons
       ["blockquote", "code-block"],
-      ["link", "", "video", "formula"],
+      ["link", "video", "formula"],
 
       [{ header: 1 }, { header: 2 }], // custom button values
       [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
@@ -51,7 +51,7 @@ export default function CustomEditor({ defaultValue, label, name }) {
       <ReactQuill
         id={name}
         theme="snow"
-        className="dark:text-slate-950 custom-quill "
+        className="dark:text-slate-950 custom-quill"
         defaultValue={editorValue}
         onChange={setEditorValue} // Updates state when the editor content changes
         modules={modules}

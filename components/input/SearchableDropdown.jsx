@@ -11,7 +11,7 @@ export default function SearchableDropdown({
   addForm, /// Add form to open when no results found
   dropDownLists,
   loadLists, // Function to load dropdown lists
-  onSelect, //
+  onSelect = () => {}, //
   index, //the index from dropdown component if it map as array
 }) {
   const { modalClosed, setModalClosed } = useModalContext();
@@ -22,7 +22,7 @@ export default function SearchableDropdown({
   const [fetchedDropDownList, setFetchedDropDownList] = useState([]);
   const dropdownRef = useRef(null);
   const [loading, setLoading] = useState(false);
-  console.log("fetchedDropDownList", fetchedDropDownList);
+
   // Set default selection based on ID
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function SearchableDropdown({
       if (loadLists) {
         setLoading(true);
         const data = await loadLists();
-        console.log("data", data);
+
         setFetchedDropDownList(data);
         setLoading(false);
       }
@@ -174,7 +174,11 @@ export default function SearchableDropdown({
                   setSelected(item);
                   setQuery(""); // Clear query but keep selection
                   setIsOpen(false); // Close dropdown
-                  onSelect && onSelect(item, index); // Call onSelect if provided
+                  if (typeof onSelect === "function") {
+                    onSelect(item, index);
+                  } else {
+                    console.warn("onSelect is not a function", onSelect);
+                  }
                 }}
               >
                 {item.name}
@@ -182,7 +186,9 @@ export default function SearchableDropdown({
             ))
           ) : (
             <>
-              <li className="px-3 py-2 text-gray-500">No results found</li>
+              <li className="px-3 py-2 text-gray-500">
+                No results found {addForm}
+              </li>
               {addForm && (
                 <li className="px-3 py-2 text-gray-200 bg-blue-500">
                   <LazyModalButton componentKey={addForm} />

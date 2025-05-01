@@ -38,7 +38,7 @@ export async function createVariationAction(formData) {
 export async function getVariations() {
   try {
     const data = await prisma.variationName.findMany();
-    
+
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -85,6 +85,56 @@ export async function deleteVariationAction(id) {
     return { success: true, data: "Successfuully deleted" }; // Return success with user data
   } catch (error) {
     console.log(error.message);
+    return { success: false, error: error.message }; // Return structured error
+  }
+}
+
+export async function getVariationByCategoryId(id) {
+  console.log("backend call");
+  try {
+    const data = await prisma.variationValue.findMany({
+      where: { categoryId: id },
+      include: {
+        variation: {
+          select: { id: true, name: true }, // Include the related variation data
+        }, // Include the related variationName data
+      },
+    });
+
+    const grouped = Object.values(
+      data.reduce((acc, item) => {
+        const key = item.variation.id;
+        if (!acc[key]) {
+          acc[key] = {
+            variation: {
+              id: item.variation.id,
+              name: item.variation.name,
+            },
+            values: [],
+          };
+        }
+        acc[key].values.push({
+          id: item.id,
+          value: item.value,
+        });
+        return acc;
+      }, {})
+    );
+
+    console.log(grouped);
+
+    return { success: true, data: grouped }; // Return success with user data
+  } catch (error) {
+    return { success: false, error: error.message }; // Return structured error
+  }
+}
+export async function getVariationById(id) {
+  try {
+    const data = await prisma.variationName.findUnique({
+      where: { id },
+    });
+    return { success: true, data }; // Return success with user data
+  } catch (error) {
     return { success: false, error: error.message }; // Return structured error
   }
 }

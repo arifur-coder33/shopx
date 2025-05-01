@@ -5,7 +5,13 @@ import { useState } from "react";
 import AddItem from "../common/AddItem";
 import { componentsMap } from "./componentsMap";
 
-export default function LazyModalButton({ componentKey, button }) {
+export default function LazyModalButton({
+  componentKey,
+  button,
+  data,
+  updateAction,
+  actionType,
+}) {
   const [LoadedComponent, setLoadedComponent] = useState(null);
   const { openModal } = useModalContext();
 
@@ -19,9 +25,21 @@ export default function LazyModalButton({ componentKey, button }) {
 
       const mod = await loadComponent();
       setLoadedComponent(() => mod.default);
-      openModal(<mod.default />);
+      openModal(
+        <mod.default
+          data={data}
+          updateAction={updateAction}
+          actionType={actionType}
+        />
+      );
     } else {
-      openModal(<LoadedComponent />);
+      openModal(
+        <LoadedComponent
+          data={data}
+          updateAction={updateAction}
+          actionType={actionType}
+        />
+      );
     }
   };
 

@@ -33,7 +33,9 @@ body {
   background-color: white;
   padding: 10px; /* Optional: Add some padding to the text editor */
 }
-
+.custom-quill .ql-editor {
+  min-height: 120px; /* adjust based on line height */
+}
 .rendered-html iframe,
 .rendered-html video {
   display: block;

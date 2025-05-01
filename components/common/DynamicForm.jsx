@@ -7,7 +7,6 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import VariationInput from "../input/VariationInput";
 
-
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
 const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
@@ -15,10 +14,12 @@ const CheckBox = dynamic(() => import("../input/CheckBox"), { ssr: false });
 const CustomEditor = dynamic(() => import("../input/CustomEditor"), {
   ssr: false,
 });
-const ProductVariationInput=dynamic(()=>import("@/components/input/ProductVariation"))
+const ProductVariationInput = dynamic(() =>
+  import("@/components/input/ProductVariation")
+);
 const FileInput = dynamic(() => import("../input/FileInput"), { ssr: false });
 const SearchableDropdown = dynamic(
-  () => import("../input/SearchableDropdown"),
+  () => import("@/components/input/SearchableDropdown"),
   { ssr: false }
 );
 const TagInput = dynamic(() => import("../input/TagInput"));
@@ -143,8 +144,9 @@ export default function DynamicForm({
                     name={field.name}
                     label={field.label}
                     defaultId={data?.[field.name]}
-                    AddForm={field.addForm}
+                    addForm={field.addForm}
                     colSpan={field.colSpan}
+                    onSelect={field.onSelect}
                   />
                   {/* <SelectInput
                     index={index}
@@ -177,7 +179,7 @@ export default function DynamicForm({
                   multipleSelect={field.multiple}
                 />
               );
-            case "variation": 
+            case "variation":
               return (
                 <VariationInput
                   key={field.name}
@@ -188,7 +190,7 @@ export default function DynamicForm({
                   labelNote={field.labelNote}
                 />
               );
-              case "productVariation": 
+            case "productVariation":
               return (
                 <ProductVariationInput
                   key={field.name}
@@ -197,6 +199,7 @@ export default function DynamicForm({
                   defaultValue={data?.[field.name]}
                   colSpan={field?.colSpan}
                   labelNote={field.labelNote}
+                  variationList={field.variationList}
                 />
               );
             default:

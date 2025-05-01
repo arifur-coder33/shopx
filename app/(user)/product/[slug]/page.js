@@ -200,9 +200,7 @@ export default async function ProductPage({ params }) {
   // );
 
   const { data } = await getProductBySlug(slug);
-  console.log("product data from client");
-  console.log(data);
-  console.log("product data from client end");
+
   const {
     id,
     title,
@@ -214,8 +212,9 @@ export default async function ProductPage({ params }) {
     thumbnail,
     gallery,
 
-    category: { name },
-  } = data;
+    category,
+  } = data || {};
+  const name = category?.name || "General";
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
   const imageUrl =
     cloudinaryMainImage(thumbnail || mainImage, 800, 800) ||
@@ -287,16 +286,16 @@ export default async function ProductPage({ params }) {
             <p className="text-2xl dark:text-slate-300 mt-4 relative">
               মূল্যঃ{" "}
               <span className="text-4xl md:text-5xl text-purple">
-                {replaceNumbers((discountPrice || 0).toString())}
+                {replaceNumbers((discountPrice || 0)?.toString())}
               </span>{" "}
               টাকা{" "}
               <del className="price-del text-xl">
-                {replaceNumbers((regularPrice || 0).toString())}
+                {replaceNumbers((regularPrice || 0)?.toString())}
               </del>
               <span className="leading-[16px] md:leading-8 p-2 bg-orange-500 text-slate-100 px-2 ml-2 text-xl md:text-3xl border-dotted border-4 dark:border-slate-900 border-slate-100 -rotate-[30deg] absolute right-0 -top-4 text-center rounded-full sm:h-28 sm:w-28 w-[80px] h-[80px]">
                 বাঁচলো{" "}
                 <span className="font-bold">
-                  {replaceNumbers((regularPrice - discountPrice).toString())}
+                  {replaceNumbers((regularPrice - discountPrice)?.toString())}
                 </span>{" "}
                 <span className="text-base"> টাকা</span>
               </span>

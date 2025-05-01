@@ -44,6 +44,7 @@ banner      Media?     @relation(fields: [bannerId], references: [id], name: "ca
 
   isVariation     Boolean    @default(false)  // Flag to check if variations exist
   variations      VariationValue[]                        // Array of variations
+  variationNames VariationName[]
   products        Product[]                   // One-to-many relationship with Product
 
   createdAt       DateTime   @default(now())  // Timestamp for category creation
@@ -53,7 +54,9 @@ banner      Media?     @relation(fields: [bannerId], references: [id], name: "ca
 // Variation Model (Size, Color, etc.)
 model VariationName {
   id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  name   String  @unique               
+  name   String  @unique   
+  categoryId String? @db.ObjectId
+  category   Category? @relation(fields: [categoryId], references: [id])            
   values VariationValue[] // Example: "Size", "Color"
 }
 

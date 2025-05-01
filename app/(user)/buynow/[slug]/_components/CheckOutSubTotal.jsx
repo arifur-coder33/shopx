@@ -7,7 +7,7 @@ export default function CheckOutSubTotal({ data, productQty, deliveryArea }) {
 
     insideDhaka,
     outSideDhaka,
-    category: { name },
+    category,
   } = data || {};
   let deliveryCharge = 0;
   deliveryCharge = deliveryArea === "inside-dhaka" ? insideDhaka : outSideDhaka;

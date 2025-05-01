@@ -2,33 +2,61 @@
 
 import { getCategory } from "@/backend/serverActions/catagoryActions";
 import { createProductAction as createAction } from "@/backend/serverActions/productActions";
+import { getVariationByCategoryId } from "@/backend/serverActions/variantionAction";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { productFormFields } from "./productFormFields";
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
   loading: () => <p>Loading form...</p>,
 });
 
-export default function ProductForm() {
+export default function ProductForm({ actionType, data, updateAction }) {
   const [categoryDropdownList, setCategoryDropdownList] = useState([]);
-
+  const [productVariationList, setProductVariationList] = useState([]);
   const loadCategoryDropDownLists = async () => {
-    const getData = await getCategory();
-    setCategoryDropdownList(getData?.data || []);
-    // return getData?.data || [];
+    try {
+      const getData = await getCategory();
+      setCategoryDropdownList(getData?.data || []);
+    } catch (error) {
+      console.error("Failed to load categories", error);
+    }
+  };
+  const debounce = (func, delay) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), delay);
+    };
   };
 
-  const fromFields = productFormFields({
-    categoryDropdownList,
-    loadCategoryDropDownLists,
-  });
+  const onSelectCategoryHandler = debounce(async (category) => {
+    try {
+      const getVariations = await getVariationByCategoryId(category?.id);
+      setProductVariationList(getVariations?.data || []);
+    } catch (error) {
+      console.error("Failed to load variations", error);
+    }
+  }, 300);
 
+  const fromFields = useMemo(() => {
+    return productFormFields({
+      categoryDropdownList,
+      loadCategoryDropDownLists,
+      onSelectCategoryHandler,
+      productVariationList,
+    });
+  }, [categoryDropdownList, productVariationList, onSelectCategoryHandler]);
+
+  const handleCreateAction = createAction;
+  const handleUpdateAction = updateAction;
   return (
     <DynamicForm
       fromFields={fromFields}
-      actionType={"add"}
-      createAction={createAction}
+      actionType={actionType}
+      createAction={handleCreateAction}
+      data={data}
+      updateAction={handleUpdateAction}
     ></DynamicForm>
   );
 }

@@ -22,10 +22,10 @@ export default function ProductCard({ product }) {
             <div className="line-clamp-2 ">{product?.title}</div>
             <div className="px-2 cursor-auto">
               <span className="text-purple font-bold text-xl md:text-2xl">
-                {replaceNumbers(product?.discountPrice.toString())}-/{" "}
+                {replaceNumbers(product?.discountPrice?.toString())}-/{" "}
               </span>
               <del className="price-del">
-                {replaceNumbers(product?.regularPrice.toString())}
+                {replaceNumbers(product?.regularPrice?.toString())}
               </del>
             </div>
           </div>

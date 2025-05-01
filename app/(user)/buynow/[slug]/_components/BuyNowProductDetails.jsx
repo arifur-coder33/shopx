@@ -3,7 +3,6 @@ import { Truck } from "lucide-react";
 import { useState } from "react";
 import CheckOutSubTotal from "./CheckOutSubTotal";
 
-
 export default function BuyNowProductDetails({
   deliveryArea,
   data,
@@ -16,7 +15,7 @@ export default function BuyNowProductDetails({
 
     insideDhaka,
     outSideDhaka,
-    category: { name },
+    category,
   } = data || {};
 
   const [productQty, setProductQty] = useState(Number(initialQty) || 1);

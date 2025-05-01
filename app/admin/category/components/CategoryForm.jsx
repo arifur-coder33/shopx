@@ -12,7 +12,7 @@ const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   loading: () => <p>Loading form...</p>,
 });
 
-export default function CategoryForm() {
+export default function CategoryForm({ actionType, data, updateAction }) {
   const [dropdownList, setDropDownList] = useState([]);
 
   const loadDropDownLists = async () => {
@@ -26,11 +26,10 @@ export default function CategoryForm() {
   return (
     <DynamicForm
       fromFields={fromFields}
-      actionType={"add"}
+      actionType={actionType}
       createAction={createAction}
-      perifix="modal"
-    >
-      {/* <VariationInput /> */}
-    </DynamicForm>
+      updateAction={updateAction}
+      data={data}
+    ></DynamicForm>
   );
 }

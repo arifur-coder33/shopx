@@ -1,6 +1,10 @@
+// import { getCategory } from "@/backend/serverActions/categoryActions";
+
 export const productFormFields = ({
   categoryDropdownList,
+  onSelectCategoryHandler,
   loadCategoryDropDownLists,
+  productVariationList,
 }) => [
   {
     type: "checkbox",
@@ -25,7 +29,8 @@ export const productFormFields = ({
     loadLists: loadCategoryDropDownLists,
     dropDownLists: categoryDropdownList,
     colSpan: "2",
-    addForm: "category",
+    addForm: "CategoryForm",
+    onSelect: onSelectCategoryHandler,
   },
   {
     type: "number",
@@ -82,6 +87,7 @@ export const productFormFields = ({
     type: "productVariation",
     label: "Add Product variation",
     name: "productVariation",
+    variationList: productVariationList,
     colSpan: "full",
   },
 ];

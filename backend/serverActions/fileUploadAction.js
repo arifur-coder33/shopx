@@ -56,10 +56,16 @@ export async function uploadImagesAction(formData) {
       await prisma.media.createMany({
         data: imageGalleryUploads,
       });
+      revalidatePath("/admin/media");
+      revalidateTag("media"); // ✅ Instead of revalidatePath()
+      return { success: true, data: imageGalleryUploads };
+    } else {
+      return {
+        success: false,
+        message: "All image uploads failed due to timeout or errors.",
+        data: [],
+      };
     }
-    revalidatePath("/admin/media");
-    revalidateTag("media"); // ✅ Instead of revalidatePath()
-    return { success: true, data: imageGalleryUploads };
   } catch (error) {
     console.error("Image upload failed:", error);
     return {
