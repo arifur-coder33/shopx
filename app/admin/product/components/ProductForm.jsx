@@ -31,6 +31,7 @@ export default function ProductForm({ actionType, data, updateAction }) {
   };
 
   const onSelectCategoryHandler = debounce(async (category) => {
+    console.log("Selected category:", category);
     try {
       const getVariations = await getVariationByCategoryId(category?.id);
       setProductVariationList(getVariations?.data || []);

@@ -2,9 +2,14 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // --- Dynamically import Heroicons ---
+const FileInput = dynamic(() => import("./FileInput"), {
+  ssr: false,
+  loading: () => <span>Loading...</span>, // Correct: Use a React component
+});
+
 const loadingIconFallback = (className = "h-5 w-5") => (
   <span className={className}></span>
 );
@@ -60,6 +65,7 @@ export default function ProductVariationInput({
   colSpan = "full",
   variationList,
   initialHasVariations = false,
+  name,
 }) {
   // State to control if variations are fundamentally enabled
   const [hasVariationsEnabled, setHasVariationsEnabled] =
@@ -71,7 +77,7 @@ export default function ProductVariationInput({
   const [expandedCategories, setExpandedCategories] = useState({});
   const [selectedValues, setSelectedValues] = useState({});
   const [rows, setRows] = useState([]);
-
+  console.log(JSON.stringify(selectedValues), "selectedValues");
   // --- Effect to clear state if variations get disabled ---
   useEffect(() => {
     if (!hasVariationsEnabled) {
@@ -244,21 +250,13 @@ export default function ProductVariationInput({
     }
   };
 
-  const handleImageChange = (e, rowId) => {
-    const file = e.target.files[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setRows((prevRows) =>
-        prevRows.map((row) =>
-          row.id === rowId
-            ? { ...row, image: file, imageUrl: reader.result }
-            : row
-        )
-      );
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+  const handleImageChange = (selectedImages, rowId) => {
+    const image = selectedImages[0]; // Assuming single select for now
+    setRows((prevRows) =>
+      prevRows.map((row) =>
+        row.id === rowId ? { ...row, image: image?.id } : row
+      )
+    );
   };
 
   const handleRemoveImage = (rowId) => {
@@ -280,11 +278,12 @@ export default function ProductVariationInput({
   // --- ---
 
   // --- Table Headers calculation (only relevant when variations are enabled) ---
-  const tableHeaders = hasVariationsEnabled
-    ? Object.keys(selectedValues)
-        .filter((key) => selectedValues[key]?.length > 0)
-        .sort()
-    : [];
+  const tableHeaders = useMemo(() => {
+    if (!hasVariationsEnabled) return [];
+    return Object.keys(selectedValues)
+      .filter((key) => selectedValues[key]?.length > 0)
+      .sort();
+  }, [hasVariationsEnabled, selectedValues]);
 
   // --- Animation variants ---
   const rowVariants = {
@@ -311,12 +310,11 @@ export default function ProductVariationInput({
     },
   }; // Adjust pt/pb as needed
   // --- ---
-
+  {
+    console.log(rows, "rows");
+  }
   return (
     <div className={`p-6 bg-gray-50 shadow-lg rounded-xl col-span-${colSpan}`}>
-      {" "}
-      {/* Removed outer space-y */}
-      {/* --- Header Row --- */}
       <div className="flex justify-between items-center border-b pb-3">
         {/* --- Left Side: Clickable Title + Expand/Collapse Icon --- */}
         <button
@@ -539,7 +537,19 @@ export default function ProductVariationInput({
                           ))}
                           <td className="px-6 py-4 align-middle">
                             <div className="flex items-center space-x-3">
-                              {row.imageUrl ? (
+                              <FileInput
+                                multipleSelect={false}
+                                key={row.id}
+                                label={""}
+                                name={"image"}
+                                defaultValue={row.imageUrl}
+                                colSpan={"full"}
+                                onImageSelect={(selectedImages) =>
+                                  handleImageChange(selectedImages, row.id)
+                                }
+                              />
+
+                              {/* {row.imageUrl ? (
                                 <div className="relative group shrink-0">
                                   <img
                                     src={row.imageUrl}
@@ -558,8 +568,8 @@ export default function ProductVariationInput({
                                 <div className="h-16 w-16 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-100 shrink-0">
                                   <DynamicPhotoIcon className="h-8 w-8 text-gray-400" />
                                 </div>
-                              )}
-                              <label className="cursor-pointer text-xs text-indigo-600 hover:text-indigo-800 font-medium underline whitespace-nowrap">
+                              )} */}
+                              {/* <label className="cursor-pointer text-xs text-indigo-600 hover:text-indigo-800 font-medium underline whitespace-nowrap">
                                 {row.imageUrl ? "Change" : "Upload"}
                                 <input
                                   type="file"
@@ -567,7 +577,7 @@ export default function ProductVariationInput({
                                   onChange={(e) => handleImageChange(e, row.id)}
                                   className="sr-only"
                                 />
-                              </label>
+                              </label> */}
                             </div>
                           </td>
                           <td className="px-6 py-4 align-middle">
@@ -654,6 +664,11 @@ export default function ProductVariationInput({
         )}
       </AnimatePresence>
       {/* --- End Conditional Render --- */}
+      <input
+        name={name}
+        hidden
+        defaultValue={rows.length > 0 && JSON.stringify(rows)}
+      />
     </div>
   );
 }

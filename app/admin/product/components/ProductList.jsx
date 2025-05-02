@@ -33,14 +33,12 @@ export default function ProductList({ initialProductData, categoryData }) {
       });
 
       if (!response.success || !response.data) {
-        console.error("Fetch failed or no data:", response.error);
         return []; // Return empty array on failure or no data
       }
 
       // IMPORTANT: Only return the data array
       return response.data;
     } catch (error) {
-      console.error(`Error fetching page ${pageIndex}:`, error);
       return []; // Return empty array on error
     }
   };
@@ -51,21 +49,17 @@ export default function ProductList({ initialProductData, categoryData }) {
     (pageIndex, previousPageData) => {
       // Reached the end if the previous page was empty
       if (previousPageData && previousPageData.length === 0) {
-        console.log("Reached end (previous page empty), returning null key");
         return null; // Reached the end
       }
       // Reached the end if the previous page fetched less data than requested
       if (previousPageData && previousPageData.length < PAGE_SIZE) {
-        console.log(
-          "Reached end (previous page smaller than limit), returning null key"
-        );
         return null; // Reached the end
       }
 
       // Generate key for the next page
       const page = pageIndex + 1;
       const key = `/products?page=${page}&limit=${PAGE_SIZE}`;
-      console.log("Generating SWR key:", key);
+
       return key;
     },
     fetcher,
@@ -89,45 +83,37 @@ export default function ProductList({ initialProductData, categoryData }) {
   useEffect(() => {
     const currentLoadMoreRef = loadMoreRef.current;
     if (!currentLoadMoreRef) {
-      console.log("Load more ref not available yet.");
       return;
     }
 
     if (observerRef.current) {
       observerRef.current.disconnect();
-      console.log("Disconnected previous observer.");
     }
 
     // Don't observe if we've likely hit the end or are currently loading
     if (hitEndOfData || isValidating) {
-      console.log("Not observing: Hit end or validating.");
       // Ensure observer is disconnected if we hit the end while it was active
       if (observerRef.current) observerRef.current.disconnect();
       return;
     }
 
-    console.log("Setting up Intersection Observer.");
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !isValidating) {
-          console.log("Intersection detected! Loading next page...");
           setSize((prevSize) => {
             const nextSize = prevSize + 1;
-            console.log("Increasing size from:", prevSize, "to:", nextSize);
+
             return nextSize;
           });
         } else {
-          // console.log("Intersection Observer triggered but not loading (intersecting:", entries[0].isIntersecting, "isValidating:", isValidating, ")");
         }
       },
       { threshold: 0.1 } // Trigger when 10% visible
     );
 
     observerRef.current.observe(currentLoadMoreRef);
-    console.log("Observing target element.");
 
     return () => {
-      console.log("Cleaning up observer.");
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
@@ -141,6 +127,7 @@ export default function ProductList({ initialProductData, categoryData }) {
       label: "Is Active",
       field: "isActive",
       type: "checkbox",
+      maxwidth: "10px",
       // action: () => {}, // Define action if needed
     },
     { label: "Image", field: "thumbnail", type: "image", alt: "title" }, // Make sure 'thumbnail' has 'name' property if type is 'image' expects it
@@ -164,8 +151,8 @@ export default function ProductList({ initialProductData, categoryData }) {
       <DynamicTable
         data={products} // Pass the combined data
         tableProperties={tableProperties}
-        updateAction={updateAction} // Define update action
-        deleteAction={deleteAction} // Define delete action
+        updateAction={updateProductAction} // Define update action
+        deleteAction={deleteProductById} // Define delete action
         actionType={"edit"}
         componentKey={"ProductForm"}
       />
