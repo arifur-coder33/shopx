@@ -392,6 +392,7 @@ export default function ProductVariationInput({
 
     // Dependencies: This effect runs when selected values change, the enabled status changes (after init),
     // the variation list map changes, or the initialization status changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedValues, hasVariationsEnabled, variationListMap, isInitialized]); // Added isInitialized
 
   // Handler for the main "Has Variations" checkbox toggle
