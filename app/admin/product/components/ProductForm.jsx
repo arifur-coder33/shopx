@@ -4,7 +4,7 @@ import { getCategory } from "@/backend/serverActions/catagoryActions";
 import { createProductAction as createAction } from "@/backend/serverActions/productActions";
 import { getVariationByCategoryId } from "@/backend/serverActions/variantionAction";
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { productFormFields } from "./productFormFields";
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
@@ -29,16 +29,27 @@ export default function ProductForm({ actionType, data, updateAction }) {
       timeout = setTimeout(() => func(...args), delay);
     };
   };
+  useEffect(() => {
+    if (!data?.category) return;
 
-  const onSelectCategoryHandler = debounce(async (category) => {
-    console.log("Selected category:", category);
-    try {
-      const getVariations = await getVariationByCategoryId(category?.id);
-      setProductVariationList(getVariations?.data || []);
-    } catch (error) {
-      console.error("Failed to load variations", error);
+    async function fetchData() {
+      await onSelectCategoryHandler(data.category);
     }
-  }, 300);
+    fetchData();
+  }, [data?.category?.id]);
+
+  const onSelectCategoryHandler = useCallback(
+    debounce(async (category) => {
+      console.log("Selected category:", category);
+      try {
+        const getVariations = await getVariationByCategoryId(category?.id);
+        setProductVariationList(getVariations?.data || []);
+      } catch (error) {
+        console.error("Failed to load variations", error);
+      }
+    }, 300),
+    []
+  );
 
   const fromFields = useMemo(() => {
     return productFormFields({
