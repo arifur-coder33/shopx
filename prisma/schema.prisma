@@ -58,6 +58,7 @@ model VariationName {
   categoryId String? @db.ObjectId
   category   Category? @relation(fields: [categoryId], references: [id])            
   values VariationValue[] // Example: "Size", "Color"
+  productVariations ProductVariation[]
 }
 
 // Variation Value Model (Specific options like XL, Red, etc.)
@@ -69,7 +70,8 @@ model VariationValue {
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   value       String  // Example: "XL", "Red", "L"
   // Many-to-Many Relationship using Join Table
-  products ProductVariationValue[]
+ 
+  productVariations ProductVariation[]
 }
 
 model ProductCodeCounter{
@@ -85,7 +87,8 @@ model Media {
   categoryThumbnail Category[] @relation(name: "categoryThumbnail")
   categoryBanner Category[] @relation(name: "categoryBanner")
   // Reverse relations
-  productsAsThumbnail Product[]  
+  productsAsThumbnail Product[] 
+  ProductVariationThumbnail ProductVariation[] 
   productGallery ProductGallery[]  // Explicit Many-to-Many Relation
 
   createdAt DateTime @default(now())
@@ -104,7 +107,7 @@ model Product {
   stockQuantity  Int         @default(0)        // Stock quantity for inventory tracking
   weight         Float?
   mainImage   String?
-imageGallery    String[]
+  imageGallery    String[]
   // One-to-One: Thumbnail Image
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
@@ -121,7 +124,7 @@ imageGallery    String[]
   outSideDhaka   Float?                          // Optional delivery charge outside Dhaka
 
   hasVariations    Boolean? @default(false)           
-  variationItems   ProductVariationValue[]       // Many-to-Many Relationship using Join Table 
+      // Many-to-Many Relationship using Join Table 
   variations      ProductVariation[] 
   orders         OrderItem[]                     // One-to-many relationship with Order
 
@@ -146,23 +149,22 @@ model ProductVariation{
   productId     String?      @db.ObjectId    // Foreign key for Category
   product       Product?    @relation(fields: [productId], references: [id]) // Relation to Category
   sku          String
+  stock       Float?
   weight Float?
   price  Float?
-  image String?
-  variations Json
+  thumbnailId    String?    @db.ObjectId
+  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
+  matcherId String
+  variationNameId String @db.ObjectId
+  variaionName VariationName @relation(fields: [variationNameId],references: [id])
+  variationValueId String @db.ObjectId
+  variaionValue VariationValue @relation(fields: [variationValueId],references: [id])
+  
 }
 
 
 // **Join Table for Many-to-Many Relationship**
-model ProductVariationValue {
-  id           String      @id @default(auto()) @map("_id") @db.ObjectId
-  productId    String      @db.ObjectId
-  variationValueId String @db.ObjectId
 
-  // Relations
-  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variationValue VariationValue @relation(fields: [variationValueId], references: [id], onDelete: Cascade)
-}
 
 // Order model with extended features
 model Order {

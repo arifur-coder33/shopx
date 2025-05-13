@@ -85,6 +85,7 @@ export default function ProductVariationInput({
   name, // Name for the hidden input submitting the final data
 }) {
   // Determine initial enabled state based on prop OR presence of initial combinations
+
   const derivedInitialEnabled =
     initialHasVariations ||
     (initialCombinations && initialCombinations.length > 0);
@@ -542,7 +543,7 @@ export default function ProductVariationInput({
       transition: { duration: 0.3, ease: "easeInOut" },
     },
   };
-
+  console.log((rows?.map(({variationValues,...rest})=>rest)))
   // --- JSX Rendering ---
   return (
     // Main container div
@@ -971,7 +972,7 @@ export default function ProductVariationInput({
         name={name} // Use the name prop passed to the component
         type="hidden"
         // Stringify the rows array. If empty, provide an empty string or '[]'
-        value={rows.length > 0 ? JSON.stringify(rows) : ""}
+        value={rows.length > 0 ? JSON.stringify(rows?.map(({variationValues,...rest})=>rest)) : ""}
         readOnly // Make it read-only as it's controlled by component state
       />
     </div> // End Main container div

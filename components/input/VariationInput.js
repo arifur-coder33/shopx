@@ -22,8 +22,7 @@ export default function VariationInput({
   const [selectedVariation, setSelectedVariation] = useState([
     { variation: "", value: "" },
   ]);
-  console.log("row", rows);
-  console.log(defaultValue);
+
   // useEffect(() => {
   //   async function getVariationsList() {
   //     const data = await getVariations();

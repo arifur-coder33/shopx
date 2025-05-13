@@ -101,7 +101,7 @@ import { newSlug } from "../utils/generateSlug";
 export async function createProductAction(formData) {
   try {
     let data = Object.fromEntries(formData.entries());
-
+ 
     if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
