@@ -30,10 +30,10 @@ model Category {
   slug            String      @unique         // Unique slug for URL identification
   description     String?                     // Optional category description
                     // Banner image for the category
-thumbnailId      String?      @db.ObjectId   
- thumbnail      Media?     @relation(fields: [thumbnailId], references: [id], name: "categoryThumbnail") 
-bannerId      String?      @db.ObjectId   
-banner      Media?     @relation(fields: [bannerId], references: [id], name: "categoryBanner")
+  thumbnailId      String?      @db.ObjectId   
+  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id], name: "categoryThumbnail") 
+ bannerId      String?      @db.ObjectId   
+ banner      Media?     @relation(fields: [bannerId], references: [id], name: "categoryBanner")
   // Self-referencing relation for subcategories
   subCategories   Category[] @relation("ParentChild")
 
@@ -158,7 +158,7 @@ model ProductVariation{
   variationNameId String @db.ObjectId
   variationName VariationName @relation(fields: [variationNameId],references: [id])
   variationValueId String @db.ObjectId
-  variaionValue VariationValue @relation(fields: [variationValueId],references: [id])
+  variationValue VariationValue @relation(fields: [variationValueId],references: [id])
   
 }
 

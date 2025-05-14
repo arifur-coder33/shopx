@@ -45,7 +45,7 @@ export default function DynamicForm({
       closeModal();
     }
   }, [success, closeModal]);
-console.log(data)
+  console.log(data);
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -200,6 +200,7 @@ console.log(data)
                   colSpan={field?.colSpan}
                   labelNote={field.labelNote}
                   variationList={field.variationList}
+                  initialCombinations={data?.[field.name]}
                 />
               );
             default:

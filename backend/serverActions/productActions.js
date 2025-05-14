@@ -98,10 +98,106 @@ import { newSlug } from "../utils/generateSlug";
 //   }
 // }
 
+// Helper function to transform flat variation attributes into grouped variants
+// Helper function to transform flat variation attributes into grouped variants
+function transformVariations(inputProductVariations) {
+  if (!inputProductVariations || inputProductVariations.length === 0) {
+    return [];
+  }
+
+  const groupedByMatcherId = new Map();
+
+  for (const item of inputProductVariations) {
+    // 'item' here is one ProductVariation record from Prisma
+    // item.id is the ObjectId of this specific ProductVariation record
+    // item.thumbnailId is the ID of the Media record for its thumbnail
+    // item.thumbnail.name is the name of that Media record
+
+    if (!groupedByMatcherId.has(item.matcherId)) {
+      // Initialize the group for this matcherId
+      groupedByMatcherId.set(item.matcherId, {
+        // Store the ID of the first ProductVariation record encountered for this matcherId.
+        // This will become the 'id' of the grouped variant object.
+        _sourceRecordId: item.id, // This is the database ID of the ProductVariation record itself
+
+        combination: [],
+        variationValues: {},
+        matcherId: item.matcherId,
+        sku: item.sku || "",
+        price:
+          item.price !== undefined && item.price !== null
+            ? String(item.price)
+            : "",
+        qty:
+          item.stock !== undefined && item.stock !== null
+            ? String(item.stock)
+            : "",
+        // Initialize image object for the group using id and name.
+        image: item.thumbnailId
+          ? { id: item.thumbnailId, name: item.thumbnail?.name || null }
+          : null,
+        imageUrl: item.thumbnail?.name
+          ? `/uploads/${item.thumbnail.name}`
+          : null,
+      });
+    }
+
+    const group = groupedByMatcherId.get(item.matcherId);
+
+    // Add to combination array
+    group.combination.push({
+      variation: {
+        id: item.variationName.id,
+        name: item.variationName.name,
+      },
+      value: {
+        id: item.variationValue.id,
+        value: item.variationValue.value,
+      },
+    });
+
+    // Add to variationValues object
+    group.variationValues[item.variationName.name] = item.variationValue.value;
+
+    // Update common fields if they were empty and this item has them
+    // These generally should be consistent for a given matcherId from the first item.
+    if (group.sku === "" && item.sku) group.sku = item.sku;
+    if (group.price === "" && item.price !== undefined && item.price !== null)
+      group.price = String(item.price);
+    if (group.qty === "" && item.stock !== undefined && item.stock !== null)
+      group.qty = String(item.stock);
+
+    // Fallback for image if the first item didn't have one
+    if (group.image === null && item.thumbnailId) {
+      group.image = {
+        id: item.thumbnailId,
+        name: item.thumbnail?.name || null,
+      };
+      if (item.thumbnail?.name) {
+        group.imageUrl = `/uploads/${item.thumbnail.name}`;
+      }
+    }
+  }
+
+  // Convert the Map values to an array
+  return Array.from(groupedByMatcherId.values()).map((group) => {
+    return {
+      id: group._sourceRecordId, // Use the stored ProductVariation record's ID as the group's ID
+      combination: group.combination,
+      variationValues: group.variationValues,
+      matcherId: group.matcherId, // Retain matcherId explicitly
+      sku: group.sku,
+      price: group.price,
+      qty: group.qty,
+      image: group.image, // This will be the object { id: "...", name: "..." } or null
+      imageUrl: group.imageUrl, // Optional: full URL
+    };
+  });
+}
 export async function createProductActions(formData) {
   try {
     let data = Object.fromEntries(formData.entries());
- 
+    console.log(data);
     if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
@@ -176,28 +272,34 @@ export async function createProductAction(formData) {
 
     // --- Basic Validation ---
     if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
-      throw new Error("সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)");
+      throw new Error(
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
+      );
     }
-    if (isNaN(parseFloat(data.regularPrice)) || parseFloat(data.regularPrice) < 0) {
-        throw new Error("Regular price must be a valid number.");
+    if (
+      isNaN(parseFloat(data.regularPrice)) ||
+      parseFloat(data.regularPrice) < 0
+    ) {
+      throw new Error("Regular price must be a valid number.");
     }
-
 
     // --- Parse Product Variations ---
     let parsedProductVariations = [];
-    if (data.productVariation && typeof data.productVariation === 'string') {
+    if (data.variations && typeof data.variations === "string") {
       try {
-        parsedProductVariations = JSON.parse(data.productVariation);
+        parsedProductVariations = JSON.parse(data.variations);
         if (!Array.isArray(parsedProductVariations)) {
-            throw new Error("Variations data must be an array.");
+          throw new Error("Variations data must be an array.");
         }
       } catch (e) {
         console.error("Error parsing product variations JSON:", e);
-        throw new Error("ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format.)");
+        throw new Error(
+          "ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format.)"
+        );
       }
-    } else if (Array.isArray(data.productVariation)) {
-        // If it's already an array (e.g. passed programmatically if not from FormData)
-        parsedProductVariations = data.productVariation;
+    } else if (Array.isArray(data.variations)) {
+      // If it's already an array (e.g. passed programmatically if not from FormData)
+      parsedProductVariations = data.variations;
     }
 
     const slug = await newSlug(data?.slug || data?.title);
@@ -211,7 +313,9 @@ export async function createProductAction(formData) {
           data: { lastProductCode: 1000 },
         });
       }
-      const newProductCode = (productCodeCounter.lastProductCode + 1).toString();
+      const newProductCode = (
+        productCodeCounter.lastProductCode + 1
+      ).toString();
       await tx.ProductCodeCounter.update({
         where: { id: productCodeCounter.id },
         data: { lastProductCode: productCodeCounter.lastProductCode + 1 },
@@ -226,11 +330,15 @@ export async function createProductAction(formData) {
         : [];
 
       // --- Filter out variation data from main product data ---
-      const { gallery, productVariation, ...filteredData } = data;
+      const { gallery, variations, ...filteredData } = data;
 
       // --- Robust Number Parsing Helper ---
       const parseOptionalNumber = (value, defaultValue = null) => {
-        if (value === undefined || value === null || String(value).trim() === "") {
+        if (
+          value === undefined ||
+          value === null ||
+          String(value).trim() === ""
+        ) {
           return defaultValue;
         }
         const num = Number(value);
@@ -243,8 +351,16 @@ export async function createProductAction(formData) {
       const preparedData = {
         ...filteredData,
         productCode: newProductCode,
-        isActive: Boolean(data?.isActive === 'on' || data?.isActive === true || data?.isActive === 'true'),
-        isFeatured: Boolean(data?.isFeatured === 'on' || data?.isFeatured === true || data?.isFeatured === 'true'),
+        isActive: Boolean(
+          data?.isActive === "on" ||
+            data?.isActive === true ||
+            data?.isActive === "true"
+        ),
+        isFeatured: Boolean(
+          data?.isFeatured === "on" ||
+            data?.isFeatured === true ||
+            data?.isFeatured === "true"
+        ),
         slug: slug,
         category: data?.category
           ? { connect: { id: data.category } }
@@ -252,7 +368,10 @@ export async function createProductAction(formData) {
         thumbnail: { connect: { id: data.thumbnail } },
         regularPrice: mainProductRegularPrice,
         discountPrice: parseOptionalNumber(data.discountPrice),
-        stockQuantity: parsedProductVariations.length > 0 ? 0 : parseOptionalNumber(data.stockQuantity, 0),
+        stockQuantity:
+          parsedProductVariations.length > 0
+            ? 0
+            : parseOptionalNumber(data.stockQuantity, 0),
         insideDhaka: parseOptionalNumber(data.insideDhaka),
         outSideDhaka: parseOptionalNumber(data.outSideDhaka),
         weight: parseOptionalNumber(data.weight),
@@ -262,7 +381,12 @@ export async function createProductAction(formData) {
         seoDescription: data?.seoDescription || null,
         // Ensure other fields from Product schema are handled
         mainImage: data?.mainImage || null, // Example if you have this field
-        imageGallery: data?.imageGallery ? data.imageGallery.split(",").map(s => s.trim()).filter(s => s) : [], // Example
+        imageGallery: data?.imageGallery
+          ? data.imageGallery
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => s)
+          : [], // Example
       };
 
       // 🔹 Create the product
@@ -284,22 +408,42 @@ export async function createProductAction(formData) {
       if (parsedProductVariations.length > 0) {
         const productVariationsToCreate = [];
         for (const variantData of parsedProductVariations) {
-          if (!variantData.matcherId || !Array.isArray(variantData.combination) || variantData.combination.length === 0) {
-            console.warn("Skipping incomplete variant data (missing matcherId or combination array):", variantData);
+          if (
+            !variantData.matcherId ||
+            !Array.isArray(variantData.combination) ||
+            variantData.combination.length === 0
+          ) {
+            console.warn(
+              "Skipping incomplete variant data (missing matcherId or combination array):",
+              variantData
+            );
             continue;
           }
 
           // SKU for this specific variant instance
-          const variantSku = variantData.sku || `${product.productCode}-${variantData.matcherId}`;
+          const variantSku =
+            variantData.sku ||
+            `${product.productCode}-${variantData.matcherId}`;
           // Stock, price, weight for this specific variant instance
           const variantStock = parseOptionalNumber(variantData.qty, 0); // Default to 0 stock
-          const variantPrice = parseOptionalNumber(variantData.price, product.regularPrice); // Default to main product price
-          const variantWeight = parseOptionalNumber(variantData.weight, product.weight); // Default to main product weight
+          const variantPrice = parseOptionalNumber(
+            variantData.price,
+            product.regularPrice
+          ); // Default to main product price
+          const variantWeight = parseOptionalNumber(
+            variantData.weight,
+            product.weight
+          ); // Default to main product weight
           const variantThumbnailId = variantData.image || product.thumbnailId; // Default to main product thumbnail
 
           for (const attrPair of variantData.combination) {
             if (!attrPair.variation?.id || !attrPair.value?.id) {
-              console.warn("Skipping variation attribute pair with missing IDs:", attrPair, "for matcherId:", variantData.matcherId);
+              console.warn(
+                "Skipping variation attribute pair with missing IDs:",
+                attrPair,
+                "for matcherId:",
+                variantData.matcherId
+              );
               continue;
             }
             productVariationsToCreate.push({
@@ -321,9 +465,14 @@ export async function createProductAction(formData) {
           await tx.productVariation.createMany({
             data: productVariationsToCreate,
           });
-        } else if (parsedProductVariations.length > 0 && productVariationsToCreate.length === 0) {
+        } else if (
+          parsedProductVariations.length > 0 &&
+          productVariationsToCreate.length === 0
+        ) {
           // This implies all parsedProductVariations items were malformed
-          throw new Error("সমস্ত ভ্যারিয়েশন তথ্য অসম্পূর্ণ বা ভুল ছিল। (All provided variation data was incomplete or incorrect.)");
+          throw new Error(
+            "সমস্ত ভ্যারিয়েশন তথ্য অসম্পূর্ণ বা ভুল ছিল। (All provided variation data was incomplete or incorrect.)"
+          );
         }
       }
       return product; // Return the created product from the transaction
@@ -338,8 +487,11 @@ export async function createProductAction(formData) {
 
     return { success: true, data: result };
   } catch (error) {
-    console.error("Error creating product:", error);
-    return { success: false, message: error.message || "প্রোডাক্ট তৈরি করতে একটি ত্রুটি ঘটেছে।" };
+    console.log("Error creating product:", error);
+    return {
+      success: false,
+      message: error.message || "প্রোডাক্ট তৈরি করতে একটি ত্রুটি ঘটেছে।",
+    };
   } finally {
     // Prisma client instance is usually managed globally in Next.js.
     // Explicitly disconnecting might not be necessary.
@@ -402,62 +554,110 @@ export const getProducts = async () => {
 
 export const getProductsOnScroll = async ({ page = 1, limit = 5 }) => {
   try {
-    // Calculate the offset based on the page and limit
     const offset = (page - 1) * limit;
 
-    // Fetch paginated data
-    const data = await prisma.product.findMany({
-      skip: offset, // Skip the previous pages
-      take: limit, // Limit the number of items per page
+    const productsFromDb = await prisma.product.findMany({
+      skip: offset,
+      take: limit,
       include: {
-        category: true,
+        category: true, // Include category details
         thumbnail: {
+          // Include product's main thumbnail
           select: {
             id: true,
-            name: true,
+            name: true, // Or full path if stored, or just name to construct URL later
           },
         },
         gallery: {
+          // Include product gallery images
           include: {
             media: {
+              select: {
+                id: true,
+                name: true, // Or full path
+              },
+            },
+          },
+        },
+        variations: {
+          // Include all related ProductVariation records
+          include: {
+            thumbnail: {
+              // Thumbnail for the specific variation attribute (if any)
+              select: {
+                id: true,
+                name: true, // Or full path
+              },
+            },
+            variationName: {
+              // The VariationName (e.g., "Color", "Size")
               select: {
                 id: true,
                 name: true,
               },
             },
+            variationValue: {
+              // The VariationValue (e.g., "Red", "XL")
+              select: {
+                id: true,
+                value: true,
+              },
+            },
           },
         },
-        variations:{
-          include:{
-            thumbnail: true,
-            variationName:true,
-            variaionValue:true
-
-          }
-        }
+      },
+      orderBy: {
+        // Optional: Add an order to ensure consistent pagination
+        createdAt: "desc",
       },
     });
-    console.log("Fetched products:", data);
-    // Transform the gallery field to extract only media details
-    const transformedData = data.map((product) => ({
-      ...product,
-      gallery: product.gallery.map((g) => g.media), // Extract only media details
-    }));
 
-    // Get the total count of products for pagination metadata
+    // console.log("Fetched products raw from DB:", JSON.stringify(productsFromDb, null, 2)); // For deep debugging
+
+    // Transform the data
+    const transformedProducts = productsFromDb.map((product) => {
+      // Transform gallery
+      const transformedGallery = product.gallery.map((g) => ({
+        id: g.media.id,
+        name: g.media.name,
+      }));
+
+      // Transform variations using the helper function
+      // Ensure product.variations is an array before passing
+      const transformedVariations =
+        product.hasVariations && Array.isArray(product.variations)
+          ? transformVariations(product.variations)
+          : [];
+
+      return {
+        ...product,
+        thumbnail: product.thumbnail
+          ? {
+              id: product.thumbnail.id,
+              name: product.thumbnail.name,
+            }
+          : null,
+        gallery: transformedGallery,
+        variations: transformedVariations,
+      };
+    });
+
+    // console.log("Transformed products:", JSON.stringify(transformedProducts, null, 2)); // For deep debugging
+
     const totalCount = await prisma.product.count();
 
     return {
       success: true,
-      data: transformedData,
+      data: transformedProducts,
       meta: {
-        totalCount, // Total number of products
-        totalPages: Math.ceil(totalCount / limit), // Total number of pages
-        currentPage: page, // Current page
-        limit, // Items per page
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+        limit,
       },
     };
   } catch (error) {
+    console.error("Error in getProductsOnScroll:", error); // Log the full error on the server
     return { success: false, error: error.message };
   }
 };
@@ -482,6 +682,28 @@ export const getProductBySlug = async (slug) => {
             media: {
               select: {
                 name: true,
+              },
+            },
+          },
+        },
+        variations: {
+          include: {
+            thumbnail: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            variationName: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            variationValue: {
+              select: {
+                id: true,
+                value: true,
               },
             },
           },

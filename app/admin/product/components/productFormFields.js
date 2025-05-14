@@ -86,7 +86,7 @@ export const productFormFields = ({
   {
     type: "productVariation",
     label: "Add Product variation",
-    name: "productVariation",
+    name: "variations",
     variationList: productVariationList,
     colSpan: "full",
   },
