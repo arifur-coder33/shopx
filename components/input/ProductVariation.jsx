@@ -833,7 +833,7 @@ export default function ProductVariationInput({
                                 <FileInput
                                   multipleSelect={false}
                                   label="" // No visible label needed here
-                                  name={`variation_image_${row.id}`} // Unique name for potential form submission (if not using hidden input)
+                                  // name={`variation_image_${row.id}`} // Unique name for potential form submission (if not using hidden input)
                                   defaultValue={row.imageUrl} // Use imageUrl from row data for initial display
                                   onImageSelect={(selectedImages) =>
                                     handleImageChange(selectedImages, row.id)

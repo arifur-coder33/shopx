@@ -17,7 +17,7 @@ export default function TagInput({
   const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    if (defaultValue.length > 0) {
+    if (defaultValue && defaultValue.length > 0) {
       setTags(
         defaultValue
           .split(",")

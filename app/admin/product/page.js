@@ -182,6 +182,7 @@ export default async function ProductListPage() {
     console.error("Failed to fetch data:", error);
   }
 
+  
   return (
     <div className="p-4">
       <ProductList

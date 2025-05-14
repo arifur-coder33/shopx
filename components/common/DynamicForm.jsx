@@ -45,7 +45,7 @@ export default function DynamicForm({
       closeModal();
     }
   }, [success, closeModal]);
-
+console.log(data)
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;

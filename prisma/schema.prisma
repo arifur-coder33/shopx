@@ -156,7 +156,7 @@ model ProductVariation{
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
   matcherId String
   variationNameId String @db.ObjectId
-  variaionName VariationName @relation(fields: [variationNameId],references: [id])
+  variationName VariationName @relation(fields: [variationNameId],references: [id])
   variationValueId String @db.ObjectId
   variaionValue VariationValue @relation(fields: [variationValueId],references: [id])
   
