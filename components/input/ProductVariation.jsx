@@ -2,17 +2,20 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 // --- Dynamically import Components & Icons ---
 const FileInput = dynamic(() => import("./FileInput"), {
-  // Adjust path to your FileInput
   ssr: false,
-  loading: () => <span className="h-12 w-12 block"></span>,
+  loading: () => (
+    <span className="h-12 w-12 block animate-pulse bg-gray-200 rounded-md"></span>
+  ),
 });
-
+// ... (other dynamic imports remain the same) ...
 const loadingIconFallback = (className = "h-5 w-5") => (
-  <span className={className}></span>
+  <span
+    className={`${className} inline-block bg-gray-300 rounded-sm animate-pulse`}
+  ></span>
 );
 const DynamicChevronDownIcon = dynamic(
   () => import("@heroicons/react/24/solid").then((mod) => mod.ChevronDownIcon),
@@ -40,45 +43,52 @@ const DynamicXCircleIcon = dynamic(
 );
 // --- ---
 
-// --- generateCombinations function (assumed to be correct from your snippet) ---
+// --- generateCombinations function (stable) ---
 const generateCombinations = (processedSelections) => {
+  // ... (your generateCombinations logic - assumed correct and stable) ...
   if (!processedSelections || processedSelections.length === 0) return [];
-  processedSelections.sort(([varAObj], [varBObj]) =>
-    varAObj.name.localeCompare(varBObj.name)
+  const sortedProcessedSelections = [...processedSelections].sort(
+    ([varAObj], [varBObj]) => varAObj.name.localeCompare(varBObj.name)
   );
-  return processedSelections.reduce((acc, [variationObj, valueObjects]) => {
-    const sortedValueObjects = Array.isArray(valueObjects)
-      ? [...valueObjects].sort((a, b) =>
-          String(a.value).localeCompare(String(b.value))
-        )
-      : [];
-    if (acc.length === 0) {
-      return sortedValueObjects.map((valueObj) => [
-        { variation: variationObj, value: valueObj },
-      ]);
-    }
-    const newAcc = [];
-    acc.forEach((combo) => {
-      sortedValueObjects.forEach((valueObj) => {
-        newAcc.push([...combo, { variation: variationObj, value: valueObj }]);
+  return sortedProcessedSelections.reduce(
+    (acc, [variationObj, valueObjects]) => {
+      const sortedValueObjects = Array.isArray(valueObjects)
+        ? [...valueObjects].sort((a, b) =>
+            String(a.value).localeCompare(String(b.value))
+          )
+        : [];
+      if (acc.length === 0) {
+        return sortedValueObjects.map((valueObj) => [
+          { variation: variationObj, value: valueObj },
+        ]);
+      }
+      const newAcc = [];
+      acc.forEach((combo) => {
+        sortedValueObjects.forEach((valueObj) => {
+          newAcc.push([...combo, { variation: variationObj, value: valueObj }]);
+        });
       });
-    });
-    return newAcc;
-  }, []);
+      return newAcc;
+    },
+    []
+  );
 };
 // --- ---
 
-// --- Component Definition ---
-export default function ProductVariationInput({
+const ProductVariationInput = React.memo(function ProductVariationInput({
   colSpan = "full",
-  variationList, // Array of { variation: {id, name}, values: [{id, value}, ...] }
+  variationList = [],
   initialHasVariations = false,
-  initialCombinations = [], // Array of row data from DB
-  name = "productVariation", // Name for the hidden input
+  initialCombinations = [],
+  name = "productVariation",
 }) {
-  const derivedInitialEnabled =
-    initialHasVariations ||
-    (initialCombinations && initialCombinations.length > 0);
+  // --- ALL HOOKS AT THE TOP ---
+  const derivedInitialEnabled = useMemo(
+    () =>
+      initialHasVariations ||
+      (initialCombinations && initialCombinations.length > 0),
+    [initialHasVariations, initialCombinations]
+  );
 
   const [hasVariationsEnabled, setHasVariationsEnabled] = useState(
     derivedInitialEnabled
@@ -88,145 +98,8 @@ export default function ProductVariationInput({
   );
   const [expandedCategories, setExpandedCategories] = useState({});
   const [selectedValues, setSelectedValues] = useState({}); // { VariationName: [ValueString, ...], ... }
-  const [rows, setRows] = useState([]); // Array of { uiKey, dbId, combination, ... }
+  const [rows, setRows] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
-
-  // --- Effect for Initial Data Loading ---
-  useEffect(() => {
-    if (
-      initialCombinations &&
-      initialCombinations.length > 0 &&
-      !isInitialized
-    ) {
-      const rowsForState = initialCombinations.map((initRow) => {
-        const sortedCombo = [...(initRow.combination || [])].sort((a, b) =>
-          a.variation.name.localeCompare(b.variation.name)
-        );
-        const uiKey = sortedCombo
-          .map((c) => `${c.variation.name}:${c.value.value}`)
-          .join("|");
-
-        // Ensure variationValues is present or derived for consistency
-        let currentVariationValues = initRow.variationValues;
-        if (!currentVariationValues && Array.isArray(initRow.combination)) {
-          currentVariationValues = initRow.combination.reduce((acc, c) => {
-            if (c.variation?.name && c.value?.value !== undefined) {
-              acc[c.variation.name] = String(c.value.value);
-            }
-            return acc;
-          }, {});
-        }
-
-        return {
-          uiKey: uiKey,
-          dbId: initRow.id, // This is the original database ID
-          combination: initRow.combination || [],
-          variationValues: currentVariationValues || {},
-          matcherId: initRow.matcherId || "", // Ensure matcherId is present
-          sku: initRow.sku || "",
-          price:
-            initRow.price !== undefined && initRow.price !== null
-              ? String(initRow.price)
-              : "",
-          qty:
-            initRow.qty !== undefined && initRow.qty !== null
-              ? String(initRow.qty)
-              : "",
-          image: initRow.image || null, // Expects {id, name} or null
-          imageUrl: initRow.imageUrl || null,
-        };
-      });
-
-      setRows(rowsForState);
-
-      const derivedSelectedValues = {};
-      initialCombinations.forEach((row) => {
-        if (Array.isArray(row.combination)) {
-          row.combination.forEach(({ variation, value }) => {
-            if (variation?.name && value?.value !== undefined) {
-              const varName = variation.name;
-              const valStr = String(value.value);
-              if (!derivedSelectedValues[varName]) {
-                derivedSelectedValues[varName] = new Set();
-              }
-              derivedSelectedValues[varName].add(valStr);
-            }
-          });
-        }
-      });
-      Object.keys(derivedSelectedValues).forEach((key) => {
-        derivedSelectedValues[key] = Array.from(
-          derivedSelectedValues[key]
-        ).sort();
-      });
-      setSelectedValues(derivedSelectedValues);
-
-      if (!hasVariationsEnabled) setHasVariationsEnabled(true);
-      if (!isSectionExpanded) setIsSectionExpanded(true);
-      const derivedExpandedCategories = {};
-      Object.keys(derivedSelectedValues).forEach((key) => {
-        derivedExpandedCategories[key] = true;
-      });
-      setExpandedCategories(derivedExpandedCategories);
-      setIsInitialized(true);
-    }
-  }, [
-    initialCombinations,
-    isInitialized,
-    hasVariationsEnabled,
-    isSectionExpanded,
-  ]);
-
-  // Effect to clear state when variations are disabled *after* initialization
-  useEffect(() => {
-    if (!hasVariationsEnabled && isInitialized) {
-      if (rows.length > 0) setRows([]);
-      if (Object.keys(selectedValues).length > 0) setSelectedValues({});
-      if (Object.keys(expandedCategories).length > 0) setExpandedCategories({});
-      if (isSectionExpanded) setIsSectionExpanded(false);
-      // setIsInitialized(false); // Optional: reset if re-init is desired on re-enable
-    }
-  }, [
-    hasVariationsEnabled,
-    isInitialized,
-    rows.length,
-    selectedValues,
-    expandedCategories,
-    isSectionExpanded,
-  ]);
-
-  const toggleCategoryExpand = (variationName) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [variationName]: !prev[variationName],
-    }));
-  };
-
-  const handleSelectValue = useCallback(
-    (variationName, valueString) => {
-      setSelectedValues((prev) => {
-        const currentValues = prev[variationName] || [];
-        const alreadySelected = currentValues.includes(valueString);
-        let updatedVariationValues;
-        if (alreadySelected) {
-          updatedVariationValues = currentValues.filter(
-            (v) => v !== valueString
-          );
-        } else {
-          updatedVariationValues = [...currentValues, valueString].sort();
-        }
-        const nextState = { ...prev };
-        if (updatedVariationValues.length === 0) {
-          delete nextState[variationName];
-        } else {
-          nextState[variationName] = updatedVariationValues;
-        }
-        return nextState;
-      });
-      if (!isInitialized) setIsInitialized(true);
-    },
-    [isInitialized]
-  );
 
   const variationListMap = useMemo(() => {
     const map = new Map();
@@ -240,227 +113,336 @@ export default function ProductVariationInput({
     return map;
   }, [variationList]);
 
-  // Effect to generate/update table rows based on selected values
-  // --- Effect to generate/update table rows based on changes in selected values ---
+  const generateUiKey = useCallback((combination) => {
+    // ... (your generateUiKey logic - assumed stable) ...
+    if (!combination || !Array.isArray(combination) || combination.length === 0)
+      return "";
+    const validComboItems = combination.filter(
+      (c) =>
+        c &&
+        c.variation &&
+        c.variation.name &&
+        c.value &&
+        c.value.value !== undefined
+    );
+    if (validComboItems.length !== combination.length) return "";
+    const sortedCombo = [...validComboItems].sort((a, b) =>
+      a.variation.name.localeCompare(b.variation.name)
+    );
+    return sortedCombo
+      .map((c) => `${c.variation.name}:${c.value.value}`)
+      .join("|");
+  }, []);
+
+  // --- Table Headers based on actual selections ---
+  const tableHeaders = useMemo(() => {
+    if (!hasVariationsEnabled) return [];
+    // Filter keys from selectedValues where the array of values is not empty, then sort
+    return Object.keys(selectedValues)
+      .filter((key) => selectedValues[key] && selectedValues[key].length > 0)
+      .sort();
+  }, [hasVariationsEnabled, selectedValues]); // Depends on selectedValues
+
+  // --- Hidden Input Value ---
+  const hiddenInputValue = useMemo(() => {
+    if (!hasVariationsEnabled || rows.length === 0) return "";
+    return JSON.stringify(
+      rows.map((row) => ({
+        uiKey: row.uiKey,
+        id: row.dbId,
+        combination: row.combination,
+        matcherId: row.matcherId,
+        sku: row.sku,
+        price: row.price,
+        qty: row.qty,
+        image: row.image ? row.image.id : null,
+      }))
+    );
+  }, [hasVariationsEnabled, rows]);
+  console.log("hiddenInputValue", hiddenInputValue);
+  // --- EFFECTS ---
+  // EFFECT 1: Initialize from `initialCombinations`
   useEffect(() => {
-    // --- Pre-conditions ---
-    if (!hasVariationsEnabled || !isInitialized) {
-      // If variations are disabled OR the component hasn't finished its initial load,
-      // don't proceed with generating rows.
-      if (!hasVariationsEnabled && rows.length > 0 && isInitialized) {
-        // If disabled after init, ensure rows are cleared (might be redundant, but safe)
-        console.log(
-          "ProductVariationInput (useEffect selectedValues): Variations disabled after init, clearing rows."
-        );
+    if (isInitialized || !variationListMap || variationListMap.size === 0) {
+      return;
+    }
+    if (!derivedInitialEnabled) {
+      setIsInitialized(true);
+      return;
+    }
+    if (!initialCombinations || initialCombinations.length === 0) {
+      setIsInitialized(true);
+      return;
+    }
+
+    const tempInitialRows = [];
+    const derivedSelected = {};
+    const derivedExpanded = {};
+
+    initialCombinations.forEach((initRow) => {
+      const combinationArray = Array.isArray(initRow.combination)
+        ? initRow.combination
+        : [];
+      const validCombination = combinationArray.filter(
+        (c) => c?.variation?.name && c?.value?.value !== undefined
+      );
+      if (validCombination.length !== combinationArray.length) {
+        /* ... */
+      }
+      const uiKey = generateUiKey(validCombination);
+      if (!uiKey) {
+        /* ... */ return;
+      }
+
+      validCombination.forEach(({ variation, value }) => {
+        const varName = variation.name;
+        const valStr = String(value.value);
+        if (!derivedSelected[varName]) derivedSelected[varName] = new Set();
+        derivedSelected[varName].add(valStr);
+        derivedExpanded[varName] = true;
+      });
+      tempInitialRows.push({
+        uiKey,
+        dbId: initRow.id,
+        combination: validCombination,
+        variationValues: validCombination.reduce((acc, c) => {
+          acc[c.variation.name] = String(c.value.value);
+          return acc;
+        }, {}),
+        matcherId:
+          initRow.matcherId ||
+          validCombination
+            .map((c) => String(c.value.value).toLowerCase().replace(/\s+/g, ""))
+            .sort()
+            .join("-"),
+        sku: initRow.sku || "",
+        price:
+          initRow.price !== undefined && initRow.price !== null
+            ? String(initRow.price)
+            : "",
+        qty:
+          initRow.qty !== undefined && initRow.qty !== null
+            ? String(initRow.qty)
+            : "",
+        image: initRow.image || null,
+        imageUrl: initRow.imageUrl || initRow.image?.url || null,
+      });
+    });
+
+    Object.keys(derivedSelected).forEach((key) => {
+      derivedSelected[key] = Array.from(derivedSelected[key]).sort();
+    });
+    setRows(tempInitialRows);
+    setSelectedValues(derivedSelected); // This will trigger the tableHeaders recalculation
+    setExpandedCategories(derivedExpanded);
+    if (!hasVariationsEnabled) setHasVariationsEnabled(true);
+    if (!isSectionExpanded) setIsSectionExpanded(true);
+    setIsInitialized(true);
+  }, [
+    initialCombinations,
+    variationListMap,
+    derivedInitialEnabled,
+    generateUiKey,
+    isInitialized,
+    hasVariationsEnabled,
+    isSectionExpanded,
+  ]);
+
+  // EFFECT: Clear state when variations are disabled
+  useEffect(() => {
+    if (!hasVariationsEnabled && isInitialized) {
+      setRows([]);
+      setSelectedValues({});
+      setExpandedCategories({});
+    }
+  }, [hasVariationsEnabled, isInitialized]);
+
+  // EFFECT 2: Generate/update table rows based on selectedValues changes
+  useEffect(() => {
+    if (
+      !hasVariationsEnabled ||
+      !isInitialized ||
+      !variationListMap ||
+      variationListMap.size === 0
+    ) {
+      return;
+    }
+
+    // If all selectedValues arrays are empty, clear rows
+    const hasAnySelection = Object.values(selectedValues).some(
+      (arr) => arr && arr.length > 0
+    );
+    if (!hasAnySelection) {
+      if (rows.length > 0) {
         setRows([]);
       }
-      return; // Exit early
+      return;
     }
 
-    // If no variation values are selected at all, clear the rows
-    if (Object.keys(selectedValues).length === 0) {
-      if (rows.length > 0) {
-        console.log(
-          "ProductVariationInput (useEffect selectedValues): No values selected, clearing rows."
-        );
-        setRows([]); // Clear existing rows
-      }
-      return; // Exit early
-    }
-    console.log(
-      "ProductVariationInput (useEffect selectedValues): Processing selectedValues:",
-      JSON.stringify(selectedValues, null, 2)
-    );
-
-    // --- Process Selections ---
     const processedSelections = Object.entries(selectedValues)
+      .filter(([_, valueStrings]) => valueStrings && valueStrings.length > 0) // Only process categories with selections
       .map(([variationName, selectedValueStrings]) => {
         const variationItem = variationListMap.get(variationName);
-        if (!variationItem?.variation || !Array.isArray(variationItem.values)) {
-          console.warn(
-            `ProductVariationInput (useEffect selectedValues): Variation data missing or invalid for: ${variationName}`
-          );
+        if (!variationItem?.variation || !Array.isArray(variationItem.values))
           return null;
-        }
         const valueMap = new Map(
           variationItem.values.map((v) => [String(v.value), v])
         );
         const selectedValueObjects = selectedValueStrings
-          .map((valueString) => valueMap.get(valueString))
+          .map((s) => valueMap.get(s))
           .filter(Boolean);
         if (selectedValueObjects.length === 0) return null;
         return [variationItem.variation, selectedValueObjects];
       })
       .filter(Boolean);
 
-    // If after processing, there are no valid selections left, clear rows and exit
-    if (processedSelections.length === 0) {
+    if (processedSelections.length === 0 && hasAnySelection) {
+      // Selections exist but couldn't be processed (e.g. variationListMap issue)
       if (rows.length > 0) {
-        console.log(
-          "ProductVariationInput (useEffect selectedValues): No valid processed selections, clearing rows."
-        );
         setRows([]);
       }
       return;
     }
+    if (processedSelections.length === 0) return; // No valid selections to generate combinations from
 
-    // --- Generate Combinations ---
-    const generatedCombinations = generateCombinations(processedSelections);
+    const generatedCombinationsFromSelection =
+      generateCombinations(processedSelections);
 
-    // --- Format New Rows (newRowsData) ---
-    // This step creates the basic structure for each combination based on current selections.
-    // For these newly structured rows, dbId is null and sku, price, etc., are empty
-    // because this data will be filled in during the merge step if the combination existed before.
-    const newRowsData = generatedCombinations.map((combo) => {
-      const sortedCombo = [...combo].sort((a, b) =>
-        a.variation.name.localeCompare(b.variation.name)
-      );
-      const uiKey = sortedCombo
-        .map((c) => `${c.variation.name}:${c.value.value}`)
-        .join("|");
-      const variationValues = combo.reduce((acc, c) => {
-        acc[c.variation.name] = String(c.value.value);
-        return acc;
-      }, {});
-      const matcherId = combo
-        .map((c) => String(c.value.value))
-        .map((val) => val.toLowerCase().replace(/\s+/g, ""))
-        .sort()
-        .join("-");
+    const newRowsData = generatedCombinationsFromSelection
+      .map((combo) => {
+        const uiKey = generateUiKey(combo);
+        if (!uiKey) return null;
+        const variationValues = combo.reduce((acc, c) => {
+          acc[c.variation.name] = String(c.value.value);
+          return acc;
+        }, {});
+        const matcherId = combo
+          .map((c) => String(c.value.value).toLowerCase().replace(/\s+/g, ""))
+          .sort()
+          .join("-");
+        return {
+          uiKey,
+          dbId: null,
+          combination: combo,
+          variationValues,
+          matcherId,
+          sku: "",
+          price: "",
+          qty: "",
+          image: null,
+          imageUrl: null,
+        };
+      })
+      .filter(Boolean);
 
-      return {
-        uiKey: uiKey,
-        dbId: null, // Intentionally null for new structures
-        combination: combo,
-        variationValues: variationValues,
-        matcherId: matcherId,
-        sku: "", // Intentionally empty
-        price: "", // Intentionally empty
-        qty: "", // Intentionally empty
-        image: null, // Intentionally null
-        imageUrl: null, // Intentionally null
-      };
-    });
-    // This console.log is expected to show empty sku, price, etc. for newRowsData items.
-    console.log(
-      "ProductVariationInput (useEffect selectedValues): newRowsData (structures from current selections, with empty data fields):",
-      JSON.stringify(newRowsData, null, 2)
-    );
-
-    // --- Merge with Previous Rows ---
-    // This is where data from `initialCombinations` (if any match the uiKey)
-    // or user-entered data from previous interactions is preserved.
     setRows((prevRows) => {
-      console.log(
-        "ProductVariationInput (useEffect selectedValues) - MERGE STEP - prevRows (current state, should be from initial load if first time after init):",
-        JSON.stringify(prevRows, null, 2)
-      );
       const prevRowsMap = new Map(prevRows.map((row) => [row.uiKey, row]));
-      console.log(
-        "ProductVariationInput (useEffect selectedValues) - MERGE STEP - prevRowsMap keys:",
-        Array.from(prevRowsMap.keys())
-      );
-
-      const finalMappedRows = newRowsData.map((newRowFromUI) => {
-        // newRowFromUI is an item from `newRowsData` (with dbId:null, empty sku, etc.)
+      const nextRows = newRowsData.map((newRowFromUI) => {
         const existingRowFromPrevState = prevRowsMap.get(newRowFromUI.uiKey);
-
         if (existingRowFromPrevState) {
-          // A row with the same uiKey was found in the previous state.
-          // This means this combination of attributes existed.
-          // We preserve its dbId and data fields (sku, price, qty, image).
-          console.log(
-            `ProductVariationInput (useEffect selectedValues) - MERGE STEP - MATCH for uiKey: [${newRowFromUI.uiKey}]`
-          );
-          console.log(
-            `    Existing dbId: ${existingRowFromPrevState.dbId}, SKU: ${
-              existingRowFromPrevState.sku
-            }, Price: ${existingRowFromPrevState.price}, Qty: ${
-              existingRowFromPrevState.qty
-            }, Image: ${JSON.stringify(existingRowFromPrevState.image)}`
-          );
           return {
-            uiKey: newRowFromUI.uiKey, // Use uiKey from the new structure (should be same)
-            dbId: existingRowFromPrevState.dbId, // CRITICAL: Keep DB ID from existing
-            combination: newRowFromUI.combination, // Use combination from new structure (ensures consistency if generateCombinations logic is canonical)
-            variationValues: newRowFromUI.variationValues, // Use from new structure
-            matcherId: newRowFromUI.matcherId, // Use from new structure
-            sku: existingRowFromPrevState.sku, // KEEP data from existing
-            price: existingRowFromPrevState.price, // KEEP data from existing
-            qty: existingRowFromPrevState.qty, // KEEP data from existing
-            image: existingRowFromPrevState.image, // KEEP data from existing
-            imageUrl: existingRowFromPrevState.imageUrl, // KEEP data from existing
+            ...newRowFromUI,
+            dbId: existingRowFromPrevState.dbId,
+            sku: existingRowFromPrevState.sku,
+            price: existingRowFromPrevState.price,
+            qty: existingRowFromPrevState.qty,
+            image: existingRowFromPrevState.image,
+            imageUrl: existingRowFromPrevState.imageUrl,
           };
-        } else {
-          // No row with this uiKey was found in the previous state.
-          // This is a genuinely new combination selected by the user after initial load,
-          // or the uiKey matching failed (which is the bug we're trying to find if data is lost).
-          console.log(
-            `ProductVariationInput (useEffect selectedValues) - MERGE STEP - NO MATCH for uiKey: [${newRowFromUI.uiKey}]. This will be a new row structure with empty data fields.`
-          );
-          return newRowFromUI; // Return the new row structure (with dbId:null, empty sku etc.)
         }
+        return newRowFromUI;
       });
-
-      console.log(
-        "ProductVariationInput (useEffect selectedValues) - MERGE STEP - finalMappedRows to be set to state:",
-        JSON.stringify(finalMappedRows, null, 2)
-      );
-      return finalMappedRows;
+      return nextRows;
     });
+  }, [
+    selectedValues,
+    hasVariationsEnabled,
+    isInitialized,
+    variationListMap,
+    generateUiKey,
+    rows.length,
+  ]); // rows.length ensures re-run if cleared
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedValues, hasVariationsEnabled, variationListMap, isInitialized]); // rows was removed from deps as it's set inside; this is a common pattern for this type of effect.
-  // However, be mindful of this if `rows` were needed for logic *before* `setRows`.
+  // --- UI Handlers (useCallback) ---
+  const handleToggleVariations = useCallback(
+    (event) => {
+      const isEnabled = event.target.checked;
+      setHasVariationsEnabled(isEnabled);
+      if (isEnabled) {
+        setIsSectionExpanded(true);
+        if (!isInitialized) setIsInitialized(true);
+      } else {
+        setIsSectionExpanded(false);
+      }
+    },
+    [isInitialized]
+  );
 
-  const handleToggleVariations = (event) => {
-    const isEnabled = event.target.checked;
-    setHasVariationsEnabled(isEnabled);
-    if (isEnabled) {
-      setIsSectionExpanded(true);
-      if (!isInitialized) setIsInitialized(true);
-    } else {
-      setIsSectionExpanded(false);
-    }
-  };
-
-  const toggleSectionExpand = () => {
+  const toggleSectionExpand = useCallback(() => {
     if (hasVariationsEnabled) setIsSectionExpanded((prev) => !prev);
-  };
+  }, [hasVariationsEnabled]);
 
-  const handleDeleteRow = (uiKeyToDelete) => {
-    const remainingRows = rows.filter((row) => row.uiKey !== uiKeyToDelete);
-    setRows(remainingRows);
-    if (remainingRows.length > 0) {
-      const nextSelectedValues = {};
-      remainingRows.forEach((row) => {
-        if (Array.isArray(row.combination)) {
-          row.combination.forEach(({ variation, value }) => {
-            if (variation?.name && value?.value !== undefined) {
-              const varName = variation.name;
-              const valStr = String(value.value);
-              if (!nextSelectedValues[varName])
-                nextSelectedValues[varName] = new Set();
-              nextSelectedValues[varName].add(valStr);
+  const toggleCategoryExpand = useCallback((variationName) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [variationName]: !prev[variationName],
+    }));
+  }, []);
+
+  const handleSelectValue = useCallback((variationName, valueString) => {
+    setSelectedValues((prev) => {
+      /* ... same as before ... */
+      const currentValues = prev[variationName] || [];
+      const alreadySelected = currentValues.includes(valueString);
+      let updatedVariationValues;
+      if (alreadySelected)
+        updatedVariationValues = currentValues.filter((v) => v !== valueString);
+      else updatedVariationValues = [...currentValues, valueString].sort();
+      const nextState = { ...prev };
+      if (updatedVariationValues.length === 0) delete nextState[variationName];
+      else nextState[variationName] = updatedVariationValues;
+      return nextState;
+    });
+  }, []);
+
+  const handleDeleteRow = useCallback(
+    (uiKeyToDelete) => {
+      // Update rows first
+      const remainingRows = rows.filter((row) => row.uiKey !== uiKeyToDelete);
+      setRows(remainingRows);
+
+      // Then, correctly derive the next selectedValues state based on remainingRows
+      setSelectedValues((prevSelected) => {
+        const nextSelected = {};
+        if (remainingRows.length > 0) {
+          remainingRows.forEach((row) => {
+            if (Array.isArray(row.combination)) {
+              row.combination.forEach(({ variation, value }) => {
+                if (variation?.name && value?.value !== undefined) {
+                  const varName = variation.name;
+                  const valStr = String(value.value);
+                  if (!nextSelected[varName]) nextSelected[varName] = new Set();
+                  nextSelected[varName].add(valStr);
+                }
+              });
             }
           });
+          Object.keys(nextSelected).forEach((key) => {
+            nextSelected[key] = Array.from(nextSelected[key]).sort();
+          });
         }
-      });
-      Object.keys(nextSelectedValues).forEach((key) => {
-        nextSelectedValues[key] = Array.from(nextSelectedValues[key]).sort();
-      });
-      if (
-        JSON.stringify(selectedValues) !== JSON.stringify(nextSelectedValues)
-      ) {
-        setSelectedValues(nextSelectedValues);
-      }
-    } else {
-      setSelectedValues({});
-    }
-    if (!isInitialized) setIsInitialized(true);
-  };
 
-  const handleImageChange = (selectedImages, rowUiKey) => {
+        if (JSON.stringify(prevSelected) !== JSON.stringify(nextSelected)) {
+          return nextSelected;
+        }
+        return prevSelected; // No change needed
+      });
+    },
+    [rows]
+  ); // Now depends on `rows` state directly for calculating next selectedValues
+
+  const handleImageChange = useCallback((selectedImages, rowUiKey) => {
+    // ... same as before ...
     const imageFile =
       selectedImages && selectedImages.length > 0 ? selectedImages[0] : null;
     setRows((prevRows) =>
@@ -469,32 +451,46 @@ export default function ProductVariationInput({
           ? {
               ...row,
               image: imageFile
-                ? { id: imageFile.id, name: imageFile.name }
+                ? { id: imageFile.id, name: imageFile.name, url: imageFile.url }
                 : null,
               imageUrl: imageFile?.url || null,
             }
           : row
       )
     );
-    if (!isInitialized) setIsInitialized(true);
-  };
+  }, []);
 
-  const handleInputChange = (e, rowUiKey, field) => {
+  const handleInputChange = useCallback((e, rowUiKey, field) => {
+    // ... same as before ...
     const { value } = e.target;
     setRows((prevRows) =>
       prevRows.map((row) =>
         row.uiKey === rowUiKey ? { ...row, [field]: value } : row
       )
     );
-    if (!isInitialized) setIsInitialized(true);
-  };
+  }, []);
 
-  const tableHeaders = useMemo(() => {
-    if (!hasVariationsEnabled) return [];
-    return Object.keys(selectedValues)
-      .filter((key) => selectedValues[key]?.length > 0)
-      .sort();
-  }, [hasVariationsEnabled, selectedValues]);
+  // --- Conditional Rendering for Loading State ---
+  // This MUST come AFTER all hook calls
+  if (
+    hasVariationsEnabled &&
+    !isInitialized &&
+    variationListMap.size > 0 &&
+    initialCombinations &&
+    initialCombinations.length > 0
+  ) {
+    return (
+      <div
+        className={`p-6 bg-gray-50 shadow-lg rounded-xl col-span-${colSpan} text-center`}
+      >
+        <div className="animate-pulse mt-4 space-y-3">
+          <div className="h-10 bg-gray-200 rounded w-full mx-auto"></div>
+          <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto"></div>
+          <div className="h-20 bg-gray-200 rounded w-full mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
 
   const rowVariants = {
     hidden: { opacity: 0, y: -10 },
@@ -513,22 +509,11 @@ export default function ProductVariationInput({
       transition: { duration: 0.3, ease: "easeInOut" },
     },
   };
-  console.log(
-    rows.map((row) => ({
-      // Transform row to the format expected by the backend server action
-      id: row.uiKey, // The backend expects the composite ID here
-      dbId: row.dbId, // Pass dbId for backend to know if it's existing
-      combination: row.combination,
-      matcherId: row.matcherId,
-      sku: row.sku,
-      price: row.price,
-      qty: row.qty,
-      image: row.image?.id || null, // Send only the image ID, as backend expects
-      // variationValues is not typically sent, backend derives from combination
-    }))
-  );
+
+  // --- JSX Render ---
   return (
     <div className={`p-6 bg-gray-50 shadow-lg rounded-xl col-span-${colSpan}`}>
+      {/* Header with Toggle */}
       <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
         <button
           type="button"
@@ -566,6 +551,7 @@ export default function ProductVariationInput({
         </label>
       </div>
 
+      {/* Variation Content Area */}
       <AnimatePresence initial={false}>
         {hasVariationsEnabled && isSectionExpanded && (
           <motion.div
@@ -577,119 +563,126 @@ export default function ProductVariationInput({
             variants={sectionVariants}
             className="space-y-6 overflow-hidden"
           >
+            {/* Variation Selection Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {variationList?.map((variationItem) => {
-                if (!variationItem?.variation?.name) return null;
-                const variationName = variationItem.variation.name;
-                const isCatExpanded = !!expandedCategories[variationName];
-                const selectionCount =
-                  selectedValues[variationName]?.length ?? 0;
-                const categoryKey = variationItem.variation.id || variationName;
-                return (
-                  <div
-                    key={categoryKey}
-                    className="border border-gray-200 rounded-lg shadow-sm bg-white overflow-hidden"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleCategoryExpand(variationName)}
-                      className={`flex items-center justify-between w-full p-3 text-left transition-colors duration-150 ease-in-out ${
-                        isCatExpanded ? "bg-gray-100" : "hover:bg-gray-50"
-                      }`}
-                      aria-expanded={isCatExpanded}
+              {variationList && variationList.length > 0 ? (
+                variationList.map((variationItem) => {
+                  // ... (Your variation item rendering)
+                  if (!variationItem?.variation?.name) return null;
+                  const variationName = variationItem.variation.name;
+                  const isCatExpanded = !!expandedCategories[variationName];
+                  const selectionCount =
+                    selectedValues[variationName]?.length ?? 0;
+                  const categoryKey =
+                    variationItem.variation.id || variationName;
+                  return (
+                    <div
+                      key={categoryKey}
+                      className="border border-gray-200 rounded-lg shadow-sm bg-white overflow-hidden"
                     >
-                      <div className="flex items-center space-x-2">
-                        {selectionCount > 0 ? (
-                          <DynamicCheckCircleIcon className="h-5 w-5 text-indigo-600 shrink-0" />
-                        ) : (
-                          <span className="h-5 w-5 block border-2 border-gray-300 rounded-full shrink-0"></span>
-                        )}
-                        <span className="font-semibold text-gray-700 text-base">
-                          {variationName}
-                        </span>
-                        {selectionCount > 0 && (
-                          <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
-                            {selectionCount} selected
+                      <button
+                        type="button"
+                        onClick={() => toggleCategoryExpand(variationName)}
+                        className={`flex items-center justify-between w-full p-3 text-left transition-colors duration-150 ease-in-out ${
+                          isCatExpanded ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                        aria-expanded={isCatExpanded}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {selectionCount > 0 ? (
+                            <DynamicCheckCircleIcon className="h-5 w-5 text-indigo-600 shrink-0" />
+                          ) : (
+                            <span className="h-5 w-5 block border-2 border-gray-300 rounded-full shrink-0"></span>
+                          )}
+                          <span className="font-semibold text-gray-700 text-base">
+                            {variationName}
                           </span>
+                          {selectionCount > 0 && (
+                            <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                              {selectionCount} selected
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-gray-400 shrink-0">
+                          {isCatExpanded ? (
+                            <DynamicChevronUpIcon className="h-5 w-5" />
+                          ) : (
+                            <DynamicChevronDownIcon className="h-5 w-5" />
+                          )}
+                        </span>
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {isCatExpanded && (
+                          <motion.div
+                            key={`${categoryKey}-content`}
+                            initial="collapsed"
+                            animate="open"
+                            exit="collapsed"
+                            variants={{
+                              open: { opacity: 1, height: "auto" },
+                              collapsed: { opacity: 0, height: 0 },
+                            }}
+                            transition={{ duration: 0.25, ease: "easeInOut" }}
+                            className="border-t border-gray-200"
+                          >
+                            <div className="p-3 space-y-2 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
+                              {variationItem.values &&
+                              variationItem.values.length > 0 ? (
+                                variationItem.values.map((valueItem) => {
+                                  if (!valueItem) return null;
+                                  const valueKey =
+                                    valueItem.id || valueItem.value;
+                                  return (
+                                    <label
+                                      key={valueKey}
+                                      className="flex items-center space-x-2.5 p-1.5 rounded-md hover:bg-gray-100 cursor-pointer transition-colors"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={
+                                          selectedValues[
+                                            variationName
+                                          ]?.includes(
+                                            String(valueItem.value)
+                                          ) ?? false
+                                        }
+                                        onChange={() =>
+                                          handleSelectValue(
+                                            variationName,
+                                            String(valueItem.value)
+                                          )
+                                        }
+                                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+                                      />
+                                      <span className="text-gray-700 select-none text-sm">
+                                        {valueItem.value}
+                                      </span>
+                                    </label>
+                                  );
+                                })
+                              ) : (
+                                <p className="text-xs text-gray-400 px-1.5 py-2">
+                                  No values defined.
+                                </p>
+                              )}
+                            </div>
+                          </motion.div>
                         )}
-                      </div>
-                      <span className="text-gray-400 shrink-0">
-                        {isCatExpanded ? (
-                          <DynamicChevronUpIcon className="h-5 w-5" />
-                        ) : (
-                          <DynamicChevronDownIcon className="h-5 w-5" />
-                        )}
-                      </span>
-                    </button>
-                    <AnimatePresence initial={false}>
-                      {isCatExpanded && (
-                        <motion.div
-                          key={`${categoryKey}-content`}
-                          initial="collapsed"
-                          animate="open"
-                          exit="collapsed"
-                          variants={{
-                            open: { opacity: 1, height: "auto" },
-                            collapsed: { opacity: 0, height: 0 },
-                          }}
-                          transition={{ duration: 0.25, ease: "easeInOut" }}
-                          className="border-t border-gray-200"
-                        >
-                          <div className="p-3 space-y-2 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
-                            {variationItem.values &&
-                            variationItem.values.length > 0 ? (
-                              variationItem.values.map((valueItem) => {
-                                if (!valueItem) return null;
-                                const valueKey =
-                                  valueItem.id || valueItem.value;
-                                return (
-                                  <label
-                                    key={valueKey}
-                                    className="flex items-center space-x-2.5 p-1.5 rounded-md hover:bg-gray-100 cursor-pointer transition-colors"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={
-                                        selectedValues[variationName]?.includes(
-                                          String(valueItem.value)
-                                        ) ?? false
-                                      }
-                                      onChange={() =>
-                                        handleSelectValue(
-                                          variationName,
-                                          String(valueItem.value)
-                                        )
-                                      }
-                                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
-                                    />
-                                    <span className="text-gray-700 select-none text-sm">
-                                      {valueItem.value}
-                                    </span>
-                                  </label>
-                                );
-                              })
-                            ) : (
-                              <p className="text-xs text-gray-400 px-1.5 py-2">
-                                No values defined.
-                              </p>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
-              {(!variationList || variationList.length === 0) &&
-                hasVariationsEnabled && (
-                  <div className="md:col-span-2 lg:col-span-3 text-center py-6 px-4 border border-dashed border-gray-300 rounded-lg bg-white">
-                    <p className="text-sm text-gray-500">
-                      No variation types defined.
-                    </p>
-                  </div>
-                )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="md:col-span-2 lg:col-span-3 text-center py-6 px-4 border border-dashed border-gray-300 rounded-lg bg-white">
+                  <p className="text-sm text-gray-500">
+                    No variation types (attributes) have been defined for this
+                    product yet.
+                  </p>
+                </div>
+              )}
             </div>
 
+            {/* Variation Table Area */}
             <AnimatePresence mode="wait">
               {rows.length > 0 ? (
                 <motion.div
@@ -703,6 +696,7 @@ export default function ProductVariationInput({
                   <table className="min-w-full text-sm text-left text-gray-600">
                     <thead className="bg-gray-100 border-b border-gray-200 text-xs text-gray-700 uppercase tracking-wider">
                       <tr>
+                        {/* tableHeaders now correctly reflects only selected variation types */}
                         {tableHeaders.map((header) => (
                           <th
                             key={header}
@@ -748,7 +742,7 @@ export default function ProductVariationInput({
                       <AnimatePresence initial={false}>
                         {rows.map((row, index) => (
                           <motion.tr
-                            key={row.uiKey} // CRITICAL: Use uiKey for React's reconciliation
+                            key={row.uiKey}
                             layout
                             variants={rowVariants}
                             initial="hidden"
@@ -763,14 +757,15 @@ export default function ProductVariationInput({
                                 key={`${row.uiKey}-${header}`}
                                 className="px-4 py-2 whitespace-nowrap font-medium text-gray-800"
                               >
-                                {row.variationValues?.[header] ?? "N/A"}
+                                {row.variationValues?.[header] ?? (
+                                  <span className="text-gray-400">-</span>
+                                )}
                               </td>
                             ))}
                             <td className="px-4 py-2 align-middle">
                               <FileInput
                                 multipleSelect={false}
-                                label=""
-                                defaultValue={row.image} // Prefer URL for display, fallback to ID for FileInput
+                                defaultValue={row.image}
                                 onImageSelect={(selectedImages) =>
                                   handleImageChange(selectedImages, row.uiKey)
                                 }
@@ -781,6 +776,7 @@ export default function ProductVariationInput({
                                 containerClassName="w-full"
                               />
                             </td>
+                            {/* ... other td for sku, price, qty ... */}
                             <td className="px-4 py-2 align-middle">
                               <input
                                 type="text"
@@ -838,9 +834,13 @@ export default function ProductVariationInput({
                   </table>
                 </motion.div>
               ) : (
+                /* Placeholders for no rows */
                 hasVariationsEnabled &&
-                isSectionExpanded &&
-                (Object.keys(selectedValues).length > 0 ? (
+                isSectionExpanded /* ... same placeholder logic ... */ &&
+                (Object.keys(selectedValues).length > 0 &&
+                Object.values(selectedValues).some(
+                  (arr) => arr && arr.length > 0
+                ) ? (
                   <motion.div
                     key="no-combos-placeholder"
                     initial={{ opacity: 0 }}
@@ -853,7 +853,7 @@ export default function ProductVariationInput({
                       No combinations generated.
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">
-                      Check selections.
+                      Review your selections or variation definitions.
                     </p>
                   </motion.div>
                 ) : (
@@ -871,7 +871,7 @@ export default function ProductVariationInput({
                         Select variation options
                       </h3>
                       <p className="text-sm text-gray-500 mt-1">
-                        Choose values to generate variations.
+                        Choose values to generate specific product variations.
                       </p>
                     </motion.div>
                   )
@@ -882,29 +882,9 @@ export default function ProductVariationInput({
         )}
       </AnimatePresence>
 
-      <input
-        name={name}
-        type="hidden"
-        value={
-          rows.length > 0
-            ? JSON.stringify(
-                rows.map((row) => ({
-                  // Transform row to the format expected by the backend server action
-                  id: row.uiKey, // The backend expects the composite ID here
-                  dbId: row.dbId, // Pass dbId for backend to know if it's existing
-                  combination: row.combination,
-                  matcherId: row.matcherId,
-                  sku: row.sku,
-                  price: row.price,
-                  qty: row.qty,
-                  image: row.image?.id || null, // Send only the image ID, as backend expects
-                  // variationValues is not typically sent, backend derives from combination
-                }))
-              )
-            : ""
-        }
-        readOnly
-      />
+      <input name={name} type="hidden" value={hiddenInputValue} readOnly />
     </div>
   );
-}
+});
+
+export default ProductVariationInput;

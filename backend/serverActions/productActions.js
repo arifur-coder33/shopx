@@ -837,7 +837,7 @@ export const getProductBySlug = async (slug) => {
 //     };
 //   }
 // };
-export async function updateProductAction({ id: productId, formData, slug }) {
+export async function updateProductActions({ id: productId, formData, slug }) {
   try {
     let data = Object.fromEntries(formData.entries());
 
@@ -921,8 +921,339 @@ export async function updateProductAction({ id: productId, formData, slug }) {
     await prisma.$disconnect();
   }
 }
+// prismaClient.js (or wherever your Prisma client is initialized)
+// import { PrismaClient } from '@prisma/client';
+// const prisma = new PrismaClient();
+// export default prisma;
 
-export async function deleteProductById(id) {
+export async function updateProductAction({ id: productId, formData, slug }) {
+  if (!productId) {
+    return { success: false, message: "Product ID is required for update." };
+  }
+
+  try {
+    let data = Object.fromEntries(formData.entries());
+
+    // --- Basic Validation ---
+    if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
+      throw new Error(
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
+      );
+    }
+    if (
+      isNaN(parseFloat(data.regularPrice)) ||
+      parseFloat(data.regularPrice) < 0
+    ) {
+      throw new Error("Regular price must be a valid number.");
+    }
+
+    // --- Parse Product Variations ---
+    let submittedVariationsData = [];
+    if (data.variations && typeof data.variations === "string") {
+      try {
+        submittedVariationsData = JSON.parse(data.variations);
+        if (!Array.isArray(submittedVariationsData)) {
+          throw new Error("Variations data must be an array.");
+        }
+      } catch (e) {
+        console.error("Error parsing product variations JSON for update:", e);
+        throw new Error(
+          "ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format for update.)"
+        );
+      }
+    } else if (Array.isArray(data.variations)) {
+      submittedVariationsData = data.variations;
+    }
+
+    // --- Robust Number Parsing Helper ---
+    const parseOptionalNumber = (value, defaultValue = null) => {
+      if (value === undefined || value === null || String(value).trim() === "")
+        return defaultValue;
+      const num = Number(value);
+      return isNaN(num) ? defaultValue : num;
+    };
+
+    const result = await prisma.$transaction(async (tx) => {
+      // --- Fetch Existing Product ---
+      const existingProduct = await tx.product.findUnique({
+        where: { id: productId },
+        include: {
+          variations: true, // Include existing variations to compare
+          gallery: true, // Include existing gallery to compare
+        },
+      });
+
+      if (!existingProduct) {
+        throw new Error("Product not found for update.");
+      }
+
+      // --- Slug Generation (only if title changed or slug is empty) ---
+      let finalSlug = existingProduct.slug;
+      if (
+        data.title !== existingProduct.title ||
+        (data.slug && data.slug !== existingProduct.slug) ||
+        !existingProduct.slug
+      ) {
+        finalSlug = await newSlug(data.slug || data.title);
+        // Check if new slug conflicts with another product (excluding current one)
+        const conflictingProduct = await tx.product.findFirst({
+          where: { slug: finalSlug, NOT: { id: productId } },
+        });
+        if (conflictingProduct) {
+          throw new Error(
+            `Slug "${finalSlug}" is already in use. Please choose a different one.`
+          );
+        }
+      }
+
+      // --- Prepare Gallery Media IDs for Update ---
+      const submittedGalleryMediaIds = data?.gallery
+        ? data.gallery
+            .split(",")
+            .map((id) => id.trim())
+            .filter((id) => id)
+        : [];
+      const existingGalleryMediaIds = existingProduct.gallery.map(
+        (g) => g.mediaId
+      );
+
+      const galleryIdsToAdd = submittedGalleryMediaIds.filter(
+        (id) => !existingGalleryMediaIds.includes(id)
+      );
+      const galleryEntriesToDelete = existingProduct.gallery.filter(
+        (g) => !submittedGalleryMediaIds.includes(g.mediaId)
+      );
+
+      // --- Filter out variation data from main product data ---
+      const { gallery, variations, ...filteredData } = data;
+
+      // --- Prepare Main Product Data for Update ---
+      const mainProductRegularPrice = Number(data.regularPrice);
+      const hasSubmittedVariations = submittedVariationsData.length > 0;
+
+      const productUpdateData = {
+        ...filteredData, // title, description, etc.
+        isActive: Boolean(
+          data?.isActive === "on" ||
+            data?.isActive === true ||
+            data?.isActive === "true"
+        ),
+        isFeatured: Boolean(
+          data?.isFeatured === "on" ||
+            data?.isFeatured === true ||
+            data?.isFeatured === "true"
+        ),
+        slug: finalSlug,
+        category: data?.category
+          ? { connect: { id: data.category } }
+          : data.category === ""
+          ? { disconnect: true }
+          : undefined,
+        thumbnail: data?.thumbnail
+          ? { connect: { id: data.thumbnail } }
+          : undefined, // Only connect if changed
+        regularPrice: mainProductRegularPrice,
+        discountPrice: parseOptionalNumber(data.discountPrice),
+        // Stock quantity on main product is 0 if it has variations, otherwise from form.
+        stockQuantity: hasSubmittedVariations
+          ? 0
+          : parseOptionalNumber(data.stockQuantity, 0),
+        insideDhaka: parseOptionalNumber(data.insideDhaka),
+        outSideDhaka: parseOptionalNumber(data.outSideDhaka),
+        weight: parseOptionalNumber(data.weight),
+        hasVariations: hasSubmittedVariations,
+        description: data?.description || null,
+        seoKeyWord: data?.seoKeyWord || null,
+        seoDescription: data?.seoDescription || null,
+        mainImage: data?.mainImage || null,
+        imageGallery: data?.imageGallery
+          ? data.imageGallery
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => s)
+          : [],
+      };
+
+      // 🔹 Update the product
+      const updatedProduct = await tx.product.update({
+        where: { id: productId },
+        data: productUpdateData,
+      });
+
+      // 🔹 Update Product Gallery ---
+      if (galleryEntriesToDelete.length > 0) {
+        await tx.productGallery.deleteMany({
+          where: { id: { in: galleryEntriesToDelete.map((g) => g.id) } },
+        });
+      }
+      if (galleryIdsToAdd.length > 0) {
+        await tx.productGallery.createMany({
+          data: galleryIdsToAdd.map((mediaId) => ({
+            productId: updatedProduct.id,
+            mediaId: mediaId,
+          })),
+        });
+      }
+
+      // --- Handle Product Variations ---
+      const existingVariationMatcherIds = new Set(
+        existingProduct.variations.map((v) => v.matcherId)
+      );
+      const submittedVariationMatcherIds = new Set(
+        submittedVariationsData.map((v) => v.matcherId)
+      );
+
+      // Variations to Delete:
+      // These are variations that existed in the DB but are NOT present in the submitted form data.
+      // We identify them by `matcherId`.
+      // Since multiple ProductVariation records can share a matcherId (one per attribute),
+      // we delete all ProductVariation records associated with a matcherId that's no longer submitted.
+      const matcherIdsToDelete = [...existingVariationMatcherIds].filter(
+        (matcherId) => !submittedVariationMatcherIds.has(matcherId)
+      );
+      if (matcherIdsToDelete.length > 0) {
+        console.log("Deleting variations for matcherIds:", matcherIdsToDelete);
+        await tx.productVariation.deleteMany({
+          where: {
+            productId: updatedProduct.id,
+            matcherId: { in: matcherIdsToDelete },
+          },
+        });
+      }
+
+      // Variations to Update or Create:
+      for (const submittedVariant of submittedVariationsData) {
+        if (
+          !submittedVariant.matcherId ||
+          !Array.isArray(submittedVariant.combination) ||
+          submittedVariant.combination.length === 0
+        ) {
+          console.warn(
+            "Skipping incomplete submitted variant data for update:",
+            submittedVariant
+          );
+          continue;
+        }
+
+        const variantSku =
+          submittedVariant.sku ||
+          `${updatedProduct.productCode}-${submittedVariant.matcherId}`;
+        const variantStock = parseOptionalNumber(submittedVariant.qty, 0);
+        const variantPrice = parseOptionalNumber(
+          submittedVariant.price,
+          updatedProduct.regularPrice
+        );
+        const variantWeight = parseOptionalNumber(
+          submittedVariant.weight,
+          updatedProduct.weight
+        );
+        // Use image.id from the FileInput component for thumbnailId
+        const variantThumbnailId =
+          submittedVariant.image || updatedProduct.thumbnailId;
+
+        // If this matcherId existed before, we need to update its associated ProductVariation records.
+        // This is tricky because one "variant" in the UI (e.g., Red-XL) corresponds to multiple
+        // ProductVariation rows in the DB (one for Color:Red, one for Size:XL, both sharing the same SKU, price, stock, matcherId).
+        if (existingVariationMatcherIds.has(submittedVariant.matcherId)) {
+          console.log(
+            "Updating existing variation for matcherId:",
+            submittedVariant.matcherId
+          );
+          // First, delete all old ProductVariation records for this matcherId to handle attribute changes easily.
+          // Then, re-create them with the new data/attributes. This is simpler than trying to match individual attribute rows.
+          await tx.productVariation.deleteMany({
+            where: {
+              productId: updatedProduct.id,
+              matcherId: submittedVariant.matcherId,
+            },
+          });
+          // Now, create them as if they are new (but they reuse the matcherId concept)
+          const variationsToCreateForThisMatcherId = [];
+          for (const attrPair of submittedVariant.combination) {
+            if (!attrPair.variation?.id || !attrPair.value?.id) {
+              console.warn(
+                "Skipping variation attribute pair with missing IDs for update:",
+                attrPair,
+                "matcherId:",
+                submittedVariant.matcherId
+              );
+              continue;
+            }
+            variationsToCreateForThisMatcherId.push({
+              productId: updatedProduct.id,
+              sku: variantSku,
+              stock: variantStock,
+              price: variantPrice,
+              thumbnailId: variantThumbnailId,
+              matcherId: submittedVariant.matcherId,
+              variationNameId: attrPair.variation.id,
+              variationValueId: attrPair.value.id,
+              weight: variantWeight,
+            });
+          }
+          if (variationsToCreateForThisMatcherId.length > 0) {
+            await tx.productVariation.createMany({
+              data: variationsToCreateForThisMatcherId,
+            });
+          }
+        } else {
+          // New variation (matcherId not seen before)
+          console.log(
+            "Creating new variation for matcherId:",
+            submittedVariant.matcherId
+          );
+          const newVariationsToCreate = [];
+          for (const attrPair of submittedVariant.combination) {
+            if (!attrPair.variation?.id || !attrPair.value?.id) {
+              console.warn(
+                "Skipping new variation attribute pair with missing IDs:",
+                attrPair,
+                "matcherId:",
+                submittedVariant.matcherId
+              );
+              continue;
+            }
+            newVariationsToCreate.push({
+              productId: updatedProduct.id,
+              sku: variantSku,
+              stock: variantStock,
+              price: variantPrice,
+              thumbnailId: variantThumbnailId,
+              matcherId: submittedVariant.matcherId,
+              variationNameId: attrPair.variation.id,
+              variationValueId: attrPair.value.id,
+              weight: variantWeight,
+            });
+          }
+          if (newVariationsToCreate.length > 0) {
+            await tx.productVariation.createMany({
+              data: newVariationsToCreate,
+            });
+          }
+        }
+      }
+      return updatedProduct;
+    });
+
+    // --- Revalidation ---
+    revalidatePath("/admin/product");
+    revalidatePath("/");
+    if (result.slug) {
+      revalidatePath(`/product/${result.slug}`);
+      revalidateTag(`product-${result.slug}`);
+    }
+    revalidateTag("products");
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error updating product:", error);
+    return {
+      success: false,
+      message: error.message || "প্রোডাক্ট আপডেট করতে একটি ত্রুটি ঘটেছে।",
+    };
+  }
+}
+export async function deleteProductByIds(id) {
   try {
     // Fetch the product to get its image data
     const product = await prisma.product.findUnique({
@@ -979,6 +1310,66 @@ export async function deleteProductById(id) {
     };
   } finally {
     await prisma.$disconnect();
+  }
+}
+export async function deleteProductById(productId) {
+  if (!productId) {
+    return { success: false, message: "Product ID is required for deletion." };
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Fetch the product to get its slug for revalidation before deleting
+      const productToDelete = await tx.product.findUnique({
+        where: { id: productId },
+        select: { slug: true }, // Only need slug
+      });
+
+      if (!productToDelete) {
+        throw new Error("Product not found for deletion.");
+      }
+
+      // 1. Delete related ProductGallery entries
+      await tx.productGallery.deleteMany({
+        where: { productId: productId },
+      });
+
+      // 2. Delete related ProductVariation entries
+      await tx.productVariation.deleteMany({
+        where: { productId: productId },
+      });
+
+      // 3. Delete the Product itself
+      await tx.product.delete({
+        where: { id: productId },
+      });
+
+      return { slug: productToDelete.slug }; // Return slug for revalidation
+    });
+
+    // --- Revalidation ---
+    revalidatePath("/admin/product");
+    revalidatePath("/");
+    if (result.slug) {
+      revalidatePath(`/product/${result.slug}`);
+      revalidateTag(`product-${result.slug}`);
+    }
+    revalidateTag("products");
+
+    return { success: true, message: "Product deleted successfully." };
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    if (error.code === "P2025") {
+      // Prisma code for record to delete not found
+      return {
+        success: false,
+        message: "Product not found or already deleted.",
+      };
+    }
+    return {
+      success: false,
+      message: error.message || "প্রোডাক্ট ডিলিট করতে একটি ত্রুটি ঘটেছে।",
+    };
   }
 }
 
