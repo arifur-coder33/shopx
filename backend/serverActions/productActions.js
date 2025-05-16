@@ -1150,6 +1150,8 @@ export async function updateProductAction({ id: productId, formData, slug }) {
         // Use image.id from the FileInput component for thumbnailId
         const variantThumbnailId =
           submittedVariant.image || updatedProduct.thumbnailId;
+        console.log("image id : ", submittedVariant.image);
+        console.log("variantThumbnailId id : ", variantThumbnailId);
 
         // If this matcherId existed before, we need to update its associated ProductVariation records.
         // This is tricky because one "variant" in the UI (e.g., Red-XL) corresponds to multiple
