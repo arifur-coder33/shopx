@@ -90,7 +90,7 @@ export async function deleteVariationAction(id) {
 }
 
 export async function getVariationByCategoryId(id) {
-  console.log("backend call");
+  console.log(`SERVER ACTION: getVariationByCategoryId called with ID: ${id}`);
   try {
     const data = await prisma.variationValue.findMany({
       where: { categoryId: id },
