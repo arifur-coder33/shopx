@@ -80,6 +80,8 @@ export default function ProductForm({ actionType, data, updateAction }) {
     });
   }, [categoryDropdownList, productVariationList, onSelectCategoryHandler]);
 
+  console.log("productvariationList product form", productVariationList); // Vercel Log
+
   const handleCreateAction = createAction;
   const handleUpdateAction = updateAction;
   return (
