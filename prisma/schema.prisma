@@ -155,10 +155,10 @@ model ProductVariation{
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
   matcherId String
-  variationNameId String @db.ObjectId
-  variationName VariationName @relation(fields: [variationNameId],references: [id])
-  variationValueId String @db.ObjectId
-  variationValue VariationValue @relation(fields: [variationValueId],references: [id])
+  variationNameId String? @db.ObjectId
+  variationName VariationName? @relation(fields: [variationNameId],references: [id])
+  variationValueId String? @db.ObjectId
+  variationValue VariationValue? @relation(fields: [variationValueId],references: [id])
   
 }
 

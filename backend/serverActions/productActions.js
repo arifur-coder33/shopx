@@ -545,7 +545,7 @@ export const getProducts = async () => {
       ...product,
       gallery: product.gallery.map((g) => g.media), // Extract only media details
     }));
-
+console.log(transformedData)
     return { success: true, data: transformedData };
   } catch (error) {
     return { success: false, error: error.message };
