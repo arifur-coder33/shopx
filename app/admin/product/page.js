@@ -160,24 +160,28 @@
 //     </div>
 //   );
 // }
-'use client'
+"use client";
 // import { getCategory } from "@/backend/serverActions/catagoryActions";
 // import { getProductsOnScroll } from "@/backend/serverActions/productActions";
-import useSWR, { SWRConfig } from 'swr'
+import useSWR from "swr";
 import ProductList from "./components/ProductList";
 
 // export const dynamic = "force-static";
 // export const revalidate = 60; // Revalidate every 60 seconds
 
-export default  function ProductListPage() {
+export default function ProductListPage() {
   let categoryData = [];
   let initialProductData = [];
-  const fetcher = url => fetch(url).then(r => r.json())
-    const { data:products, error,isLoading } = useSWR('/api/products', fetcher)
-    console.log(products)
-    if (isLoading) {
-      return "loading"
-    }
+  const fetcher = (url) => fetch(url).then((r) => r.json());
+  const {
+    data: products,
+    error,
+    isLoading,
+  } = useSWR("/api/products", fetcher, { refreshInterval: 1000 });
+  console.log(products);
+  if (isLoading && !products) {
+    return "loading";
+  }
   try {
     // Fetch categories and the first page of products
     // const [categories, products] = await Promise.all([
@@ -185,12 +189,11 @@ export default  function ProductListPage() {
     //   getProductsOnScroll({ page: 1, limit: 7 }), // Fetch only the first 10 items
     // ]);
     // categoryData = categories?.data || [];
-    initialProductData = products?.data || [];
+    initialProductData = products || [];
   } catch (error) {
     console.error("Failed to fetch data:", error);
   }
 
-  
   return (
     <div className="p-4">
       <ProductList

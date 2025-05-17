@@ -2,8 +2,8 @@ import AdminNavBar from "@/components/nav/AdminNav";
 import NavItem from "@/components/nav/NavItem";
 import { ModalProvider } from "@/context/ModalContext";
 import { SessionProvider } from "next-auth/react";
-
 import { Suspense } from "react";
+import { SWRConfig } from "swr";
 
 export const metadata = {
   title: "Admin | আমার শপ",
@@ -69,28 +69,30 @@ export default function AdminLayout({ children }) {
   const isNotFound = !children;
   return (
     <>
-      <SessionProvider>
-        <AdminNavBar />
-        <div className="max-w-7xl mx-auto ">
-          <div className="flex flex-row relative">
-            {/* side bar  */}
-            <div className="sm:w-64 w-36 hidden sm:block fixed shrink">
-              <div className="sm:w-64 w-36 flex flex-col min-h-screen bg-slate-950 absolute top-0 left-0 ">
-                {adminNavbarList.length > 0 &&
-                  adminNavbarList?.map((list) => (
-                    <NavItem key={list?.slug} item={list} />
-                  ))}
+      <SWRConfig>
+        <SessionProvider>
+          <AdminNavBar />
+          <div className="max-w-7xl mx-auto ">
+            <div className="flex flex-row relative">
+              {/* side bar  */}
+              <div className="sm:w-64 w-36 hidden sm:block fixed shrink">
+                <div className="sm:w-64 w-36 flex flex-col min-h-screen bg-slate-950 absolute top-0 left-0 ">
+                  {adminNavbarList.length > 0 &&
+                    adminNavbarList?.map((list) => (
+                      <NavItem key={list?.slug} item={list} />
+                    ))}
+                </div>
+              </div>
+              {/* main content */}
+              <div className="flex-1 shrink overflow-y overflow-x-auto sm:ml-64  min-h-screen ">
+                <Suspense fallback="loading...........">
+                  <ModalProvider>{children}</ModalProvider>
+                </Suspense>
               </div>
             </div>
-            {/* main content */}
-            <div className="flex-1 shrink overflow-y overflow-x-auto sm:ml-64  min-h-screen ">
-              <Suspense fallback="loading...........">
-                <ModalProvider>{children}</ModalProvider>
-              </Suspense>
-            </div>
           </div>
-        </div>
-      </SessionProvider>
+        </SessionProvider>
+      </SWRConfig>
     </>
   );
 }
