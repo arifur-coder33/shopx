@@ -12,7 +12,7 @@ export default function Imagecustom({
   priority,
   sizes,
   quality,
-  loading,
+
 }) {
   const [isLoaded, setIsLoaded] = useState(false);
   return (
@@ -20,7 +20,7 @@ export default function Imagecustom({
       src={cloudinaryMainImage(src, w, h)}
       sizes={sizes}
       // loader={customLoader}
-      className={`rounded-md  ${style}transition-opacity duration-500 ease-in-out ${
+      className={`rounded-md  ${style} ${
         isLoaded ? "remove-blur" : "blur"
       }`}
       // placeholder="blur"
@@ -31,7 +31,7 @@ export default function Imagecustom({
       onLoad={() => setIsLoaded(true)}
       priority={priority}
       quality={quality}
-      loading={loading}
+      
     />
   );
 }
