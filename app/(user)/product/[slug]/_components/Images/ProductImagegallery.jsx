@@ -14,7 +14,6 @@ export function ProductImageGallery({ imageGallery, title }) {
               w={800}
               h={800}
               alt={title}
-              loading="lazy"
               priority={false}
             />
           );

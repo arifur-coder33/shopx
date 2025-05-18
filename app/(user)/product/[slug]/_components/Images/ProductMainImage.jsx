@@ -23,6 +23,7 @@ export default function ProductMainImage({ image, title }) {
       w={500}
       h={500}
       alt={title}
+      priority={true}
     />
   );
 }

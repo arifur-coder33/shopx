@@ -145,3 +145,26 @@ body {
   transform: scale(1);
   transition: filter 0.3s ease-in, opacity 0.3s ease-in, transform 0.3s ease-in;
 }
+
+
+/* .blur {
+  filter: blur(10px);
+  opacity: 0.8;
+ 
+  transition: filter 0.3s ease-out, opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.remove-blur {
+  filter: blur(0);
+  opacity: 1;
+  transform: scale(1);
+  transition: filter 0.3s ease-in, opacity 0.3s ease-in, transform 0.3s ease-in;
+} */
+
+/* Ensure the image placeholder and image itself take up space if needed */
+.image-placeholder,
+.image-placeholder > img { /* Target Next/Image's img tag if needed */
+  display: block; /* Or inline-block, depending on layout */
+  width: 100%;
+  height: 100%;
+}
