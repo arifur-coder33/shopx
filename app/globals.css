@@ -131,3 +131,16 @@ body {
   filter: blur(0px);
   transition: filter 0.3s ease-in;
 }
+/* In your global CSS file */
+.image-custom-root.blur > div[style*="padding-top"], /* Targets the aspect ratio placeholder */
+.image-custom-root.blur > img { /* Targets the image itself before it's loaded if placeholder is complex */
+  filter: blur(10px);
+  transform: scale(1.05); /* Optional: Slight zoom for blur */
+  transition: filter 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.image-custom-root.remove-blur > div[style*="padding-top"],
+.image-custom-root.remove-blur > img {
+  filter: blur(0px);
+  transform: scale(1);
+}

@@ -16,6 +16,8 @@ export default function ProductCard({ product }) {
               w={300}
               h={300}
               alt={product?.title}
+              priority={false}
+               objectFit="cover"
             />
           </div>
           <div className="p-2">

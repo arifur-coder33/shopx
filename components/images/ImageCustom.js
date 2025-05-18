@@ -1,37 +1,146 @@
+// "use client";
+// import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+// import Image from "next/image";
+// import { useState } from "react";
+
+// export default function Imagecustom({
+//   src,
+//   style,
+//   w,
+//   h,
+//   alt,
+//   priority,
+//   sizes,
+//   quality,
+
+// }) {
+//   const [isLoaded, setIsLoaded] = useState(false);
+//   return (
+//     <Image
+//       src={cloudinaryMainImage(src, w, h)}
+//       sizes={sizes}
+//       // loader={customLoader}
+//       className={`rounded-md  ${style} ${
+//         isLoaded ? "remove-blur" : "blur"
+//       }`}
+     
+//       width={w}
+//       height={h}
+//       alt={alt ? alt : "image"}
+//       onLoad={() => setIsLoaded(true)}
+//       priority={priority}
+//       quality={quality}
+      
+//     />
+//   );
+// }
 "use client";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Imagecustom({
   src,
-  style,
+  style, // This style will be applied to the wrapper for placeholder
   w,
   h,
   alt,
-  priority,
+  priority, // If true, we'll bypass IntersectionObserver
   sizes,
   quality,
-
 }) {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const placeholderRef = useRef(null);
+
+  useEffect(() => {
+    // If priority is true, image should load immediately, so set isInView true
+    if (priority) {
+      setIsInView(true);
+      return;
+    }
+
+    // If no ref, or already in view (e.g. from priority), do nothing
+    if (!placeholderRef.current || isInView) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Update state when element comes into view
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.unobserve(entry.target); // No need to observe anymore
+        }
+      },
+      {
+        // Optional: Adjust rootMargin to trigger loading slightly before
+        // the element is fully in view. E.g., "0px 0px 200px 0px"
+        // means it will trigger when the element is 200px from the bottom edge
+        // of the viewport.
+        rootMargin: "0px 0px 100px 0px", // Load 100px before it's visible
+      }
+    );
+
+    observer.observe(placeholderRef.current);
+
+    return () => {
+      // Disconnect observer on unmount
+      if (placeholderRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        observer.unobserve(placeholderRef.current);
+      }
+    };
+  }, [priority, isInView]); // Re-run if priority changes or if isInView was somehow set externally
+
+  // If priority is true, render the image directly
+  if (priority) {
+    return (
+      <Image
+        src={cloudinaryMainImage(src, w, h)}
+        sizes={sizes}
+        className={`rounded-md ${style || ""} ${ // Added style here
+          isLoaded ? "remove-blur" : "blur"
+        }`}
+        width={w}
+        height={h}
+        alt={alt ? alt : "image"}
+        onLoad={() => setIsLoaded(true)}
+        priority={true} // Explicitly true
+        quality={quality}
+      />
+    );
+  }
+
+  // For non-priority, use Intersection Observer
   return (
-    <Image
-      src={cloudinaryMainImage(src, w, h)}
-      sizes={sizes}
-      // loader={customLoader}
-      className={`rounded-md  ${style} ${
-        isLoaded ? "remove-blur" : "blur"
+    <div
+      ref={placeholderRef}
+      style={{  height: h }} // Ensure placeholder takes up space
+      className={`rounded-md ${style || ""} ${ // Apply style to wrapper
+        isInView && isLoaded ? "remove-blur" : "blur" // Keep blur until loaded AND in view
       }`}
-      // placeholder="blur"
-      // blurDataURL="data:image/webp;base64,UklGRqoDAABXRUJQVlA4WAoAAAAgAAAAKwEAKwEASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDggvAEAANAiAJ0BKiwBLAE/mczmaTk/sigilJhL8DMJaW7hdVEbqmVb8E2dBzYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYPjYOVVnwYglEs+8zzYILCJAkwmZBjMjrgAZedAwi01GyBzYCOp4/ayJVJg7uv8S770YdQoIMUxP05GyTvFjuxPfLqLhIj5al5RMHA3Xs6nBSI3IZuKDaIYfOhe6CmsLY3ChXBeTo1VaDAjyz0wPZxHtHqlJxGvzakVug5sHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxsHxaAAP796MAAAABOP4Gbw4877zYl1xdySXKPQVaMVfr1SSq+F7hAaHVQw/OrG7A+Xc84ogl5fgEXXeiogTaHW7izJVnJ0Dgxt4JX3m4snuGEXE+fg+nw1t1BixUiqho74GWx5QC82oNlb/dBn/buLoNJM0iogqVIMbk9jp0LiejdVQAjWj2WFPIwGTN4YFE03kPWDZAr5DAAAAAAAAAAAA=="
-      width={w}
-      height={h}
-      alt={alt ? alt : "image"}
-      onLoad={() => setIsLoaded(true)}
-      priority={priority}
-      quality={quality}
-      
-    />
+    >
+      {isInView ? (
+        <Image
+          src={cloudinaryMainImage(src, w, h)}
+          sizes={sizes}
+          // No specific className for blur here, handled by parent div or can be added if needed
+          className={`rounded-md ${isLoaded ? "remove-blur" : "blur"}`} // This would make Image itself blur/unblur
+        
+          width={w}
+          height={h}
+          alt={alt ? alt : "image"}
+          onLoad={() => setIsLoaded(true)}
+          priority={false} // Explicitly false
+          quality={quality}
+          loading="lazy" // Still good to keep for browsers that support it well
+        />
+      ) : (
+        // Optional: A visible placeholder content while not in view
+        // The div itself acts as a placeholder maintaining dimensions.
+        // You could add a spinner or a specific background color.
+        // For now, the blur class on the div handles the visual.
+        null
+      )}
+    </div>
   );
 }
