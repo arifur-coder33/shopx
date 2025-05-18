@@ -23,14 +23,14 @@
 //       className={`rounded-md  ${style} ${
 //         isLoaded ? "remove-blur" : "blur"
 //       }`}
-     
+
 //       width={w}
 //       height={h}
 //       alt={alt ? alt : "image"}
 //       onLoad={() => setIsLoaded(true)}
 //       priority={priority}
 //       quality={quality}
-      
+
 //     />
 //   );
 // }
@@ -126,7 +126,7 @@
 //           sizes={sizes}
 //           // No specific className for blur here, handled by parent div or can be added if needed
 //           className={`rounded-md ${isInView && isLoaded ? "remove-blur" : "blur" ? "remove-blur" : "blur"}`} // This would make Image itself blur/unblur
-        
+
 //           width={w}
 //           height={h}
 //           alt={alt ? alt : "image"}
@@ -146,10 +146,10 @@
 //   );
 // }
 
-"use client"; 
+"use client";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Imagecustom({
   src,
@@ -172,7 +172,8 @@ export default function Imagecustom({
   const placeholderRef = useRef(null);
 
   useEffect(() => {
-    if (priority || isInView) { // If priority, or already in view, it's effectively "in view"
+    if (priority || isInView) {
+      // If priority, or already in view, it's effectively "in view"
       if (!isInView) setIsInView(true); // Ensure isInView is true if priority was initially false but became true
       return;
     }
@@ -222,7 +223,6 @@ export default function Imagecustom({
     imageDimensionProps.height = h;
     imageStyle.objectFit = objectFit; // objectFit is still relevant even without fill
   }
-
 
   const finalImageClassName = `rounded-md ${imageClassName || ""} ${
     isLoaded ? "remove-blur" : "blur"

@@ -14,6 +14,7 @@ export default async function HeroSection() {
       h={500}
       alt={data?.name || "banner"}
       priority={true}
+      objectFit="fi"
     />
   );
 }
