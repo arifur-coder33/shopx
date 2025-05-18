@@ -122,12 +122,26 @@ body {
     @apply hover:text-orange-500 hover:scale-110 transition;
   }
 }
-.blur {
-  filter: blur(5px);
+/* .blur {
+  filter: blur(10px);
   transition: filter 0.3s ease-in;
 }
 
 .remove-blur {
   filter: blur(0px);
   transition: filter 0.3s ease-in;
+} */
+.blur {
+  filter: blur(10px); /* Adjust blur amount as needed */
+  opacity: 0.8; /* Optional: slight opacity for blurred state */
+  transform: scale(1.01); /* Optional: slight zoom for blur effect */
+  transition: filter 0.3s ease-out, opacity 0.3s ease-out,
+    transform 0.3s ease-out;
+}
+
+.remove-blur {
+  filter: blur(0);
+  opacity: 1;
+  transform: scale(1);
+  transition: filter 0.3s ease-in, opacity 0.3s ease-in, transform 0.3s ease-in;
 }

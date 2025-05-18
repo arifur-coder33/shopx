@@ -7,18 +7,6 @@ export function ProductImageGallery({ imageGallery, title }) {
       {imageGallery?.length > 0 &&
         imageGallery.map((image) => {
           return (
-            // <Image
-            //   key={image}
-            //   src={cloudinaryMainImage(image, 800, 800)}
-            //   alt={title}
-            //   width={800}
-            //   height={800}
-            //   placeholder="blur"
-            //   blurDataURL={image}
-            //   sizes="(max-width: 768px) 100vh, (max-width: 1200px) 800px, 800px"
-            //   loading="lazy"
-            // />
-
             <Imagecustom
               key={image}
               sizes="(max-width: 768px) 300px, (max-width: 1200px) 400px, 800px"

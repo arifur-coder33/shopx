@@ -1,12 +1,10 @@
 "use client";
 
-
 import { homeBannerUpdate } from "@/backend/serverActions/bannerAction";
 
 import Button from "@/components/button";
-import Imagecustom from "@/components/images/ImageCustom";
+import FileInput from "@/components/input/FileInput";
 import FloatingInput from "@/components/input/FloatingInput";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "react-toastify";
@@ -29,8 +27,8 @@ export default function HomePageBannerForm({ data }) {
     const form = e.target;
     const formData = new FormData(form);
     const singleImage = formData.get("image");
-    if (singleImage?.size===0) {
-      formData.delete('image')
+    if (singleImage?.size === 0) {
+      formData.delete("image");
     }
     setError(null);
     setSuccess(null);
@@ -68,17 +66,16 @@ export default function HomePageBannerForm({ data }) {
           type={"text"}
           colSpan="full"
         />
-      
 
-        <FloatingInput
+        {/* <FloatingInput
           label={"Banner"}
           name={"image"}
           type={"file"}
           colSpan={"full"}
           onChange={(e) => handlemainImagechange(e.target.files[0])}
-        />
-
-        <div className="flex gap-6 col-span-full">
+        /> */}
+        <FileInput defaultValue={data?.image?.name} name={"image"} />
+        {/* <div className="flex gap-6 col-span-full">
           {uploadedMainimage && (
             <div className=" relative">
               <Image
@@ -104,8 +101,7 @@ export default function HomePageBannerForm({ data }) {
               </div>
             </>
           )}
-        </div>
-       
+        </div> */}
 
         <Button
           type={"submit"}

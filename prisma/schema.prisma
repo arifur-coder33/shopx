@@ -90,7 +90,7 @@ model Media {
   productsAsThumbnail Product[] 
   ProductVariationThumbnail ProductVariation[] 
   productGallery ProductGallery[]  // Explicit Many-to-Many Relation
-
+  banner banner[]  // Explicit Many-to-Many Relation
   createdAt DateTime @default(now())
 }
 
@@ -240,7 +240,8 @@ model notice{
 
 model banner{
   id              String @id @default(auto()) @map("_id") @db.ObjectId
-  image String?
+  thumbnailId    String?    @db.ObjectId
+  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
   name String?
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt  
