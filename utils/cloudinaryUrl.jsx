@@ -4,7 +4,7 @@ const cloudName =process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
     // Fallback to a transparent pixel or minimal placeholder to avoid errors
     return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   }
-  return `https://res.cloudinary.com/${cloudName}/image/upload/w_${widthHint},f_auto,q_auto,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/w_${widthHint},h_${heightHint},f_auto,q_auto,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
 }
 
 // export function cloudinaryMainImage(imageName, width, height) {

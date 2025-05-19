@@ -43,6 +43,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="bn">
+      <head>
+         <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body className={` ${tiro_bangla.className}  antialiased  theam`}>
         <NextTopLoader showSpinner={false} />
         <CartProvider>
