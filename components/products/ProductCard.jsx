@@ -62,8 +62,8 @@ export default function ProductCard({ product }) {
               src={product?.mainImage || product?.thumbnail?.name}
               alt={product?.title}
               // Option 1: Use width and height (objectFit will apply within these bounds)
-              w={300} // Desired display width
-              h={300} // Desired display height
+              w={230} // Desired display width
+              h={230} // Desired display height
               objectFit="cover" // How the image fits into w/h
               // fill={false} // This is the default if not specified
 

@@ -151,22 +151,131 @@ import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+// export default function Imagecustom({
+//   src,
+//   // Use 'className' for classes intended for the Image/wrapper
+//   // And 'imageClassName' specifically for the Next/Image element
+//   className: wrapperClassName, // Classes for the wrapper div (non-priority) or Image (priority)
+//   imageClassName, // Specific classes for the Next/Image component
+//   w,
+//   h,
+//   alt,
+//   priority,
+//   sizes,
+//   quality,
+//   objectFit = "cover", // Default to 'cover', allow override
+//   fill, // Add fill prop
+// }) {
+//   const [isLoaded, setIsLoaded] = useState(false);
+//   // Initialize isInView to true if priority is true
+//   const [isInView, setIsInView] = useState(!!priority);
+//   const placeholderRef = useRef(null);
+
+//   useEffect(() => {
+//     if (priority || isInView) {
+//       // If priority, or already in view, it's effectively "in view"
+//       if (!isInView) setIsInView(true); // Ensure isInView is true if priority was initially false but became true
+//       return;
+//     }
+
+//     if (!placeholderRef.current) return;
+
+//     const observer = new IntersectionObserver(
+//       ([entry]) => {
+//         if (entry.isIntersecting) {
+//           setIsInView(true);
+//           observer.unobserve(entry.target);
+//         }
+//       },
+//       {
+//         rootMargin: "0px 0px 100px 0px",
+//       }
+//     );
+
+//     const currentRef = placeholderRef.current;
+//     observer.observe(currentRef);
+
+//     return () => {
+//       if (currentRef) {
+//         observer.unobserve(currentRef);
+//       }
+//     };
+//   }, [priority, isInView]); // Re-run if priority changes
+
+//   const commonImageProps = {
+//     src: cloudinaryMainImage(src, fill ? undefined : w, fill ? undefined : h), // w,h ignored if fill is true
+//     alt: alt || "image",
+//     quality: quality,
+//     onLoad: () => setIsLoaded(true),
+//     priority: !!priority, // Ensure boolean
+//     sizes: sizes,
+//   };
+
+//   // Determine how to apply dimensions and objectFit
+//   let imageStyle = {};
+//   let imageDimensionProps = {};
+
+//   if (fill) {
+//     imageDimensionProps.fill = true;
+//     imageStyle.objectFit = objectFit;
+//   } else {
+//     imageDimensionProps.width = w;
+//     imageDimensionProps.height = h;
+//     imageStyle.objectFit = objectFit; // objectFit is still relevant even without fill
+//   }
+
+//   const finalImageClassName = `rounded-md ${imageClassName || ""} ${
+//     isLoaded ? "remove-blur" : "blur"
+//   }`;
+
+//   // If priority is true OR if it's now in view (for non-priority images)
+//   if (priority || isInView) {
+//     return (
+//       <Image
+//         {...commonImageProps}
+//         {...imageDimensionProps}
+//         style={imageStyle}
+//         className={finalImageClassName}
+//         loading={priority ? "eager" : "lazy"} // Eager for priority, lazy otherwise
+//         alt=""
+//       />
+//     );
+//   }
+
+//   // For non-priority images not yet in view, render the placeholder
+//   // The placeholder itself will be blurred by its own class
+//   return (
+//     <div
+//       ref={placeholderRef}
+//       style={{ width: w, height: h }} // Ensure placeholder takes up space
+//       className={`image-placeholder rounded-md ${wrapperClassName || ""} blur`} // Wrapper gets blur initially
+//     >
+//       {/* The div acts as a sized, blurred placeholder.
+//           You could put a low-quality placeholder image here if desired,
+//           but for blur effect, an empty div with background or just dimensions is often enough. */}
+//     </div>
+//   );
+// }
+
+// Imagecustom.js
+
+// ... (imports and other code) ...
+
 export default function Imagecustom({
   src,
-  // Use 'className' for classes intended for the Image/wrapper
-  // And 'imageClassName' specifically for the Next/Image element
-  className: wrapperClassName, // Classes for the wrapper div (non-priority) or Image (priority)
-  imageClassName, // Specific classes for the Next/Image component
-  w,
-  h,
+  className: wrapperClassName,
+  imageClassName,
+  w, // Still useful for Next/Image props and Cloudinary URL if not using fill
+  h, // Still useful for Next/Image props and Cloudinary URL if not using fill
   alt,
   priority,
   sizes,
   quality,
-  objectFit = "cover", // Default to 'cover', allow override
-  fill, // Add fill prop
+  objectFit = "cover",
+  fill,
 }) {
-  const [isLoaded, setIsLoaded] = useState(false);
+  // ... (useState, useEffect hooks remain the same) ...
+ const [isLoaded, setIsLoaded] = useState(false);
   // Initialize isInView to true if priority is true
   const [isInView, setIsInView] = useState(!!priority);
   const placeholderRef = useRef(null);
@@ -201,17 +310,15 @@ export default function Imagecustom({
       }
     };
   }, [priority, isInView]); // Re-run if priority changes
-
   const commonImageProps = {
-    src: cloudinaryMainImage(src, fill ? undefined : w, fill ? undefined : h), // w,h ignored if fill is true
-    alt: alt || "image",
+    src: cloudinaryMainImage(src, fill ? undefined : w, fill ? undefined : h),
+    alt: alt || "image", // Ensure alt is passed through
     quality: quality,
     onLoad: () => setIsLoaded(true),
-    priority: !!priority, // Ensure boolean
+    priority: !!priority,
     sizes: sizes,
   };
 
-  // Determine how to apply dimensions and objectFit
   let imageStyle = {};
   let imageDimensionProps = {};
 
@@ -219,40 +326,41 @@ export default function Imagecustom({
     imageDimensionProps.fill = true;
     imageStyle.objectFit = objectFit;
   } else {
+    // For non-fill, Next/Image uses width/height for aspect ratio hints
+    // and initial sizing, but it will still be responsive within its container.
     imageDimensionProps.width = w;
     imageDimensionProps.height = h;
-    imageStyle.objectFit = objectFit; // objectFit is still relevant even without fill
+    imageStyle.objectFit = objectFit;
   }
 
   const finalImageClassName = `rounded-md ${imageClassName || ""} ${
     isLoaded ? "remove-blur" : "blur"
   }`;
 
-  // If priority is true OR if it's now in view (for non-priority images)
   if (priority || isInView) {
     return (
       <Image
-        {...commonImageProps}
+        {...commonImageProps} // alt is included here
         {...imageDimensionProps}
         style={imageStyle}
         className={finalImageClassName}
-        loading={priority ? "eager" : "lazy"} // Eager for priority, lazy otherwise
-        alt=""
+        loading={priority ? "eager" : "lazy"}
+        // Removed explicit alt="" here as it's covered by commonImageProps
       />
     );
   }
 
   // For non-priority images not yet in view, render the placeholder
-  // The placeholder itself will be blurred by its own class
+  // The placeholder should fill its parent container, which already has the correct aspect ratio.
   return (
     <div
       ref={placeholderRef}
-      style={{ width: w, height: h }} // Ensure placeholder takes up space
-      className={`image-placeholder rounded-md ${wrapperClassName || ""} blur`} // Wrapper gets blur initially
+      // Make placeholder fill its parent, which is correctly sized by ProductCard
+      // The parent (.relative.aspect-square.w-full) defines the dimensions.
+      style={{ width: "100%", height: "100%" }}
+      className={`image-placeholder rounded-md ${wrapperClassName || ""} blur`}
     >
-      {/* The div acts as a sized, blurred placeholder.
-          You could put a low-quality placeholder image here if desired,
-          but for blur effect, an empty div with background or just dimensions is often enough. */}
+      {/* Content can be added here if needed, e.g., a very low-res inline SVG or similar */}
     </div>
   );
 }
