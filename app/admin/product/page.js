@@ -177,7 +177,7 @@ export default function ProductListPage() {
     data: products,
     error,
     isLoading,
-  } = useSWR("/api/products?page=1&limit=10", fetcher, {
+  } = useSWR("/api/products", fetcher, {
     refreshInterval: 1000,
   });
   console.log(products);
