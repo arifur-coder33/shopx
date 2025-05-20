@@ -261,66 +261,43 @@ import { useEffect, useRef, useState } from "react";
 
 // ... (imports and other code) ...
 
-// A simple, small, transparent base64 encoded GIF for blurDataURL
-const shimmer = (w, h) => `
-<svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <defs>
-    <linearGradient id="g">
-      <stop stop-color="#f0f0f0" offset="20%" />
-      <stop stop-color="#e0e0e0" offset="50%" />
-      <stop stop-color="#f0f0f0" offset="70%" />
-    </linearGradient>
-  </defs>
-  <rect width="${w}" height="${h}" fill="#f0f0f0" />
-  <rect id="r" width="${w}" height="${h}" fill="url(#g)" />
-  <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite"  />
-</svg>`;
-
-const toBase64 = (str) =>
-  typeof window === "undefined"
-    ? Buffer.from(str).toString("base64")
-    : window.btoa(str);
-
 export default function Imagecustom({
   src,
-  className: wrapperClassName = "", // For the main div wrapper
-  imageClassName = "", // For the Next/Image component itself
-  w,
-  h,
-  alt = "image",
-  priority = false,
+  className: wrapperClassName,
+  imageClassName,
+  w, // Still useful for Next/Image props and Cloudinary URL if not using fill
+  h, // Still useful for Next/Image props and Cloudinary URL if not using fill
+  alt,
+  priority,
   sizes,
   quality,
   objectFit = "cover",
   fill,
-  showSpinner = true, // New prop to control spinner visibility
 }) {
-  const [imageStatus, setImageStatus] = useState(
-    priority ? "loading" : "pending"
-  ); // 'pending', 'loading', 'loaded', 'error'
+  // ... (useState, useEffect hooks remain the same) ...
+  const [isLoaded, setIsLoaded] = useState(false);
+  // Initialize isInView to true if priority is true
   const [isInView, setIsInView] = useState(!!priority);
   const placeholderRef = useRef(null);
 
   useEffect(() => {
-    if (priority) {
-      // If priority, bypass IntersectionObserver and set to loading
-      setIsInView(true);
-      if (imageStatus === "pending") setImageStatus("loading");
+    if (priority || isInView) {
+      // If priority, or already in view, it's effectively "in view"
+      if (!isInView) setIsInView(true); // Ensure isInView is true if priority was initially false but became true
       return;
     }
 
-    if (!placeholderRef.current || isInView) return;
+    if (!placeholderRef.current) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsInView(true);
-          setImageStatus("loading"); // Start loading when it comes into view
           observer.unobserve(entry.target);
         }
       },
       {
-        rootMargin: "0px 0px 200px 0px", // Load images 200px before they enter viewport
+        rootMargin: "0px 0px 100px 0px",
       }
     );
 
@@ -332,18 +309,14 @@ export default function Imagecustom({
         observer.unobserve(currentRef);
       }
     };
-  }, [priority, isInView, imageStatus]); // imageStatus added to re-evaluate if needed
-
+  }, [priority, isInView]); // Re-run if priority changes
   const commonImageProps = {
-    alt,
-    quality,
-    priority, // next/image priority
-    sizes,
-    onError: () => setImageStatus("error"),
-    onLoad: () => {
-      // Add a slight delay to ensure blur effect is visible if loading is too fast
-      setTimeout(() => setImageStatus("loaded"), 50);
-    },
+    src: cloudinaryMainImage(src, fill ? undefined : w, fill ? undefined : h),
+    alt: alt || "image", // Ensure alt is passed through
+    quality: quality,
+    onLoad: () => setIsLoaded(true),
+    priority: !!priority,
+    sizes: sizes,
   };
 
   let imageStyle = {};
@@ -353,103 +326,42 @@ export default function Imagecustom({
     imageDimensionProps.fill = true;
     imageStyle.objectFit = objectFit;
   } else {
+    // For non-fill, Next/Image uses width/height for aspect ratio hints
+    // and initial sizing, but it will still be responsive within its container.
     imageDimensionProps.width = w;
     imageDimensionProps.height = h;
     imageStyle.objectFit = objectFit;
   }
 
-  // Determine CSS classes for Next/Image
-  let dynamicImageClassName = `image-next ${imageClassName} `;
-  if (imageStatus === "loading") {
-    dynamicImageClassName += "blur-on-load";
-  } else if (imageStatus === "loaded") {
-    dynamicImageClassName += "loaded";
-  }
+  const finalImageClassName = `rounded-md ${imageClassName || ""} ${
+    isLoaded ? "remove-blur" : "blur"
+  }`;
 
-  const placeholderContent = showSpinner ? (
-    <div className="image-loading-spinner"></div>
-  ) : null;
-
-  // If not priority and not yet in view, or src is missing
-  if (!src || (!priority && !isInView && imageStatus === "pending")) {
-    const placeholderStyle = fill
-      ? { width: "100%", height: "100%" }
-      : { width: w, height: h };
+  if (priority || isInView) {
     return (
-      <div
-        ref={placeholderRef}
-        style={placeholderStyle}
-        className={`image-custom-placeholder  image-loading-spinner ${wrapperClassName} rounded-md`}
-        aria-label={alt || "Image placeholder"}
-      >
-        {/* Optionally, show a spinner even in the initial placeholder */}
-        {/* {showSpinner && <div className="image-loading-spinner"></div>} */}
-      </div>
-    );
-  }
-
-  // If image encountered an error
-  if (imageStatus === "error") {
-    const errorPlaceholderStyle = fill
-      ? { width: "100%", height: "100%" }
-      : { width: w, height: h };
-    return (
-      <div
-        style={errorPlaceholderStyle}
-        className={`image-custom-placeholder ${wrapperClassName} rounded-md`}
-        role="img"
-        aria-label={`Error loading ${alt}`}
-      >
-        ⚠️
-      </div>
-    );
-  }
-
-  // Render the image (it will be either loading state with blur, or loaded state)
-  // The wrapper div ensures consistent sizing and allows rounded corners from `imageClassName` to apply if `overflow:hidden`
-  const wrapperStyles = fill
-    ? { position: "relative", width: "100%", height: "100%" }
-    : { width: w, height: h };
-
-  return (
-    <div
-      ref={placeholderRef} // Still needed for initial mount if not priority
-      className={`image-custom-wrapper ${wrapperClassName} rounded-md`}
-      style={wrapperStyles}
-    >
-      {imageStatus === "loading" && showSpinner && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1, // Above the blurring image
-          }}
-        >
-          <div className="image-loading-spinner"></div>
-        </div>
-      )}
       <Image
-        {...commonImageProps}
-        src={cloudinaryMainImage(
-          src,
-          fill ? undefined : w,
-          fill ? undefined : h
-        )}
+        alt=""
+        {...commonImageProps} // alt is included here
         {...imageDimensionProps}
         style={imageStyle}
-        className={dynamicImageClassName} // Ensure this includes rounded-md if needed
-        placeholder="blur" // Use Next.js built-in blur
-        blurDataURL={`data:image/svg+xml;base64,${toBase64(
-          shimmer(fill ? 700 : w, fill ? 475 : h)
-        )}`} // Generic shimmer
-        loading={priority ? "eager" : "lazy"} // next/image loading strategy
+        className={finalImageClassName}
+        loading={priority ? "eager" : "lazy"}
+        // Removed explicit alt="" here as it's covered by commonImageProps
       />
+    );
+  }
+
+  // For non-priority images not yet in view, render the placeholder
+  // The placeholder should fill its parent container, which already has the correct aspect ratio.
+  return (
+    <div
+      ref={placeholderRef}
+      // Make placeholder fill its parent, which is correctly sized by ProductCard
+      // The parent (.relative.aspect-square.w-full) defines the dimensions.
+      style={{ width: "100%", height: "100%" }}
+      className={`image-placeholder rounded-md ${wrapperClassName || ""} blur`}
+    >
+      {/* Content can be added here if needed, e.g., a very low-res inline SVG or similar */}
     </div>
   );
 }
