@@ -98,6 +98,8 @@ export default function FileInput({
   multipleSelect,
   colSpan = "col-span-full", // Default colSpan
   onImageSelect,
+  w = 96,
+  h = 96,
 }) {
   // Initialize state ensuring defaultValue is always treated as an array internally
   const [images, setImages] = useState(() => {
@@ -163,14 +165,14 @@ export default function FileInput({
         {images.map((image) => (
           <div
             key={image?.id}
-            className="relative group w-24 h-24 flex-shrink-0" // Fixed size for previews
+            className={`relative group w-[${w}px] h-[${h}px]  flex-shrink-0`} // Fixed size for previews
           >
             <ImageCustom
               className="rounded-md object-cover w-full h-full shadow-sm" // Ensure image covers the area
               placeholder="blur" // Keep placeholder if ImageCustom supports it
               src={image?.name} // Assuming name is the URL or path
-              w={96} // Provide appropriate dimensions for ImageCustom's optimization
-              h={96}
+              w={w} // Provide appropriate dimensions for ImageCustom's optimization
+              h={h}
               alt={image?.alt || `Selected image ${image?.id}`} // Add alt text
             />
             <button
@@ -195,7 +197,7 @@ export default function FileInput({
               // Using a div styled as a button/dropzone for the trigger
               <div
                 className={`
-                  w-24 h-24 flex flex-col items-center justify-center
+                  w-[${w}px] h-[${h}px] flex flex-col items-center justify-center
                   border-2 border-dashed border-gray-300 rounded-lg
                   text-gray-500 bg-white cursor-pointer
                   hover:border-indigo-500 hover:text-indigo-600
@@ -207,7 +209,10 @@ export default function FileInput({
                 role="button"
                 aria-label={multipleSelect ? "Add images" : "Add image"}
               >
-                <ImagePlus className="w-8 h-8 mb-1" strokeWidth={1.5} />
+                <ImagePlus
+                  className={`      w-[${w}px] h-[${h}px]  mb-1`}
+                  strokeWidth={1.5}
+                />
                 <span className="text-xs font-medium text-center">
                   {multipleSelect ? "Add Images" : "Add Image"}
                 </span>

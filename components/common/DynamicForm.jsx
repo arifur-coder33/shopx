@@ -213,7 +213,13 @@ export default function DynamicForm({
           disabled={isPending}
           className="w-full mt-2 py-2 col-span-full"
         >
-          {isPending ? "Saving..." : "Save"}
+          {actionType === "edit"
+            ? isPending
+              ? "Updating"
+              : "Update"
+            : isPending
+            ? "Saving..."
+            : "Save"}
         </Button>
       </div>
     </form>
