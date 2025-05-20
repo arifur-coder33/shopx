@@ -379,7 +379,7 @@ export default function Imagecustom({
       <div
         ref={placeholderRef}
         style={placeholderStyle}
-        className={`image-custom-placeholder ${wrapperClassName} rounded-md`}
+        className={`image-custom-placeholder  image-loading-spinner ${wrapperClassName} rounded-md`}
         aria-label={alt || "Image placeholder"}
       >
         {/* Optionally, show a spinner even in the initial placeholder */}
