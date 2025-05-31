@@ -10,8 +10,6 @@ import LazyModalButton from "@/components/modal/LazyModalButton";
 import { useEffect, useRef } from "react"; // Import useEffect
 import useSWRInfinite from "swr/infinite";
 
-// No interface definitions needed in JS
-
 export default function ProductList({ initialProductData, categoryData }) {
   const PAGE_SIZE = 7; // Number of items to load per page
   const observerRef = useRef(null); // useRef for IntersectionObserver instance
@@ -33,13 +31,12 @@ export default function ProductList({ initialProductData, categoryData }) {
       });
 
       if (!response.success || !response.data) {
-        return []; // Return empty array on failure or no data
+        return [];
       }
 
-      // IMPORTANT: Only return the data array
       return response.data;
     } catch (error) {
-      return []; // Return empty array on error
+      return [];
     }
   };
 

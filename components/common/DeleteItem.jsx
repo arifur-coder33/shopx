@@ -2,7 +2,7 @@
 
 import { toast } from "react-toastify";
 
-export default function DeleteItem({ deleteItem, id, children }) {
+export default function DeleteItem({ deleteItem, id, children, className }) {
   const deleteHandler = async () => {
     try {
       const confirmFromUser = confirm("Do you want to delete?");

@@ -273,6 +273,7 @@ export default function Imagecustom({
   quality,
   objectFit = "cover",
   fill,
+  ref,
 }) {
   // ... (useState, useEffect hooks remain the same) ...
   const [isLoaded, setIsLoaded] = useState(false);
