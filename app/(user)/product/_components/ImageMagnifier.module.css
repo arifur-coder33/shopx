@@ -1,67 +1,72 @@
 /* components/ImageMagnifier.module.css */
 .magnifierContainer {
   position: relative;
-  display: inline-block; /* Allows it to size based on content or be inline with other elements */
-  /* It should NOT have width: 100% here unless that's specifically desired for all cases */
-  vertical-align: top; /* Or middle, depending on alignment needs with sibling inline elements */
+  display: block; /* Ensures it takes the width of its parent */
+  width: 100%; 
+  vertical-align: top; /* Good practice for block elements */
 }
 
 .smallImageWrapperInitial,
 .smallImageWrapper {
-  position: relative; /* For Next/Image layout="fill" and absolute children */
-  display: block; /* Makes it take up width if its parent allows */
-  /* width: 100%; */ /* This would make it take 100% of magnifierContainer.
-                        If magnifierContainer is inline-block, this works.
-                        If magnifierContainer is block, then this is 100% of that block.
-                        Often, the parent of ImageMagnifier defines the max-width. */
+  position: relative; 
+  display: block; 
+  width: 100%; /* Takes full width of magnifierContainer */
+  /* height is determined by aspectRatio prop */
   cursor: crosshair;
-  border: 1px solid #ccc;
+  border: 1px solid #e0e0e0; /* Lighter border */
   -webkit-user-drag: none;
   user-select: none;
-  /* overflow: hidden; */ /* Removing overflow on wrapper allows glass UI to appear outside if needed */
-                          /* Be mindful of layout implications if glass is very large or offset far */
+  background-color: #f9f9f9; /* Light background for the image area */
+  /* overflow: hidden; */ /* Remove if mobile panel needs to overlay slightly outside */
 }
 
-/* This helps Next/Image with layout="fill" or "responsive" work correctly */
+/* Ensure Next/Image's wrapper span behaves correctly */
 .smallImageWrapperInitial > span,
 .smallImageWrapper > span {
   display: block !important; 
 }
 
+/* Styles for the actual <img> tag rendered by Next/Image */
 .smallImageWrapperInitial img,
 .smallImageWrapper img {
   display: block;
-  pointer-events: none;
+  pointer-events: none; /* Interaction is on the wrapper */
 }
 
+/* Desktop: Semi-transparent lens that moves over the small image */
 .desktopLens {
   position: absolute;
   pointer-events: none;
   box-sizing: border-box;
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  background-color: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  background-color: rgba(255, 255, 255, 0.2);
   z-index: 50;
 }
 
-.mobileGlassMagnifier {
+/* Mobile: Rectangular panel showing the zoomed image, fixed at the top of the small image */
+.mobileZoomPanel {
   position: absolute;
-  pointer-events: none;
   box-sizing: border-box;
-  border-radius: 50%;
-  border: 3px solid #fff;
-  box-shadow: 0 0 15px rgba(0,0,0,0.4), inset 0 0 10px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  background-color: #ffffff; /* Fallback or loading background */
   background-repeat: no-repeat;
-  overflow: hidden; /* Clip content to circle */
-  z-index: 100;
+  overflow: hidden; /* Clip magnified content */
+  z-index: 100; /* Above the small image */
+  pointer-events: none; /* User interacts with small image, panel just displays */
+  border-radius: 6px; /* Slightly rounded corners */
+  transition: opacity 0.1s ease-in-out; /* Smooth appearance (can be added via JS state) */
 }
 
+/* Desktop: Side panel showing the magnified portion */
 .desktopMagnifiedImageContainer {
   position: absolute;
-  border: 1px solid #aaa;
+  border: 1px solid #d0d0d0;
   overflow: hidden;
   background-repeat: no-repeat;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   box-sizing: border-box;
   pointer-events: none;
   z-index: 90;
+  background-color: #ffffff;
 }

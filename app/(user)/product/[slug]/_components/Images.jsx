@@ -1,47 +1,60 @@
+// your .../_components/Images.js file
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import ImageMagnifier from "../../_components/ImageMagnifier";
+import ImageMagnifier from "../../_components/ImageMagnifier"; // Make sure this path is correct
+
 export default function Images({ mainImage, title }) {
    const product = {
     smallImage: {
-      src:  cloudinaryMainImage(mainImage, 400, 400), // e.g., 600x400
-      width: 400,
-      height: 400,
-      alt: 'Amazing Product View 1',
+      src:  cloudinaryMainImage(mainImage, 600, 600), // Or your preferred small image size from Cloudinary
+      alt: title || 'Product Image',
     },
     largeImage: {
-        src:  cloudinaryMainImage(mainImage, 1600, 1600),
-      width: 1600,
-      height: 1600,
+      // Ensure this is a significantly higher resolution version for good zoom quality
+      src:  cloudinaryMainImage(mainImage, 1800, 1800), // e.g., 3x the small image dimensions
+      width: 1800, // Actual width of this large image file
+      height: 1800, // Actual height of this large image file
     },
   };
-  {
-    return (
-      <>
-        {/* <ProductMainImage title={title} image={mainImage} /> */}
-   <div >
+
+  // Determine aspect ratio from your Cloudinary call if needed, or set a fixed one
+  // For example, if your cloudinaryMainImage(mainImage, 600, 600) always returns a square image
+  const intendedAspectRatio = "1/1"; // Or calculate if dynamic: product.smallImage.width / product.smallImage.height
+
+  return (
+    <>
+      {/* The parent div of ImageMagnifier will dictate its available width.
+          In your ProductPage.js, this is the div with "col-span-3". */}
+      <div> 
         <ImageMagnifier
           smallImageSrc={product.smallImage.src}
           smallImageAlt={product.smallImage.alt}
-          // aspectRatio="1/1" // The wrapper above will define width, aspect-ratio defines height
-                           // Or, if your images are always square, you can hardcode "1/1"
-                           // If images have varying aspects, and you want to preserve them:
-          aspectRatio={null} // Will try to use natural aspect with layout="responsive"
+          
+          // --- Aspect Ratio ---
+          // If your small images are always square (e.g. 600x600 source from Cloudinary), use "1/1".
+          // If they have varying aspect ratios and you want to preserve that: pass `null`
+          // (but ensure your CSS/layout supports varying heights).
+          // For consistency, "1/1" is often good for product carousels/main images.
+          aspectRatio={intendedAspectRatio} 
 
+          // --- Large Image Details (for zoom) ---
           largeImageSrc={product.largeImage.src}
           largeImageWidth={product.largeImage.width}
           largeImageHeight={product.largeImage.height}
           
-          magnifiedImageContainerWidth={300}
-          magnifiedImageContainerHeight={300}
-          magnifierOffset={{ x: 10, y: 0 }}
+          // --- Desktop Zoom Panel Customization ---
+          magnifiedImageContainerWidth={350} // Width of the side zoom panel on desktop
+          magnifiedImageContainerHeight={350} // Height of the side zoom panel on desktop
+          magnifierOffset={{ x: 20, y: 0 }} // Gap between small image and desktop zoom panel
 
-          glassMagnifierSize={120}
-          // This offsets the *UI of the glass* upwards from the finger.
-          // The content *inside* the glass still corresponds to the touch point.
-          mobileGlassMagnifierUIVisibleOffset={{ x: 0, y: -80 }} 
+          // --- Mobile Top Zoom Panel Customization (New UI) ---
+          mobileZoomPanelHeight={120} // Height of the top zoom panel on mobile
+          mobileZoomPanelTopOffset={5} // Distance from the top of the small image
+          mobileZoomPanelWidthPercentage={95} // Panel width as % of small image (e.g. 95%)
+
+          // Optional: You can set an explicit zoomFactor if you don't want it auto-calculated
+          // zoomFactor={3} 
         />
       </div>
-      </>
-    );
-  }
+    </>
+  );
 }
