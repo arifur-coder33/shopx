@@ -1,65 +1,73 @@
 /* components/ImageMagnifier.module.css */
 .magnifierContainer {
   position: relative;
-  display: inline-block;
-  user-select: none; /* Prevent text selection during interaction */
+  display: inline-block; /* Or block if it should take full width of its parent */
+  user-select: none;
+  /* width is now controlled by its content (smallImageWrapper) or parent */
 }
+
+/* Used while dimensions are being calculated */
+.smallImageWrapperInitial {
+  position: relative; /* Needed for Next/Image layout="fill" */
+  width: 100%; /* Take full width of parent */
+  /* aspectRatio will be set by inline style */
+  display: block;
+}
+.smallImageWrapperInitial img { /* Target Next/Image's img */
+  object-fit: contain; /* Or cover, depending on desired behavior */
+}
+
 
 .smallImageWrapper {
   position: relative;
   cursor: crosshair;
   border: 1px solid #ccc;
-  overflow: hidden; /* Important: clips the mobile glass magnifier if it goes off edge */
-  /* width and height will be set by inline styles from props */
+  /* overflow: hidden; -- Let's remove this for now to see mobile glass behavior, can add back if needed */
+  /* width and height will be set by inline styles from state */
   -webkit-user-drag: none;
+  display: block; /* Ensure it behaves as a block for sizing */
 }
 
-.smallImageWrapper img {
+/* This is crucial for Next/Image with layout="fill" to work within a sized container */
+.smallImageWrapper > span {
+  display: block !important; /* Override Next/Image's default span styling if necessary */
+}
+
+
+.smallImageWrapper img { /* Target Next/Image's actual img tag */
   display: block;
-  max-width: 100%;
-  height: auto;
-  pointer-events: none; /* Mouse events should go to the wrapper */
-}
-
-/* Common Lens Style (not used directly, but base for others) */
-.baseLens {
-  position: absolute;
+  /* With layout="fill", width and height are 100% of parent span, object-fit handles scaling */
   pointer-events: none;
-  box-sizing: border-box;
 }
 
-/* Desktop: Semi-transparent square lens */
 .desktopLens {
-  composes: baseLens; /* Inherits from baseLens if you had one */
   position: absolute;
   pointer-events: none;
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.7);
   background-color: rgba(255, 255, 255, 0.25);
+  z-index: 50; /* Above image, below mobile glass if it were to overlap */
 }
 
-/* Mobile: Circular Glass Magnifier */
 .mobileGlassMagnifier {
-  composes: baseLens; /* Inherits from baseLens if you had one */
   position: absolute;
   pointer-events: none;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 3px solid #fff; /* Example border */
-  box-shadow: 0 0 10px rgba(0,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.1);
+  border: 3px solid #fff;
+  box-shadow: 0 0 15px rgba(0,0,0,0.4), inset 0 0 10px rgba(0,0,0,0.05);
   background-repeat: no-repeat;
-  overflow: hidden; /* Ensures content stays within the circle */
-  z-index: 100; /* Ensure it's above the small image */
+  overflow: hidden;
+  z-index: 100;
 }
 
-/* Desktop: Side panel for magnified image */
 .desktopMagnifiedImageContainer {
-  position: absolute; /* Positioned relative to magnifierContainer */
+  position: absolute;
   border: 1px solid #aaa;
   overflow: hidden;
   background-repeat: no-repeat;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
   box-sizing: border-box;
   pointer-events: none;
-  z-index: 90; /* Below mobile glass, but above other page content */
+  z-index: 90;
 }
