@@ -1,39 +1,34 @@
 /* components/ImageMagnifier.module.css */
 .magnifierContainer {
   position: relative;
-  display: block; /* Ensures it takes the width of its parent */
+  display: block; 
   width: 100%; 
-  vertical-align: top; /* Good practice for block elements */
+  vertical-align: top; 
 }
 
 .smallImageWrapperInitial,
 .smallImageWrapper {
   position: relative; 
   display: block; 
-  width: 100%; /* Takes full width of magnifierContainer */
-  /* height is determined by aspectRatio prop */
+  width: 100%; 
   cursor: crosshair;
-  border: 1px solid #e0e0e0; /* Lighter border */
+  border: 1px solid #e0e0e0; 
   -webkit-user-drag: none;
   user-select: none;
-  background-color: #f9f9f9; /* Light background for the image area */
-  /* overflow: hidden; */ /* Remove if mobile panel needs to overlay slightly outside */
+  background-color: #f9f9f9; 
 }
 
-/* Ensure Next/Image's wrapper span behaves correctly */
 .smallImageWrapperInitial > span,
 .smallImageWrapper > span {
   display: block !important; 
 }
 
-/* Styles for the actual <img> tag rendered by Next/Image */
 .smallImageWrapperInitial img,
 .smallImageWrapper img {
   display: block;
-  pointer-events: none; /* Interaction is on the wrapper */
+  pointer-events: none; 
 }
 
-/* Desktop: Semi-transparent lens that moves over the small image */
 .desktopLens {
   position: absolute;
   pointer-events: none;
@@ -43,22 +38,20 @@
   z-index: 50;
 }
 
-/* Mobile: Rectangular panel showing the zoomed image, fixed at the top of the small image */
 .mobileZoomPanel {
-  position: absolute;
+  /* position: absolute; */ /* REMOVED - will be set to 'fixed' via inline style */
   box-sizing: border-box;
   border: 1px solid rgba(0,0,0,0.1);
-  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-  background-color: #ffffff; /* Fallback or loading background */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2); /* Enhanced shadow for better visibility */
+  background-color: #ffffff; 
   background-repeat: no-repeat;
-  overflow: hidden; /* Clip magnified content */
-  z-index: 100; /* Above the small image */
-  pointer-events: none; /* User interacts with small image, panel just displays */
-  border-radius: 6px; /* Slightly rounded corners */
-  transition: opacity 0.1s ease-in-out; /* Smooth appearance (can be added via JS state) */
+  overflow: hidden; 
+  z-index: 1000; /* High z-index to be on top of everything */
+  pointer-events: none; 
+  border-radius: 8px; /* Slightly more rounded corners */
+  /* transition: opacity 0.1s ease-in-out; */ /* Can add if managing opacity via JS */
 }
 
-/* Desktop: Side panel showing the magnified portion */
 .desktopMagnifiedImageContainer {
   position: absolute;
   border: 1px solid #d0d0d0;

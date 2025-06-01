@@ -1,9 +1,9 @@
 // components/ImageMagnifier.js (or your path)
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image'; // Using standard Next/Image
+import Image from 'next/image';
 import styles from './ImageMagnifier.module.css';
-import useMediaQuery from '@/hooks/useMediaQuery'; // Ensure this path is correct
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 const ImageMagnifier = ({
   smallImageSrc,
@@ -15,9 +15,12 @@ const ImageMagnifier = ({
   magnifiedImageContainerWidth = 300,
   magnifiedImageContainerHeight = 300,
   magnifierOffset = { x: 15, y: 0 },
-  mobileZoomPanelHeight = 150,
-  mobileZoomPanelTopOffset = 10,
-  mobileZoomPanelWidthPercentage = 90,
+  
+  // Mobile specific props
+  mobileZoomPanelHeight = 100, // Height of the zoom panel on mobile
+  mobileZoomPanelTopOffsetDevice = 10, // Offset from the TOP OF THE DEVICE VIEWPORT
+  mobileZoomPanelWidthPercentage = 95, // Panel width as % of viewport width
+  
   zoomFactor,
 }) => {
   const [showMagnifier, setShowMagnifier] = useState(false);
@@ -44,19 +47,16 @@ const ImageMagnifier = ({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Effect to disable body scroll on mobile when magnifier is active
   useEffect(() => {
     if (isMobile && showMagnifier) {
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = ''; // Or 'auto' or whatever your default is
+      document.body.style.overflow = '';
     }
-    // Cleanup function to restore scroll when component unmounts or effect re-runs
     return () => {
       document.body.style.overflow = '';
     };
   }, [isMobile, showMagnifier]);
-
 
   const currentSmallImageWidth = renderedSmallImageDims.width;
   const currentSmallImageHeight = renderedSmallImageDims.height;
@@ -70,7 +70,11 @@ const ImageMagnifier = ({
   const desktopVisualLensX = Math.max(0, Math.min(cursorOnImagePosition.x - desktopVisualLensWidth / 2, currentSmallImageWidth - desktopVisualLensWidth));
   const desktopVisualLensY = Math.max(0, Math.min(cursorOnImagePosition.y - desktopVisualLensHeight / 2, currentSmallImageHeight - desktopVisualLensHeight));
 
-  const mobilePanelActualUiWidth = (mobileZoomPanelWidthPercentage / 100) * currentSmallImageWidth;
+  // --- Mobile Zoom Panel Calculations ---
+  // Use viewport width for panel width calculation if positioning fixed to viewport
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : currentSmallImageWidth; // Fallback
+  const mobilePanelActualUiWidth = (mobileZoomPanelWidthPercentage / 100) * viewportWidth;
+  
   const mobileContentSampleAreaWidth = mobilePanelActualUiWidth / actualZoomFactor;
   const mobileContentSampleAreaHeight = mobileZoomPanelHeight / actualZoomFactor;
 
@@ -97,37 +101,12 @@ const ImageMagnifier = ({
     setCursorOnImagePosition({ x, y });
   }, [currentSmallImageWidth, currentSmallImageHeight]);
 
-  // Event Handlers
-  const handleMouseEnter = (e) => {
-    if (isMobile || currentSmallImageWidth === 0) return;
-    setShowMagnifier(true);
-    calculateInteractionPoint(e.clientX, e.clientY);
-  };
-  const handleMouseMove = (e) => {
-    if (isMobile || !showMagnifier || currentSmallImageWidth === 0) return;
-    calculateInteractionPoint(e.clientX, e.clientY);
-  };
-  const handleMouseLeave = () => {
-    if (isMobile || currentSmallImageWidth === 0) return;
-    setShowMagnifier(false);
-  };
-  const handleTouchStart = (e) => {
-    // No e.preventDefault() here, to allow normal tap actions if not dragging
-    if (!isMobile || currentSmallImageWidth === 0) return;
-    setShowMagnifier(true);
-    calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY);
-  };
-  const handleTouchMove = (e) => {
-    if (!isMobile || !showMagnifier || currentSmallImageWidth === 0) return;
-    // CRUCIAL: Prevent default scroll/pan behavior WHEN dragging for magnification
-    e.preventDefault(); 
-    calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY);
-  };
-  const handleTouchEnd = () => {
-    if (!isMobile || currentSmallImageWidth === 0) return;
-    setShowMagnifier(false);
-    // Scroll is re-enabled by the useEffect cleanup when showMagnifier becomes false
-  };
+  const handleMouseEnter = (e) => { if (!isMobile && currentSmallImageWidth > 0) { setShowMagnifier(true); calculateInteractionPoint(e.clientX, e.clientY); }};
+  const handleMouseMove = (e) => { if (!isMobile && showMagnifier && currentSmallImageWidth > 0) calculateInteractionPoint(e.clientX, e.clientY); };
+  const handleMouseLeave = () => { if (!isMobile && currentSmallImageWidth > 0) setShowMagnifier(false); };
+  const handleTouchStart = (e) => { if (isMobile && currentSmallImageWidth > 0) { setShowMagnifier(true); calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY); }};
+  const handleTouchMove = (e) => { if (isMobile && showMagnifier && currentSmallImageWidth > 0) { e.preventDefault(); calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY); }};
+  const handleTouchEnd = () => { if (isMobile && currentSmallImageWidth > 0) setShowMagnifier(false); };
 
   if (currentSmallImageWidth === 0 || currentSmallImageHeight === 0) {
     return (
@@ -145,6 +124,19 @@ const ImageMagnifier = ({
     );
   }
 
+  // Calculate styles for the mobile zoom panel here to use `position: fixed`
+  const mobileZoomPanelStyle = (isMobile && showMagnifier) ? {
+    position: 'fixed', // Position relative to the viewport
+    width: `${mobilePanelActualUiWidth}px`,
+    height: `${mobileZoomPanelHeight}px`,
+    backgroundImage: `url(${largeImageSrc || smallImageSrc})`,
+    backgroundSize: `${effectiveLargeImageBackgroundWidth}px ${effectiveLargeImageBackgroundHeight}px`,
+    backgroundPosition: `${bgPosX}px ${bgPosY}px`,
+    top: `${mobileZoomPanelTopOffsetDevice}px`, // Use the new prop for device top offset
+    left: `${(viewportWidth - mobilePanelActualUiWidth) / 2}px`, // Centered horizontally in viewport
+    // zIndex and other styles will come from the CSS module class
+  } : {};
+
   return (
     <div className={styles.magnifierContainer}>
       <div
@@ -152,7 +144,6 @@ const ImageMagnifier = ({
         className={styles.smallImageWrapper}
         style={{ 
             aspectRatio: aspectRatio || undefined,
-            // Apply touch-action directly to the element handling touch events
             touchAction: isMobile ? 'none' : 'auto' 
         }}
         onMouseEnter={handleMouseEnter}
@@ -162,29 +153,10 @@ const ImageMagnifier = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* The Next/Image component itself does not need touch-action if its parent handles it,
-            and its pointer-events are none. */}
         {aspectRatio ? (
-          <Image 
-            src={smallImageSrc} 
-            alt={smallImageAlt} 
-            layout="fill" 
-            objectFit="contain" 
-            priority 
-            draggable="false" 
-            // style={{ touchAction: isMobile ? 'none' : 'auto' }} // Moved to wrapper
-          />
+          <Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority draggable="false" />
         ) : (
-          <Image 
-            src={smallImageSrc} 
-            alt={smallImageAlt} 
-            width={largeImageWidth} 
-            height={largeImageHeight} 
-            layout="responsive" 
-            priority 
-            draggable="false" 
-            // style={{ touchAction: isMobile ? 'none' : 'auto' }} // Moved to wrapper
-          />
+          <Image src={smallImageSrc} alt={smallImageAlt} width={largeImageWidth} height={largeImageHeight} layout="responsive" priority draggable="false" />
         )}
 
         {showMagnifier && !isMobile && (
@@ -199,22 +171,16 @@ const ImageMagnifier = ({
           />
         )}
         
-        {showMagnifier && isMobile && (
+        {/* Mobile Zoom Panel using `position: fixed` */}
+        {isMobile && showMagnifier && (
           <div 
-            className={styles.mobileZoomPanel}
-            style={{
-              width: `${mobilePanelActualUiWidth}px`,
-              height: `${mobileZoomPanelHeight}px`,
-              backgroundImage: `url(${largeImageSrc || smallImageSrc})`,
-              backgroundSize: `${effectiveLargeImageBackgroundWidth}px ${effectiveLargeImageBackgroundHeight}px`,
-              backgroundPosition: `${bgPosX}px ${bgPosY}px`,
-              top: `${mobileZoomPanelTopOffset}px`,
-              left: `${(currentSmallImageWidth - mobilePanelActualUiWidth) / 2}px`,
-            }}
+            className={styles.mobileZoomPanel} // This class will provide z-index, box-shadow etc.
+            style={mobileZoomPanelStyle}
           />
         )}
       </div>
 
+      {/* Desktop Magnified Image Container */}
       {showMagnifier && !isMobile && (
         <div
           className={styles.desktopMagnifiedImageContainer}
