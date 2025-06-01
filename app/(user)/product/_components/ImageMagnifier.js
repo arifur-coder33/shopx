@@ -8,30 +8,26 @@ import useMediaQuery from '@/hooks/useMediaQuery'; // Adjust path if needed
 const ImageMagnifier = ({
   smallImageSrc,
   smallImageAlt = "Product Image",
-  // Remove fixed smallImageWidth/Height from props if we want it to be responsive
-  // smallImageWidth,
-  // smallImageHeight,
-  aspectRatio = "1/1", // Default to square, e.g., "16/9", "4/3", or pass null for natural
+  aspectRatio = "1/1", // e.g., "16/9", "4/3". If null, attempts natural aspect ratio.
   largeImageSrc,
   largeImageWidth, // Actual width of the large image file
   largeImageHeight, // Actual height of the large image file
-  magnifiedImageContainerWidth = 300,
-  magnifiedImageContainerHeight = 300,
-  zoomFactor,
-  magnifierOffset = { x: 15, y: 0 },
-  glassMagnifierSize = 150,
-  mobileGlassMagnifierOffset = { x: 0, y: -90 }, // Offset glass UP from finger
+  magnifiedImageContainerWidth = 300, // Desktop zoom panel width
+  magnifiedImageContainerHeight = 300, // Desktop zoom panel height
+  zoomFactor, // Optional: explicit zoom factor
+  magnifierOffset = { x: 15, y: 0 }, // Desktop zoom panel offset
+  glassMagnifierSize = 150, // Mobile: diameter of the circular glass
+  mobileGlassMagnifierUIVisibleOffset = { x: 0, y: -90 }, // How much to shift the *visual* glass UI up
 }) => {
   const [showMagnifier, setShowMagnifier] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  // Position of the cursor/touch relative to the small image wrapper
+  const [cursorOnImagePosition, setCursorOnImagePosition] = useState({ x: 0, y: 0 });
   
-  // State for responsive small image dimensions
   const [renderedSmallImageDims, setRenderedSmallImageDims] = useState({ width: 0, height: 0 });
 
-  const smallImageWrapperRef = useRef(null); // Changed from smallImageRef
+  const smallImageWrapperRef = useRef(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
-  // Effect to get and update rendered dimensions of the small image
   useEffect(() => {
     const wrapper = smallImageWrapperRef.current;
     if (!wrapper) return;
@@ -42,70 +38,68 @@ const ImageMagnifier = ({
         height: wrapper.offsetHeight,
       });
     };
-
-    updateDimensions(); // Initial dimensions
-
+    updateDimensions();
     const resizeObserver = new ResizeObserver(updateDimensions);
     resizeObserver.observe(wrapper);
-
     return () => resizeObserver.disconnect();
-  }, []); // Empty dependency array ensures this runs once on mount and cleans up
+  }, []);
 
-  // Use rendered dimensions for calculations
   const currentSmallImageWidth = renderedSmallImageDims.width;
   const currentSmallImageHeight = renderedSmallImageDims.height;
 
   const actualZoomFactor = zoomFactor || (currentSmallImageWidth > 0 ? largeImageWidth / currentSmallImageWidth : 1);
 
-  let currentLensWidth, currentLensHeight;
+  // Determine the size of the lens/glass UI element
+  let uiLensWidth, uiLensHeight;
   if (isMobile) {
-    currentLensWidth = glassMagnifierSize;
-    currentLensHeight = glassMagnifierSize;
+    uiLensWidth = glassMagnifierSize;
+    uiLensHeight = glassMagnifierSize;
   } else {
-    currentLensWidth = currentSmallImageWidth > 0 ? magnifiedImageContainerWidth / actualZoomFactor : 0;
-    currentLensHeight = currentSmallImageHeight > 0 ? magnifiedImageContainerHeight / actualZoomFactor : 0;
+    uiLensWidth = currentSmallImageWidth > 0 ? magnifiedImageContainerWidth / actualZoomFactor : 0;
+    uiLensHeight = currentSmallImageHeight > 0 ? magnifiedImageContainerHeight / actualZoomFactor : 0;
   }
 
-  // Lens display position (where the visual lens/glass is shown)
-  let lensDisplayX = cursorPosition.x - currentLensWidth / 2;
-  let lensDisplayY = cursorPosition.y - currentLensHeight / 2;
+  // Calculate the top-left position for the *visual* lens/glass UI
+  // This is centered on the cursor/touch, then offset for mobile visibility
+  let visualLensUiX = cursorOnImagePosition.x - uiLensWidth / 2;
+  let visualLensUiY = cursorOnImagePosition.y - uiLensHeight / 2;
 
   if (isMobile) {
-    lensDisplayX += mobileGlassMagnifierOffset.x;
-    lensDisplayY += mobileGlassMagnifierOffset.y;
+    visualLensUiX += mobileGlassMagnifierUIVisibleOffset.x;
+    visualLensUiY += mobileGlassMagnifierUIVisibleOffset.y;
   }
   
-  // Constrained lens position (for background calculation, always within image bounds)
-  // This refers to the *area* of the small image being sampled.
-  const constrainedSampleAreaX = Math.max(0, Math.min(cursorPosition.x - currentLensWidth / 2, currentSmallImageWidth - currentLensWidth));
-  const constrainedSampleAreaY = Math.max(0, Math.min(cursorPosition.y - currentLensHeight / 2, currentSmallImageHeight - currentLensHeight));
+  // Calculate the top-left corner of the *area on the small image* that is being sampled for magnification.
+  // This area is always centered under the actual cursor/touch point.
+  // The size of this sample area is uiLensWidth/Height for mobile (the glass size),
+  // or the calculated desktop lens size for desktop.
+  const sampleAreaX = Math.max(0, Math.min(cursorOnImagePosition.x - uiLensWidth / 2, currentSmallImageWidth - uiLensWidth));
+  const sampleAreaY = Math.max(0, Math.min(cursorOnImagePosition.y - uiLensHeight / 2, currentSmallImageHeight - uiLensHeight));
 
+  // Calculate background position for the magnified image content
+  const backgroundPosX = -(sampleAreaX * actualZoomFactor);
+  const backgroundPosY = -(sampleAreaY * actualZoomFactor);
 
-  const backgroundPosX = -(constrainedSampleAreaX * actualZoomFactor);
-  const backgroundPosY = -(constrainedSampleAreaY * actualZoomFactor);
-
-
-  const calculatePositions = useCallback((clientX, clientY) => {
+  const calculateInteractionPoint = useCallback((clientX, clientY) => {
     if (!smallImageWrapperRef.current || currentSmallImageWidth === 0) return;
     const rect = smallImageWrapperRef.current.getBoundingClientRect();
     
     const x = Math.max(0, Math.min(clientX - rect.left, currentSmallImageWidth));
     const y = Math.max(0, Math.min(clientY - rect.top, currentSmallImageHeight));
     
-    setCursorPosition({ x, y });
+    setCursorOnImagePosition({ x, y });
 
-  }, [currentSmallImageWidth, currentSmallImageHeight]); // Depend on rendered dimensions
+  }, [currentSmallImageWidth, currentSmallImageHeight]);
 
-  // Event handlers (largely the same, but ensure they use currentSmallImageWidth/Height for checks if any)
   const handleMouseEnter = (e) => {
     if (isMobile || currentSmallImageWidth === 0) return;
     setShowMagnifier(true);
-    calculatePositions(e.clientX, e.clientY);
+    calculateInteractionPoint(e.clientX, e.clientY);
   };
 
   const handleMouseMove = (e) => {
     if (isMobile || !showMagnifier || currentSmallImageWidth === 0) return;
-    calculatePositions(e.clientX, e.clientY);
+    calculateInteractionPoint(e.clientX, e.clientY);
   };
 
   const handleMouseLeave = () => {
@@ -116,13 +110,13 @@ const ImageMagnifier = ({
   const handleTouchStart = (e) => {
     if (!isMobile || currentSmallImageWidth === 0) return;
     setShowMagnifier(true);
-    calculatePositions(e.touches[0].clientX, e.touches[0].clientY);
+    calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY);
   };
 
   const handleTouchMove = (e) => {
     if (!isMobile || !showMagnifier || currentSmallImageWidth === 0) return;
     e.preventDefault();
-    calculatePositions(e.touches[0].clientX, e.touches[0].clientY);
+    calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY);
   };
 
   const handleTouchEnd = () => {
@@ -130,15 +124,16 @@ const ImageMagnifier = ({
     setShowMagnifier(false);
   };
   
-  const commonLensStyle = {
-    width: `${currentLensWidth}px`,
-    height: `${currentLensHeight}px`,
-    top: `${lensDisplayY}px`,
-    left: `${lensDisplayX}px`,
+  // Style for the visual lens/glass UI element
+  const visualLensUiStyle = {
+    width: `${uiLensWidth}px`,
+    height: `${uiLensHeight}px`,
+    top: `${visualLensUiY}px`,
+    left: `${visualLensUiX}px`,
   };
 
-  // If dimensions are not yet calculated, don't render magnifier parts
   if (currentSmallImageWidth === 0 || currentSmallImageHeight === 0) {
+    // Initial state before dimensions are known, ensure wrapper respects aspect ratio
     return (
       <div
         ref={smallImageWrapperRef}
@@ -146,24 +141,25 @@ const ImageMagnifier = ({
         style={{ aspectRatio: aspectRatio || undefined }}
       >
         {aspectRatio ? (
-            <Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority />
+          <Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority />
         ) : (
-            <Image src={smallImageSrc} alt={smallImageAlt} width={largeImageWidth} height={largeImageHeight} layout="intrinsic" priority />
+          // For natural aspect ratio, provide intrinsic dimensions to Next/Image
+          // This helps the wrapper establish its initial size if parent doesn't constrain height
+          <Image src={smallImageSrc} alt={smallImageAlt} width={largeImageWidth} height={largeImageHeight} layout="intrinsic" priority />
         )}
       </div>
     );
   }
 
   return (
-    <div className={styles.magnifierContainer} style={{ width: currentSmallImageWidth }}>
+    // magnifierContainer should not enforce its own width, it should adapt or be controlled by parent CSS
+    <div className={styles.magnifierContainer}>
       <div
-        ref={smallImageWrapperRef} // Use this ref on the wrapper
+        ref={smallImageWrapperRef}
         className={styles.smallImageWrapper}
-        style={{ 
-            width: currentSmallImageWidth, 
-            height: currentSmallImageHeight,
-            aspectRatio: aspectRatio || undefined // Maintain aspect ratio
-        }}
+        // The wrapper itself will get its dimensions from its parent or its intrinsic content + aspect ratio
+        // No explicit width/height here to allow it to be responsive.
+        style={{ aspectRatio: aspectRatio || undefined }}
         onMouseEnter={handleMouseEnter}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -171,60 +167,55 @@ const ImageMagnifier = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Use Next/Image with layout="fill" and objectFit for responsiveness within the wrapper */}
         {aspectRatio ? (
-            <Image 
-                src={smallImageSrc} 
-                alt={smallImageAlt} 
-                layout="fill" 
-                objectFit="contain" // or "cover"
-                priority 
-                draggable="false"
-                style={{ touchAction: isMobile ? 'none' : 'auto' }}
-            />
-        ) : ( // Fallback for natural aspect ratio if aspectRatio prop is null/undefined
-            <Image 
-                src={smallImageSrc} 
-                alt={smallImageAlt} 
-                width={largeImageWidth} // Provide intrinsic width for layout="intrinsic"
-                height={largeImageHeight} // Provide intrinsic height
-                layout="intrinsic" // Or "responsive" if parent has width
-                priority 
-                draggable="false"
-                style={{ touchAction: isMobile ? 'none' : 'auto' }}
-            />
+          <Image 
+            src={smallImageSrc} 
+            alt={smallImageAlt} 
+            layout="fill" 
+            objectFit="contain"
+            priority 
+            draggable="false"
+            style={{ touchAction: isMobile ? 'none' : 'auto' }}
+          />
+        ) : (
+          <Image 
+            src={smallImageSrc} 
+            alt={smallImageAlt} 
+            width={largeImageWidth} // For layout="intrinsic" or "responsive"
+            height={largeImageHeight}
+            layout="responsive" // Or intrinsic. 'responsive' works if parent has width.
+            priority 
+            draggable="false"
+            style={{ touchAction: isMobile ? 'none' : 'auto' }}
+          />
         )}
 
-
-        {/* Desktop Lens (semi-transparent square) */}
         {showMagnifier && !isMobile && (
           <div
             className={styles.desktopLens}
             style={{
-              width: `${currentLensWidth}px`,
-              height: `${currentLensHeight}px`,
-              // For desktop lens, keep it strictly within image bounds (visually)
-              top: `${Math.max(0, Math.min(cursorPosition.y - currentLensHeight / 2, currentSmallImageHeight - currentLensHeight))}px`,
-              left: `${Math.max(0, Math.min(cursorPosition.x - currentLensWidth / 2, currentSmallImageWidth - currentLensWidth))}px`,
+              ...visualLensUiStyle, // Desktop lens also uses this for its position
+              // Ensure desktop lens stays visually within bounds if preferred
+              top: `${Math.max(0, Math.min(cursorOnImagePosition.y - uiLensHeight / 2, currentSmallImageHeight - uiLensHeight))}px`,
+              left: `${Math.max(0, Math.min(cursorOnImagePosition.x - uiLensWidth / 2, currentSmallImageWidth - uiLensWidth))}px`,
             }}
           />
         )}
 
-        {/* Mobile Glass Magnifier */}
         {showMagnifier && isMobile && (
           <div
             className={styles.mobileGlassMagnifier}
             style={{
-              ...commonLensStyle, // This now includes the mobile offset
+              ...visualLensUiStyle, // Position the UI element with offset
               backgroundImage: `url(${largeImageSrc || smallImageSrc})`,
               backgroundSize: `${largeImageWidth}px ${largeImageHeight}px`,
+              // Background position is based on the *actual touch point* (sampleAreaX/Y)
               backgroundPosition: `${backgroundPosX}px ${backgroundPosY}px`,
             }}
           />
         )}
       </div>
 
-      {/* Desktop Magnified Image Container (Side Panel) */}
       {showMagnifier && !isMobile && (
         <div
           className={styles.desktopMagnifiedImageContainer}
@@ -235,6 +226,7 @@ const ImageMagnifier = ({
             backgroundSize: `${largeImageWidth}px ${largeImageHeight}px`,
             backgroundPosition: `${backgroundPosX}px ${backgroundPosY}px`,
             top: `${magnifierOffset.y}px`,
+            // Position relative to the *rendered* width of the small image
             left: `${currentSmallImageWidth + magnifierOffset.x}px`,
           }}
         />

@@ -18,26 +18,27 @@ export default function Images({ mainImage, title }) {
     return (
       <>
         {/* <ProductMainImage title={title} image={mainImage} /> */}
-      <div style={{ padding: '20px' }}> {/* Add some padding for visual clarity */}
+   <div >
         <ImageMagnifier
           smallImageSrc={product.smallImage.src}
           smallImageAlt={product.smallImage.alt}
-          smallImageWidth={product.smallImage.width}
-          smallImageHeight={product.smallImage.height}
+          // aspectRatio="1/1" // The wrapper above will define width, aspect-ratio defines height
+                           // Or, if your images are always square, you can hardcode "1/1"
+                           // If images have varying aspects, and you want to preserve them:
+          aspectRatio={null} // Will try to use natural aspect with layout="responsive"
+
           largeImageSrc={product.largeImage.src}
           largeImageWidth={product.largeImage.width}
           largeImageHeight={product.largeImage.height}
           
-          // Desktop settings
-          magnifiedImageContainerWidth={500}
-          magnifiedImageContainerHeight={500}
-          magnifierOffset={{ x: 20, y: 0 }} // Gap between small image and zoom panel
+          magnifiedImageContainerWidth={300}
+          magnifiedImageContainerHeight={300}
+          magnifierOffset={{ x: 10, y: 0 }}
 
-          // Mobile "Glass Magnifier" settings
-          glassMagnifierSize={120} // Diameter of the circular lens on mobile
-          
-          // Optional: if you want to force a specific zoom level for both
-          // zoomFactor={4} 
+          glassMagnifierSize={120}
+          // This offsets the *UI of the glass* upwards from the finger.
+          // The content *inside* the glass still corresponds to the touch point.
+          mobileGlassMagnifierUIVisibleOffset={{ x: 0, y: -80 }} 
         />
       </div>
       </>

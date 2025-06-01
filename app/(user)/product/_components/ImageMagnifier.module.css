@@ -1,42 +1,36 @@
 /* components/ImageMagnifier.module.css */
 .magnifierContainer {
   position: relative;
-  display: inline-block; /* Or block if it should take full width of its parent */
-  user-select: none;
-  /* width is now controlled by its content (smallImageWrapper) or parent */
+  display: inline-block; /* Allows it to size based on content or be inline with other elements */
+  /* It should NOT have width: 100% here unless that's specifically desired for all cases */
+  vertical-align: top; /* Or middle, depending on alignment needs with sibling inline elements */
 }
 
-/* Used while dimensions are being calculated */
-.smallImageWrapperInitial {
-  position: relative; /* Needed for Next/Image layout="fill" */
-  width: 100%; /* Take full width of parent */
-  /* aspectRatio will be set by inline style */
-  display: block;
-}
-.smallImageWrapperInitial img { /* Target Next/Image's img */
-  object-fit: contain; /* Or cover, depending on desired behavior */
-}
-
-
+.smallImageWrapperInitial,
 .smallImageWrapper {
-  position: relative;
+  position: relative; /* For Next/Image layout="fill" and absolute children */
+  display: block; /* Makes it take up width if its parent allows */
+  /* width: 100%; */ /* This would make it take 100% of magnifierContainer.
+                        If magnifierContainer is inline-block, this works.
+                        If magnifierContainer is block, then this is 100% of that block.
+                        Often, the parent of ImageMagnifier defines the max-width. */
   cursor: crosshair;
   border: 1px solid #ccc;
-  /* overflow: hidden; -- Let's remove this for now to see mobile glass behavior, can add back if needed */
-  /* width and height will be set by inline styles from state */
   -webkit-user-drag: none;
-  display: block; /* Ensure it behaves as a block for sizing */
+  user-select: none;
+  /* overflow: hidden; */ /* Removing overflow on wrapper allows glass UI to appear outside if needed */
+                          /* Be mindful of layout implications if glass is very large or offset far */
 }
 
-/* This is crucial for Next/Image with layout="fill" to work within a sized container */
+/* This helps Next/Image with layout="fill" or "responsive" work correctly */
+.smallImageWrapperInitial > span,
 .smallImageWrapper > span {
-  display: block !important; /* Override Next/Image's default span styling if necessary */
+  display: block !important; 
 }
 
-
-.smallImageWrapper img { /* Target Next/Image's actual img tag */
+.smallImageWrapperInitial img,
+.smallImageWrapper img {
   display: block;
-  /* With layout="fill", width and height are 100% of parent span, object-fit handles scaling */
   pointer-events: none;
 }
 
@@ -46,7 +40,7 @@
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.7);
   background-color: rgba(255, 255, 255, 0.25);
-  z-index: 50; /* Above image, below mobile glass if it were to overlap */
+  z-index: 50;
 }
 
 .mobileGlassMagnifier {
@@ -57,7 +51,7 @@
   border: 3px solid #fff;
   box-shadow: 0 0 15px rgba(0,0,0,0.4), inset 0 0 10px rgba(0,0,0,0.05);
   background-repeat: no-repeat;
-  overflow: hidden;
+  overflow: hidden; /* Clip content to circle */
   z-index: 100;
 }
 
