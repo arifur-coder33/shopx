@@ -5,14 +5,14 @@ import ImageMagnifier from "../../_components/ImageMagnifier"; // Make sure this
 export default function Images({ mainImage, title }) {
    const product = {
     smallImage: {
-      src:  cloudinaryMainImage(mainImage, 600, 600), // Or your preferred small image size from Cloudinary
+      src:  cloudinaryMainImage(mainImage, 500, 500), // Or your preferred small image size from Cloudinary
       alt: title || 'Product Image',
     },
     largeImage: {
       // Ensure this is a significantly higher resolution version for good zoom quality
-      src:  cloudinaryMainImage(mainImage, 1800, 1800), // e.g., 3x the small image dimensions
-      width: 1800, // Actual width of this large image file
-      height: 1800, // Actual height of this large image file
+      src:  cloudinaryMainImage(mainImage, 800, 800), // e.g., 3x the small image dimensions
+      width: 800, // Actual width of this large image file
+      height: 800, // Actual height of this large image file
     },
   };
 
@@ -24,7 +24,7 @@ export default function Images({ mainImage, title }) {
     <>
       {/* The parent div of ImageMagnifier will dictate its available width.
           In your ProductPage.js, this is the div with "col-span-3". */}
-      <div> 
+      <div className="max-w-[500px]"> 
         <ImageMagnifier
           smallImageSrc={product.smallImage.src}
           smallImageAlt={product.smallImage.alt}

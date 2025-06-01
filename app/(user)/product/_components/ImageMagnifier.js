@@ -1,7 +1,7 @@
 // components/ImageMagnifier.js (or your path)
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import Image from 'next/image'; // Using standard Next/Image
 import styles from './ImageMagnifier.module.css';
 import useMediaQuery from '@/hooks/useMediaQuery'; // Ensure this path is correct
 
@@ -31,7 +31,7 @@ const ImageMagnifier = ({
     const wrapper = smallImageWrapperRef.current;
     if (!wrapper) return;
     const updateDimensions = () => {
-      if (wrapper.offsetWidth > 0 && wrapper.offsetHeight > 0) { // Ensure valid dimensions
+      if (wrapper.offsetWidth > 0 && wrapper.offsetHeight > 0) {
         setRenderedSmallImageDims({
           width: wrapper.offsetWidth,
           height: wrapper.offsetHeight,
@@ -44,47 +44,47 @@ const ImageMagnifier = ({
     return () => resizeObserver.disconnect();
   }, []);
 
+  // Effect to disable body scroll on mobile when magnifier is active
+  useEffect(() => {
+    if (isMobile && showMagnifier) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = ''; // Or 'auto' or whatever your default is
+    }
+    // Cleanup function to restore scroll when component unmounts or effect re-runs
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, showMagnifier]);
+
+
   const currentSmallImageWidth = renderedSmallImageDims.width;
   const currentSmallImageHeight = renderedSmallImageDims.height;
 
-  // Ensure actualZoomFactor is not NaN or Infinity if dimensions are momentarily zero
   const actualZoomFactor = zoomFactor || 
     (currentSmallImageWidth > 0 && largeImageWidth > 0 ? largeImageWidth / currentSmallImageWidth : 1);
 
-
-  // --- Desktop Lens Calculations ---
-  // The visual lens on the small image
   const desktopVisualLensWidth = currentSmallImageWidth > 0 ? magnifiedImageContainerWidth / actualZoomFactor : 0;
   const desktopVisualLensHeight = currentSmallImageHeight > 0 ? magnifiedImageContainerHeight / actualZoomFactor : 0;
   
-  // Top-left position of this visual desktop lens, constrained within the small image
   const desktopVisualLensX = Math.max(0, Math.min(cursorOnImagePosition.x - desktopVisualLensWidth / 2, currentSmallImageWidth - desktopVisualLensWidth));
   const desktopVisualLensY = Math.max(0, Math.min(cursorOnImagePosition.y - desktopVisualLensHeight / 2, currentSmallImageHeight - desktopVisualLensHeight));
 
-  // --- Mobile Zoom Panel Calculations ---
   const mobilePanelActualUiWidth = (mobileZoomPanelWidthPercentage / 100) * currentSmallImageWidth;
-  // The area on the small image that needs to be sampled to fill the mobile zoom panel
   const mobileContentSampleAreaWidth = mobilePanelActualUiWidth / actualZoomFactor;
   const mobileContentSampleAreaHeight = mobileZoomPanelHeight / actualZoomFactor;
 
-  // Top-left of this sample area on the small image, centered on cursor/touch point, constrained
   const mobileContentSampleAreaX = Math.max(0, Math.min(cursorOnImagePosition.x - mobileContentSampleAreaWidth / 2, currentSmallImageWidth - mobileContentSampleAreaWidth));
   const mobileContentSampleAreaY = Math.max(0, Math.min(cursorOnImagePosition.y - mobileContentSampleAreaHeight / 2, currentSmallImageHeight - mobileContentSampleAreaHeight));
 
-  // CORRECTED and UNIFIED: Background position for magnified content
-  let bgPosX, bgPosY;
-  // The size of the large image as it should appear in the background of the zoom containers
-  // This is the small image dimensions scaled up by the zoom factor.
   const effectiveLargeImageBackgroundWidth = currentSmallImageWidth * actualZoomFactor;
   const effectiveLargeImageBackgroundHeight = currentSmallImageHeight * actualZoomFactor;
 
-
+  let bgPosX, bgPosY;
   if (isMobile) {
-    // For mobile, the background position is based on the top-left of the content sample area
     bgPosX = -(mobileContentSampleAreaX * actualZoomFactor);
     bgPosY = -(mobileContentSampleAreaY * actualZoomFactor);
   } else {
-    // For desktop, the background position is based on the top-left of the visual desktop lens
     bgPosX = -(desktopVisualLensX * actualZoomFactor);
     bgPosY = -(desktopVisualLensY * actualZoomFactor);
   }
@@ -112,18 +112,21 @@ const ImageMagnifier = ({
     setShowMagnifier(false);
   };
   const handleTouchStart = (e) => {
+    // No e.preventDefault() here, to allow normal tap actions if not dragging
     if (!isMobile || currentSmallImageWidth === 0) return;
     setShowMagnifier(true);
     calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY);
   };
   const handleTouchMove = (e) => {
     if (!isMobile || !showMagnifier || currentSmallImageWidth === 0) return;
+    // CRUCIAL: Prevent default scroll/pan behavior WHEN dragging for magnification
     e.preventDefault(); 
     calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY);
   };
   const handleTouchEnd = () => {
     if (!isMobile || currentSmallImageWidth === 0) return;
     setShowMagnifier(false);
+    // Scroll is re-enabled by the useEffect cleanup when showMagnifier becomes false
   };
 
   if (currentSmallImageWidth === 0 || currentSmallImageHeight === 0) {
@@ -147,7 +150,11 @@ const ImageMagnifier = ({
       <div
         ref={smallImageWrapperRef}
         className={styles.smallImageWrapper}
-        style={{ aspectRatio: aspectRatio || undefined }}
+        style={{ 
+            aspectRatio: aspectRatio || undefined,
+            // Apply touch-action directly to the element handling touch events
+            touchAction: isMobile ? 'none' : 'auto' 
+        }}
         onMouseEnter={handleMouseEnter}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -155,10 +162,29 @@ const ImageMagnifier = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
+        {/* The Next/Image component itself does not need touch-action if its parent handles it,
+            and its pointer-events are none. */}
         {aspectRatio ? (
-          <Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority draggable="false" style={{ touchAction: isMobile ? 'none' : 'auto' }}/>
+          <Image 
+            src={smallImageSrc} 
+            alt={smallImageAlt} 
+            layout="fill" 
+            objectFit="contain" 
+            priority 
+            draggable="false" 
+            // style={{ touchAction: isMobile ? 'none' : 'auto' }} // Moved to wrapper
+          />
         ) : (
-          <Image src={smallImageSrc} alt={smallImageAlt} width={largeImageWidth} height={largeImageHeight} layout="responsive" priority draggable="false" style={{ touchAction: isMobile ? 'none' : 'auto' }}/>
+          <Image 
+            src={smallImageSrc} 
+            alt={smallImageAlt} 
+            width={largeImageWidth} 
+            height={largeImageHeight} 
+            layout="responsive" 
+            priority 
+            draggable="false" 
+            // style={{ touchAction: isMobile ? 'none' : 'auto' }} // Moved to wrapper
+          />
         )}
 
         {showMagnifier && !isMobile && (
