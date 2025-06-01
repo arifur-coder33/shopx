@@ -1,6 +1,5 @@
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import ImageMagnifier from "../../_components/ImageMagnifier";
-import MagnifierImage from "../../_components/ImageMagnifier";
 export default function Images({ mainImage, title }) {
    const product = {
     smallImage: {
@@ -19,20 +18,28 @@ export default function Images({ mainImage, title }) {
     return (
       <>
         {/* <ProductMainImage title={title} image={mainImage} /> */}
-       <div style={{ maxWidth: '1000px', margin: '20px auto' }}> {/* Example layout wrapper */}
-          <ImageMagnifier
+      <div style={{ padding: '20px' }}> {/* Add some padding for visual clarity */}
+        <ImageMagnifier
           smallImageSrc={product.smallImage.src}
           smallImageAlt={product.smallImage.alt}
           smallImageWidth={product.smallImage.width}
           smallImageHeight={product.smallImage.height}
           largeImageSrc={product.largeImage.src}
-          largeImageWidth={product.largeImage.width} // Actual width of the large image file
-          largeImageHeight={product.largeImage.height} // Actual height of the large image file
-          magnifiedImageContainerWidth={300} // Desired width of the zoom window
-          magnifiedImageContainerHeight={300} // Desired height of the zoom window
-          // zoomFactor={3} // Optionally provide a zoom factor
+          largeImageWidth={product.largeImage.width}
+          largeImageHeight={product.largeImage.height}
+          
+          // Desktop settings
+          magnifiedImageContainerWidth={500}
+          magnifiedImageContainerHeight={500}
+          magnifierOffset={{ x: 20, y: 0 }} // Gap between small image and zoom panel
+
+          // Mobile "Glass Magnifier" settings
+          glassMagnifierSize={120} // Diameter of the circular lens on mobile
+          
+          // Optional: if you want to force a specific zoom level for both
+          // zoomFactor={4} 
         />
-        </div>
+      </div>
       </>
     );
   }

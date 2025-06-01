@@ -1,55 +1,65 @@
 /* components/ImageMagnifier.module.css */
 .magnifierContainer {
-  position: relative; /* Crucial for absolute positioning of children */
-  display: inline-block; /* Or block, depending on layout needs */
-  /* width will be set by inline style from component based on smallImageWidth */
+  position: relative;
+  display: inline-block;
+  user-select: none; /* Prevent text selection during interaction */
 }
 
 .smallImageWrapper {
-  position: relative; /* For lens positioning */
+  position: relative;
   cursor: crosshair;
   border: 1px solid #ccc;
-  overflow: hidden;
+  overflow: hidden; /* Important: clips the mobile glass magnifier if it goes off edge */
   /* width and height will be set by inline styles from props */
-  user-select: none; /* Prevent text selection when interacting */
-  -webkit-user-drag: none; /* Prevent image drag in Safari/Chrome */
+  -webkit-user-drag: none;
 }
 
 .smallImageWrapper img {
   display: block;
   max-width: 100%;
   height: auto;
-  pointer-events: none; /* Ensure mouse events go to the wrapper */
+  pointer-events: none; /* Mouse events should go to the wrapper */
 }
 
-.lens {
+/* Common Lens Style (not used directly, but base for others) */
+.baseLens {
   position: absolute;
-  border: 2px solid rgba(0, 0, 0, 0.6);
-  background-color: rgba(255, 255, 255, 0.25);
   pointer-events: none;
-  box-sizing: border-box; /* Include border in width/height */
+  box-sizing: border-box;
 }
 
-.magnifiedImageContainer {
-  /* position, top, left, zIndex will be set by inline styles */
+/* Desktop: Semi-transparent square lens */
+.desktopLens {
+  composes: baseLens; /* Inherits from baseLens if you had one */
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Mobile: Circular Glass Magnifier */
+.mobileGlassMagnifier {
+  composes: baseLens; /* Inherits from baseLens if you had one */
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 3px solid #fff; /* Example border */
+  box-shadow: 0 0 10px rgba(0,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.1);
+  background-repeat: no-repeat;
+  overflow: hidden; /* Ensures content stays within the circle */
+  z-index: 100; /* Ensure it's above the small image */
+}
+
+/* Desktop: Side panel for magnified image */
+.desktopMagnifiedImageContainer {
+  position: absolute; /* Positioned relative to magnifierContainer */
   border: 1px solid #aaa;
   overflow: hidden;
   background-repeat: no-repeat;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
   box-sizing: border-box;
-  pointer-events: none; /* Usually, you don't interact with the magnified view itself */
-}
-
-/* Specific mobile adjustments if needed beyond inline styles */
-.mobileMagnified {
-  /* Example: if you wanted it to take full width on mobile and be fixed */
-  /*
-  position: fixed !important;
-  top: 10px !important;
-  left: 5% !important;
-  width: 90% !important;
-  height: auto !important; // or a fixed aspect ratio
-  aspect-ratio: 1 / 1; // Example for square
-  max-height: 40vh; // Limit height
-  */
+  pointer-events: none;
+  z-index: 90; /* Below mobile glass, but above other page content */
 }
