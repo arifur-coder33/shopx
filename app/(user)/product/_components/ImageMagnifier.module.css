@@ -1,0 +1,55 @@
+/* components/ImageMagnifier.module.css */
+.magnifierContainer {
+  position: relative; /* Crucial for absolute positioning of children */
+  display: inline-block; /* Or block, depending on layout needs */
+  /* width will be set by inline style from component based on smallImageWidth */
+}
+
+.smallImageWrapper {
+  position: relative; /* For lens positioning */
+  cursor: crosshair;
+  border: 1px solid #ccc;
+  overflow: hidden;
+  /* width and height will be set by inline styles from props */
+  user-select: none; /* Prevent text selection when interacting */
+  -webkit-user-drag: none; /* Prevent image drag in Safari/Chrome */
+}
+
+.smallImageWrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  pointer-events: none; /* Ensure mouse events go to the wrapper */
+}
+
+.lens {
+  position: absolute;
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  background-color: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  box-sizing: border-box; /* Include border in width/height */
+}
+
+.magnifiedImageContainer {
+  /* position, top, left, zIndex will be set by inline styles */
+  border: 1px solid #aaa;
+  overflow: hidden;
+  background-repeat: no-repeat;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  box-sizing: border-box;
+  pointer-events: none; /* Usually, you don't interact with the magnified view itself */
+}
+
+/* Specific mobile adjustments if needed beyond inline styles */
+.mobileMagnified {
+  /* Example: if you wanted it to take full width on mobile and be fixed */
+  /*
+  position: fixed !important;
+  top: 10px !important;
+  left: 5% !important;
+  width: 90% !important;
+  height: auto !important; // or a fixed aspect ratio
+  aspect-ratio: 1 / 1; // Example for square
+  max-height: 40vh; // Limit height
+  */
+}
