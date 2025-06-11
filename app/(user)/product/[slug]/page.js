@@ -277,7 +277,7 @@ export default async function ProductPage({ params }) {
           <Images
             title={title}
             mainImage={thumbnail || mainImage}
-            imageGallery={imageGallery}
+             imageGallery={gallery || imageGallery}
           />
         </div>
         <div className="col-span-2 mt-2">

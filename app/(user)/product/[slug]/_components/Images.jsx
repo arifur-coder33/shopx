@@ -45,20 +45,33 @@
 ///---------------------------- imager zoomer 
 
 // your .../_components/Images.js file
+// your .../_components/Images.js file
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import ImageZoomer from "../../_components/ImageZoomer";
+import ImageZoomer from "../../_components/ImageZoomer"; // Use the final component
 
+export default function Images({ mainImage, imageGallery = [], title }) {
 
-export default function Images({ mainImage, title }) {
+  // Create the structured array the component expects
+  const productImages = [
+    {
+      small: cloudinaryMainImage(mainImage, 600, 600),
+      large: cloudinaryMainImage(mainImage, 1800, 1800),
+      alt: title || 'Main product image',
+    },
+    // Add the other images from your product data
+    ...imageGallery.map((img, index) => ({
+      small: cloudinaryMainImage(img, 600, 600),
+      large: cloudinaryMainImage(img, 1800, 1800),
+      alt: `Product image ${index + 2}`,
+    }))
+  ];
+
   return (
     <div className="max-w-[500px] w-full">
       <ImageZoomer
-        smallImageSrc={cloudinaryMainImage(mainImage, 600, 600)}
-        largeImageSrc={cloudinaryMainImage(mainImage, 1800, 1800)} // Use a high-res version
-        alt={title || 'Product Image'}
+        images={productImages}
         aspectRatio="1/1"
         overlayBackgroundColor="rgba(0, 0, 0, 0.9)"
-        zoomIcon={true} // Set to false to hide the icon on mobile
       />
     </div>
   );
