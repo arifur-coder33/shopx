@@ -1,4 +1,4 @@
-// components/ImageMagnifier.js (or your path)
+// components/ImageMagnifier.js
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -8,190 +8,164 @@ import useMediaQuery from '@/hooks/useMediaQuery';
 const ImageMagnifier = ({
   smallImageSrc,
   smallImageAlt = "Product Image",
-  aspectRatio = "1/1", 
+  aspectRatio = "1/1",
   largeImageSrc,
-  largeImageWidth, 
+  largeImageWidth,
   largeImageHeight,
-  magnifiedImageContainerWidth = 300,
-  magnifiedImageContainerHeight = 300,
-  magnifierOffset = { x: 15, y: 0 },
-  
-  // Mobile specific props
-  mobileZoomPanelHeight = 100, // Height of the zoom panel on mobile
-  mobileZoomPanelTopOffsetDevice = 10, // Offset from the TOP OF THE DEVICE VIEWPORT
-  mobileZoomPanelWidthPercentage = 95, // Panel width as % of viewport width
-  
+  overlayColor = "rgba(0, 0, 0, 0.6)",
   zoomFactor,
+
+  // --- Desktop Props ---
+  magnifiedImageContainerWidth = 350,
+  magnifiedImageContainerHeight = 350,
+  magnifierOffset = { x: 20, y: 0 },
+
+  // --- Mobile Props ---
+  mobileMagnifierSize = 150,
+  // Padding from the image edge for the mobile magnifier
+  mobileMagnifierPadding = 10,
 }) => {
   const [showMagnifier, setShowMagnifier] = useState(false);
-  const [cursorOnImagePosition, setCursorOnImagePosition] = useState({ x: 0, y: 0 });
-  const [renderedSmallImageDims, setRenderedSmallImageDims] = useState({ width: 0, height: 0 });
+  const [isActive, setIsActive] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [renderedDims, setRenderedDims] = useState({ width: 0, height: 0 });
 
   const smallImageWrapperRef = useRef(null);
+  const animationFrameId = useRef(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const transitionDuration = 200;
 
   useEffect(() => {
     const wrapper = smallImageWrapperRef.current;
     if (!wrapper) return;
-    const updateDimensions = () => {
-      if (wrapper.offsetWidth > 0 && wrapper.offsetHeight > 0) {
-        setRenderedSmallImageDims({
-          width: wrapper.offsetWidth,
-          height: wrapper.offsetHeight,
-        });
-      }
-    };
-    updateDimensions();
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    resizeObserver.observe(wrapper);
-    return () => resizeObserver.disconnect();
+    const observer = new ResizeObserver(() => {
+      setRenderedDims({
+        width: wrapper.offsetWidth,
+        height: wrapper.offsetHeight,
+      });
+    });
+    observer.observe(wrapper);
+    return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (isMobile && showMagnifier) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isMobile, showMagnifier]);
-
-  const currentSmallImageWidth = renderedSmallImageDims.width;
-  const currentSmallImageHeight = renderedSmallImageDims.height;
-
-  const actualZoomFactor = zoomFactor || 
-    (currentSmallImageWidth > 0 && largeImageWidth > 0 ? largeImageWidth / currentSmallImageWidth : 1);
-
-  const desktopVisualLensWidth = currentSmallImageWidth > 0 ? magnifiedImageContainerWidth / actualZoomFactor : 0;
-  const desktopVisualLensHeight = currentSmallImageHeight > 0 ? magnifiedImageContainerHeight / actualZoomFactor : 0;
+  const { width: smallImageWidth, height: smallImageHeight } = renderedDims;
+  const actualZoomFactor = zoomFactor || (smallImageWidth > 0 ? largeImageWidth / smallImageWidth : 1);
   
-  const desktopVisualLensX = Math.max(0, Math.min(cursorOnImagePosition.x - desktopVisualLensWidth / 2, currentSmallImageWidth - desktopVisualLensWidth));
-  const desktopVisualLensY = Math.max(0, Math.min(cursorOnImagePosition.y - desktopVisualLensHeight / 2, currentSmallImageHeight - desktopVisualLensHeight));
+  // --- Pixel Perfecting Fix ---
+  // A small buffer to prevent rendering artifacts (white lines) at the edges.
+  const pixelBuffer = 2;
+  const effectiveLargeWidth = smallImageWidth * actualZoomFactor;
+  const effectiveLargeHeight = smallImageHeight * actualZoomFactor;
 
-  // --- Mobile Zoom Panel Calculations ---
-  // Use viewport width for panel width calculation if positioning fixed to viewport
-  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : currentSmallImageWidth; // Fallback
-  const mobilePanelActualUiWidth = (mobileZoomPanelWidthPercentage / 100) * viewportWidth;
+  // Desktop calculations
+  const lensWidth = magnifiedImageContainerWidth / actualZoomFactor;
+  const lensHeight = magnifiedImageContainerHeight / actualZoomFactor;
+  const desktopLensX = Math.max(0, Math.min(cursorPosition.x - lensWidth / 2, smallImageWidth - lensWidth));
+  const desktopLensY = Math.max(0, Math.min(cursorPosition.y - lensHeight / 2, smallImageHeight - lensHeight));
   
-  const mobileContentSampleAreaWidth = mobilePanelActualUiWidth / actualZoomFactor;
-  const mobileContentSampleAreaHeight = mobileZoomPanelHeight / actualZoomFactor;
+  // Background positions
+  const desktopBgPosX = -(desktopLensX * actualZoomFactor);
+  const desktopBgPosY = -(desktopLensY * actualZoomFactor);
+  // Adjusted mobile position to account for the pixel buffer
+  const mobileBgPosX = -cursorPosition.x * actualZoomFactor + mobileMagnifierSize / 2 - pixelBuffer / 2;
+  const mobileBgPosY = -cursorPosition.y * actualZoomFactor + mobileMagnifierSize / 2 - pixelBuffer / 2;
 
-  const mobileContentSampleAreaX = Math.max(0, Math.min(cursorOnImagePosition.x - mobileContentSampleAreaWidth / 2, currentSmallImageWidth - mobileContentSampleAreaWidth));
-  const mobileContentSampleAreaY = Math.max(0, Math.min(cursorOnImagePosition.y - mobileContentSampleAreaHeight / 2, currentSmallImageHeight - mobileContentSampleAreaHeight));
-
-  const effectiveLargeImageBackgroundWidth = currentSmallImageWidth * actualZoomFactor;
-  const effectiveLargeImageBackgroundHeight = currentSmallImageHeight * actualZoomFactor;
-
-  let bgPosX, bgPosY;
+  // --- NEW Quadrant-Based Mobile Magnifier Positioning ---
+  let finalMagnifierX, finalMagnifierY;
   if (isMobile) {
-    bgPosX = -(mobileContentSampleAreaX * actualZoomFactor);
-    bgPosY = -(mobileContentSampleAreaY * actualZoomFactor);
-  } else {
-    bgPosX = -(desktopVisualLensX * actualZoomFactor);
-    bgPosY = -(desktopVisualLensY * actualZoomFactor);
+    // Check if the cursor is in the top-left quadrant of the image
+    const isInTopLeftQuadrant = cursorPosition.y < smallImageHeight / 2 && cursorPosition.x < smallImageWidth / 2;
+    
+    if (isInTopLeftQuadrant) {
+      // If finger is in top-left, move magnifier to top-right
+      finalMagnifierX = smallImageWidth - mobileMagnifierSize - mobileMagnifierPadding;
+      finalMagnifierY = mobileMagnifierPadding;
+    } else {
+      // Default position is top-left for all other quadrants
+      finalMagnifierX = mobileMagnifierPadding;
+      finalMagnifierY = mobileMagnifierPadding;
+    }
   }
 
-  const calculateInteractionPoint = useCallback((clientX, clientY) => {
-    if (!smallImageWrapperRef.current || currentSmallImageWidth === 0) return;
-    const rect = smallImageWrapperRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(clientX - rect.left, currentSmallImageWidth));
-    const y = Math.max(0, Math.min(clientY - rect.top, currentSmallImageHeight));
-    setCursorOnImagePosition({ x, y });
-  }, [currentSmallImageWidth, currentSmallImageHeight]);
+  // --- Event Handlers (Unchanged) ---
+  const updateCursorPosition = useCallback((clientX, clientY) => {
+    const rect = smallImageWrapperRef.current?.getBoundingClientRect();
+    if (rect) {
+      const x = Math.max(0, Math.min(clientX - rect.left, smallImageWidth));
+      const y = Math.max(0, Math.min(clientY - rect.top, smallImageHeight));
+      setCursorPosition({ x, y });
+    }
+  }, [smallImageWidth, smallImageHeight]);
 
-  const handleMouseEnter = (e) => { if (!isMobile && currentSmallImageWidth > 0) { setShowMagnifier(true); calculateInteractionPoint(e.clientX, e.clientY); }};
-  const handleMouseMove = (e) => { if (!isMobile && showMagnifier && currentSmallImageWidth > 0) calculateInteractionPoint(e.clientX, e.clientY); };
-  const handleMouseLeave = () => { if (!isMobile && currentSmallImageWidth > 0) setShowMagnifier(false); };
-  const handleTouchStart = (e) => { if (isMobile && currentSmallImageWidth > 0) { setShowMagnifier(true); calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY); }};
-  const handleTouchMove = (e) => { if (isMobile && showMagnifier && currentSmallImageWidth > 0) { e.preventDefault(); calculateInteractionPoint(e.touches[0].clientX, e.touches[0].clientY); }};
-  const handleTouchEnd = () => { if (isMobile && currentSmallImageWidth > 0) setShowMagnifier(false); };
+  const handleInteractionStart = useCallback((clientX, clientY) => {
+    if (smallImageWidth > 0) { setShowMagnifier(true); setTimeout(() => setIsActive(true), 0); updateCursorPosition(clientX, clientY); }
+  }, [smallImageWidth, updateCursorPosition]);
 
-  if (currentSmallImageWidth === 0 || currentSmallImageHeight === 0) {
-    return (
-      <div 
-        ref={smallImageWrapperRef}
-        className={styles.smallImageWrapperInitial} 
-        style={{ aspectRatio: aspectRatio || undefined }}
-      >
-        {aspectRatio ? (
-          <Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority />
-        ) : (
-          <Image src={smallImageSrc} alt={smallImageAlt} width={largeImageWidth} height={largeImageHeight} layout="intrinsic" priority />
-        )}
-      </div>
-    );
+  const handleInteractionMove = useCallback((clientX, clientY) => {
+    if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+    animationFrameId.current = requestAnimationFrame(() => updateCursorPosition(clientX, clientY));
+  }, [updateCursorPosition]);
+
+  const handleInteractionEnd = useCallback(() => {
+    setIsActive(false); setTimeout(() => setShowMagnifier(false), transitionDuration);
+  }, []);
+
+  const zoomBackgroundImage = `url(${largeImageSrc}), url(${smallImageSrc})`;
+
+  if (smallImageWidth === 0) {
+    return (<div ref={smallImageWrapperRef} className={styles.smallImageWrapper} style={{ aspectRatio }}><Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority /></div>);
   }
-
-  // Calculate styles for the mobile zoom panel here to use `position: fixed`
-  const mobileZoomPanelStyle = (isMobile && showMagnifier) ? {
-    position: 'fixed', // Position relative to the viewport
-    width: `${mobilePanelActualUiWidth}px`,
-    height: `${mobileZoomPanelHeight}px`,
-    backgroundImage: `url(${largeImageSrc || smallImageSrc})`,
-    backgroundSize: `${effectiveLargeImageBackgroundWidth}px ${effectiveLargeImageBackgroundHeight}px`,
-    backgroundPosition: `${bgPosX}px ${bgPosY}px`,
-    top: `${mobileZoomPanelTopOffsetDevice}px`, // Use the new prop for device top offset
-    left: `${(viewportWidth - mobilePanelActualUiWidth) / 2}px`, // Centered horizontally in viewport
-    // zIndex and other styles will come from the CSS module class
-  } : {};
 
   return (
-    <div className={styles.magnifierContainer}>
+    <div className={styles.magnifierRootContainer}>
       <div
         ref={smallImageWrapperRef}
         className={styles.smallImageWrapper}
-        style={{ 
-            aspectRatio: aspectRatio || undefined,
-            touchAction: isMobile ? 'none' : 'auto' 
-        }}
-        onMouseEnter={handleMouseEnter}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        style={{ aspectRatio, touchAction: isMobile ? 'none' : 'auto' }}
+        onMouseEnter={(e) => !isMobile && handleInteractionStart(e.clientX, e.clientY)}
+        onMouseMove={(e) => !isMobile && isActive && handleInteractionMove(e.clientX, e.clientY)}
+        onMouseLeave={() => !isMobile && handleInteractionEnd()}
+        onTouchStart={(e) => isMobile && handleInteractionStart(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchMove={(e) => isMobile && isActive && handleInteractionMove(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchEnd={() => isMobile && handleInteractionEnd()}
       >
-        {aspectRatio ? (
-          <Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority draggable="false" />
-        ) : (
-          <Image src={smallImageSrc} alt={smallImageAlt} width={largeImageWidth} height={largeImageHeight} layout="responsive" priority draggable="false" />
-        )}
-
-        {showMagnifier && !isMobile && (
-          <div
-            className={styles.desktopLens}
-            style={{
-              width: `${desktopVisualLensWidth}px`,
-              height: `${desktopVisualLensHeight}px`,
-              top: `${desktopVisualLensY}px`,
-              left: `${desktopVisualLensX}px`,
-            }}
-          />
-        )}
-        
-        {/* Mobile Zoom Panel using `position: fixed` */}
-        {isMobile && showMagnifier && (
-          <div 
-            className={styles.mobileZoomPanel} // This class will provide z-index, box-shadow etc.
-            style={mobileZoomPanelStyle}
-          />
+        <Image src={smallImageSrc} alt={smallImageAlt} layout="fill" objectFit="contain" priority draggable="false" />
+        {showMagnifier && (
+          <>
+            <div className={styles.imageOverlay} style={{ backgroundColor: overlayColor, clipPath: `path(evenodd, "M 0 0 H ${smallImageWidth} V ${smallImageHeight} H 0 Z M ${cursorPosition.x} ${cursorPosition.y} m -40, 0 a 40,40 0 1,0 80,0 a 40,40 0 1,0 -80,0 Z")`, opacity: isActive ? 1 : 0 }} />
+            {isMobile ? (
+              <div
+                className={styles.mobileMagnifier}
+                style={{
+                  width: `${mobileMagnifierSize}px`,
+                  height: `${mobileMagnifierSize}px`,
+                  transform: `translate(${finalMagnifierX}px, ${finalMagnifierY}px)`,
+                  backgroundImage: zoomBackgroundImage,
+                  // Apply pixel-perfecting fix to background size
+                  backgroundSize: `${effectiveLargeWidth + pixelBuffer}px ${effectiveLargeHeight + pixelBuffer}px`,
+                  backgroundPosition: `${mobileBgPosX}px ${mobileBgPosY}px`,
+                  opacity: isActive ? 1 : 0,
+                }}
+              />
+            ) : (
+              <div className={styles.desktopLens} style={{ width: `${lensWidth}px`, height: `${lensHeight}px`, transform: `translate(${desktopLensX}px, ${desktopLensY}px)`, opacity: isActive ? 1 : 0 }} />
+            )}
+          </>
         )}
       </div>
 
-      {/* Desktop Magnified Image Container */}
-      {showMagnifier && !isMobile && (
+      {!isMobile && showMagnifier && (
         <div
           className={styles.desktopMagnifiedImageContainer}
           style={{
             width: `${magnifiedImageContainerWidth}px`,
             height: `${magnifiedImageContainerHeight}px`,
-            backgroundImage: `url(${largeImageSrc || smallImageSrc})`,
-            backgroundSize: `${effectiveLargeImageBackgroundWidth}px ${effectiveLargeImageBackgroundHeight}px`,
-            backgroundPosition: `${bgPosX}px ${bgPosY}px`,
             top: `${magnifierOffset.y}px`,
-            left: `${currentSmallImageWidth + magnifierOffset.x}px`,
+            left: `${smallImageWidth + magnifierOffset.x}px`,
+            backgroundImage: zoomBackgroundImage,
+            backgroundSize: `${effectiveLargeWidth}px ${effectiveLargeHeight}px`,
+            backgroundPosition: `${desktopBgPosX}px ${desktopBgPosY}px`,
+            opacity: isActive ? 1 : 0,
           }}
         />
       )}
