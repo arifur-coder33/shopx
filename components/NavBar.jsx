@@ -1,14 +1,14 @@
 // src/components/NavBar.js (Now a cleaner Server Component)
 
-import Link from "next/link";
 import Logo from "@/components/common/Logo";
+import Link from "next/link";
+import NavActions from "./common/NavActions"; // Import the new client component
 import Notice from "./common/Notice";
-import NavActions from "./common/NavActions";// Import the new client component
 
 export default async function NavBar() {
   // This component remains a Server Component.
   // It can still fetch data, e.g., from a CMS for the notice.
-  
+
   return (
     <>
       <Notice />
@@ -19,10 +19,9 @@ export default async function NavBar() {
               <Logo />
             </Link>
           </div>
-          
+
           {/* All interactive elements are now neatly contained in this one component */}
           <NavActions />
-
         </div>
       </header>
     </>
