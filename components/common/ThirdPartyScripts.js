@@ -42,17 +42,21 @@ export default function ThirdPartyScripts() {
   }
 
   const pixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
+  const tagId = process.env.NEXT_PUBLIC_GOOGLE_TAG_ID;
+  const analyticesId = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICES_ID;
 
   return (
     <>
-      <GoogleTagManager gtmId={process.env.GoogleTagMangerID} />
-      <GoogleAnalytics gaId={process.env.GoogleAnalyticsID} />
+      {tagId && <GoogleTagManager gtmId={tagId} />}
+      {analyticesId && <GoogleAnalytics gaId={analyticesId} />}
+
       <SpeedInsights />
-      <Script
-        id="facebook-pixel"
-        strategy="worker" // Still use the worker strategy!
-        dangerouslySetInnerHTML={{
-          __html: `
+      {pixelId && (
+        <Script
+          id="facebook-pixel"
+          strategy="worker" // Still use the worker strategy!
+          dangerouslySetInnerHTML={{
+            __html: `
               !function(f,b,e,v,n,t,s)
               {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
               n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -64,9 +68,9 @@ export default function ThirdPartyScripts() {
               fbq('init', '${pixelId}');
               fbq('track', 'PageView');
             `,
-        }}
-      />
-      {/* The noscript tag should remain in the layout for non-JS users */}
+          }}
+        />
+      )}
     </>
   );
 }
