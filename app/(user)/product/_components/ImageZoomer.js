@@ -6,6 +6,7 @@ import Imagecustom from '@/components/images/ImageCustom';
 import { cloudinaryMainImage } from '@/utils/cloudinaryUrl';
 import styles from './ImageZoomer.module.css';
 import useMediaQuery from '@/hooks/useMediaQuery';
+import { useSwipe } from '@/hooks/useSwipe';
 
 const clamp = (val, min, max) => Math.max(min, Math.min(val, max));
 
@@ -13,6 +14,7 @@ const ZoomIcon = () => (<svg className={styles.iconSvg} viewBox="0 0 24 24"><pat
 const CloseIcon = () => (<svg className={styles.iconSvg} viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>);
 const SpinnerIcon = () => (<svg className={styles.spinnerSvg} viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" strokeWidth="5"></circle></svg>);
 
+// --- Main ImageZoomer Component ---
 const ImageZoomer = ({
   images = [],
   aspectRatio = "1/1",
@@ -20,6 +22,7 @@ const ImageZoomer = ({
   zoomIcon = true,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState('none');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [desktopZoomActive, setDesktopZoomActive] = useState(false);
   const [desktopZoomPosition, setDesktopZoomPosition] = useState({ x: 0.5, y: 0.5 });
@@ -28,18 +31,42 @@ const ImageZoomer = ({
   const imageContainerRef = useRef(null);
   const activeImage = images[activeIndex] || {};
 
+  const handleNavigation = useCallback((direction) => {
+    setSlideDirection(direction);
+    const newIndex = direction === 'next'
+      ? (activeIndex + 1) % images.length
+      : (activeIndex - 1 + images.length) % images.length;
+    setActiveIndex(newIndex);
+  }, [activeIndex, images.length]);
+
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => handleNavigation('next'),
+    onSwipeRight: () => handleNavigation('prev'),
+    enabled: isMobile,
+  });
+
   const handleMouseMove = (e) => {
-    if (!imageContainerRef.current) return;
+    if (!imageContainerRef.current || isMobile) return;
     const rect = imageContainerRef.current.getBoundingClientRect();
     const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
     const y = clamp((e.clientY - rect.top) / rect.height, 0, 1);
     setDesktopZoomPosition({ x, y });
   };
 
-  const handleOpenModal = () => { if (isMobile) { setIsModalOpen(true); document.body.style.overflow = 'hidden'; }};
-  const handleCloseModal = useCallback(() => { setIsModalOpen(false); document.body.style.overflow = ''; }, []);
+  const handleOpenModal = () => {
+    if (isMobile) {
+      setIsModalOpen(true);
+      document.body.style.overflow = 'hidden';
+    }
+  };
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    document.body.style.overflow = '';
+  }, []);
 
   if (!images.length) return <div>No images provided.</div>;
+
+  const animationClass = slideDirection === 'next' ? styles.slideNext : slideDirection === 'prev' ? styles.slidePrev : '';
 
   return (
     <div className={styles.galleryContainer}>
@@ -48,50 +75,39 @@ const ImageZoomer = ({
         ref={imageContainerRef}
         onMouseEnter={() => !isMobile && setDesktopZoomActive(true)}
         onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
-        onMouseMove={!isMobile ? handleMouseMove : undefined}
+        onMouseMove={handleMouseMove} // <-- CORRECTED: Directly pass the handler
+        {...swipeHandlers}
       >
-        <div className={styles.smallImageContainer} onClick={handleOpenModal} style={{ aspectRatio }}>
-          {activeImage.id && (
-            <Imagecustom
-              key={activeImage.id}
-              src={activeImage.id}
-              alt={activeImage.alt}
-              fill={true}
-              urlWidthHint={600} // Provide a sensible base width for the main image URL
-              objectFit="contain"
-              priority={true}
-            />
-          )}
+        <div 
+          className={styles.smallImageContainer} 
+          onClick={handleOpenModal} // <-- CORRECTED: The click handler should be on the container
+          style={{ aspectRatio }}
+        >
+          <div
+            key={activeIndex}
+            className={`${styles.imageAnimationWrapper} ${animationClass}`}
+            onAnimationEnd={() => setSlideDirection('none')}
+          >
+            {activeImage.id && (
+              <Imagecustom src={activeImage.id} alt={activeImage.alt} fill={true} urlWidthHint={600} objectFit="contain" priority={true}/>
+            )}
+          </div>
           {isMobile && zoomIcon && <div className={styles.zoomIconWrapper}><ZoomIcon /></div>}
         </div>
         {!isMobile && (
-          <div
-            className={styles.desktopZoomPanel}
-            style={{
-              backgroundImage: `url(${cloudinaryMainImage(activeImage.id, 1800, 1800)})`,
-              backgroundPosition: `${desktopZoomPosition.x * 100}% ${desktopZoomPosition.y * 100}%`,
-              opacity: desktopZoomActive ? 1 : 0,
-              visibility: desktopZoomActive ? 'visible' : 'hidden',
-            }}
-          />
+          <div className={styles.desktopZoomPanel} style={{ backgroundImage: `url(${cloudinaryMainImage(activeImage.id, 1800, 1800)})`, backgroundPosition: `${desktopZoomPosition.x * 100}% ${desktopZoomPosition.y * 100}%`, opacity: desktopZoomActive ? 1 : 0, visibility: desktopZoomActive ? 'visible' : 'hidden' }}/>
         )}
       </div>
       
       <div className={styles.thumbnailList}>
         {images.map((image, index) => (
           <button key={image.id || index} className={`${styles.thumbnailButton} ${index === activeIndex ? styles.thumbnailActive : ''}`} onClick={() => setActiveIndex(index)}>
-            <Imagecustom
-              src={image.id}
-              alt={image.alt}
-              w={100} // This is not using fill, so `w` provides the hint correctly
-              h={100}
-              objectFit="cover"
-            />
+            <Imagecustom src={image.id} alt={image.alt} w={100} h={100} objectFit="cover"/>
           </button>
         ))}
       </div>
       
-      {isModalOpen && (
+      {isMobile && isModalOpen && (
         <MobileModalZoomer
           images={images}
           initialIndex={activeIndex}
@@ -104,80 +120,60 @@ const ImageZoomer = ({
   );
 };
 
+
+// --- MobileModalZoomer Component (Defined ONCE, no changes from previous correct version) ---
 const MobileModalZoomer = ({ images, initialIndex, backgroundColor, onClose, onIndexChange }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [slideDirection, setSlideDirection] = useState('none');
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [loadedImages, setLoadedImages] = useState({ [initialIndex]: true });
+
   const imageRef = useRef(null);
-  const lastTouch = useRef({ dist: 0, x: 0, y: 0, time: 0 }).current;
+  const lastTouch = useRef({ dist: 0, x: 0, y: 0 }).current;
   const isInteracting = useRef(false);
   const activeImage = images[currentIndex] || {};
   const isCurrentImageLoaded = loadedImages[currentIndex];
 
   useEffect(() => {
-    const preload = (index) => {
-      if (index < 0 || index >= images.length || loadedImages[index]) return;
-      const img = new window.Image();
-      img.src = cloudinaryMainImage(images[index].id, 1800, 1800);
-      img.onload = () => setLoadedImages(prev => ({ ...prev, [index]: true }));
-    };
-    preload(currentIndex);
-    preload(currentIndex + 1);
-    preload(currentIndex - 1);
+    const preload = (index) => { if (index < 0 || index >= images.length || loadedImages[index]) return; const img = new window.Image(); img.src = cloudinaryMainImage(images[index].id, 1800, 1800); img.onload = () => setLoadedImages(prev => ({ ...prev, [index]: true })); };
+    preload(currentIndex); preload(currentIndex + 1); preload(currentIndex - 1);
   }, [currentIndex, images, loadedImages]);
+  
+  useEffect(() => { setTransform({ x: 0, y: 0, scale: 1 }); onIndexChange(currentIndex); }, [currentIndex, onIndexChange]);
 
-  useEffect(() => {
-    setTransform({ x: 0, y: 0, scale: 1 });
-    onIndexChange(currentIndex);
-  }, [currentIndex, onIndexChange]);
+  const handleNavigation = useCallback((direction) => {
+    setSlideDirection(direction);
+    const newIndex = direction === 'next'
+      ? (currentIndex + 1) % images.length
+      : (currentIndex - 1 + images.length) % images.length;
+    setCurrentIndex(newIndex);
+  }, [currentIndex, images.length]);
 
-  const handleNext = useCallback(() => { setCurrentIndex((prev) => (prev + 1) % images.length); }, [images.length]);
-  const handlePrev = useCallback(() => { setCurrentIndex((prev) => (prev - 1 + images.length) % images.length); }, [images.length]);
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => handleNavigation('next'),
+    onSwipeRight: () => handleNavigation('prev'),
+    enabled: transform.scale === 1,
+  });
 
   const handleTouchStart = (e) => {
+    swipeHandlers.onTouchStart(e);
     isInteracting.current = true;
-    lastTouch.time = Date.now();
-    if (transform.scale === 1) {
-      lastTouch.x = e.touches[0].pageX;
-      lastTouch.y = e.touches[0].pageY;
-    } else if (e.touches.length === 1) {
-      lastTouch.x = e.touches[0].pageX - transform.x;
-      lastTouch.y = e.touches[0].pageY - transform.y;
-    } else if (e.touches.length === 2) {
-      lastTouch.dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    }
+    if (e.touches.length === 2) { lastTouch.dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); }
+    else if (e.touches.length === 1) { lastTouch.x = e.touches[0].pageX - (transform.scale > 1 ? transform.x : 0); lastTouch.y = e.touches[0].pageY - (transform.scale > 1 ? transform.y : 0); }
   };
-
   const handleTouchMove = (e) => {
     if (!isInteracting.current) return;
-    e.preventDefault();
-    if (e.touches.length === 1 && transform.scale > 1) {
-      const x = e.touches[0].pageX - lastTouch.x;
-      const y = e.touches[0].pageY - lastTouch.y;
-      setTransform(t => ({ ...t, x, y }));
-    } else if (e.touches.length === 2) {
-      const newDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-      const scale = clamp(transform.scale * (newDist / lastTouch.dist), 1, 5);
-      setTransform(t => ({ ...t, scale }));
-      lastTouch.dist = newDist;
-    }
+    if (e.touches.length === 1 && transform.scale > 1) { e.preventDefault(); const x = e.touches[0].pageX - lastTouch.x; const y = e.touches[0].pageY - lastTouch.y; setTransform(t => ({ ...t, x, y })); }
+    else if (e.touches.length === 2) { e.preventDefault(); const newDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); const scale = clamp(transform.scale * (newDist / lastTouch.dist), 1, 5); setTransform(t => ({ ...t, scale })); lastTouch.dist = newDist; }
   };
-
   const handleTouchEnd = (e) => {
+    swipeHandlers.onTouchEnd(e);
     if (!isInteracting.current) return;
-    if (transform.scale === 1 && e.changedTouches.length === 1 && (Date.now() - lastTouch.time < 300)) {
-      const deltaX = e.changedTouches[0].pageX - lastTouch.x;
-      if (deltaX > 50) handlePrev();
-      else if (deltaX < -50) handleNext();
-    }
-    if (transform.scale > 1) {
-        const { width, height } = imageRef.current.getBoundingClientRect();
-        const maxPanX = Math.max(0, (width * transform.scale - width) / 2);
-        const maxPanY = Math.max(0, (height * transform.scale - height) / 2);
-        setTransform(t => ({...t, x: clamp(t.x, -maxPanX, maxPanX), y: clamp(t.y, -maxPanY, maxPanY) }));
-    }
+    if (transform.scale > 1) { const { width, height } = imageRef.current.getBoundingClientRect(); const maxPanX = Math.max(0, (width * transform.scale - width) / 2); const maxPanY = Math.max(0, (height * transform.scale - height) / 2); setTransform(t => ({ ...t, x: clamp(t.x, -maxPanX, maxPanX), y: clamp(t.y, -maxPanY, maxPanY) })); }
     isInteracting.current = false;
   };
+
+  const animationClass = slideDirection === 'next' ? styles.slideNext : slideDirection === 'prev' ? styles.slidePrev : '';
 
   return createPortal(
     <div className={styles.modalBackdrop} style={{ backgroundColor }}>
@@ -186,30 +182,21 @@ const MobileModalZoomer = ({ images, initialIndex, backgroundColor, onClose, onI
         <div className={styles.modalImageWrapper} ref={imageRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {!isCurrentImageLoaded && <div className={styles.spinnerContainer}><SpinnerIcon/></div>}
           <div className={styles.imageTransitionContainer} style={{ opacity: isCurrentImageLoaded ? 1 : 0 }}>
-            {activeImage.id && (
-              <Imagecustom
-                key={activeImage.id}
-                src={activeImage.id}
-                alt={activeImage.alt}
-                fill={true}
-                urlWidthHint={1800} // Provide a high-res width for the zoomable modal image URL
-                objectFit="contain"
-                imageClassName={styles.modalImageActual}
-                style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }}
-              />
-            )}
+             <div
+              key={currentIndex}
+              className={`${styles.imageAnimationWrapper} ${animationClass}`}
+              onAnimationEnd={() => setSlideDirection('none')}
+            >
+              {activeImage.id && (
+                <Imagecustom src={activeImage.id} alt={activeImage.alt} fill={true} urlWidthHint={1800} objectFit="contain" imageClassName={styles.modalImageActual} style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }}/>
+              )}
+            </div>
           </div>
         </div>
         <div className={styles.modalThumbnailList}>
           {images.map((image, index) => (
             <button key={image.id || index} className={`${styles.thumbnailButton} ${index === currentIndex ? styles.thumbnailActive : ''}`} onClick={() => setCurrentIndex(index)}>
-              <Imagecustom
-                src={image.id}
-                alt={image.alt}
-                w={60} // Not using fill, `w` works correctly
-                h={60}
-                objectFit="cover"
-              />
+              <Imagecustom src={image.id} alt={image.alt} w={60} h={60} objectFit="cover"/>
             </button>
           ))}
         </div>
@@ -217,5 +204,6 @@ const MobileModalZoomer = ({ images, initialIndex, backgroundColor, onClose, onI
     </div>, document.body
   );
 };
+
 
 export default ImageZoomer;
