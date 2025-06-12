@@ -146,10 +146,10 @@
 //   );
 // }
 
-"use client";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+// "use client";
+// import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+// import Image from "next/image";
+// import { useEffect, useRef, useState } from "react";
 
 // export default function Imagecustom({
 //   src,
@@ -261,35 +261,144 @@ import { useEffect, useRef, useState } from "react";
 
 // ... (imports and other code) ...
 
+// export default function Imagecustom({
+//   src,
+//   className: wrapperClassName,
+//   imageClassName,
+//   w, // Still useful for Next/Image props and Cloudinary URL if not using fill
+//   h, // Still useful for Next/Image props and Cloudinary URL if not using fill
+//   alt,
+//   priority,
+//   sizes,
+//   quality,
+//   objectFit = "cover",
+//   fill,
+//   ref,
+// }) {
+//   // ... (useState, useEffect hooks remain the same) ...
+//   const [isLoaded, setIsLoaded] = useState(false);
+//   // Initialize isInView to true if priority is true
+//   const [isInView, setIsInView] = useState(!!priority);
+//   const placeholderRef = useRef(null);
+
+//   useEffect(() => {
+//     if (priority || isInView) {
+//       // If priority, or already in view, it's effectively "in view"
+//       if (!isInView) setIsInView(true); // Ensure isInView is true if priority was initially false but became true
+//       return;
+//     }
+
+//     if (!placeholderRef.current) return;
+
+//     const observer = new IntersectionObserver(
+//       ([entry]) => {
+//         if (entry.isIntersecting) {
+//           setIsInView(true);
+//           observer.unobserve(entry.target);
+//         }
+//       },
+//       {
+//         rootMargin: "0px 0px 100px 0px",
+//       }
+//     );
+
+//     const currentRef = placeholderRef.current;
+//     observer.observe(currentRef);
+
+//     return () => {
+//       if (currentRef) {
+//         observer.unobserve(currentRef);
+//       }
+//     };
+//   }, [priority, isInView]); // Re-run if priority changes
+//   const commonImageProps = {
+//     src: cloudinaryMainImage(src, fill ? undefined : w, fill ? undefined : h),
+//     alt: alt || "image", // Ensure alt is passed through
+//     quality: quality,
+//     onLoad: () => setIsLoaded(true),
+//     priority: !!priority,
+//     sizes: sizes,
+//   };
+
+//   let imageStyle = {};
+//   let imageDimensionProps = {};
+
+//   if (fill) {
+//     imageDimensionProps.fill = true;
+//     imageStyle.objectFit = objectFit;
+//   } else {
+//     // For non-fill, Next/Image uses width/height for aspect ratio hints
+//     // and initial sizing, but it will still be responsive within its container.
+//     imageDimensionProps.width = w;
+//     imageDimensionProps.height = h;
+//     imageStyle.objectFit = objectFit;
+//   }
+
+//   const finalImageClassName = `rounded-md ${imageClassName || ""} ${
+//     isLoaded ? "remove-blur" : "blur"
+//   }`;
+
+//   if (priority || isInView) {
+//     return (
+//       <Image
+//         alt=""
+//         {...commonImageProps} // alt is included here
+//         {...imageDimensionProps}
+//         style={imageStyle}
+//         className={finalImageClassName}
+//         loading={priority ? "eager" : "lazy"}
+//         // Removed explicit alt="" here as it's covered by commonImageProps
+//       />
+//     );
+//   }
+
+//   // For non-priority images not yet in view, render the placeholder
+//   // The placeholder should fill its parent container, which already has the correct aspect ratio.
+//   return (
+//     <div
+//       ref={placeholderRef}
+//       // Make placeholder fill its parent, which is correctly sized by ProductCard
+//       // The parent (.relative.aspect-square.w-full) defines the dimensions.
+//       style={{ width: "100%", height: "100%" }}
+//       className={`image-placeholder rounded-md ${wrapperClassName || ""} blur`}
+//     >
+//       {/* Content can be added here if needed, e.g., a very low-res inline SVG or similar */}
+//     </div>
+//   );
+// }
+
+// components/Imagecustom.js
+// components/Imagecustom.js
+"use client";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+
 export default function Imagecustom({
-  src,
-  className: wrapperClassName,
-  imageClassName,
-  w, // Still useful for Next/Image props and Cloudinary URL if not using fill
-  h, // Still useful for Next/Image props and Cloudinary URL if not using fill
+  src, // Image ID
+  w,   // For non-fill images
+  h,   // For non-fill images
+  urlWidthHint, // NEW: For generating URL when using fill
   alt,
   priority,
+  fill,
+  objectFit = "cover",
+  style,
+  imageClassName,
+  className: wrapperClassName,
   sizes,
   quality,
-  objectFit = "cover",
-  fill,
-  ref,
 }) {
-  // ... (useState, useEffect hooks remain the same) ...
   const [isLoaded, setIsLoaded] = useState(false);
-  // Initialize isInView to true if priority is true
   const [isInView, setIsInView] = useState(!!priority);
   const placeholderRef = useRef(null);
 
   useEffect(() => {
     if (priority || isInView) {
-      // If priority, or already in view, it's effectively "in view"
-      if (!isInView) setIsInView(true); // Ensure isInView is true if priority was initially false but became true
+      if (!isInView) setIsInView(true);
       return;
     }
-
     if (!placeholderRef.current) return;
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -297,27 +406,27 @@ export default function Imagecustom({
           observer.unobserve(entry.target);
         }
       },
-      {
-        rootMargin: "0px 0px 100px 0px",
-      }
+      { rootMargin: "0px 0px 100px 0px" }
     );
-
     const currentRef = placeholderRef.current;
     observer.observe(currentRef);
+    return () => { if (currentRef) observer.unobserve(currentRef); };
+  }, [priority, isInView]);
 
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, [priority, isInView]); // Re-run if priority changes
+  // If using `fill`, use `urlWidthHint` for the URL.
+  // If not using `fill`, use the standard `w` prop.
+  const widthForUrl = fill ? urlWidthHint : w;
+  const heightForUrl = fill ? urlWidthHint : h;
+
+  const finalSrc = cloudinaryMainImage(src, widthForUrl, heightForUrl);
+
   const commonImageProps = {
-    src: cloudinaryMainImage(src, fill ? undefined : w, fill ? undefined : h),
-    alt: alt || "image", // Ensure alt is passed through
-    quality: quality,
+    src: finalSrc,
+    alt: alt || "image",
+    quality,
     onLoad: () => setIsLoaded(true),
     priority: !!priority,
-    sizes: sizes,
+    sizes,
   };
 
   let imageStyle = {};
@@ -327,42 +436,31 @@ export default function Imagecustom({
     imageDimensionProps.fill = true;
     imageStyle.objectFit = objectFit;
   } else {
-    // For non-fill, Next/Image uses width/height for aspect ratio hints
-    // and initial sizing, but it will still be responsive within its container.
     imageDimensionProps.width = w;
     imageDimensionProps.height = h;
     imageStyle.objectFit = objectFit;
   }
 
-  const finalImageClassName = `rounded-md ${imageClassName || ""} ${
-    isLoaded ? "remove-blur" : "blur"
-  }`;
+  const finalImageClassName = `rounded-md ${imageClassName || ""} ${isLoaded ? "remove-blur" : "blur"}`;
 
   if (priority || isInView) {
     return (
       <Image
-        alt=""
-        {...commonImageProps} // alt is included here
+        {...commonImageProps}
         {...imageDimensionProps}
-        style={imageStyle}
+        style={{ ...imageStyle, ...style }}
         className={finalImageClassName}
         loading={priority ? "eager" : "lazy"}
-        // Removed explicit alt="" here as it's covered by commonImageProps
+        alt=""
       />
     );
   }
 
-  // For non-priority images not yet in view, render the placeholder
-  // The placeholder should fill its parent container, which already has the correct aspect ratio.
   return (
     <div
       ref={placeholderRef}
-      // Make placeholder fill its parent, which is correctly sized by ProductCard
-      // The parent (.relative.aspect-square.w-full) defines the dimensions.
       style={{ width: "100%", height: "100%" }}
       className={`image-placeholder rounded-md ${wrapperClassName || ""} blur`}
-    >
-      {/* Content can be added here if needed, e.g., a very low-res inline SVG or similar */}
-    </div>
+    ></div>
   );
 }

@@ -46,22 +46,27 @@
 
 // your .../_components/Images.js file
 // your .../_components/Images.js file
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+// your .../_components/Images.js file
+// your .../_components/Images.js file
 import ImageZoomer from "../../_components/ImageZoomer"; // Use the final component
 
 export default function Images({ mainImage, imageGallery = [], title }) {
 
-  // Create the structured array the component expects
+  // --- De-duplication Logic ---
+  // Filter the gallery to remove any ID that matches the main image.
+  const uniqueGalleryIds = imageGallery.filter(id => id !== mainImage);
+  
+  // --- Data Structuring Logic ---
+  // Create the structured array the component expects.
   const productImages = [
+    // 1. The main image is always first.
     {
-      small: cloudinaryMainImage(mainImage, 600, 600),
-      large: cloudinaryMainImage(mainImage, 1800, 1800),
+      id: mainImage,
       alt: title || 'Main product image',
     },
-    // Add the other images from your product data
-    ...imageGallery.map((img, index) => ({
-      small: cloudinaryMainImage(img, 600, 600),
-      large: cloudinaryMainImage(img, 1800, 1800),
+    // 2. Spread the unique gallery images after it.
+    ...uniqueGalleryIds.map((imgId, index) => ({
+      id: imgId,
       alt: `Product image ${index + 2}`,
     }))
   ];

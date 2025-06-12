@@ -54,7 +54,7 @@
   width: 100px;
   height: 100px;
   flex-shrink: 0;
-  line-height: 0; /* Prevents extra space under the image */
+  line-height: 0;
 }
 
 .thumbnailButton:hover {
@@ -62,7 +62,7 @@
 }
 
 .thumbnailActive {
-  border-color: #0070f3; /* Example active color */
+  border-color: #0070f3;
 }
 
 .thumbnailActive:hover {
@@ -167,7 +167,7 @@
 }
 
 .modalImageWrapper {
-  flex-grow: 1; /* Make the image area take up available space */
+  flex-grow: 1;
   width: 100%;
   overflow: hidden;
   touch-action: none;
@@ -184,9 +184,9 @@
   transition: opacity 0.2s ease-in-out;
 }
 
-.imageTransitionContainer img {
-  /* Prevent jarring jumps during pan/zoom */
-  transition: transform 0.05s linear;
+.modalImageActual {
+  /* This class is passed to Imagecustom to allow specific styling */
+  transition: transform 0.05s linear !important;
 }
 
 /* Spinner for loading state */
