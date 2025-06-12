@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 
 export async function getBanner() {
   try {
+    console.time("getBanner DB Query");
     const data = await prisma.banner.findFirst({
       include: {
         thumbnail: true,
       },
     });
+    console.timeEnd("getBanner DB Query");
     return { success: true, data: data };
   } catch (error) {
     return { success: false, message: error.message };
