@@ -376,8 +376,8 @@ import { useEffect, useRef, useState } from "react";
 
 export default function Imagecustom({
   src, // Image ID
-  w,   // For non-fill images
-  h,   // For non-fill images
+  w, // For non-fill images
+  h, // For non-fill images
   urlWidthHint, // NEW: For generating URL when using fill
   alt,
   priority,
@@ -410,7 +410,9 @@ export default function Imagecustom({
     );
     const currentRef = placeholderRef.current;
     observer.observe(currentRef);
-    return () => { if (currentRef) observer.unobserve(currentRef); };
+    return () => {
+      if (currentRef) observer.unobserve(currentRef);
+    };
   }, [priority, isInView]);
 
   // If using `fill`, use `urlWidthHint` for the URL.
@@ -441,14 +443,16 @@ export default function Imagecustom({
     imageStyle.objectFit = objectFit;
   }
 
-  const finalImageClassName = `rounded-md ${imageClassName || ""} ${isLoaded ? "remove-blur" : "blur"}`;
+  const finalImageClassName = `rounded-md ${imageClassName || ""} ${
+    isLoaded ? "remove-blur" : "blur"
+  }`;
 
   if (priority || isInView) {
     return (
       <Image
         {...commonImageProps}
         {...imageDimensionProps}
-        style={{ ...imageStyle, ...style }}
+        style={imageStyle}
         className={finalImageClassName}
         loading={priority ? "eager" : "lazy"}
         alt=""
