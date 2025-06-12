@@ -1,38 +1,26 @@
-import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
-import Imagecustom from "../images/ImageCustom";
+// src/components/common/Logo.js (CRITICAL FIX)
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import Image from "next/image"; // Use the standard component!
 
-export default async function Logo() {
-  const { data } = await getSiteSetting({
-    select: {
-      logo: true,
-      name: true,
-    },
-  });
+// This is now a simple, synchronous Server Component. No more `async`.
+export default function Logo({ data }) {
+  if (!data?.logo) return null; // Or return a text fallback
 
   return (
     <div className="flex flex-row items-center text-3xl text-orange-600">
-      {" "}
-      {/* <Image
-        src={
-          "https://res.cloudinary.com/bdmart24/image/upload/w_50,h_50,f_auto,q_auto,dpr_auto/v1735555899/logo_fkajgn.png"
-        }
+      <Image
+        // DO NOT USE Imagecustom here. This is the fix.
+        src={cloudinaryMainImage(
+          data.logo,
+          200, // Width for the logo
+          50 // Height for the logo
+        )}
+        width={200}
         height={50}
-        width={50}
-        priority
-        placeholder="blur"
-        blurDataURL="https://res.cloudinary.com/bdmart24/image/upload/w_50,h_50,f_auto,q_auto,dpr_auto/v1735555899/logo_fkajgn.png"
-        alt="logo"
-      />
-      <KalapanaFont> বিডি মার্ট24</KalapanaFont> */}
-      <Imagecustom
+        alt={`${data.name}_logo` || "logo"}
+        priority={true} // Crucial: tells browser to load this early
         sizes="(max-width: 480px) 200px, 200px"
-        className=" rounded-md "
-        src={data?.logo}
-        h={50}
-        w={200}
-        alt={`${data?.name}_logo ` || "logo"}
-        priority
-        quality={100}
+        className="rounded-md"
       />
     </div>
   );

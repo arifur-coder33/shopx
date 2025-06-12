@@ -1,22 +1,18 @@
-import { getNotice } from "@/backend/serverActions/noticeaction";
+// src/components/common/Notice.js (REVISED)
 
-export default async function Notice() {
-  const { data } = await getNotice();
+// This is also now a simple, synchronous Server Component.
+export default function Notice({ data }) {
   const currentDate = new Date();
-
-  // Parse start and end dates
   const startDate = new Date(data?.start);
   const endDate = new Date(data?.end);
 
-  // Check if the current date is within the validity range
-  const isValid = currentDate >= startDate && currentDate <= endDate;
+  const isValid = data && currentDate >= startDate && currentDate <= endDate;
 
   if (!isValid) {
-    // Render nothing if the notice is not valid
     return null;
   }
 
-  return (
-    <marquee className="pt-1" >{data?.notice}</marquee>
-  );
+  // Note: <marquee> is deprecated. A CSS animation is better for performance and accessibility.
+  // But for now, this works.
+  return <marquee className="pt-1">{data.notice}</marquee>;
 }
