@@ -12,7 +12,6 @@ import Script from "next/script";
 import FacebookEventTrac from "../_components/FacebookEventTrack";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
-import { ProductImageGallery } from "./_components/Images/ProductImagegallery";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -277,7 +276,7 @@ export default async function ProductPage({ params }) {
           <Images
             title={title}
             mainImage={thumbnail || mainImage}
-             imageGallery={gallery || imageGallery}
+            imageGallery={gallery || imageGallery}
           />
         </div>
         <div className="col-span-2 mt-2">
@@ -305,28 +304,13 @@ export default async function ProductPage({ params }) {
         </div>
       </div>
       <ProductDescription description={description} />
-      <ProductImageGallery
-        imageGallery={gallery || imageGallery}
-        title={title}
-      />
+
       <FacebookEventTrac product={data} />
       <Script
         id="jsonld"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
-      {/* <Script
-        id="eventSchema"
-        dangerouslySetInnerHTML={{
-          __html: `
-            if (typeof fbq !== 'undefined') {
-              fbq('track', 'ViewContent', ${JSON.stringify(schemaEvent)});
-            }else {
-        console.warn('Meta Pixel is not loaded.');
-      }
-          `,
-        }}
-      /> */}
 
       <Script
         id="jsonldforGoogle"
