@@ -212,3 +212,20 @@
 .slidePrev {
   animation: slideInFromLeft 0.3s forwards ease-out;
 }
+.mainImage {
+  transition: filter 0.5s ease-in-out, transform 0.3s ease-in-out;
+  transform: scale(1);
+  width: 100%;
+  height: 100%;
+}
+
+.imageLoading {
+  filter: blur(10px);
+  /* Optional: slightly scale down while blurred */
+  transform: scale(1.05);
+}
+
+.imageLoaded {
+  filter: blur(0px);
+  transform: scale(1);
+}

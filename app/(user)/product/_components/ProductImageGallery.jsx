@@ -30,7 +30,7 @@ export default function ProductImageGallery({
   const [activeIndex, setActiveIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
-
+  const [isLoading, setIsLoading] = useState(true);
   const [desktopZoomActive, setDesktopZoomActive] = useState(false);
   const [desktopZoomPosition, setDesktopZoomPosition] = useState({
     x: 0.5,
@@ -67,6 +67,10 @@ export default function ProductImageGallery({
     src: cloudinaryMainImage(activeImage.id, 600, 600),
     alt: activeImage.alt,
     priority: activeIndex === 0,
+    onLoad: () => setIsLoading(false),
+    className: `${styles.mainImage} ${
+      isLoading ? styles.imageLoading : styles.imageLoaded
+    }`,
   });
 
   return (
