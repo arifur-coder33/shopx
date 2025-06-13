@@ -2,8 +2,7 @@ import {
   getProductBySlug,
   getProducts,
 } from "@/backend/serverActions/productActions";
-import KalapanaFont from "@/components/KalapanaFont";
-import ProductDescription from "@/components/products/productDescription";
+
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { getBase64ImageUrl } from "@/utils/getBase64";
@@ -11,10 +10,22 @@ import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
 import Image from "next/image";
 import Script from "next/script";
-import FacebookEventTrac from "../_components/FacebookEventTrack";
-import ProductImageGallery from "../_components/ProductImageGallery";
-import BuyNowSection from "./_components/BuyNowSection";
 
+import dynamic from "next/dynamic"; // <-- Import dynamic
+
+// --- LAZY-LOADED COMPONENTS ---
+
+const KalapanaFont = dynamic(() => import("@/components/KalapanaFont"));
+const ProductImageGallery = dynamic(() =>
+  import("../_components/ProductImageGallery")
+);
+const ProductDescription = dynamic(() =>
+  import("@/components/products/productDescription")
+);
+const FacebookEventTrac = dynamic(() =>
+  import("../_components/FacebookEventTrack")
+);
+const BuyNowSection = dynamic(() => import("./_components/BuyNowSection"));
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
@@ -289,19 +300,12 @@ export default async function ProductPage({ params }) {
               It's passed as `children` to the client component.
             */}
             <Image
-              src={cloudinaryMainImage(thumbnail || mainImage, 600, 600)}
+              src={cloudinaryMainImage(mainProductImageId, 600, 600)}
               alt={title}
-              width={600}
-              height={600}
-              priority={true} // CRITICAL: Preloads the image
-              sizes="(max-width: 768px) 100vw, 50vw" // Helps browser choose correct image size
-              style={{
-                width: "100%",
-                height: "auto",
-                aspectRatio: "1/1",
-                objectFit: "contain",
-                borderRadius: "0.375rem",
-              }}
+              fill={true} // Use fill for responsive sizing within the container
+              priority={true}
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="rounded-md object-contain"
               placeholder="blur"
               blurDataURL={blurDataURL}
             />

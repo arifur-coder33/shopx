@@ -222,7 +222,7 @@
 .imageLoading {
   filter: blur(10px);
   /* Optional: slightly scale down while blurred */
-  transform: scale(1.05);
+  /* transform: scale(1.05); */
 }
 
 .imageLoaded {

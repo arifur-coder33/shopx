@@ -72,7 +72,9 @@ export default function ProductImageGallery({
       isLoading ? styles.imageLoading : styles.imageLoaded
     }`,
   });
-
+  if (allImages.length <= 1) {
+    return null;
+  }
   return (
     <div className={styles.galleryContainer}>
       {/* --- NEW WRAPPER for image and zoom panel --- */}
