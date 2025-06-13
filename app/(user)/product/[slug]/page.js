@@ -6,6 +6,7 @@ import KalapanaFont from "@/components/KalapanaFont";
 import ProductDescription from "@/components/products/productDescription";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import { getBase64ImageUrl } from "@/utils/getBase64";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
 import Image from "next/image";
@@ -270,6 +271,10 @@ export default async function ProductPage({ params }) {
     },
   };
 
+  const mainProductImageId = thumbnail || mainImage;
+
+  // --- Add this line to generate the blur placeholder on the server ---
+  const blurDataURL = await getBase64ImageUrl(mainProductImageId);
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
@@ -297,6 +302,8 @@ export default async function ProductPage({ params }) {
                 objectFit: "contain",
                 borderRadius: "0.375rem",
               }}
+              placeholder="blur"
+              blurDataURL={blurDataURL}
             />
           </ProductImageGallery>
           {/* <Images

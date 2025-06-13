@@ -171,7 +171,7 @@ export default function MobileModalZoomer({
             >
               {activeImage.id && (
                 <Image
-                  src={cloudinaryMainImage(activeImage.id, 1800, 1800)}
+                  src={cloudinaryMainImage(activeImage.id, 1200, 1200)}
                   alt={activeImage.alt}
                   fill={true}
                   sizes="100vw"
