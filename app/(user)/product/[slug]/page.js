@@ -8,10 +8,11 @@ import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
+import Image from "next/image";
 import Script from "next/script";
 import FacebookEventTrac from "../_components/FacebookEventTrack";
+import ProductImageGallery from "../_components/ProductImageGallery";
 import BuyNowSection from "./_components/BuyNowSection";
-import Images from "./_components/Images";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -218,7 +219,7 @@ export default async function ProductPage({ params }) {
   const imageUrl =
     cloudinaryMainImage(thumbnail || mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
-
+  const primaryImage = thumbnail || mainImage;
   //for facebook product schema listing
   const schema = {
     "@context": "http://schema.org",
@@ -272,14 +273,40 @@ export default async function ProductPage({ params }) {
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <div className="col-span-3">
-          <Images
+        <div className="md:col-span-2 ">
+          <ProductImageGallery
+            mainImageId={thumbnail || mainImage}
+            galleryIds={gallery || imageGallery}
+            title={title}
+          >
+            {/* 
+              This is the LCP element. It is rendered on the SERVER.
+              It's passed as `children` to the client component.
+            */}
+            <Image
+              src={cloudinaryMainImage(thumbnail || mainImage, 600, 600)}
+              alt={title}
+              width={600}
+              height={600}
+              priority={true} // CRITICAL: Preloads the image
+              sizes="(max-width: 768px) 100vw, 50vw" // Helps browser choose correct image size
+              style={{
+                width: "100%",
+                height: "auto",
+                aspectRatio: "1/1",
+                objectFit: "contain",
+                borderRadius: "0.375rem",
+              }}
+            />
+          </ProductImageGallery>
+          {/* <Images
             title={title}
             mainImage={thumbnail || mainImage}
             imageGallery={gallery || imageGallery}
-          />
+          /> */}
         </div>
-        <div className="col-span-2 mt-2">
+
+        <div className="col-span-2 mt-2 col-start-4 ">
           <h1 className="text-4xl font-bold border-b-2">{title}</h1>
           <KalapanaFont>
             <p className="text-2xl dark:text-slate-300 mt-4 relative">
