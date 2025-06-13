@@ -306,7 +306,7 @@ export default async function ProductPage({ params }) {
           /> */}
         </div>
 
-        <div className="col-span-2 mt-2 col-start-4 ">
+        <div className="md:col-span-2 mt-2 md:col-start-4 ">
           <h1 className="text-4xl font-bold border-b-2">{title}</h1>
           <KalapanaFont>
             <p className="text-2xl dark:text-slate-300 mt-4 relative">
