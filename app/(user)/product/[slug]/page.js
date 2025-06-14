@@ -61,18 +61,19 @@ export async function generateMetadata({ params }) {
     regularPrice,
     discountPrice,
     id,
+    thumbnail,
   } = data;
-
+  const primaryImage = thumbnail || mainImage;
   const imageUrl =
-    cloudinaryMainImage(mainImage, 800, 800) ||
+    cloudinaryMainImage(primaryImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
 
   const ogImageUrl =
     convertImageToOG_cloudinary(
-      cloudinaryMainImage(mainImage, 1200, 630),
-      "t_to_og"
+      cloudinaryMainImage(primaryImage, 1200, 630),
+      "t_og-image-width-convert"
     ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
-
+  console.log("ogImageUrl", ogImageUrl);
   const price = new Intl.NumberFormat("en-BD", {
     style: "currency",
     currency: "BDT",

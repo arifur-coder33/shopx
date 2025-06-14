@@ -7,12 +7,12 @@ export function cloudinaryMainImage(publicId, widthHint, heightHint) {
   }
 
   // Only add the width parameter if widthHint is a valid number
-  const widthTransform = widthHint ? `w_${widthHint},` : '';
-  
+  const widthTransform = widthHint ? `w_${widthHint},` : "";
+
   // Note: We're assuming height is not part of the transform string based on your original function.
   // If you also wanted to support height, you'd add a similar `heightTransform`.
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${widthTransform}f_auto,q_auto,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${widthTransform}f_auto,q_auto:good,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
 }
 
 // export function cloudinaryMainImage(imageName, width, height) {

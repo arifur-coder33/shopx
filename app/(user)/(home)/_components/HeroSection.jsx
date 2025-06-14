@@ -45,10 +45,10 @@ export const getCachedBanner = unstable_cache(
 export default async function HeroSection() {
   const { data } = await getCachedBanner();
 
-  if (!data?.thumbnail) {
-    // Return a fallback or null if there's no banner
+  if (!data?.thumbnail?.name) {
+    // This is a good fallback for when no image exists
     return (
-      <div className="w-full h-[500px] bg-gray-200 rounded-md animate-pulse"></div>
+      <div className="w-full aspect-[1280/500] bg-gray-200 rounded-3xl animate-pulse"></div>
     );
   }
 

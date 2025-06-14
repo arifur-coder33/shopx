@@ -79,24 +79,6 @@ export async function generateMetadata() {
   };
 }
 
-// const getProducts = await prisma.product.findMany({
-//   select: {
-//     id: true,
-//     title: true,
-//     regularPrice: true,
-//     discountPrice: true,
-//     slug: true,
-//     mainImage: true,
-//   },
-// });
-
-// const getProducts = unstable_cache(
-//   async () => {
-//     return await prisma.product.findMany();
-//   },
-//   ["products"],
-//   { revalidate: 0.1, tags: ["products"] }
-// );
 export default async function Home() {
   // const data = await prisma.product.findMany();
 
