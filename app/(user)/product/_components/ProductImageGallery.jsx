@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import useMediaQuery from "@/hooks/useMediaQuery";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import Image from "next/image";
-import React, { useCallback, useRef, useState } from "react";
-import MobileModalZoomer from "./MobileModalZoomer";
-import styles from "./ProductImageGallery.module.css";
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import Image from 'next/image';
+import { cloudinaryMainImage } from '@/utils/cloudinaryUrl';
+import useMediaQuery from '@/hooks/useMediaQuery';
+import MobileModalZoomer from './MobileModalZoomer';
+import styles from './ProductImageGallery.module.css';
 
 const clamp = (val, min, max) => Math.max(min, Math.min(val, max));
 const ZoomIcon = () => (
@@ -29,23 +29,29 @@ export default function ProductImageGallery({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 768px)");
-  const [isLoading, setIsLoading] = useState(true);
-  const [desktopZoomActive, setDesktopZoomActive] = useState(false);
-  const [desktopZoomPosition, setDesktopZoomPosition] = useState({
-    x: 0.5,
-    y: 0.5,
-  });
-  const imageContainerRef = useRef(null);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
+  const [desktopZoomActive, setDesktopZoomActive] = useState(false);
+  const [desktopZoomPosition, setDesktopZoomPosition] = useState({ x: 0.5, y: 0.5 });
+  const galleryRef = useRef(null); // Ref on the root container now
+  
   const activeImage = allImages[activeIndex] || {};
 
   const handleMouseMove = useCallback(
     (e) => {
-      if (!imageContainerRef.current || isMobile) return;
-      const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-      const y = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+      if (!galleryRef.current || isMobile) return;
+      // We only care about the main image area for positioning
+      const imageRect = galleryRef.current.querySelector(`.${styles.mainImageContainer}`).getBoundingClientRect();
+      const galleryRect = galleryRef.current.getBoundingClientRect();
+
+      // Calculate position relative to the image, not the whole gallery
+      const x = clamp((e.clientX - imageRect.left) / imageRect.width, 0, 1);
+      const y = clamp((e.clientY - imageRect.top) / imageRect.height, 0, 1);
       setDesktopZoomPosition({ x, y });
     },
     [isMobile]
@@ -54,94 +60,78 @@ export default function ProductImageGallery({
   const openModal = () => {
     if (isMobile) {
       setIsModalOpen(true);
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden';
     }
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    document.body.style.overflow = "";
+    document.body.style.overflow = '';
   };
-
+  
   const mainDisplay = React.cloneElement(children, {
-    src: cloudinaryMainImage(activeImage.id, 600, 600),
+    src: cloudinaryMainImage(activeImage.id, 800, 800),
     alt: activeImage.alt,
     priority: activeIndex === 0,
-    onLoad: () => setIsLoading(false),
-    className: `${styles.mainImage} ${
-      isLoading ? styles.imageLoading : styles.imageLoaded
-    }`,
   });
-  if (allImages.length <= 1) {
-    return null;
-  }
+
   return (
-    <div className={styles.galleryContainer}>
-      {/* --- NEW WRAPPER for image and zoom panel --- */}
-      <div
-        ref={imageContainerRef}
-        className={styles.imageAndZoomWrapper}
-        onMouseEnter={() => !isMobile && setDesktopZoomActive(true)}
-        onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
-        onMouseMove={handleMouseMove}
-      >
-        {/* Main image container now only handles the image itself */}
-        <div
+    // THE ROOT CONTAINER NOW HANDLES POSITIONING AND EVENTS
+    <div
+      ref={galleryRef}
+      className={styles.galleryContainer}
+      onMouseEnter={() => !isMobile && setDesktopZoomActive(true)}
+      onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
+      onMouseMove={handleMouseMove}
+    >
+      {/* This inner div is ONLY for layout, not events or positioning */}
+      <div className={styles.layoutWrapper}>
+        <div 
           className={styles.mainImageContainer}
           onClick={openModal}
-          style={{ cursor: isMobile ? "pointer" : "crosshair" }}
+          style={{ cursor: isMobile ? 'pointer' : 'crosshair' }}
         >
           {mainDisplay}
-          {isMobile && (
-            <div className={styles.zoomIconWrapper}>
-              <ZoomIcon />
-            </div>
-          )}
+          {isMobile && <div className={styles.zoomIconWrapper}><ZoomIcon /></div>}
         </div>
 
-        {/* --- DESKTOP ZOOM PANEL IS NOW A SIBLING --- */}
-        {!isMobile && (
-          <div
-            className={styles.desktopZoomPanel}
-            style={{
-              backgroundImage: `url(${cloudinaryMainImage(
-                activeImage.id,
-                1200,
-                1200
-              )})`,
-              backgroundPosition: `${desktopZoomPosition.x * 100}% ${
-                desktopZoomPosition.y * 100
-              }%`,
-              opacity: desktopZoomActive ? 1 : 0,
-              visibility: desktopZoomActive ? "visible" : "hidden",
-            }}
-          />
+        {allImages.length > 1 && (
+          <div className={styles.thumbnailList}>
+            {allImages.map((image, index) => (
+              <button
+                key={image.id || index}
+                className={`${styles.thumbnailButton} ${index === activeIndex ? styles.thumbnailActive : ''}`}
+                onClick={() => setActiveIndex(index)}
+                aria-label={`View image ${index + 1}`}
+              >
+                <Image
+                  src={cloudinaryMainImage(image.id, 100, 100)}
+                  alt={image.alt}
+                  width={100}
+                  height={100}
+                  style={{ objectFit: 'cover' }}
+                  className={styles.thumbnailImage}
+                />
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Thumbnails remain outside the wrapper */}
-      {allImages.length > 1 && (
-        <div className={styles.thumbnailList}>
-          {allImages.map((image, index) => (
-            <button
-              key={image.id || index}
-              className={`${styles.thumbnailButton} ${
-                index === activeIndex ? styles.thumbnailActive : ""
-              }`}
-              onClick={() => setActiveIndex(index)}
-              aria-label={`View image ${index + 1}`}
-            >
-              <Image
-                src={cloudinaryMainImage(image.id, 100, 100)}
-                alt={image.alt}
-                width={100}
-                height={100}
-                style={{ objectFit: "cover" }}
-                className={styles.thumbnailImage}
-              />
-            </button>
-          ))}
-        </div>
+      {/* 
+        THE ZOOM PANEL IS NOW A SIBLING TO THE LAYOUT WRAPPER.
+        It is an overlay and will not affect the width of the main content.
+      */}
+      {isMounted && !isMobile && (
+        <div
+          className={styles.desktopZoomPanel}
+          style={{
+            backgroundImage: `url(${cloudinaryMainImage(activeImage.id, 1800, 1800)})`,
+            backgroundPosition: `${desktopZoomPosition.x * 100}% ${desktopZoomPosition.y * 100}%`,
+            opacity: desktopZoomActive ? 1 : 0,
+            visibility: desktopZoomActive ? 'visible' : 'hidden',
+          }}
+        />
       )}
 
       {isMobile && isModalOpen && (

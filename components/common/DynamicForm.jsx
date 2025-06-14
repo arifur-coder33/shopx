@@ -11,7 +11,7 @@ import VariationInput from "../input/VariationInput";
 const Button = dynamic(() => import("@/components/button"));
 const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
 const CheckBox = dynamic(() => import("../input/CheckBox"), { ssr: false });
-const CustomEditor = dynamic(() => import("../input/CustomEditor"), {
+const CustomEditor = dynamic(() => import("../input/quillEditor/CustomEditor"), {
   ssr: false,
 });
 const ProductVariationInput = dynamic(() =>

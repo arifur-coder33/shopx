@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import "react-quill-new/dist/quill.snow.css";
-
+import styles from "./CustomEditor.module.css";
 // Dynamically import ReactQuill with SSR disabled
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 export default function CustomEditor({ defaultValue, label, name }) {
@@ -43,7 +43,7 @@ export default function CustomEditor({ defaultValue, label, name }) {
   ];
 
   return (
-    <div className="text-editor">
+    <div className={styles.editorWrapper}>
       <label htmlFor={name} className="block  text-sm font-medium">
         {label}
       </label>

@@ -13,7 +13,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import Imagecustom from "../images/ImageCustom";
 import CheckBox from "../input/CheckBox";
-import CustomEditor from "../input/CustomEditor";
+import CustomEditor from "../input/quillEditor/CustomEditor";
 import SelectInput from "../input/SelectInput";
 export default function ProductForm({ category, data, actionType }) {
   const { closeModal } = useModalContext();

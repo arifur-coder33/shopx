@@ -1,0 +1,42 @@
+.editorWrapper :global(.ql-toolbar) {
+  background-color: #f0f0f0; /* Change this to the desired color */
+  border-bottom: 2px solid #ccc; /* Optional: Add a border */
+  border-top-left-radius: 8px; /* Optional: nice rounded corners */
+  border-top-right-radius: 8px; /* Optional: nice rounded corners */
+}
+
+.editorWrapper :global(.ql-snow .ql-tooltip) {
+  background-color: aqua !important;
+  transform: translateX(50%) translateY(-10%) !important;
+  /* Note: !important is still sometimes necessary to override library inline styles or high-specificity rules */
+}
+
+.editorWrapper :global(.ql-container) {
+  border-bottom-left-radius: 8px; /* Optional: match the toolbar corners */
+  border-bottom-right-radius: 8px; /* Optional: match the toolbar corners */
+}
+
+/* Keep the background color of the editor area as white */
+.editorWrapper :global(.ql-editor) {
+  background-color: white;
+  min-height: 120px; /* Merged from your .custom-quill rule */
+  padding: 10px; /* Optional: Add some padding */
+  color: #0f172a; /* Example: set a default text color for the editor content */
+}
+
+.editorWrapper :global(.ql-editor iframe),
+.editorWrapper :global(.ql-editor video) {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  aspect-ratio: 16 / 9;
+  margin: 1.5rem auto; /* Added some vertical margin for better spacing in the editor */
+  border-radius: 8px; /* Optional: adds a nice touch */
+}
+
+@media (min-width: 768px) {
+  .editorWrapper :global(.ql-editor iframe),
+  .editorWrapper :global(.ql-editor video) {
+    max-width: 800px !important;
+  }
+}
