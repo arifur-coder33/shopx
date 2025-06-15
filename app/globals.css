@@ -78,7 +78,7 @@ body {
 }
 
 .blur {
-  filter: blur(10px); /* Adjust blur amount as needed */
+  filter: blur(7px); /* Adjust blur amount as needed */
   opacity: 0.8; /* Optional: slight opacity for blurred state */
   transform: scale(1); /* Optional: slight zoom for blur effect */
   transition: filter 0.1s ease-out, opacity 0.1s ease-out,
