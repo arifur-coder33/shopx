@@ -1,10 +1,12 @@
 // The layout from your first question (e.g., app/(user)/layout.js)
 /* eslint-disable @next/next/no-img-element */
 
-import ThirdPartyScripts from "@/components/common/ThirdPartyScripts"; // The optimized ThirdPartyScripts component
 import Footer from "@/components/footer/Footer";
 import NavBar from "@/components/NavBar"; // The optimized NavBar from our previous discussion
+import dynamic from "next/dynamic";
 
+const ThirdPartyScripts=dynamic(()=>import('@/components/common/ThirdPartyScripts'),
+)
 // The metadata from this layout will be merged with the RootLayout's metadata
 export const metadata = {
   title: " আমার শপ",
