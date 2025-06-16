@@ -545,7 +545,7 @@ export const getProducts = async () => {
       ...product,
       gallery: product.gallery.map((g) => g.media), // Extract only media details
     }));
-console.log(transformedData)
+
     return { success: true, data: transformedData };
   } catch (error) {
     return { success: false, error: error.message };
@@ -715,7 +715,8 @@ export const getProductBySlug = async (slug) => {
       thumbnail: data?.thumbnail?.name,
       gallery: data.gallery.map((g) => g.media?.name),
     };
-
+    console.log('product data')
+console.log(transformedData.variations)
     return { success: true, data: transformedData }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
