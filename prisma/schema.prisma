@@ -58,7 +58,7 @@ model VariationName {
   categoryId String? @db.ObjectId
   category   Category? @relation(fields: [categoryId], references: [id])            
   values VariationValue[] // Example: "Size", "Color"
-  productVariations ProductVariation[]
+  combinations Combination[]
 }
 
 // Variation Value Model (Specific options like XL, Red, etc.)
@@ -71,7 +71,7 @@ model VariationValue {
   value       String  // Example: "XL", "Red", "L"
   // Many-to-Many Relationship using Join Table
  
-  productVariations ProductVariation[]
+  combinations Combination[] // Many-to-Many Relationship using Join Table
 }
 
 model ProductCodeCounter{
@@ -125,7 +125,7 @@ model Product {
 
   hasVariations    Boolean? @default(false)           
       // Many-to-Many Relationship using Join Table 
-  variations      ProductVariation[] 
+  variationId      ProductVariation[] 
   orders         OrderItem[]                     // One-to-many relationship with Order
 
   createdAt      DateTime    @default(now())     // Timestamp for product creation
@@ -147,7 +147,7 @@ model ProductGallery {
 model ProductVariation{
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   productId     String?      @db.ObjectId    // Foreign key for Category
-  product       Product?    @relation(fields: [productId], references: [id]) // Relation to Category
+  product       Product?    @relation(fields: [productId], references: [id] ,onDelete: Cascade) // Relation to Category
   sku          String
   stock       Float?
   weight Float?
@@ -155,10 +155,22 @@ model ProductVariation{
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
   matcherId String
-  variationNameId String? @db.ObjectId
+  
+  combinations Combination[] // Many-to-Many Relationship using Join Table
+  
+}
+
+model Combination {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+ productVariationId String @db.ObjectId
+  productVariation   ProductVariation @relation(fields: [productVariationId], references: [id], onDelete: Cascade)
+ variationNameId String? @db.ObjectId
   variationName VariationName? @relation(fields: [variationNameId],references: [id])
   variationValueId String? @db.ObjectId
   variationValue VariationValue? @relation(fields: [variationValueId],references: [id])
+  // Additional fields can be added as needed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
 }
 
