@@ -125,7 +125,7 @@ model Product {
 
   hasVariations    Boolean? @default(false)           
       // Many-to-Many Relationship using Join Table 
-  variationId      ProductVariation[] 
+  variations      ProductVariation[] 
   orders         OrderItem[]                     // One-to-many relationship with Order
 
   createdAt      DateTime    @default(now())     // Timestamp for product creation

@@ -12,6 +12,7 @@ import Image from "next/image";
 import Script from "next/script";
 
 import dynamic from "next/dynamic"; // <-- Import dynamic
+import ProductVariationSelector from "../_components/ProductVariationSelector";
 
 // --- LAZY-LOADED COMPONENTS ---
 
@@ -224,7 +225,7 @@ export default async function ProductPage({ params }) {
     mainImage,
     thumbnail,
     gallery,
-
+    variations,
     category,
   } = data || {};
   const name = category?.name || "General";
@@ -339,6 +340,7 @@ export default async function ProductPage({ params }) {
               </span>
             </p>
           </KalapanaFont>
+          <ProductVariationSelector variations={variations} />
           <BuyNowSection data={data} />
         </div>
       </div>

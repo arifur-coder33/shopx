@@ -372,10 +372,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
         createdAt: "desc",
       },
     });
-    console.log(
-      "Products from DB:",
-      productsFromDb[0].variations[0].combinations
-    );
+
     // Transform the data
     const transformedProducts = productsFromDb.map((product) => {
       // Transform gallery
@@ -441,35 +438,30 @@ export const getProductBySlug = async (slug) => {
         },
         variations: {
           include: {
-            thumbnail: {
-              select: {
-                id: true,
-                name: true,
+            thumbnail: { select: { id: true, name: true } },
+            // Include the combinations for each variation
+            combinations: {
+              orderBy: {
+                // Optional: ensure combination order is consistent
+                createdAt: "asc",
               },
-            },
-            variationName: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            variationValue: {
-              select: {
-                id: true,
-                value: true,
+              include: {
+                variationName: { select: { id: true, name: true } },
+                variationValue: { select: { id: true, value: true } },
               },
             },
           },
         },
       },
     });
+    const transformedVariations = transformVariations(data.variations);
     const transformedData = {
       ...data,
       thumbnail: data?.thumbnail?.name,
       gallery: data.gallery.map((g) => g.media?.name),
     };
     console.log("product data");
-    console.log(transformedData.variations);
+    console.log(JSON.stringify(transformedData?.variations));
     return { success: true, data: transformedData }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
