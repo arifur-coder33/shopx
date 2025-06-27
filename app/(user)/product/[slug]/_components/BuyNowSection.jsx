@@ -4,7 +4,7 @@ import IncrementNDcrement from "@/components/products/incrementNDcrement";
 import { useState } from "react";
 import ActionButtons from "./ActionButtons";
 
-export default function BuyNowSection({ data }) {
+export default function BuyNowSection({ data, selectedVariation }) {
   const [productQty, setProductQty] = useState(1);
   return (
     <>
@@ -20,7 +20,11 @@ export default function BuyNowSection({ data }) {
           </div>
         </div>
       </KalapanaFont>
-      <ActionButtons productQty={productQty} product={data} />
+      <ActionButtons
+        productQty={productQty}
+        product={data}
+        selectedVariation={selectedVariation}
+      />
     </>
   );
 }
