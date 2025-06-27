@@ -178,7 +178,7 @@ export default function ProductImageGallery({
               isFading ? styles.fading : ""
             }`}
           >
-            {isVideoActive ? (
+            {isVideoActive && !isModalOpen ? (
               loadVideoPlayer ? (
                 <VideoPlayer
                   url={activeMedia.url}
