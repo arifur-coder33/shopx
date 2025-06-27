@@ -1,45 +1,25 @@
-/* ROOT CONTAINER */
+/* --- Main Gallery Layout --- */
 .galleryContainer {
   position: relative;
   width: 100%;
 }
-
-/* Layout wrapper */
 .layoutWrapper {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   width: 100%;
 }
-
 .mainImageContainer {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  overflow: hidden; /* CRITICAL for the shadow overlay trick to work */
+  overflow: hidden;
   border-radius: 0.375rem;
 }
 
-/* --- UPDATED STYLE FOR THE LENS BOX --- */
-.desktopZoomLens {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  pointer-events: none;
-  z-index: 9;
-  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+/* --- Cross-Fade Transition --- */
 
-  /* 
-    THE MAGIC TRICK:
-    This creates a huge, semi-transparent black shadow that fills the parent container.
-    Because the parent has overflow:hidden, the shadow is clipped to its bounds,
-    creating a perfect dimming overlay that follows the lens.
-  */
-  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.4);
-}
-
-/* --- DESKTOP ZOOM PANEL STYLES --- */
+/* --- Desktop Zoom Panel --- */
 .desktopZoomPanel {
   display: none;
   position: absolute;
@@ -47,15 +27,13 @@
   width: 100%;
   height: 100%;
   background-repeat: no-repeat;
-  background-size: 200%; /* This is the zoom factor */
+  background-size: 200%;
   border: 1px solid #e5e7eb;
   z-index: 10;
   pointer-events: none;
   transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
   border-radius: 0.375rem;
 }
-
-/* Enable and position the zoom panel ONLY on desktop */
 @media (min-width: 769px) {
   .desktopZoomPanel {
     display: block;
@@ -63,15 +41,126 @@
   }
 }
 
-/* Thumbnails */
+/* --- Video Sizing & Thumbnails --- */
+.videoWrapper {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-top: 100%; /* Maintains 1:1 aspect ratio */
+  background-color: #000;
+  overflow: hidden;
+  border-radius: 0.375rem;
+}
+
+/* General rule for all players to fill the wrapper */
+.videoWrapper iframe,
+.videoWrapper video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+.youtubeControlsOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* CRITICAL: This allows mouse clicks to "pass through" the overlay */
+  pointer-events: none;
+}
+
+/* 
+  We use pseudo-elements to create the "patches" that cover the buttons.
+  This keeps the JSX clean.
+*/
+.youtubeControlsOverlay::before {
+  content: "";
+  position: absolute;
+  bottom: 56px; /* Vertical position of the patches */
+  height: 35px; /* Height of the patches */
+  /* This color should match the YouTube player's background */
+  background-color: black;
+  /* For debugging, you can change this to `background-color: red;` */
+}
+.youtubeControlsOverlay::after {
+  content: "";
+  position: absolute;
+  bottom: 8px; /* Vertical position of the patches */
+  height: 28px; /* Height of the patches */
+  /* This color should match the YouTube player's background */
+  background-color: black;
+  /* For debugging, you can change this to `background-color: red;` */
+}
+
+/* This patch covers the "CC" (Captions) button on the left */
+.youtubeControlsOverlay::before {
+  right: 0; /* Distance from the left edge */
+  width: 60px; /* Width of the patch */
+}
+
+/* This patch covers the "Settings" and "YouTube Logo" on the right */
+.youtubeControlsOverlay::after {
+  right: 58px; /* Distance from the right edge (leaves space for fullscreen) */
+  width: 140px; /* Width of the patch to cover both buttons */
+}
+.youtubePlayer {
+  clip-path: inset(60px 0 0 0);
+}
+.videoUiHackWrapper {
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.videoUiHackWrapper iframe {
+  width: 100%;
+  height: calc(100% + 100px);
+  margin-top: -55px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.videoThumbnail {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.videoThumbnailOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: white;
+  transition: background-color 0.2s ease-in-out;
+}
+.thumbnailButton:hover .videoThumbnailOverlay {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+.videoThumbnailOverlay svg {
+  width: 24px;
+  height: 24px;
+  fill: white;
+}
+
+/* --- General Thumbnail List --- */
 .thumbnailList {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
-
-/* All other styles below this line are correct and remain the same */
 .thumbnailButton {
+  position: relative;
   border: 2px solid transparent;
   border-radius: 0.375rem;
   padding: 0;
@@ -90,12 +179,12 @@
 .thumbnailImage {
   border-radius: 0.25rem;
   display: block;
-}
-.iconSvg {
   width: 100%;
   height: 100%;
-  fill: white;
+  object-fit: cover;
 }
+
+/* --- Mobile UI & Icons --- */
 .zoomIconWrapper {
   position: absolute;
   top: 1rem;
@@ -107,6 +196,13 @@
   padding: 0.5rem;
   pointer-events: none;
 }
+.iconSvg {
+  width: 100%;
+  height: 100%;
+  fill: white;
+}
+
+/* --- Mobile Modal Zoomer --- */
 .modalBackdrop {
   position: fixed;
   top: 0;
@@ -161,6 +257,7 @@
   justify-content: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .spinnerContainer {
   position: absolute;

@@ -102,9 +102,9 @@ model Product {
   description    String?                        // Optional detailed description
   categoryId     String?      @db.ObjectId      // Foreign key for Category
   category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
-  regularPrice   Float                         // Regular price of the product
+  regularPrice   Float?                         // Regular price of the product
   discountPrice  Float?                         // Optional discount price
-  stockQuantity  Int         @default(0)        // Stock quantity for inventory tracking
+  stock  Int         @default(0)        // Stock quantity for inventory tracking
   weight         Float?
   mainImage   String?
   imageGallery    String[]
@@ -151,7 +151,8 @@ model ProductVariation{
   sku          String
   stock       Float?
   weight Float?
-  price  Float?
+  regularPrice   Float?                         // Regular price of the product
+  discountPrice  Float?                         // Optional discount price
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
   matcherId String

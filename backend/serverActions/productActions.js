@@ -33,7 +33,8 @@ function transformVariations(productVariations) {
       id: pv.id, // The ID of the ProductVariation record itself
       matcherId: pv.matcherId,
       sku: pv.sku || "",
-      price: pv.price !== null ? String(pv.price) : "",
+      regularPrice: pv.regularPrice !== null ? String(pv.regularPrice) : "",
+      discountPrice: pv.discountPrice !== null ? String(pv.discountPrice) : "",
       qty: pv.stock !== null ? String(pv.stock) : "",
       image: pv.thumbnail
         ? { id: pv.thumbnail.id, name: pv.thumbnail.name }
@@ -142,10 +143,10 @@ export async function createProductAction(formData) {
         thumbnail: { connect: { id: data.thumbnail } },
         regularPrice: mainProductRegularPrice,
         discountPrice: parseOptionalNumber(data.discountPrice),
-        stockQuantity:
+        stock:
           parsedProductVariations.length > 0
             ? 0
-            : parseOptionalNumber(data.stockQuantity, 0),
+            : parseOptionalNumber(data.stock, 0),
         insideDhaka: parseOptionalNumber(data.insideDhaka),
         outSideDhaka: parseOptionalNumber(data.outSideDhaka),
         weight: parseOptionalNumber(data.weight),
@@ -191,9 +192,14 @@ export async function createProductAction(formData) {
             variantData.sku ||
             `${product.productCode}-${variantData.matcherId}`;
           const variantStock = parseOptionalNumber(variantData.qty, 0);
-          const variantPrice = parseOptionalNumber(
-            variantData.price,
+          const variantRegularPrice = parseOptionalNumber(
+            variantData.regularPrice,
             product.regularPrice
+          );
+
+          const variantDiscountPrice = parseOptionalNumber(
+            variantData.discountPrice,
+            product.discountPrice || product.regularPrice
           );
           const variantWeight = parseOptionalNumber(
             variantData.weight,
@@ -235,7 +241,8 @@ export async function createProductAction(formData) {
               matcherId: variantData.matcherId,
               sku: variantSku,
               stock: variantStock,
-              price: variantPrice,
+              regularPrice: variantRegularPrice,
+              discountPrice: variantDiscountPrice,
               weight: variantWeight,
               thumbnail: variantThumbnailId
                 ? { connect: { id: variantThumbnailId } }
@@ -425,12 +432,14 @@ export const getProductBySlug = async (slug) => {
         thumbnail: {
           select: {
             name: true,
+            id: true, // Include thumbnail ID for image URL
           },
         },
         gallery: {
           select: {
             media: {
               select: {
+                id: true,
                 name: true,
               },
             },
@@ -438,7 +447,7 @@ export const getProductBySlug = async (slug) => {
         },
         variations: {
           include: {
-            thumbnail: { select: { id: true, name: true } },
+            thumbnail: { select: { name: true, id: true } },
             // Include the combinations for each variation
             combinations: {
               orderBy: {
@@ -457,11 +466,10 @@ export const getProductBySlug = async (slug) => {
     const transformedVariations = transformVariations(data.variations);
     const transformedData = {
       ...data,
-      thumbnail: data?.thumbnail?.name,
-      gallery: data.gallery.map((g) => g.media?.name),
+
+      gallery: data.gallery.map((g) => g.media),
     };
-    console.log("product data");
-    console.log(JSON.stringify(transformedData?.variations));
+
     return { success: true, data: transformedData }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -476,20 +484,22 @@ export async function updateProductAction({ id: productId, formData }) {
   try {
     const data = Object.fromEntries(formData.entries());
 
-    // ... (Validations and Parsing remain the same) ...
+    // --- Parse Product Variations ---
     let submittedVariationsData = [];
-    if (data.variations && typeof data.variations === "string") {
+    // ✅ FIX: Using 'variations' to match your form data log.
+    const variationsJson = data.variations;
+    if (variationsJson && typeof variationsJson === "string") {
       try {
-        submittedVariationsData = JSON.parse(data.variations);
+        submittedVariationsData = JSON.parse(variationsJson);
         if (!Array.isArray(submittedVariationsData))
           throw new Error("Variations data must be an array.");
       } catch (e) {
-        throw new Error("Invalid variation data format for update.");
+        throw new Error("Invalid variation data format.");
       }
-    } else if (Array.isArray(data.variations)) {
-      submittedVariationsData = data.variations;
     }
+    const hasSubmittedVariations = submittedVariationsData.length > 0;
 
+    // --- Robust Number Parsing Helper ---
     const parseOptionalNumber = (value, defaultValue = null) => {
       if (value === undefined || value === null || String(value).trim() === "")
         return defaultValue;
@@ -498,32 +508,72 @@ export async function updateProductAction({ id: productId, formData }) {
     };
 
     const result = await prisma.$transaction(async (tx) => {
-      // ... (Existing product fetch, slug, gallery, and main product update logic remain the same) ...
-
+      // Step 1: Fetch Existing Product
       const existingProduct = await tx.product.findUnique({
         where: { id: productId },
-        include: { gallery: true },
       });
       if (!existingProduct) throw new Error("Product not found for update.");
-      // ... slug, gallery logic ...
 
-      const { gallery, variations, ...filteredData } = data;
-      const hasSubmittedVariations = submittedVariationsData.length > 0;
+      // Step 2: Handle Slug
+      let newSlug = existingProduct.slug;
+      if (data.title && data.title !== existingProduct.title) {
+        const baseSlug = await generateSlug(data.slug || data.title);
+        newSlug = await generateUniqueSlug(tx, baseSlug, productId);
+      }
+
+      // Step 3: Explicitly build the update payload. This is the robust pattern.
       const productUpdateData = {
-        /* ... as before ... */
+        title: data.title,
+        slug: newSlug,
+        description: data.description || null,
+        categoryId: data.category || null,
+        thumbnailId: data.thumbnail || existingProduct.thumbnailId,
+        regularPrice: hasSubmittedVariations
+          ? null
+          : parseOptionalNumber(data.regularPrice),
+        discountPrice: hasSubmittedVariations
+          ? null
+          : parseOptionalNumber(data.discountPrice),
+        stock: hasSubmittedVariations ? 0 : parseOptionalNumber(data.stock, 0),
+        weight: parseOptionalNumber(data.weight),
+        seoKeyWord: data.seoKeyWord || null,
+        seoDescription: data.seoDescription || null,
+        isFeatured: Boolean(data.isFeatured === "on"),
+        isActive: Boolean(data.isActive === "on"),
+        insideDhaka: parseOptionalNumber(data.insideDhaka),
+        outSideDhaka: parseOptionalNumber(data.outSideDhaka),
+        hasVariations: hasSubmittedVariations,
       };
+
+      // Step 4: Update the Main Product Record
       const updatedProduct = await tx.product.update({
         where: { id: productId },
         data: productUpdateData,
       });
-      // ... gallery update logic ...
 
-      // --- VARIATION HANDLING SECTION ---
+      // Step 5: Update Gallery (Wipe and Replace)
+      await tx.productGallery.deleteMany({
+        where: { productId: updatedProduct.id },
+      });
+      const newMediaIds = data.gallery
+        ? data.gallery
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : [];
+      if (newMediaIds.length > 0) {
+        await tx.productGallery.createMany({
+          data: newMediaIds.map((mediaId) => ({
+            productId: updatedProduct.id,
+            mediaId: mediaId,
+          })),
+        });
+      }
 
+      // Step 6: Update Variations (Wipe and Replace)
       await tx.productVariation.deleteMany({
         where: { productId: updatedProduct.id },
       });
-
       if (hasSubmittedVariations) {
         for (const variantData of submittedVariationsData) {
           if (
@@ -533,34 +583,38 @@ export async function updateProductAction({ id: productId, formData }) {
           )
             continue;
 
-          // ... (sku, stock, price, weight parsing as before) ...
           const variantSku =
             variantData.sku ||
             `${updatedProduct.productCode}-${variantData.matcherId}`;
           const variantStock = parseOptionalNumber(variantData.qty, 0);
-          const variantPrice = parseOptionalNumber(
-            variantData.price,
-            updatedProduct.regularPrice
+
+          const variantRegularPrice = parseOptionalNumber(
+            variantData.regularPrice,
+            parseOptionalNumber(data.regularPrice)
+          );
+          const variantDiscountPrice = parseOptionalNumber(
+            variantData.discountPrice,
+            parseOptionalNumber(data.discountPrice) ||
+              parseOptionalNumber(data.regularPrice)
           );
           const variantWeight = parseOptionalNumber(
             variantData.weight,
             updatedProduct.weight
           );
 
-          // ✅ --- BULLETPROOF THUMBNAIL LOGIC --- ✅
           let variantThumbnailId = null;
           if (
             typeof variantData.image === "string" &&
             variantData.image.length > 0
           ) {
-            // Handles case: "image": "some_id"
-            variantThumbnailId = variantData.image || product.thumbnailId;
+            variantThumbnailId = variantData.image;
           } else if (
             typeof variantData.image === "object" &&
             variantData.image?.id
           ) {
-            // Handles case: "image": { "id": "some_id" }
-            variantThumbnailId = variantData.image.id || product.thumbnailId;
+            variantThumbnailId = variantData.image.id;
+          } else {
+            variantThumbnailId = updatedProduct.thumbnailId;
           }
 
           const combinationsToCreate = variantData.combination
@@ -578,57 +632,50 @@ export async function updateProductAction({ id: productId, formData }) {
 
           await tx.productVariation.create({
             data: {
-              product: { connect: { id: updatedProduct.id } },
+              productId: updatedProduct.id,
               matcherId: variantData.matcherId,
               sku: variantSku,
               stock: variantStock,
-              price: variantPrice,
+              regularPrice: variantRegularPrice,
+              discountPrice: variantDiscountPrice,
               weight: variantWeight,
-              thumbnail: variantThumbnailId
-                ? { connect: { id: variantThumbnailId } }
-                : undefined,
+              thumbnailId: variantThumbnailId,
               combinations: { create: combinationsToCreate },
             },
           });
         }
       }
-
       return updatedProduct;
     });
 
-    // ... (Revalidation as before) ...
+    // --- Revalidation ---
+    revalidatePath("/admin/product");
+    revalidatePath("/");
+    revalidatePath(`/product/${result.slug}`);
+    revalidateTag("products");
+    revalidateTag(`product-${result.slug}`);
 
     return { success: true, data: result };
   } catch (error) {
-    // ✅ --- ROBUST ERROR HANDLING LOGIC --- ✅
-
-    // Log the raw error value safely for debugging.
-    console.error("Caught error in updateProductAction:", error);
-
-    let errorMessage = "An unknown error occurred.";
-
-    // Check if it's a standard Error object to get its message.
-    if (error instanceof Error) {
-      errorMessage = error.message;
+    if (error) {
+      console.error("Caught error in updateProductAction:", error);
+    } else {
+      console.error(
+        "Caught a null error in updateProductAction. This usually indicates an invalid data shape was passed to Prisma."
+      );
     }
 
-    // Handle specific Prisma unique constraint errors.
-    // Use optional chaining (?.) to safely access properties that might not exist.
+    let errorMessage = "An unknown error occurred.";
+    if (error instanceof Error) errorMessage = error.message;
     if (error?.code === "P2002" && error.meta?.target?.includes("slug")) {
       return {
         success: false,
-        message: `Slug "${data.slug}" is already in use. Please choose a different one.`,
+        message: `Slug "${data.slug}" is already in use.`,
       };
     }
-
-    // Return a generic, safe error response.
-    return {
-      success: false,
-      message: errorMessage || "প্রোডাক্ট আপডেট করতে একটি ত্রুটি ঘটেছে।",
-    };
+    return { success: false, message: errorMessage };
   }
 }
-
 export async function deleteProductById(productId) {
   if (!productId) {
     return { success: false, message: "Product ID is required for deletion." };

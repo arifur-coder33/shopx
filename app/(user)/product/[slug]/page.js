@@ -4,7 +4,6 @@ import {
 } from "@/backend/serverActions/productActions";
 
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import { replaceNumbers } from "@/utils/engToBanNumber";
 import { getBase64ImageUrl } from "@/utils/getBase64";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
@@ -12,7 +11,7 @@ import Image from "next/image";
 import Script from "next/script";
 
 import dynamic from "next/dynamic"; // <-- Import dynamic
-import ProductVariationSelector from "../_components/ProductVariationSelector";
+import ProductHeader from "../_components/ProductHeader";
 
 // --- LAZY-LOADED COMPONENTS ---
 
@@ -64,7 +63,7 @@ export async function generateMetadata({ params }) {
     id,
     thumbnail,
   } = data;
-  const primaryImage = thumbnail || mainImage;
+  const primaryImage = thumbnail?.name || mainImage;
   const imageUrl =
     cloudinaryMainImage(primaryImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
@@ -231,9 +230,9 @@ export default async function ProductPage({ params }) {
   const name = category?.name || "General";
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
   const imageUrl =
-    cloudinaryMainImage(thumbnail || mainImage, 800, 800) ||
+    cloudinaryMainImage(thumbnail.name || mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
-  const primaryImage = thumbnail || mainImage;
+  const primaryImage = thumbnail?.name || mainImage;
   //for facebook product schema listing
   const schema = {
     "@context": "http://schema.org",
@@ -284,65 +283,25 @@ export default async function ProductPage({ params }) {
     },
   };
 
-  const mainProductImageId = thumbnail || mainImage;
+  const mainProductImageId = thumbnail?.name || mainImage;
 
   // --- Add this line to generate the blur placeholder on the server ---
   const blurDataURL = await getBase64ImageUrl(mainProductImageId);
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <div className="col-span-2 ">
-          <ProductImageGallery
-            mainImageId={thumbnail || mainImage}
-            galleryIds={gallery || imageGallery}
-            title={title}
-          >
-            {/* 
-              This is the LCP element. It is rendered on the SERVER.
-              It's passed as `children` to the client component.
-            */}
-            <Image
-              src={cloudinaryMainImage(mainProductImageId, 600, 600)}
-              alt={title}
-              fill={true} // Use fill for responsive sizing within the container
-              priority={true}
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="rounded-md object-contain"
-              placeholder="blur"
-              blurDataURL={blurDataURL}
-            />
-          </ProductImageGallery>
-          {/* <Images
-            title={title}
-            mainImage={thumbnail || mainImage}
-            imageGallery={gallery || imageGallery}
-          /> */}
-        </div>
-
-        <div className="md:col-span-2 mt-2 md:col-start-4 ">
-          <h1 className="text-4xl font-bold border-b-2">{title}</h1>
-          <KalapanaFont>
-            <p className="text-2xl dark:text-slate-300 mt-4 relative">
-              মূল্যঃ{" "}
-              <span className="text-4xl md:text-5xl text-purple">
-                {replaceNumbers((discountPrice || 0)?.toString())}
-              </span>{" "}
-              টাকা{" "}
-              <del className="price-del text-xl">
-                {replaceNumbers((regularPrice || 0)?.toString())}
-              </del>
-              <span className="leading-[16px] md:leading-8 p-2 bg-orange-500 text-slate-100 px-2 ml-2 text-xl md:text-3xl border-dotted border-4 dark:border-slate-900 border-slate-100 -rotate-[30deg] absolute right-0 -top-4 text-center rounded-full sm:h-28 sm:w-28 w-[80px] h-[80px]">
-                বাঁচলো{" "}
-                <span className="font-bold">
-                  {replaceNumbers((regularPrice - discountPrice)?.toString())}
-                </span>{" "}
-                <span className="text-base"> টাকা</span>
-              </span>
-            </p>
-          </KalapanaFont>
-          <ProductVariationSelector variations={variations} />
-          <BuyNowSection data={data} />
-        </div>
+        <ProductHeader data={data}>
+          <Image
+            src={cloudinaryMainImage(mainProductImageId, 600, 600)}
+            alt={title}
+            fill={true} // Use fill for responsive sizing within the container
+            priority={true}
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="rounded-md object-contain"
+            placeholder="blur"
+            blurDataURL={blurDataURL}
+          />
+        </ProductHeader>
       </div>
       <ProductDescription description={description} />
 

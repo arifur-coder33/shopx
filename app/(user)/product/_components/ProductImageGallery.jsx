@@ -1,146 +1,240 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import Image from 'next/image';
-import { cloudinaryMainImage } from '@/utils/cloudinaryUrl';
-import useMediaQuery from '@/hooks/useMediaQuery';
-import MobileModalZoomer from './MobileModalZoomer';
-import styles from './ProductImageGallery.module.css';
+import useMediaQuery from "@/hooks/useMediaQuery";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import Image from "next/image";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import MobileModalZoomer from "./MobileModalZoomer";
+import styles from "./ProductImageGallery.module.css";
+import VideoPlayer from "./VideoPlayer";
 
-const clamp = (val, min, max) => Math.max(min, Math.min(val, max));
+// --- Icons ---
 const ZoomIcon = () => (
   <svg className={styles.iconSvg} viewBox="0 0 24 24">
     <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM10 9h-1V6h2v3h3v2h-3v3H9v-3H6V9h3z" />
   </svg>
 );
 
+const VideoThumbnailIcon = () => (
+  <div className={styles.videoThumbnailOverlay}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  </div>
+);
+
 export default function ProductImageGallery({
   children,
-  mainImageId,
-  galleryIds = [],
+  mainImage,
+  gallery = [],
   title,
+  variationsImage = [],
+  activeImageId = null,
+  videoUrl = "https://www.youtube.com/watch?v=KvdBePTOmc4",
 }) {
-  const allImages = [
-    { id: mainImageId, alt: title },
-    ...galleryIds
-      .filter((id) => id && id !== mainImageId)
-      .map((id, index) => ({ id, alt: `${title} - image ${index + 2}` })),
-  ];
+  const allMedia = useMemo(() => {
+    const mediaMap = new Map();
+    const addMedia = (item, type, alt) => {
+      const key = item.id || item.url;
+      if (key && !mediaMap.has(key)) {
+        mediaMap.set(key, { ...item, type, alt });
+      }
+    };
+
+    addMedia(mainImage, "image", title);
+    gallery.forEach((img, i) =>
+      addMedia(img, "image", `${title} - image ${i + 2}`)
+    );
+    variationsImage.forEach((img) =>
+      addMedia(img, "image", `${title} - variation`)
+    );
+    if (videoUrl) {
+      addMedia({ id: videoUrl, url: videoUrl }, "video", `${title} - Video`);
+    }
+
+    return Array.from(mediaMap.values());
+  }, [mainImage, gallery, variationsImage, title, videoUrl]);
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const [isMounted, setIsMounted] = useState(false);
-  
+  const [isFading, setIsFading] = useState(false);
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    setIsFading(true);
+    const timer = setTimeout(() => setIsFading(false), 150);
+    return () => clearTimeout(timer);
+  }, [activeIndex]);
 
-  const [desktopZoomActive, setDesktopZoomActive] = useState(false);
-  const [desktopZoomPosition, setDesktopZoomPosition] = useState({ x: 0.5, y: 0.5 });
-  const galleryRef = useRef(null); // Ref on the root container now
-  
-  const activeImage = allImages[activeIndex] || {};
+  useEffect(() => {
+    if (activeImageId) {
+      const newIndex = allMedia.findIndex(
+        (media) => media.id === activeImageId
+      );
+      if (newIndex !== -1 && newIndex !== activeIndex) {
+        setActiveIndex(newIndex);
+      }
+    }
+  }, [activeImageId, allMedia, activeIndex]);
 
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (!galleryRef.current || isMobile) return;
-      // We only care about the main image area for positioning
-      const imageRect = galleryRef.current.querySelector(`.${styles.mainImageContainer}`).getBoundingClientRect();
-      const galleryRect = galleryRef.current.getBoundingClientRect();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
-      // Calculate position relative to the image, not the whole gallery
-      const x = clamp((e.clientX - imageRect.left) / imageRect.width, 0, 1);
-      const y = clamp((e.clientY - imageRect.top) / imageRect.height, 0, 1);
-      setDesktopZoomPosition({ x, y });
-    },
-    [isMobile]
-  );
+  const activeMedia = allMedia[activeIndex] || {};
+  const isVideoActive = activeMedia.type === "video";
 
   const openModal = () => {
     if (isMobile) {
       setIsModalOpen(true);
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     }
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    document.body.style.overflow = '';
+    document.body.style.overflow = "";
   };
-  
-  const mainDisplay = React.cloneElement(children, {
-    src: cloudinaryMainImage(activeImage.id, 800, 800),
-    alt: activeImage.alt,
-    priority: activeIndex === 0,
+
+  const [desktopZoomActive, setDesktopZoomActive] = useState(false);
+  const [desktopZoomPosition, setDesktopZoomPosition] = useState({
+    x: 0.5,
+    y: 0.5,
   });
+  const galleryRef = useRef(null);
+
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!galleryRef.current || isMobile || isVideoActive) return;
+      const imageRect = galleryRef.current
+        .querySelector(`.${styles.mainImageContainer}`)
+        .getBoundingClientRect();
+      const x = Math.max(
+        0,
+        Math.min((e.clientX - imageRect.left) / imageRect.width, 1)
+      );
+      const y = Math.max(
+        0,
+        Math.min((e.clientY - imageRect.top) / imageRect.height, 1)
+      );
+      setDesktopZoomPosition({ x, y });
+    },
+    [isMobile, isVideoActive]
+  );
 
   return (
-    // THE ROOT CONTAINER NOW HANDLES POSITIONING AND EVENTS
     <div
       ref={galleryRef}
       className={styles.galleryContainer}
-      onMouseEnter={() => !isMobile && setDesktopZoomActive(true)}
-      onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
       onMouseMove={handleMouseMove}
     >
-      {/* This inner div is ONLY for layout, not events or positioning */}
       <div className={styles.layoutWrapper}>
-        <div 
+        <div
           className={styles.mainImageContainer}
+          onMouseEnter={() =>
+            !isMobile && !isVideoActive && setDesktopZoomActive(true)
+          }
+          onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
           onClick={openModal}
-          style={{ cursor: isMobile ? 'pointer' : 'crosshair' }}
         >
-          {mainDisplay}
-          {isMobile && <div className={styles.zoomIconWrapper}><ZoomIcon /></div>}
+          <div
+            className={`${styles.transitionContainer} ${
+              isFading ? styles.fading : ""
+            }`}
+          >
+            {isVideoActive ? (
+              <VideoPlayer
+                url={activeMedia.url}
+                alt={activeMedia.alt}
+                isMuted={true}
+              />
+            ) : (
+              React.cloneElement(children, {
+                src: cloudinaryMainImage(activeMedia?.name, 800, 800),
+                alt: activeMedia.alt,
+                priority: activeIndex === 0,
+              })
+            )}
+          </div>
+          {isMobile && !isVideoActive && (
+            <div className={styles.zoomIconWrapper}>
+              <ZoomIcon />
+            </div>
+          )}
         </div>
 
-        {allImages.length > 1 && (
+        {allMedia.length > 1 && (
           <div className={styles.thumbnailList}>
-            {allImages.map((image, index) => (
+            {allMedia.map((media, index) => (
               <button
-                key={image.id || index}
-                className={`${styles.thumbnailButton} ${index === activeIndex ? styles.thumbnailActive : ''}`}
+                key={media.id}
+                className={`${styles.thumbnailButton} ${
+                  index === activeIndex ? styles.thumbnailActive : ""
+                }`}
                 onClick={() => setActiveIndex(index)}
-                aria-label={`View image ${index + 1}`}
               >
-                <Image
-                  src={cloudinaryMainImage(image.id, 100, 100)}
-                  alt={image.alt}
-                  width={100}
-                  height={100}
-                  style={{ objectFit: 'cover' }}
-                  className={styles.thumbnailImage}
-                />
+                {media.type === "video" ? (
+                  <div className={styles.videoThumbnail}>
+                    <Image
+                      src={cloudinaryMainImage(mainImage.name, 60, 60)}
+                      alt="Video thumbnail"
+                      width={60}
+                      height={60}
+                      className={styles.thumbnailImage}
+                    />
+                    <VideoThumbnailIcon />
+                  </div>
+                ) : (
+                  <Image
+                    src={cloudinaryMainImage(media.name, 60, 60)}
+                    alt={media.alt}
+                    width={60}
+                    height={60}
+                    className={styles.thumbnailImage}
+                  />
+                )}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* 
-        THE ZOOM PANEL IS NOW A SIBLING TO THE LAYOUT WRAPPER.
-        It is an overlay and will not affect the width of the main content.
-      */}
-      {isMounted && !isMobile && (
-        <div
-          className={styles.desktopZoomPanel}
-          style={{
-            backgroundImage: `url(${cloudinaryMainImage(activeImage.id, 1800, 1800)})`,
-            backgroundPosition: `${desktopZoomPosition.x * 100}% ${desktopZoomPosition.y * 100}%`,
-            opacity: desktopZoomActive ? 1 : 0,
-            visibility: desktopZoomActive ? 'visible' : 'hidden',
-          }}
-        />
-      )}
+      <div
+        className={styles.desktopZoomPanel}
+        style={{
+          backgroundImage: `url(${cloudinaryMainImage(
+            activeMedia.name,
+            1800,
+            1800
+          )})`,
+          backgroundPosition: `${desktopZoomPosition.x * 100}% ${
+            desktopZoomPosition.y * 100
+          }%`,
+          opacity: !isVideoActive && desktopZoomActive ? 1 : 0,
+          visibility:
+            !isVideoActive && desktopZoomActive ? "visible" : "hidden",
+        }}
+      />
 
       {isMobile && isModalOpen && (
         <MobileModalZoomer
-          images={allImages}
+          media={allMedia}
           initialIndex={activeIndex}
           onClose={closeModal}
-          backgroundColor="rgba(0, 0, 0, 0.9)"
           onIndexChange={setActiveIndex}
+          backgroundColor="rgba(0, 0, 0, 0.9)"
         />
       )}
     </div>

@@ -83,8 +83,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
   initialCombinations = [],
   name = "productVariation",
 }) {
-  console.log("variationList", variationList);
-  console.log("initialCombinations", initialCombinations);
   // --- ALL HOOKS AT THE TOP ---
   const derivedInitialEnabled = useMemo(
     () =>
@@ -92,8 +90,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
       (initialCombinations && initialCombinations.length > 0),
     [initialHasVariations, initialCombinations]
   );
-  // console.log("ProductVariationInput RENDER - variationList prop:", variationList);
-  // console.log("ProductVariationInput RENDER - initialCombinations prop:", initialCombinations);
 
   const [hasVariationsEnabled, setHasVariationsEnabled] = useState(
     derivedInitialEnabled
@@ -115,7 +111,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         }
       });
     }
-    // console.log("useMemo: variationListMap recalculated, size:", map.size);
     return map;
   }, [variationList]);
 
@@ -131,7 +126,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         c.value.value !== undefined
     );
     if (validComboItems.length !== combination.length) {
-      // console.warn("generateUiKey: Invalid items in combination array", combination);
       return "";
     }
     const sortedCombo = [...validComboItems].sort((a, b) =>
@@ -144,34 +138,30 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
 
   const tableHeaders = useMemo(() => {
     if (!hasVariationsEnabled) return [];
-    const headers = Object.keys(selectedValues)
+    return Object.keys(selectedValues)
       .filter((key) => selectedValues[key] && selectedValues[key].length > 0)
       .sort();
-    // console.log("useMemo: tableHeaders recalculated:", headers);
-    return headers;
   }, [hasVariationsEnabled, selectedValues]);
 
   const hiddenInputValue = useMemo(() => {
     if (!hasVariationsEnabled || rows.length === 0) return "";
-    const valueToStore = JSON.stringify(
+    return JSON.stringify(
       rows.map((row) => ({
-        uiKey: row.uiKey, // Retain for client-side keying if needed, backend might not use
-        id: row.dbId, // This is crucial for updates
+        uiKey: row.uiKey,
+        id: row.dbId,
         combination: row.combination,
         matcherId: row.matcherId,
         sku: row.sku,
-        price: row.price,
+        regularPrice: row.regularPrice, // MODIFIED
+        discountPrice: row.discountPrice, // MODIFIED
         qty: row.qty,
-        image: row.image ? row.image.id : null, // Send only image ID
+        image: row.image ? row.image.id : null,
       }))
     );
-    // console.log("useMemo: hiddenInputValue recalculated, length:", valueToStore.length);
-    return valueToStore;
   }, [hasVariationsEnabled, rows]);
 
   // --- EFFECT 1: Initialize from `initialCombinations` ---
   useEffect(() => {
-    // console.log("EFFECT 1 (Initial Combinations) TRYING, isInitialized:", isInitialized, "variationListMap size:", variationListMap.size, "derivedInitialEnabled:", derivedInitialEnabled);
     if (isInitialized || !variationListMap || variationListMap.size === 0) {
       if (
         !isInitialized &&
@@ -179,26 +169,20 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         (!initialCombinations || initialCombinations.length === 0) &&
         variationListMap.size > 0
       ) {
-        // Case: Variations enabled, no initial combos, but definitions are ready. Mark initialized.
-        // console.log("INIT EFFECT: Variations enabled, definitions ready, no initial combinations. Marking initialized.");
         setIsInitialized(true);
       }
       return;
     }
 
-    if (!derivedInitialEnabled) {
-      // console.log("INIT EFFECT: derivedInitialEnabled is false. Marking initialized.");
+    if (
+      !derivedInitialEnabled ||
+      !initialCombinations ||
+      initialCombinations.length === 0
+    ) {
       setIsInitialized(true);
       return;
     }
 
-    if (!initialCombinations || initialCombinations.length === 0) {
-      // console.log("INIT EFFECT: No initial combinations to process. Marking initialized.");
-      setIsInitialized(true);
-      return;
-    }
-
-    // console.log("INIT EFFECT: Processing initialCombinations:", initialCombinations.length);
     const tempInitialRows = [];
     const derivedSelected = {};
     const derivedExpanded = {};
@@ -211,12 +195,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         (c) => c?.variation?.name && c?.value?.value !== undefined
       );
 
-      if (validCombination.length !== combinationArray.length) {
-        // console.warn(`INIT EFFECT: Row with dbId ${initRow.id} has invalid combination items.`);
-      }
       const uiKey = generateUiKey(validCombination);
       if (!uiKey) {
-        // console.error(`INIT EFFECT: Could not generate uiKey for initial row (dbId: ${initRow.id}). Skipping.`);
         return;
       }
 
@@ -229,7 +209,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
       });
       tempInitialRows.push({
         uiKey,
-        dbId: initRow.id, // This is the 'id' from initialCombinations
+        dbId: initRow.id,
         combination: validCombination,
         variationValues: validCombination.reduce((acc, c) => {
           acc[c.variation.name] = String(c.value.value);
@@ -242,15 +222,20 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
             .sort()
             .join("-"),
         sku: initRow.sku || "",
-        price:
-          initRow.price !== undefined && initRow.price !== null
-            ? String(initRow.price)
+        // MODIFIED: From price to regularPrice and discountPrice
+        regularPrice:
+          initRow.regularPrice !== undefined && initRow.regularPrice !== null
+            ? String(initRow.regularPrice)
+            : "",
+        discountPrice:
+          initRow.discountPrice !== undefined && initRow.discountPrice !== null
+            ? String(initRow.discountPrice)
             : "",
         qty:
           initRow.qty !== undefined && initRow.qty !== null
             ? String(initRow.qty)
             : "",
-        image: initRow.image || null, // This should be {id, name, url} if present
+        image: initRow.image || null,
         imageUrl: initRow.imageUrl || initRow.image?.url || null,
       });
     });
@@ -258,9 +243,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     Object.keys(derivedSelected).forEach((key) => {
       derivedSelected[key] = Array.from(derivedSelected[key]).sort();
     });
-
-    // console.log("INIT EFFECT: Setting initial rows:", tempInitialRows.length);
-    // console.log("INIT EFFECT: Setting initial selectedValues:", derivedSelected);
 
     setRows(tempInitialRows);
     setSelectedValues(derivedSelected);
@@ -282,19 +264,15 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
 
   // EFFECT: Clear state when variations are disabled
   useEffect(() => {
-    // console.log("EFFECT (Disable Variations) RUNNING, hasVariationsEnabled:", hasVariationsEnabled, "isInitialized:", isInitialized);
     if (!hasVariationsEnabled && isInitialized) {
-      // console.log("DISABLE EFFECT: Clearing variation state.");
       setRows([]);
       setSelectedValues({});
       setExpandedCategories({});
-      // isSectionExpanded is handled by handleToggleVariations
     }
   }, [hasVariationsEnabled, isInitialized]);
 
   // EFFECT 2: Generate/update table rows based on selectedValues changes
   useEffect(() => {
-    // console.log("EFFECT 2 (Selected Values) RUNNING, isInitialized:", isInitialized, "selectedValues:", selectedValues);
     if (
       !hasVariationsEnabled ||
       !isInitialized ||
@@ -308,10 +286,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
       (arr) => arr && arr.length > 0
     );
     if (!hasAnyActualSelection) {
-      if (rows.length > 0) {
-        // console.log("SELECTED_VALUES EFFECT: All selections cleared. Clearing rows.");
-        setRows([]);
-      }
+      if (rows.length > 0) setRows([]);
       return;
     }
 
@@ -332,18 +307,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
       })
       .filter(Boolean);
 
-    if (processedSelections.length === 0 && hasAnyActualSelection) {
-      if (rows.length > 0) {
-        // console.log("SELECTED_VALUES EFFECT: Selections exist but no valid processed selections. Clearing rows.");
-        setRows([]);
-      }
+    if (processedSelections.length === 0) {
+      if (hasAnyActualSelection && rows.length > 0) setRows([]);
       return;
     }
-    if (processedSelections.length === 0) return;
 
     const generatedCombinationsFromSelection =
       generateCombinations(processedSelections);
-    // console.log("SELECTED_VALUES EFFECT: Generated combinations:", generatedCombinationsFromSelection.length);
 
     const newRowsData = generatedCombinationsFromSelection
       .map((combo) => {
@@ -364,7 +334,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
           variationValues,
           matcherId,
           sku: "",
-          price: "",
+          regularPrice: "", // MODIFIED
+          discountPrice: "", // MODIFIED
           qty: "",
           image: null,
           imageUrl: null,
@@ -374,14 +345,15 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
 
     setRows((prevRows) => {
       const prevRowsMap = new Map(prevRows.map((row) => [row.uiKey, row]));
-      const nextRows = newRowsData.map((newRowFromUI) => {
+      return newRowsData.map((newRowFromUI) => {
         const existingRowFromPrevState = prevRowsMap.get(newRowFromUI.uiKey);
         if (existingRowFromPrevState) {
           return {
             ...newRowFromUI,
             dbId: existingRowFromPrevState.dbId,
             sku: existingRowFromPrevState.sku,
-            price: existingRowFromPrevState.price,
+            regularPrice: existingRowFromPrevState.regularPrice, // MODIFIED
+            discountPrice: existingRowFromPrevState.discountPrice, // MODIFIED
             qty: existingRowFromPrevState.qty,
             image: existingRowFromPrevState.image,
             imageUrl: existingRowFromPrevState.imageUrl,
@@ -389,8 +361,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         }
         return newRowFromUI;
       });
-      // console.log("SELECTED_VALUES EFFECT - MERGE - finalMappedRows:", nextRows.length);
-      return nextRows;
     });
   }, [
     selectedValues,
@@ -408,10 +378,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
       setHasVariationsEnabled(isEnabled);
       if (isEnabled) {
         setIsSectionExpanded(true);
-        if (!isInitialized) {
-          // console.log("Manually enabling variations, setting isInitialized true");
-          setIsInitialized(true); // Allow effects to run if enabled manually
-        }
+        if (!isInitialized) setIsInitialized(true);
       } else {
         setIsSectionExpanded(false);
       }
@@ -505,7 +472,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
   }, []);
 
   // --- Conditional Rendering for Loading State ---
-  // This MUST come AFTER all hook calls
   if (
     hasVariationsEnabled &&
     !isInitialized &&
@@ -526,7 +492,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     );
   }
   if (hasVariationsEnabled && !isInitialized && variationListMap.size === 0) {
-    // Special case: variations enabled, but no variation definitions loaded yet (e.g. parent still fetching)
     return (
       <div
         className={`p-6 bg-gray-50 shadow-lg rounded-xl col-span-${colSpan} text-center`}
@@ -760,11 +725,18 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                         >
                           SKU
                         </th>
+                        {/* MODIFIED: Table Headers */}
                         <th
                           scope="col"
-                          className="px-4 py-2 font-semibold w-24"
+                          className="px-4 py-2 font-semibold w-28"
                         >
-                          Price
+                          Regular Price
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-2 font-semibold w-28"
+                        >
+                          Discount Price
                         </th>
                         <th
                           scope="col"
@@ -830,16 +802,39 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                 className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"
                               />
                             </td>
+                            {/* MODIFIED: Table Data Cells for Prices */}
                             <td className="px-4 py-2 align-middle">
                               <input
                                 type="number"
                                 placeholder="0.00"
-                                aria-label={`Price for ${row.uiKey}`}
+                                aria-label={`Regular Price for ${row.uiKey}`}
                                 step="0.01"
                                 min="0"
-                                value={row.price ?? ""}
+                                value={row.regularPrice ?? ""}
                                 onChange={(e) =>
-                                  handleInputChange(e, row.uiKey, "price")
+                                  handleInputChange(
+                                    e,
+                                    row.uiKey,
+                                    "regularPrice"
+                                  )
+                                }
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                            </td>
+                            <td className="px-4 py-2 align-middle">
+                              <input
+                                type="number"
+                                placeholder="0.00"
+                                aria-label={`Discount Price for ${row.uiKey}`}
+                                step="0.01"
+                                min="0"
+                                value={row.discountPrice ?? ""}
+                                onChange={(e) =>
+                                  handleInputChange(
+                                    e,
+                                    row.uiKey,
+                                    "discountPrice"
+                                  )
                                 }
                                 className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
@@ -897,8 +892,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                       Review your selections or variation definitions.
                     </p>
                   </motion.div>
-                ) : // This condition implies no values are selected yet OR variationList is empty
-                variationList && variationList.length > 0 ? ( // If variation types are defined, prompt to select
+                ) : variationList && variationList.length > 0 ? (
                   <motion.div
                     key="select-options-placeholder"
                     initial={{ opacity: 0 }}
@@ -914,8 +908,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                       Choose values to generate specific product variations.
                     </p>
                   </motion.div>
-                ) : // If no variation types are defined at all
-                !isInitialized && variationListMap.size === 0 ? null : ( // Avoid showing "no types" during initial brief moment variationListMap might be empty
+                ) : !isInitialized && variationListMap.size === 0 ? null : (
                   <motion.div
                     key="no-variation-types-placeholder"
                     initial={{ opacity: 0 }}

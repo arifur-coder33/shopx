@@ -11,9 +11,12 @@ import VariationInput from "../input/VariationInput";
 const Button = dynamic(() => import("@/components/button"));
 const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
 const CheckBox = dynamic(() => import("../input/CheckBox"), { ssr: false });
-const CustomEditor = dynamic(() => import("../input/quillEditor/CustomEditor"), {
-  ssr: false,
-});
+const CustomEditor = dynamic(
+  () => import("../input/quillEditor/CustomEditor"),
+  {
+    ssr: false,
+  }
+);
 const ProductVariationInput = dynamic(() =>
   import("@/components/input/ProductVariation")
 );
@@ -74,12 +77,12 @@ export default function DynamicForm({
           form.reset();
         } else {
           window.scrollTo(0, 0);
-          toast.warn(response.error || "Something went wrong");
-          setError(response.error || "Something went wrong");
+          toast.warn(response.message || "Something went wrong");
+          setError(response.message || "Something went wrong");
         }
       } catch (error) {
         console.log(error);
-        setError(error || "Something went wrong");
+        setError(error || "Something went wrongs");
       }
     });
   };
