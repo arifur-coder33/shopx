@@ -11,6 +11,7 @@ import Image from "next/image";
 import Script from "next/script";
 
 import dynamic from "next/dynamic"; // <-- Import dynamic
+import { cache } from "react";
 import ProductHeader from "../_components/ProductHeader";
 
 // --- LAZY-LOADED COMPONENTS ---
@@ -198,11 +199,16 @@ export async function generateStaticParams() {
     slug: product.slug,
   }));
 }
-
+const getProductCached = cache(getProductBySlug);
+const getBase64Cached = cache(getBase64ImageUrl);
 export default async function ProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;
+  const { data } = await getProductCached(slug);
 
+  const blurDataURL = await getBase64Cached(
+    data?.thumbnail?.name || data?.mainImage
+  );
   // const getProduct = unstable_cache(
   //   async () => {
   //     const data = await getProductBySlug(slug);
@@ -211,8 +217,6 @@ export default async function ProductPage({ params }) {
   //   [slug],
   //   { revalidate: 60, tags: [`product-${slug}`] }
   // );
-
-  const { data } = await getProductBySlug(slug);
 
   const {
     id,
@@ -286,7 +290,7 @@ export default async function ProductPage({ params }) {
   const mainProductImageId = thumbnail?.name || mainImage;
 
   // --- Add this line to generate the blur placeholder on the server ---
-  const blurDataURL = await getBase64ImageUrl(mainProductImageId);
+
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
