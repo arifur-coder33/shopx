@@ -1,13 +1,21 @@
 "use client";
 
-import KalapanaFont from "@/components/KalapanaFont";
-import { replaceNumbers } from "@/utils/engToBanNumber";
 import { getMinMax } from "@/utils/getMinMax";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import BuyNowSection from "../[slug]/_components/BuyNowSection";
-import ProductImageGallery from "./ProductImageGallery";
-import ProductVariationSelector from "./ProductVariationSelector";
 
+const ProductVariationSelector = dynamic(() =>
+  import("./ProductVariationSelector")
+);
+
+const ProductImageGallery = dynamic(() => import("./ProductImageGallery"), {});
+
+const BuyNowSection = dynamic(() =>
+  import("./../[slug]/_components/BuyNowSection")
+);
+const KalapanaFont = dynamic(() => import("@/components/KalapanaFont"));
+
+import { replaceNumbers } from "@/utils/engToBanNumber";
 export default function ProductClientShell({
   data,
   imageComponent,

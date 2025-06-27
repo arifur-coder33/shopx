@@ -48,11 +48,7 @@ export default React.memo(function VideoPlayer({ url, alt, isMuted = false }) {
               // We add a specific class ONLY to the YouTube player
               className={styles.youtubePlayer}
               // The `controls=1` parameter is essential for showing the bottom bar
-              src={`https://www.youtube.com/embed/${
-                videoInfo.id
-              }?autoplay=1&mute=${
-                isMuted ? 1 : 0
-              }&loop=1&rel=0&controls=1&playlist=${videoInfo.id}`}
+              src={`https://www.youtube.com/embed/${videoInfo.id}?autoplay=1&mute=0&loop=1&rel=0&controls=1&playlist=${videoInfo.id}`}
               title={alt}
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
