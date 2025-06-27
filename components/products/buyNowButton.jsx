@@ -1,8 +1,10 @@
 "use client";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import Button from "../button";
-import KalapanaFont from "../KalapanaFont";
+// Dynamically import Button and KalapanaFont
+const Button = dynamic(() => import("../button"));
+const KalapanaFont = dynamic(() => import("../KalapanaFont"));
 
 export default function BuyNowButton({ product, slug, ...restProps }) {
   // Track the Initiate Checkout event

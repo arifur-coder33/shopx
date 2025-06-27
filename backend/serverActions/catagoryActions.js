@@ -265,6 +265,13 @@ export async function getAllCategoryWithproduct() {
             discountPrice: true,
             slug: true,
             mainImage: true,
+            hasVariations: true,
+            variations: {
+              select: {
+                regularPrice: true,
+                discountPrice: true,
+              },
+            },
             thumbnail: {
               select: {
                 id: true,
