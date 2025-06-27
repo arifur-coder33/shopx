@@ -2,6 +2,7 @@
 
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import React, {
   useCallback,
@@ -10,9 +11,24 @@ import React, {
   useRef,
   useState,
 } from "react";
-import MobileModalZoomer from "./MobileModalZoomer";
+
+const MobileModalZoomer = dynamic(() => import("./MobileModalZoomer"), {
+  loading: () => (
+    <div className={styles.spinnerContainer}>
+      <p>Loading Zoom...</p>
+    </div>
+  ),
+});
+
 import styles from "./ProductImageGallery.module.css";
-import VideoPlayer from "./VideoPlayer";
+// --- LAZY-LOAD THE HEAVY VIDEO PLAYER ---
+const VideoPlayer = dynamic(() => import("./VideoPlayer"), {
+  loading: () => (
+    <div className={styles.spinnerContainer}>
+      <p>Loading Player...</p>
+    </div>
+  ),
+});
 
 // --- Icons ---
 const ZoomIcon = () => (
@@ -88,13 +104,21 @@ export default function ProductImageGallery({
         setActiveIndex(newIndex);
       }
     }
-  }, [activeImageId, allMedia, activeIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeImageId]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
-
+  const [loadVideoPlayer, setLoadVideoPlayer] = useState(false);
   const activeMedia = allMedia[activeIndex] || {};
   const isVideoActive = activeMedia.type === "video";
+  const handleThumbnailClick = (index) => {
+    // If the clicked item is a video, set the state to load the player
+    if (allMedia[index].type === "video") {
+      setLoadVideoPlayer(true);
+    }
+    setActiveIndex(index);
+  };
 
   const openModal = () => {
     if (isMobile) {
@@ -155,11 +179,27 @@ export default function ProductImageGallery({
             }`}
           >
             {isVideoActive ? (
-              <VideoPlayer
-                url={activeMedia.url}
-                alt={activeMedia.alt}
-                isMuted={true}
-              />
+              loadVideoPlayer ? (
+                <VideoPlayer
+                  url={activeMedia.url}
+                  alt={activeMedia.alt}
+                  isMuted={true}
+                />
+              ) : (
+                // Initially, show a lightweight fake player (an image)
+                <div className={styles.videoThumbnail}>
+                  <Image
+                    src={cloudinaryMainImage(mainImage.name, 800, 800)}
+                    alt="Video thumbnail"
+                    priority
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
+                  <div className={styles.largePlayButtonOverlay}>
+                    {/* You can put a large Play SVG icon here */}
+                  </div>
+                </div>
+              )
             ) : (
               React.cloneElement(children, {
                 src: cloudinaryMainImage(activeMedia?.name, 800, 800),
@@ -183,7 +223,7 @@ export default function ProductImageGallery({
                 className={`${styles.thumbnailButton} ${
                   index === activeIndex ? styles.thumbnailActive : ""
                 }`}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => handleThumbnailClick(index)}
               >
                 {media.type === "video" ? (
                   <div className={styles.videoThumbnail}>

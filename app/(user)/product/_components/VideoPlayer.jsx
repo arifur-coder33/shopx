@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import styles from "./ProductImageGallery.module.css";
 
-export default function VideoPlayer({ url, alt, isMuted = false }) {
+export default React.memo(function VideoPlayer({ url, alt, isMuted = false }) {
   const videoInfo = useMemo(() => {
     try {
       const urlObject = new URL(url);
@@ -100,4 +100,4 @@ export default function VideoPlayer({ url, alt, isMuted = false }) {
   };
 
   return <div className={styles.videoWrapper}>{renderPlayer()}</div>;
-}
+});

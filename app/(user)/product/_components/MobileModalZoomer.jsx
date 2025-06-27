@@ -3,7 +3,7 @@
 import { useSwipe } from "@/hooks/useSwipe";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./ProductImageGallery.module.css";
 import VideoPlayer from "./VideoPlayer"; // Import the new component
@@ -33,7 +33,7 @@ const VideoThumbnailIcon = () => (
   </div>
 );
 
-export default function MobileModalZoomer({
+export default React.memo(function MobileModalZoomer({
   media,
   initialIndex,
   backgroundColor,
@@ -250,4 +250,4 @@ export default function MobileModalZoomer({
     </div>,
     document.body
   );
-}
+});
