@@ -6,7 +6,7 @@ import BuyNowProductDetails from "./BuyNowProductDetails";
 export default function BuyNowCheckout({ data }) {
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
   const searchParams = useSearchParams();
-  const initialQty = searchParams.get("qty");
+  const initialQty = searchParams.get("qty") || 1;
 
   const products = [
     {

@@ -17,7 +17,9 @@ export default function ActionButtons({
         <BuyNowButton
           product={product}
           selectedVariation={selectedVariation}
-          slug={`${product?.slug}?qty=${productQty}`}
+          slug={`${product?.slug}?qty=${productQty}${
+            selectedVariation?.id ? `&v=${selectedVariation?.id}` : ""
+          }`}
           bgcolor="bg-purple"
           className={
             " w-full hover:bg-orange-600 hover:border-b-orange-900 text-white  border-b-4  border-orange-800  py-2 text-4xl "
