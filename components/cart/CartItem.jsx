@@ -1,35 +1,53 @@
 import IncrementNDcrement from "@/components/products/incrementNDcrement";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import Image from "next/image";
+import Link from "next/link";
+import Imagecustom from "../images/ImageCustom";
 import RemoveCartItem from "./RemoveCartItem";
 
 export default function CartItem({
-  data,
+  title,
+  mainImageUrl,
+  slug,
+  discountPrice,
+  regularPrice,
   setProductQy,
   productQty = 1,
   removeItem,
+  variation = null,
+  id,
 }) {
-  const { title, discountPrice, id, mainImage } = data || {};
-
   return (
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
       <div className="col-span-3">
-        <Image
-          sizes="50px"
-          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAgMBAQUAdo4AAAAASUVORK5CYII="
-          width={75}
-          height={75}
+        <Imagecustom
+          src={mainImageUrl}
           alt={title}
-          src={cloudinaryMainImage(mainImage,100,100)}
-          priority
+          w={75}
+          h={75}
+          objectFit="cover"
+          sizes="(max-width: 480px) 75px, (max-width: 768px) 100px, 150px"
+          imageClassName="transition-opacity duration-300 ease-in-out"
+          priority={false}
+          quality={75}
         />
       </div>
       <div className="col-span-8 leading-none ">
-        <h1 className="text-base line-clamp-1">{title}</h1>
+        <Link href={`/product/${slug}`}>
+          <h1 className="text-base ">{title}</h1>
+        </Link>
         <div className="grid p-0 m-0 grid-cols-2 gap-1">
-          {data?.size && <span>সাইজ: {data?.size}</span>}
-          {data?.color && <span>কালার: {data?.color}</span>}
+          <div className="flex flex-row items-center gap-1 col-span-full">
+            {variation &&
+              variation?.combinations.length > 0 &&
+              variation.combinations.map((item, index) => (
+                <span
+                  key={index}
+                  className=" border-2 bg-slate-300 rounded-full px-2 py-1"
+                >
+                  {item?.variationName?.name} : {item.variationValue.value}
+                </span>
+              ))}
+          </div>
 
           <div className="flex flex-row items-center col-span-full">
             <span className="flex flex-row items-center">
@@ -52,9 +70,12 @@ export default function CartItem({
       )}
 
       <div className="col-span-12 text-center text-white bg-gray-500 dark:bg-slate-800">
-        মোট: {replaceNumbers(discountPrice?.toString())} x{" "}
+        মোট: {replaceNumbers((discountPrice || regularPrice)?.toString())} x{" "}
         {replaceNumbers(productQty.toString())} ={" "}
-        {replaceNumbers((discountPrice * productQty).toString())}টাকা
+        {replaceNumbers(
+          ((discountPrice || regularPrice) * productQty).toString()
+        )}
+        টাকা
       </div>
     </div>
   );

@@ -1,14 +1,12 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
-export default function CheckOutSubTotal({ data, productQty, deliveryArea }) {
-  const {
-    regularPrice,
-
-    discountPrice,
-
-    insideDhaka,
-    outSideDhaka,
-    category,
-  } = data || {};
+export default function CheckOutSubTotal({
+  data,
+  productQty,
+  deliveryArea,
+  discountPrice,
+  regularPrice,
+}) {
+  const { insideDhaka, outSideDhaka, category } = data || {};
   let deliveryCharge = 0;
   deliveryCharge = deliveryArea === "inside-dhaka" ? insideDhaka : outSideDhaka;
   return (
@@ -17,10 +15,7 @@ export default function CheckOutSubTotal({ data, productQty, deliveryArea }) {
         label={"পণ্যর রেগুলার মোট মুল্যঃ"}
         value={regularPrice * productQty}
       />
-      <Item
-        label={"পণ্যর ডিস্কাউন্ট মোট মুল্যঃ"}
-        value={discountPrice * productQty}
-      />
+
       <Item
         label={"ডিস্কাউন্টঃ (-)"}
         value={(regularPrice - discountPrice) * productQty}

@@ -7,6 +7,7 @@ export default function BuyNowCheckout({ data }) {
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
   const searchParams = useSearchParams();
   const initialQty = searchParams.get("qty") || 1;
+  const variationId = searchParams.get("v") || null;
 
   const products = [
     {
@@ -32,6 +33,7 @@ export default function BuyNowCheckout({ data }) {
         data={data}
         initialQty={initialQty}
         deliveryArea={deliveryArea}
+        variationId={variationId}
       />
     </OrderForm>
   );
