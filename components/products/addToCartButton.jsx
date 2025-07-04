@@ -1,16 +1,42 @@
 "use client";
 import { useCart } from "@/context/CartContext";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
+import { errorSoundWithVibrate } from "@/utils/sounds";
+import { toast } from "react-toastify";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
   const { addToCart } = useCart();
-  const { product } = props;
+  const { product, selectedVariation, productQty } = props;
 
   const handleAddToCart = () => {
-    // addToCart({ name: "Iphone 16 pro", price: 16500, id:product?.id });
+    const productData = {
+      title: product?.title,
+      discountPrice: selectedVariation
+        ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
+        : product?.discountPrice || product?.regularPrice,
+      regularPrice: selectedVariation
+        ? selectedVariation?.regularPrice
+        : product?.regularPrice,
+      variation: selectedVariation
+        ? {
+            id: selectedVariation?.id,
+            combinations: selectedVariation?.combinations,
+          }
+        : null,
 
-    addToCart(product);
+      mainImageUrl: selectedVariation
+        ? selectedVariation?.thumbnail?.name
+        : product?.thumbnail?.name || product?.mainImage,
+      slug: product?.slug,
+      id: product?.id,
+    };
+    if (product?.variations?.length > 0 && !selectedVariation) {
+      toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
+      errorSoundWithVibrate();
+      return;
+    }
+    addToCart(productData, productQty);
     trackFacebookEvent("AddToCart", {
       content_type: "product",
       content_id: product.id,

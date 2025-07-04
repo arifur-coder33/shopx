@@ -19,18 +19,6 @@ export default function BuyNowButton({
   // --- TOP PRIORITY RULE ---
   // If no 'slug' prop is provided, we are on a product grid/list.
   // The button's only purpose is to link to the product detail page.
-  if (!slug) {
-    return (
-      <Link href={`/product/${product?.slug}`} passHref className="w-full">
-        <Button
-          className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
-          {...restProps}
-        >
-          <KalapanaFont>এখনি কিনুন</KalapanaFont>
-        </Button>
-      </Link>
-    );
-  }
 
   // --- LOGIC FOR WHEN SLUG IS PROVIDED (on product detail page) ---
 
@@ -72,6 +60,31 @@ export default function BuyNowButton({
     errorSoundWithVibrate();
   };
 
+  if (!slug && !hasVariations) {
+    return (
+      <Link href={`/buynow/${product?.slug}`} passHref className="w-full">
+        <Button
+          className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
+          {...restProps}
+        >
+          <KalapanaFont>এখনি কিনুন</KalapanaFont>
+        </Button>
+      </Link>
+    );
+  }
+
+  if (!slug && hasVariations) {
+    return (
+      <Link href={`/product/${product?.slug}`} passHref className="w-full">
+        <Button
+          className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
+          {...restProps}
+        >
+          <KalapanaFont>এখনি কিনুন</KalapanaFont>
+        </Button>
+      </Link>
+    );
+  }
   // --- RENDER LOGIC (for when slug exists) ---
 
   // CASE A: The button must be DISABLED (due to stock).

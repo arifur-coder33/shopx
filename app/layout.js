@@ -1,10 +1,11 @@
 // app/layout.js
 /* eslint-disable @next/next/no-img-element */
-import Providers from "@/components/common/Providers";
+
+import dynamic from "next/dynamic";
 import { Roboto, Tiro_Bangla } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
-
+const Providers = dynamic(() => import("@/components/common/Providers"));
 // Your font setup is perfect, keep it as is
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "700"] });
 const tiro_bangla = Tiro_Bangla({

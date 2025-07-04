@@ -16,6 +16,7 @@ const BuyNowSection = dynamic(() =>
 const KalapanaFont = dynamic(() => import("@/components/KalapanaFont"));
 
 import { replaceNumbers } from "@/utils/engToBanNumber";
+
 export default function ProductClientShell({
   data,
   imageComponent,
@@ -30,7 +31,7 @@ export default function ProductClientShell({
     discountPrice,
     regularPrice,
     variations,
-    videoUrl, // Make sure to pass videoUrl if available
+    videoUrl,
   } = data;
 
   const [selectedVariation, setSelectedVariation] = useState(null);
@@ -39,7 +40,7 @@ export default function ProductClientShell({
     setSelectedVariation(variation);
   };
 
-  // All of your useMemo hooks for price calculation and image arrays belong here.
+  // Memoize price ranges for variations
   const regularPriceRange = useMemo(
     () =>
       getMinMax(
@@ -55,31 +56,78 @@ export default function ProductClientShell({
     [variations]
   );
 
-  const displayRegularPrice = useMemo(() => {
-    if (variations) {
-      if (selectedVariation)
-        return `${selectedVariation.regularPrice.toLocaleString()}`;
-      if (regularPriceRange.min === 0 && regularPriceRange.max === 0)
-        return "Currently Unavailable";
-      if (regularPriceRange.min === regularPriceRange.max)
-        return `${regularPriceRange.min.toLocaleString()}`;
-      return `${regularPriceRange.min.toLocaleString()} - ${regularPriceRange.max.toLocaleString()}`;
-    }
-    return `$${regularPrice.toLocaleString()}`;
-  }, [selectedVariation, variations, regularPrice, regularPriceRange]);
+  // **REFACTORED PRICE LOGIC**
+  // This single useMemo hook determines the price to show and the strikethrough price.
+  const { priceToDisplay, originalPriceToDisplay } = useMemo(() => {
+    let price;
+    let originalPrice = null; // Default to null (no strikethrough)
 
-  const displayDiscountPrice = useMemo(() => {
-    if (variations) {
-      if (selectedVariation)
-        return `${selectedVariation.discountPrice.toLocaleString()}`;
-      if (discountPriceRange.min === 0 && discountPriceRange.max === 0)
-        return "Currently Unavailable";
-      if (discountPriceRange.min === discountPriceRange.max)
-        return `${discountPriceRange.min.toLocaleString()}`;
-      return `${discountPriceRange.min.toLocaleString()} - ${discountPriceRange.max.toLocaleString()}`;
+    // Case 1: A specific variation is selected
+    if (selectedVariation) {
+      const hasDiscount =
+        typeof selectedVariation.discountPrice === "number" &&
+        selectedVariation.discountPrice > 0 &&
+        selectedVariation.discountPrice < selectedVariation.regularPrice;
+
+      price = hasDiscount
+        ? selectedVariation.discountPrice
+        : selectedVariation.regularPrice;
+      originalPrice = hasDiscount ? selectedVariation.regularPrice : null;
     }
-    return `$${discountPrice.toLocaleString()}`;
-  }, [selectedVariation, variations, discountPrice, discountPriceRange]);
+    // Case 2: Product has variations, but none are selected (show a price range)
+    else if (variations?.length > 0) {
+      // Check if any variation has a meaningful discount
+      const hasRangeDiscount =
+        discountPriceRange.min < regularPriceRange.min ||
+        discountPriceRange.max < regularPriceRange.max;
+
+      if (regularPriceRange.min === 0 && regularPriceRange.max === 0) {
+        price = "Currently Unavailable";
+      } else if (hasRangeDiscount) {
+        price =
+          discountPriceRange.min === discountPriceRange.max
+            ? `${discountPriceRange.min}`
+            : `${discountPriceRange.min} - ${discountPriceRange.max}`;
+        originalPrice =
+          regularPriceRange.min === regularPriceRange.max
+            ? `${regularPriceRange.min}`
+            : `${regularPriceRange.min} - ${regularPriceRange.max}`;
+      } else {
+        // No discount in the range, so just show the regular price range
+        price =
+          regularPriceRange.min === regularPriceRange.max
+            ? `${regularPriceRange.min}`
+            : `${regularPriceRange.min} - ${regularPriceRange.max}`;
+      }
+    }
+    // Case 3: Simple product with no variations
+    else {
+      const hasDiscount =
+        typeof discountPrice === "number" &&
+        discountPrice > 0 &&
+        discountPrice < regularPrice;
+
+      price = hasDiscount ? discountPrice : regularPrice;
+      originalPrice = hasDiscount ? regularPrice : null;
+    }
+
+    // Format numbers to localized strings for display
+    return {
+      priceToDisplay:
+        typeof price === "number" ? price.toLocaleString() : price,
+      originalPriceToDisplay:
+        typeof originalPrice === "number"
+          ? originalPrice.toLocaleString()
+          : originalPrice,
+    };
+  }, [
+    selectedVariation,
+    variations,
+    regularPrice,
+    discountPrice,
+    regularPriceRange,
+    discountPriceRange,
+  ]);
 
   const variationsImage = useMemo(
     () =>
@@ -114,12 +162,14 @@ export default function ProductClientShell({
           <p className="text-2xl dark:text-slate-300 mt-4 relative">
             মূল্যঃ{" "}
             <span className="text-4xl md:text-5xl text-purple">
-              {replaceNumbers((displayDiscountPrice || 0)?.toString())}
+              {replaceNumbers((priceToDisplay || 0).toString())}
             </span>{" "}
-            টাকা{" "}
-            <del className="price-del text-xl">
-              {replaceNumbers((displayRegularPrice || 0)?.toString())}
-            </del>
+            টাকা {/* The <del> tag is now rendered conditionally */}
+            {originalPriceToDisplay && (
+              <del className="price-del text-xl ml-2">
+                {replaceNumbers(originalPriceToDisplay.toString())}
+              </del>
+            )}
           </p>
         </KalapanaFont>
         <ProductVariationSelector

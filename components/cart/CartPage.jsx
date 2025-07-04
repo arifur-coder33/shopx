@@ -3,6 +3,7 @@ import { useCart } from "@/context/CartContext";
 import { ShoppingBag } from "lucide-react";
 
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import Link from "next/link";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 import CartItems from "./CartItems";
@@ -17,7 +18,7 @@ export default function CartPage({ setIsOpen }) {
           <span className=" text-2xl">ব্যাগ</span>
         </KalapanaFont>
       </div>
-      {cartItems.length > 0 ? (
+      {cartItems?.length > 0 ? (
         <>
           <CartItems />
           <div className="text-white text-center w-full bg-gray-500 dark:bg-slate-800 p-2 absolute left-0 bottom-0 rounded-lg  ">
@@ -29,14 +30,14 @@ export default function CartPage({ setIsOpen }) {
               </span>{" "}
               টাকার পন্য আছে
             </p>
-            <a href={"/checkout?from=cart"}>
+            <Link href={"/checkout?from=cart"}>
               <Button
                 onClick={() => setIsOpen(false)}
                 className={"text-lg md:text-xl px-2 py-1 tracking-normal"}
               >
                 ব্যাগের পন্য গুলো অর্ডার করুন
               </Button>
-            </a>
+            </Link>
           </div>
         </>
       ) : (

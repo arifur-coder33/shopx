@@ -3,8 +3,11 @@ import { useCart } from "@/context/CartContext";
 import CartItem from "./CartItem";
 export default function CartItems() {
   const { addToCart, reduceCartQty, cartItems, totalCartPrice } = useCart();
+  console.log("cartItems", cartItems);
   if (cartItems?.length > 0) {
-    return cartItems?.map((item) => <Item key={item.id} data={item} />);
+    return cartItems?.map((item, index) => (
+      <Item key={item.id + index} data={item} />
+    ));
   }
 }
 
@@ -18,10 +21,6 @@ function Item({ data }) {
     }
   };
   return (
-    <CartItem
-      data={data}
-      productQty={data?.quantity}
-      setProductQy={qtyHandler}
-    />
+    <CartItem {...data} productQty={data?.quantity} setProductQy={qtyHandler} />
   );
 }

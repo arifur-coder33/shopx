@@ -1,5 +1,4 @@
 "use client";
-// context/CartContext.js
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const CartContext = createContext();
@@ -7,10 +6,8 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
 
-  // Load cart from localStorage on initial render
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // Check if we're in the browser
       const storedCart = localStorage.getItem("cartItems");
       if (storedCart) {
         setCartItems(JSON.parse(storedCart));
@@ -18,68 +15,86 @@ export const CartProvider = ({ children }) => {
     }
   }, []);
 
-  // Update localStorage whenever cartItems changes
   useEffect(() => {
     localStorage.setItem("cartItems", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product) => {
+  // ✅ Helper to safely compare two cart items
+  const isSameCartItem = (a, b) => {
+    const sameProduct = a.id === b.id;
+    const aVarId = a.variation?.id || null;
+    const bVarId = b.variation?.id || null;
+    return sameProduct && aVarId === bVarId;
+  };
+
+  // ✅ Add to cart
+  const addToCart = (product, qty) => {
     setCartItems((prevItems) => {
-      const itemExists = prevItems.find((item) => item.id === product.id);
-      if (itemExists) {
+      const existingItem = prevItems.find((item) =>
+        isSameCartItem(item, product)
+      );
+      if (existingItem) {
         return prevItems.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+          isSameCartItem(item, product)
+            ? {
+                ...item,
+                quantity: qty ? item.quantity + qty : item.quantity + 1,
+              }
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        return [...prevItems, { ...product, quantity: qty ? qty : 1 }];
       }
     });
   };
 
+  // ✅ Reduce quantity
   const reduceCartQty = (product) => {
-    setCartItems((prevItems) => {
-      const itemExists = prevItems.find((item) => item.id === product.id);
-      if (itemExists) {
-        return prevItems.map((item) =>
-          item.id === product.id
+    setCartItems((prevItems) =>
+      prevItems
+        .map((item) =>
+          isSameCartItem(item, product)
             ? { ...item, quantity: item.quantity - 1 }
             : item
-        );
-      }
-    });
+        )
+        .filter((item) => item.quantity > 0)
+    );
   };
 
-  const removeFromCart = (productId) => {
+  // ✅ Remove from cart
+  const removeFromCart = (product) => {
     setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id !== productId)
+      prevItems.filter((item) => !isSameCartItem(item, product))
     );
   };
 
-  const clearCart = () => {
-    setCartItems([]);
-  };
+  const clearCart = () => setCartItems([]);
 
-  // Calculate total quantity of items in the cart
-  const totalCartQuantity = useMemo(() => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
-  }, [cartItems]);
+  // ✅ Totals
+  const totalCartQuantity = useMemo(
+    () => cartItems.reduce((total, item) => total + item.quantity, 0),
+    [cartItems]
+  );
 
-  // Calculate total cart price in the cart
-  const totalCartPrice = useMemo(() => {
-    return cartItems.reduce(
-      (total, item) => total + item.discountPrice * item.quantity,
-      0
-    );
-  }, [cartItems]);
+  const totalCartPrice = useMemo(
+    () =>
+      cartItems.reduce(
+        (total, item) =>
+          total +
+          (item.discountPrice || item.regularPrice || 0) * item.quantity,
+        0
+      ),
+    [cartItems]
+  );
 
-  const totalCartRegularPrice = useMemo(() => {
-    return cartItems.reduce(
-      (total, item) => total + item.regularPrice * item.quantity,
-      0
-    );
-  }, [cartItems]);
+  const totalCartRegularPrice = useMemo(
+    () =>
+      cartItems.reduce(
+        (total, item) => total + (item.regularPrice || 0) * item.quantity,
+        0
+      ),
+    [cartItems]
+  );
 
   return (
     <CartContext.Provider

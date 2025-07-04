@@ -16,6 +16,10 @@ export default function CartItem({
   variation = null,
   id,
 }) {
+  const product = {
+    id,
+    variation,
+  };
   return (
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
       <div className="col-span-3">
@@ -36,13 +40,13 @@ export default function CartItem({
           <h1 className="text-base ">{title}</h1>
         </Link>
         <div className="grid p-0 m-0 grid-cols-2 gap-1">
-          <div className="flex flex-row items-center gap-1 col-span-full">
+          <div className="flex flex-wrap flex-row items-center gap-1 col-span-full">
             {variation &&
               variation?.combinations.length > 0 &&
               variation.combinations.map((item, index) => (
                 <span
                   key={index}
-                  className=" border-2 bg-slate-300 rounded-full px-2 py-1"
+                  className=" border-2 bg-slate-300 rounded-full px-2 py-1 text-[9px]"
                 >
                   {item?.variationName?.name} : {item.variationValue.value}
                 </span>
@@ -65,7 +69,7 @@ export default function CartItem({
       </div>
       {!removeItem && (
         <div className="col-span-1 cursor-pointer">
-          <RemoveCartItem productId={id} />
+          <RemoveCartItem productId={product} />
         </div>
       )}
 

@@ -6,6 +6,7 @@
 //   enabled: process.env.ANALYZE === 'true',
 // });
 const nextConfig = {
+  reactStrictMode: true,
   images: {
     remotePatterns: [
       {
@@ -35,7 +36,7 @@ const nextConfig = {
       },
     ],
 
-   deviceSizes: [320, 480, 640, 768, 1024, 1280, 1536], // Common device widths
+    deviceSizes: [320, 480, 640, 768, 1024, 1280, 1536], // Common device widths
     // Specific widths for images that aren't full viewport width, e.g., cards
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 300, 384],
   },
