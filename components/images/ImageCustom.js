@@ -99,40 +99,62 @@
 // }
 
 // REMOVE: "use client";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import { getBase64ImageUrl } from "@/utils/getBase64";
+// REMOVE: "use client";
+import { cloudinaryMainImage, getBase64ImageUrl } from "@/utils/cloudinaryUrl";
+
 import Image from "next/image";
 
-// This is now an ASYNC SERVER COMPONENT. No client-side JS!
+// This is an ASYNC SERVER COMPONENT.
 export default async function Imagecustom({
-  src, // Image ID
-  w,
-  h,
+  src, // Image ID (required)
   alt,
   priority,
   className,
   sizes,
   quality = 75,
+
+  // --- PROPS FOR FIXED SIZE MODE ---
+  w,
+  h,
+
+  // --- PROPS FOR RESPONSIVE FILL MODE ---
+  fill, // boolean
+  objectFit, // string, e.g., 'cover' or 'contain'
+  urlWidthHint, // number, e.g., 1280 (A hint for URL generation when `fill` is true)
 }) {
-  // Generate the full-size image URL and the blur placeholder URL in parallel
+  // If using `fill`, use `urlWidthHint`. Otherwise, use `w`.
+  const widthForUrl = fill ? urlWidthHint : w;
+
+  // Generate the full-size image URL and the blur placeholder URL in parallel.
   const [finalSrc, blurDataURL] = await Promise.all([
-    cloudinaryMainImage(src, w, h),
-    getBase64ImageUrl(src), // Generate the blur placeholder
+    cloudinaryMainImage(src, widthForUrl),
+    getBase64ImageUrl(src),
   ]);
 
-  return (
-    <Image
-      src={finalSrc}
-      width={w}
-      height={h}
-      alt={alt || "product image"}
-      className={className}
-      sizes={sizes}
-      quality={quality}
-      // Let next/image handle everything automatically!
-      priority={priority} // If true, sets loading="eager". If false, sets loading="lazy".
-      placeholder="blur" // Use the blur-up effect.
-      blurDataURL={blurDataURL} // Provide the data for the blur.
-    />
-  );
+  // Create a base object for props common to both modes
+  const commonImageProps = {
+    src: finalSrc,
+    alt: alt || "image",
+    className: className,
+    sizes: sizes,
+    quality: quality,
+    priority: priority,
+    placeholder: "blur",
+    blurDataURL: blurDataURL,
+  };
+
+  // --- THE CORE LOGIC ---
+  // If `fill` is true, return the <Image> component configured for fill mode.
+  if (fill) {
+    return (
+      <Image
+        {...commonImageProps}
+        fill
+        style={{ objectFit: objectFit || "cover" }}
+      />
+    );
+  }
+
+  // Otherwise, return the <Image> component configured for fixed width/height mode.
+  return <Image {...commonImageProps} width={w} height={h} />;
 }
