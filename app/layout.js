@@ -1,6 +1,7 @@
 // app/layout.js
 /* eslint-disable @next/next/no-img-element */
 
+import { ThemeScript } from "@/components/common/ThemeScript";
 import dynamic from "next/dynamic";
 import { Roboto, Tiro_Bangla } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
@@ -21,10 +22,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="bn">
+    <html lang="bn" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <ThemeScript />
       </head>
       <body
         className={` ${tiro_bangla.className} ${roboto.className} antialiased theam`}

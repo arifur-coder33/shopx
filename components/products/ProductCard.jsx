@@ -1,8 +1,7 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import Imagecustom from "../images/ImageCustom"; // Correct path
-const BuyNowButton = dynamic(() => import("./buyNowButton"));
+import BuyNowButton from "./buyNowButton";
 
 export default function ProductCard({ product }) {
   if (!product) {

@@ -2,11 +2,10 @@ export const dynamic = "force-static"; // Ensures the page is statically generat
 
 // import { getProducts } from "@/backend/serverActions/productActions";
 
-
-import HeroSection from "./_components/HeroSection";
 import nextDynamic from "next/dynamic";
+import HeroSection from "./_components/HeroSection";
 
-const CategoryWiseProductList=nextDynamic(() =>
+const CategoryWiseProductList = nextDynamic(() =>
   import("./_components/CategoryWiseProductList")
 );
 export async function generateMetadata() {
