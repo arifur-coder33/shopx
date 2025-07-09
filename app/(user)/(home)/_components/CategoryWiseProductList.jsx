@@ -14,7 +14,11 @@ export default async function CategoryWiseProductList() {
               <ProductList link={category?.slug} headerName={category?.name}>
                 {category?.products?.length > 0 &&
                   category?.products?.map((product, i) => (
-                    <ProductCard key={product?.id} product={product} />
+                    <ProductCard
+                      key={product?.id}
+                      product={product}
+                      index={i}
+                    />
                   ))}
               </ProductList>
             </div>

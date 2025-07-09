@@ -3,7 +3,7 @@ import Link from "next/link";
 import Imagecustom from "../images/ImageCustom"; // Correct path
 import BuyNowButton from "./buyNowButton";
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, index }) {
   if (!product) {
     return <div className="text-red-500">Product not found</div>;
   }
@@ -35,11 +35,10 @@ export default function ProductCard({ product }) {
               alt={product?.title}
               w={230}
               h={230}
-              objectFit="cover"
+              className="rounded-md object-cover w-full h-full"
               sizes="(max-width: 480px) 150px, (max-width: 768px) 200px, 300px"
-              imageClassName="transition-opacity duration-300 ease-in-out"
-              priority={false}
               quality={75}
+              priority={index < 5} // Crucial for performance
             />
           </div>
           <div className="p-2">

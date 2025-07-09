@@ -1,11 +1,14 @@
 "use client";
-import Tooltip from "@/components/common/Tooltip"; // IMPORTANT: Adjust path to your Tooltip component
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { errorSoundWithVibrate } from "@/utils/sounds";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
+const Tooltip = dynamic(() => import("@/components/common/Tooltip"), {
+  ssr: false,
+});
 export default function BuyNowButton({
   product,
   slug,
