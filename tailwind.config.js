@@ -1,3 +1,4 @@
+const { fontFamily } = require("tailwindcss/defaultTheme");
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: "class",
@@ -13,7 +14,9 @@ module.exports = {
         foreground: "var(--foreground)",
       },
       fontFamily: {
-        kalpana: ["kalpana", "solaiman", "sans-serif"],
+        sans: ["var(--font-roboto)", ...fontFamily.sans], // Default font
+        bengali: ["var(--font-tiro-bangla)", ...fontFamily.sans],
+        kalpana: ["var(--font-kalpana)"], // Your custom font class
       },
       keyframes: {
         fadeIn: {

@@ -11,6 +11,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "res.cloudinary.com",
+        port: "",
+      },
+      {
+        protocol: "https",
         hostname: "images.unsplash.com",
         port: "",
       },
@@ -24,11 +29,7 @@ const nextConfig = {
         hostname: "a0.muscache.com",
         port: "",
       },
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        port: "",
-      },
+
       {
         protocol: "https",
         hostname: "facebook.com",
@@ -44,6 +45,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "3mb",
     },
+    optimizeCss: true,
   },
 };
 

@@ -1,0 +1,7 @@
+# file: .browserslistrc
+
+# This tells Next.js to only support browsers that have been updated in the
+# last 2 years, are used by more than 0.5% of the market, and are not dead.
+# This list automatically excludes very old browsers that need lots of polyfills.
+defaults
+not IE 11

@@ -1,8 +1,3 @@
-import { KalpanaUNICODE } from "@/app/fonts/font";
 export default function KalapanaFont({ children }) {
-  return (
-    <div className={`${KalpanaUNICODE.className} tracking-wider`}>
-      {children}
-    </div>
-  );
+  return <div className={`font-kalpana tracking-wider`}>{children}</div>;
 }
