@@ -19,7 +19,7 @@ import ProductHeader from "../_components/ProductHeader";
 
 const KalapanaFont = dynamic(() => import("@/components/KalapanaFont"));
 const ProductImageGallery = dynamic(() =>
-  import("../_components/ProductImageGallery")
+  import("../_components/ProductImageGallerfy")
 );
 const ProductDescription = dynamic(() =>
   import("@/components/products/productDescription")

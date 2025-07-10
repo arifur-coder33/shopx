@@ -1,15 +1,13 @@
 "use client";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { errorSoundWithVibrate } from "@/utils/sounds";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Button from "../button";
+import Tooltip from "../common/Tooltip";
 import KalapanaFont from "../KalapanaFont";
-const Tooltip = dynamic(() => import("@/components/common/Tooltip"), {
-  ssr: false,
-});
 export default function BuyNowButton({
+  children = "এখনি কিনুন",
   product,
   slug,
   selectedVariation,
@@ -66,7 +64,7 @@ export default function BuyNowButton({
           className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
           {...restProps}
         >
-          <KalapanaFont>এখনি কিনুন</KalapanaFont>
+          <KalapanaFont>{children}</KalapanaFont>
         </Button>
       </Link>
     );
