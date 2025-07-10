@@ -1,4 +1,4 @@
-export const revalidate = 60;
+// export const revalidate = 60;
 import {
   getProductBySlug,
   getProducts,
@@ -204,8 +204,11 @@ const getBase64Cached = cache(getBase64ImageUrl);
 export default async function ProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;
-  const { data } = await getProductCached(slug);
-
+  const { success, data } = await getProductBySlug(slug);
+  if (!success) {
+    // Handle error case, e.g., show a not found message
+    return <div>Error: {error}</div>;
+  }
   const blurDataURL = await getBase64Cached(
     data?.thumbnail?.name || data?.mainImage
   );
@@ -217,7 +220,7 @@ export default async function ProductPage({ params }) {
   //   [slug],
   //   { revalidate: 60, tags: [`product-${slug}`] }
   // );
-
+  console.log("Product data:", data);
   const {
     id,
     title,

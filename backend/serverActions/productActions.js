@@ -35,6 +35,7 @@ function transformVariations(productVariations) {
       sku: pv.sku || "",
       regularPrice: pv.regularPrice !== null ? String(pv.regularPrice) : "",
       discountPrice: pv.discountPrice !== null ? String(pv.discountPrice) : "",
+      stock: pv.stock !== null ? String(pv.stock) : "",
       qty: pv.stock !== null ? String(pv.stock) : "",
       image: pv.thumbnail
         ? { id: pv.thumbnail.id, name: pv.thumbnail.name }
@@ -463,7 +464,7 @@ export const getProductBySlug = async (slug) => {
         },
       },
     });
-    const transformedVariations = transformVariations(data.variations);
+    // const transformedVariations = transformVariations(data.variations);
     const transformedData = {
       ...data,
 
@@ -475,7 +476,22 @@ export const getProductBySlug = async (slug) => {
     return { success: false, error: error.message }; // Return structured error
   }
 };
+// const cachedGetProductBySlug = cache(
+//   (slug) => getProductBySlug_uncached(slug),
+//   ["get-product-by-slug"],
+//   {
+//     tags: (slug) => [`product-${slug}`],
+//     revalidate: 3600,
+//   }
+// );
 
+// // 2. Create and EXPORT a new ASYNC wrapper function.
+// //    This is the function your pages will call.
+// export const getProductBySlug = async (slug) => {
+//   // Inside this async function, we call the cached function.
+//   // The 'await' here is not strictly necessary but makes the intent clear.
+//   return await cachedGetProductBySlug(slug);
+// };
 export async function updateProductAction({ id: productId, formData }) {
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
