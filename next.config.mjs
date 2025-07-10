@@ -45,7 +45,9 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "3mb",
     },
-    optimizeCss: true,
+    // optimizeCss: true,
+    // workerThreads: true,
+    // partytown: true,
   },
 };
 

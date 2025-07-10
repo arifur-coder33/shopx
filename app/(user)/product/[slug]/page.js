@@ -1,4 +1,4 @@
-// export const revalidate = 60;
+export const revalidate = 60;
 import {
   getProductBySlug,
   getProducts,
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }) {
       cloudinaryMainImage(primaryImage, 1200, 630),
       "t_og-image-width-convert"
     ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
-  console.log("ogImageUrl", ogImageUrl);
+
   const price = new Intl.NumberFormat("en-BD", {
     style: "currency",
     currency: "BDT",
@@ -209,6 +209,7 @@ export default async function ProductPage({ params }) {
     // Handle error case, e.g., show a not found message
     return <div>Error: {error}</div>;
   }
+
   const blurDataURL = await getBase64Cached(
     data?.thumbnail?.name || data?.mainImage
   );
@@ -220,7 +221,7 @@ export default async function ProductPage({ params }) {
   //   [slug],
   //   { revalidate: 60, tags: [`product-${slug}`] }
   // );
-  console.log("Product data:", data);
+
   const {
     id,
     title,

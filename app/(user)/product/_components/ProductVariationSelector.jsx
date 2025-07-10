@@ -56,7 +56,7 @@ const ProductVariationSelector = ({ variations, onVariationChange }) => {
     } else {
       setSelectedVariantText(""); // Reset text if not all options are selected
     }
-    console.log(matchedVariation);
+
     // Fire the callback to the parent
     onVariationChange && onVariationChange(matchedVariation || null);
   }, [selectedOptions, variations, onVariationChange, options]);

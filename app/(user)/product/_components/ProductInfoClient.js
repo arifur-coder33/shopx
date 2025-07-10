@@ -21,7 +21,7 @@ export default function ProductInfoClient({ data, children }) {
   const onVariationChangeHandler = (variation) => {
     setSelectedVariation(variation);
   };
-  console.log("Selected Variation:", selectedVariation);
+
   // Memoize price ranges for variations on the client
   const regularPriceRange = useMemo(
     () =>
