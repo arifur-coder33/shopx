@@ -1,13 +1,13 @@
 // The layout from your first question (e.g., app/(user)/layout.js)
 /* eslint-disable @next/next/no-img-element */
 
-import Footer from "@/components/footer/Footer";
-import NavBar from "@/components/NavBar"; // The optimized NavBar from our previous discussion
-import dynamic from "next/dynamic";
+// import Footer from "@/components/footer/Footer";
+// import NavBar from "@/components/NavBar"; // The optimized NavBar from our previous discussion
+// import dynamic from "next/dynamic";
 
-const ThirdPartyScripts = dynamic(() =>
-  import("@/components/common/ThirdPartyScripts")
-);
+// const ThirdPartyScripts = dynamic(() =>
+//   import("@/components/common/ThirdPartyScripts")
+// );
 // The metadata from this layout will be merged with the RootLayout's metadata
 export const metadata = {
   title: " আমার শপ",
@@ -19,12 +19,12 @@ export default function UserLayout({ children }) {
   const pixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
   return (
     <>
-      <NavBar />
+      {/* <NavBar /> */}
       <main className="max-w-7xl mx-auto p-2 min-h-screen">{children}</main>
       <Footer />
 
       {/* All your scripts are now cleanly handled by this component */}
-      <ThirdPartyScripts />
+      {/* <ThirdPartyScripts /> */}
 
       {/* The noscript tag is for users without JavaScript. It MUST remain here */}
       {/* in the HTML body and cannot be inside the client component. */}
