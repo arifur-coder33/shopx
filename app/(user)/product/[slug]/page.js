@@ -11,15 +11,14 @@ import { htmlToText } from "html-to-text";
 import Image from "next/image";
 import Script from "next/script";
 
+import LazyLoadOnScroll from "@/components/common/LazyLoadOnScroll";
 import dynamic from "next/dynamic"; // <-- Import dynamic
 import { cache } from "react";
 import ProductHeader from "../_components/ProductHeader";
-
 // --- LAZY-LOADED COMPONENTS ---
 
-const KalapanaFont = dynamic(() => import("@/components/KalapanaFont"));
-const ProductImageGallery = dynamic(() =>
-  import("../_components/ProductImageGallerfy")
+const ProductImageGallery = dynamic(
+  () => import("../_components/ProductImageGallery") // <-- Corrected
 );
 const ProductDescription = dynamic(() =>
   import("@/components/products/productDescription")
@@ -301,16 +300,22 @@ export default async function ProductPage({ params }) {
             alt={title}
             fill={true} // Use fill for responsive sizing within the container
             priority={true}
-            sizes="(max-width: 768px) 100vw, 50vw"
+            sizes="(max-width: 768px) 100vw, 40vw"
             className="rounded-md object-contain"
             placeholder="blur"
             blurDataURL={blurDataURL}
           />
         </ProductHeader>
       </div>
-      <ProductDescription description={description} />
+      <LazyLoadOnScroll>
+        <ProductDescription description={description} />
+      </LazyLoadOnScroll>
 
-      <FacebookEventTrac product={data} />
+      {/* --- LAZY LOAD THE FACEBOOK TRACKER --- */}
+      {/* This doesn't need to fire until the user scrolls a bit */}
+      <LazyLoadOnScroll minHeight="50px">
+        <FacebookEventTrac product={data} />
+      </LazyLoadOnScroll>
       <Script
         id="jsonld"
         type="application/ld+json"
