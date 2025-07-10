@@ -1,7 +1,7 @@
 // app/layout.js
 /* eslint-disable @next/next/no-img-element */
 
-import { ThemeScript } from "@/components/common/ThemeScript";
+// import { ThemeScript } from "@/components/common/ThemeScript";
 import dynamic from "next/dynamic";
 import { Roboto, Tiro_Bangla } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
@@ -26,7 +26,7 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
-        <ThemeScript />
+        {/* <ThemeScript /> */}
       </head>
       <body
         className={` ${tiro_bangla.className} ${roboto.className} antialiased theam`}
@@ -35,8 +35,8 @@ export default function RootLayout({ children }) {
         <NextTopLoader showSpinner={false} />
 
         {/* Wrap children in the Providers component */}
-        <Providers>{children}</Providers>
-
+        {/* <Providers>{children}</Providers> */}
+        {children}
         {/* 
           ToastContainer and CartProvider have been MOVED into Providers.js
         */}

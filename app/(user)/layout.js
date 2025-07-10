@@ -21,7 +21,7 @@ export default function UserLayout({ children }) {
     <>
       {/* <NavBar /> */}
       <main className="max-w-7xl mx-auto p-2 min-h-screen">{children}</main>
-      <Footer />
+      {/* <Footer /> */}
 
       {/* All your scripts are now cleanly handled by this component */}
       {/* <ThirdPartyScripts /> */}
