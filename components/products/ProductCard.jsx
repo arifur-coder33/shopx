@@ -1,6 +1,6 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import Link from "next/link";
-import Imagecustom from "../images/ImageCustom"; // Correct path
+import ImageCustomServer from "../images/ImageCustomServer";
 import BuyNowButton from "./buyNowButton";
 
 export default function ProductCard({ product, index }) {
@@ -30,7 +30,7 @@ export default function ProductCard({ product, index }) {
       <div className="product-card">
         <Link href={`/product/${encodeURIComponent(product?.slug)}`}>
           <div className="relative aspect-square w-full">
-            <Imagecustom
+            <ImageCustomServer
               src={product?.mainImage || product?.thumbnail?.name}
               alt={product?.title}
               w={230}
