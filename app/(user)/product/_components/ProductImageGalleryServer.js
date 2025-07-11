@@ -85,6 +85,7 @@ export default function ProductImageGalleryServer({
                     width={60}
                     height={60}
                     className={styles.thumbnailImage}
+                    priority={index < 5} // Prioritize the first image
                   />
                 )}
               </div>

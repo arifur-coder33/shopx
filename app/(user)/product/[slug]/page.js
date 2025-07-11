@@ -26,7 +26,7 @@ const ProductDescription = dynamic(() =>
 const FacebookEventTrac = dynamic(() =>
   import("../_components/FacebookEventTrack")
 );
-const BuyNowSection = dynamic(() => import("./_components/BuyNowSection"));
+const BuyNowSection = dynamic(() => import("../_components/BuyNowSection"));
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 

@@ -6,7 +6,7 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import { getMinMax } from "@/utils/getMinMax";
 import { useEffect, useMemo, useState } from "react";
 
-import BuyNowSection from "../[slug]/_components/BuyNowSection";
+import BuyNowSection from "./BuyNowSection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
 
 export default function ProductInfoClient({ data, children }) {

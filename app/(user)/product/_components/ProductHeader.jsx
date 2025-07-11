@@ -1,7 +1,6 @@
 // NO "use client". This is a Server Component.
-import dynamic from "next/dynamic";
+import ProductClientShell from "./ProductClientShell";
 
-const ProductClientShell = dynamic(() => import("./ProductClientShell"));
 export default function ProductHeader({ data, children }) {
   const { title } = data;
 

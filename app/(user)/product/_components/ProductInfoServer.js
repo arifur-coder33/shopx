@@ -5,11 +5,6 @@ import KalapanaFont from "@/components/KalapanaFont";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { getMinMax } from "@/utils/getMinMax";
 
-/**
- * Calculates the initial price display for the product.
- * On the server, this is either the simple product price or a price range for variations.
- * It does not account for a selected variation, as that's a client-side state.
- */
 function calculateInitialDisplayPrice(product) {
   const { variations, regularPrice, discountPrice } = product;
   let price;

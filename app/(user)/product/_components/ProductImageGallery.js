@@ -48,7 +48,6 @@ const VideoThumbnailIcon = () => (
   </div>
 );
 
-// NOTE: This component is your original ProductImageGallery.js, renamed.
 export default function ProductImageGallery({
   children,
   mainImage,
@@ -58,7 +57,6 @@ export default function ProductImageGallery({
   activeImageId = null,
   videoUrl = "https://www.youtube.com/watch?v=KvdBePTOmc4",
 }) {
-  // --- ALL YOUR ORIGINAL HOOKS AND LOGIC START HERE ---
   const allMedia = useMemo(() => {
     const mediaMap = new Map();
     const addMedia = (item, type, alt) => {
@@ -138,6 +136,15 @@ export default function ProductImageGallery({
   });
   const galleryRef = useRef(null);
 
+  const ZOOM_LEVEL = 2;
+  const lensSize = useMemo(
+    () => ({
+      width: (1 / ZOOM_LEVEL) * 100,
+      height: (1 / ZOOM_LEVEL) * 100,
+    }),
+    []
+  );
+
   const handleMouseMove = useCallback(
     (e) => {
       if (!galleryRef.current || isMobile || isVideoActive) return;
@@ -156,6 +163,31 @@ export default function ProductImageGallery({
     },
     [isMobile, isVideoActive]
   );
+
+  const lensPosition = useMemo(() => {
+    const left = desktopZoomPosition.x * 100 - lensSize.width / 2;
+    const top = desktopZoomPosition.y * 100 - lensSize.height / 2;
+    return {
+      left: Math.max(0, Math.min(left, 100 - lensSize.width)),
+      top: Math.max(0, Math.min(top, 100 - lensSize.height)),
+    };
+  }, [desktopZoomPosition, lensSize]);
+
+  // --- START: THE FIX ---
+  // This new calculation correctly positions the background in the zoom panel.
+  // It maps the lens's position (which moves in a smaller range) to the
+  // full 0-100% range required for the background image.
+  const zoomPanelPosition = useMemo(() => {
+    const x = (lensPosition.left / (100 - lensSize.width)) * 100;
+    const y = (lensPosition.top / (100 - lensSize.height)) * 100;
+
+    // A check to prevent NaN if lens size is 100%
+    return {
+      x: isFinite(x) ? x : 0,
+      y: isFinite(y) ? y : 0,
+    };
+  }, [lensPosition, lensSize]);
+  // --- END: THE FIX ---
 
   return (
     <div
@@ -209,6 +241,21 @@ export default function ProductImageGallery({
               <ZoomIcon />
             </div>
           )}
+
+          <div
+            className={styles.zoomLens}
+            style={{
+              opacity: desktopZoomActive && !isMobile && !isVideoActive ? 1 : 0,
+              visibility:
+                desktopZoomActive && !isMobile && !isVideoActive
+                  ? "visible"
+                  : "hidden",
+              width: `${lensSize.width}%`,
+              height: `${lensSize.height}%`,
+              top: `${lensPosition.top}%`,
+              left: `${lensPosition.left}%`,
+            }}
+          />
         </div>
         {allMedia.length > 1 && (
           <div className={styles.thumbnailList}>
@@ -253,9 +300,11 @@ export default function ProductImageGallery({
             1800,
             1800
           )})`,
-          backgroundPosition: `${desktopZoomPosition.x * 100}% ${
-            desktopZoomPosition.y * 100
-          }%`,
+          backgroundSize: `${ZOOM_LEVEL * 100}%`,
+          // --- START: THE FIX ---
+          // Use the new, corrected position calculation here.
+          backgroundPosition: `${zoomPanelPosition.x}% ${zoomPanelPosition.y}%`,
+          // --- END: THE FIX ---
           opacity: !isVideoActive && desktopZoomActive ? 1 : 0,
           visibility:
             !isVideoActive && desktopZoomActive ? "visible" : "hidden",

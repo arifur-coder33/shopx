@@ -1,12 +1,9 @@
 // file: app/product/_components/ProductClientShell.js
 "use client";
 
-import { useMemo } from "react";
-// Import the new unified gallery component
+import { useEffect, useMemo, useState } from "react";
 import ProductImageGallery from "./ProductImageGallery";
-// The server version is still needed to be passed as a prop
 import ProductImageGalleryServer from "./ProductImageGalleryServer";
-// Your other imports
 import ProductInfoClient from "./ProductInfoClient";
 import ProductInfoServer from "./ProductInfoServer";
 
@@ -15,6 +12,12 @@ export default function ProductClientShell({
   imageComponent, // This is the prioritized <Image> from page.js
   titleComponent,
 }) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  // This hook runs only on the client, after the initial render.
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   const {
     thumbnail,
     mainImage,
@@ -32,34 +35,33 @@ export default function ProductClientShell({
     [variations]
   );
 
+  const staticContent = (
+    <ProductImageGalleryServer
+      mainImage={thumbnail || mainImage}
+      gallery={gallery || imageGallery}
+      variationsImage={variationsImage}
+      title={title}
+      videoUrl={videoUrl}
+    >
+      {imageComponent}
+    </ProductImageGalleryServer>
+  );
   return (
     <>
       <div className="col-span-2">
-        {/* --- THE NEW, SIMPLIFIED USAGE --- */}
-        <ProductImageGallery
-          // --- Props for the interactive version ---
-          mainImage={thumbnail || mainImage}
-          gallery={gallery || imageGallery}
-          variationsImage={variationsImage}
-          title={title}
-          videoUrl={videoUrl}
-          // --- Prop for the static server version ---
-          staticContent={
-            <ProductImageGalleryServer
-              mainImage={thumbnail || mainImage}
-              gallery={gallery || imageGallery}
-              variationsImage={variationsImage}
-              title={title}
-              videoUrl={videoUrl}
-            >
-              {imageComponent}
-            </ProductImageGalleryServer>
-          }
-        >
-          {/* --- The <Image> component is passed as a direct child --- */}
-          {/* This is what React.cloneElement will use, fixing the error. */}
-          {imageComponent}
-        </ProductImageGallery>
+        {!isMounted ? (
+          staticContent
+        ) : (
+          <ProductImageGallery
+            mainImage={thumbnail || mainImage}
+            gallery={gallery || imageGallery}
+            variationsImage={variationsImage}
+            title={title}
+            videoUrl={videoUrl}
+          >
+            {imageComponent}
+          </ProductImageGallery>
+        )}
       </div>
 
       <div className="md:col-span-2 mt-2 md:col-start-4 md:mt-0">
