@@ -31,10 +31,8 @@
 //   );
 // }
 
-"use client";
-
 import Logout from "@/components/auth/Logout";
-import { useMounted } from "@/hooks/useMounted";
+// import { useMounted } from "@/hooks/useMounted";
 import { MoonStar, ShoppingCart, User2Icon } from "lucide-react";
 import Link from "next/link";
 import Cart from "../Cart";
@@ -63,13 +61,13 @@ const NavActionsSkeleton = () => (
 
 export default function NavActions() {
   // This will be `false` on the server and `true` on the client after hydration.
-  const hasMounted = useMounted();
+  // const hasMounted = useMounted();
 
-  // If we are on the server OR during the initial client paint, show the static skeleton.
-  // This guarantees no server-client mismatch and no layout shift.
-  if (!hasMounted) {
-    return <NavActionsSkeleton />;
-  }
+  // // If we are on the server OR during the initial client paint, show the static skeleton.
+  // // This guarantees no server-client mismatch and no layout shift.
+  // if (!hasMounted) {
+  //   return <NavActionsSkeleton />;
+  // }
 
   // Once mounted, render the REAL components that use client-side hooks.
   return (
@@ -80,7 +78,9 @@ export default function NavActions() {
 
       {/* These components will now render seamlessly on the client */}
       <Logout className="nav-hover" />
-      <Cart className="nav-hover" />
+      <Cart>
+        <ShoppingCart className="nav-hover" />{" "}
+      </Cart>
       <ThemeToggle className="nav-hover" />
     </div>
   );

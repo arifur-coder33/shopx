@@ -2,16 +2,18 @@
 "use client";
 import { useCart } from "@/context/CartContext";
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import { ShoppingCart } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import Modal from "./Modal";
+// import Modal from "./Modal";
+import CartPage from "./cart/CartPage";
 
 // Dynamically import CartPage. Its code will only be fetched from the server
 // when the user clicks the cart icon and `isOpen` becomes true.
 const DynamicCartPage = dynamic(() => import("./cart/CartPage"));
-
-export default function Cart({ className }) {
+const Modal = dynamic(() => import("./Modal"), {
+  ssr: false, // Ensure the modal is only rendered on the client side
+});
+export default function Cart({ className, children }) {
   const { totalCartQuantity } = useCart();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -21,7 +23,8 @@ export default function Cart({ className }) {
         onClick={() => setIsOpen(true)} // Changed to ensure it only opens
         className="relative cursor-pointer"
       >
-        <ShoppingCart className={`${className}`} />
+        {/* <ShoppingCart className={`${className}`} /> */}
+        {children}
         {totalCartQuantity > 0 && (
           <span className="absolute -top-2 text-center left-2 text-white rounded-full bg-purple text-base font-bold w-5 h-5 opacity-100">
             {replaceNumbers(totalCartQuantity.toString())}
@@ -36,7 +39,7 @@ export default function Cart({ className }) {
           React will suspend while it fetches the component's code the first time.
           This happens ONLY after the user clicks.
         */}
-        {isOpen && <DynamicCartPage setIsOpen={setIsOpen} />}
+        {isOpen && <CartPage setIsOpen={setIsOpen} />}
       </Modal>
     </>
   );
