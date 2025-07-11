@@ -62,7 +62,7 @@ function transformVariations(productVariations) {
 export async function createProductAction(formData) {
   try {
     let data = Object.fromEntries(formData.entries());
-    console.log(JSON.parse(data?.variations || "[]"));
+
     // --- Basic Validation ---
     if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
       throw new Error(
@@ -511,7 +511,7 @@ export async function updateProductAction({ id: productId, formData }) {
 
   try {
     const data = Object.fromEntries(formData.entries());
-
+    console.log(data);
     // --- Parse Product Variations ---
     let submittedVariationsData = [];
     // ✅ FIX: Using 'variations' to match your form data log.
@@ -553,6 +553,7 @@ export async function updateProductAction({ id: productId, formData }) {
       const productUpdateData = {
         title: data.title,
         slug: newSlug,
+        videoUrl: data.videoUrl || null,
         description: data.description || null,
         categoryId: data.category || null,
         thumbnailId: data.thumbnail || existingProduct.thumbnailId,
@@ -673,6 +674,7 @@ export async function updateProductAction({ id: productId, formData }) {
           });
         }
       }
+      console.log("Updated product with variations:", updatedProduct);
       return updatedProduct;
     });
 
