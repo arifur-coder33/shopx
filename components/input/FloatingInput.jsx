@@ -4,11 +4,14 @@ export default function FloatingInput({
   name,
   inputType = "text",
   colSpan,
+
   ...props
 }) {
   const uniqueId = `input-${name}-${Math.random()
     .toString(36)
     .substring(2, 9)}`;
+  console.log("name", name);
+
   return (
     <div className={`relative my-3  col-span-${colSpan}`}>
       <input
@@ -17,6 +20,7 @@ export default function FloatingInput({
         id={name}
         name={name}
         placeholder=""
+        {...props}
       />
       <label
         htmlFor={name}

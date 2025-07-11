@@ -23,6 +23,17 @@ function transformVariations(productVariations) {
       },
     }));
 
+    const combinations = pv.combinations.map((combo) => ({
+      variationName: {
+        id: combo.variationName.id,
+        name: combo.variationName.name,
+      },
+      variationValue: {
+        id: combo.variationValue.id,
+        value: combo.variationValue.value,
+      },
+    }));
+
     // Build the `variationValues` object for easy lookup (e.g., { Color: 'Red', Size: 'Large' })
     const variationValues = pv.combinations.reduce((acc, combo) => {
       acc[combo.variationName.name] = combo.variationValue.value;
@@ -42,6 +53,7 @@ function transformVariations(productVariations) {
         : null,
       imageUrl: pv.thumbnail?.name ? `/uploads/${pv.thumbnail.name}` : null,
       combination: combination,
+      combinations: combinations,
       variationValues: variationValues,
     };
   });

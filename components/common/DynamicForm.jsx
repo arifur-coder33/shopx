@@ -36,6 +36,7 @@ export default function DynamicForm({
   fromFields,
   children,
 }) {
+  console.log("DynamicForm data:", data);
   const { closeModal } = useModalContext();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -48,7 +49,7 @@ export default function DynamicForm({
       closeModal();
     }
   }, [success, closeModal]);
-  console.log(data);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -113,6 +114,8 @@ export default function DynamicForm({
               );
             case "text":
             case "number":
+              console.log("label", field.label);
+              console.log("value", data?.[field.name]);
               return (
                 <FloatingInput
                   index={index}

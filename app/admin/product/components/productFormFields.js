@@ -71,6 +71,12 @@ export const productFormFields = ({
     colSpan: "full",
   },
   {
+    type: "text",
+    label: "Video URL",
+    name: "videoUrl",
+    colSpan: "2",
+  },
+  {
     type: "tag",
     label: "Product Tag",
     name: "seoKeyWord",

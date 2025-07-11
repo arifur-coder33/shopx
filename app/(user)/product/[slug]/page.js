@@ -1,32 +1,17 @@
 export const revalidate = 60;
+export const dynamic = "force-static"; // Ensures the page is statically generated
+
 import {
   getProductBySlug,
   getProducts,
 } from "@/backend/serverActions/productActions";
 
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import { getBase64ImageUrl } from "@/utils/getBase64";
+import { cloudinaryMainImage, getBase64ImageUrl } from "@/utils/cloudinaryUrl";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
-import Image from "next/image";
 import Script from "next/script";
+import ProductDataView from "../_components/ProductDataView";
 
-import LazyLoadOnScroll from "@/components/common/LazyLoadOnScroll";
-import dynamic from "next/dynamic"; // <-- Import dynamic
-import { cache } from "react";
-import ProductHeader from "../_components/ProductHeader";
-// --- LAZY-LOADED COMPONENTS ---
-
-const ProductImageGallery = dynamic(
-  () => import("../_components/ProductImageGallery") // <-- Corrected
-);
-const ProductDescription = dynamic(() =>
-  import("@/components/products/productDescription")
-);
-const FacebookEventTrac = dynamic(() =>
-  import("../_components/FacebookEventTrack")
-);
-const BuyNowSection = dynamic(() => import("../_components/BuyNowSection"));
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
@@ -199,8 +184,7 @@ export async function generateStaticParams() {
     slug: product.slug,
   }));
 }
-const getProductCached = cache(getProductBySlug);
-const getBase64Cached = cache(getBase64ImageUrl);
+
 export default async function ProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;
@@ -210,9 +194,6 @@ export default async function ProductPage({ params }) {
     return <div>Error: {error}</div>;
   }
 
-  const blurDataURL = await getBase64Cached(
-    data?.thumbnail?.name || data?.mainImage
-  );
   // const getProduct = unstable_cache(
   //   async () => {
   //     const data = await getProductBySlug(slug);
@@ -241,6 +222,7 @@ export default async function ProductPage({ params }) {
     cloudinaryMainImage(thumbnail.name || mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const primaryImage = thumbnail?.name || mainImage;
+  const blurDataURL = await getBase64ImageUrl(primaryImage);
   //for facebook product schema listing
   const schema = {
     "@context": "http://schema.org",
@@ -291,35 +273,11 @@ export default async function ProductPage({ params }) {
     },
   };
 
-  const mainProductImageId = thumbnail?.name || mainImage;
-
   // --- Add this line to generate the blur placeholder on the server ---
 
   return (
     <div className="mb-16">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <ProductHeader data={data}>
-          <Image
-            src={cloudinaryMainImage(mainProductImageId, 600, 600)}
-            alt={title}
-            fill={true} // Use fill for responsive sizing within the container
-            priority={true}
-            sizes="(max-width: 768px) 100vw, 40vw"
-            className="rounded-md object-contain"
-            placeholder="blur"
-            blurDataURL={blurDataURL}
-          />
-        </ProductHeader>
-      </div>
-      <LazyLoadOnScroll>
-        <ProductDescription description={description} />
-      </LazyLoadOnScroll>
-
-      {/* --- LAZY LOAD THE FACEBOOK TRACKER --- */}
-      {/* This doesn't need to fire until the user scrolls a bit */}
-      <LazyLoadOnScroll minHeight="50px">
-        <FacebookEventTrac product={data} />
-      </LazyLoadOnScroll>
+      <ProductDataView data={data} blurDataURL={blurDataURL} />
       <Script
         id="jsonld"
         type="application/ld+json"

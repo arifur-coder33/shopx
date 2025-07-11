@@ -1,6 +1,7 @@
 // components/common/DynamicTable.js
 
 // import ProductPageData from "@/app/(user)/product/[slug]/_components/ProductPageData";
+import ProductDataView from "@/app/(user)/product/_components/ProductDataView";
 import { Edit, Eye, Trash, View } from "lucide-react";
 import Link from "next/link";
 import Imagecustom from "../images/ImageCustom";
@@ -170,7 +171,7 @@ export default function DynamicTable({
                       <View className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
                     }
                   >
-                    {/* <ProductPageData data={item} /> */}
+                    <ProductDataView data={item} />
                   </ModalButton>
                   <Link href={`/product/${encodeURIComponent(item?.slug)}`}>
                     <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />

@@ -111,7 +111,7 @@ model Product {
   // One-to-One: Thumbnail Image
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
-
+  videoUrl String? // Optional video URL for the product
   // Many-to-Many: Gallery (Using Join Table)
   gallery ProductGallery[]
 
