@@ -31,13 +31,15 @@
 //   );
 // }
 
-import Logout from "@/components/auth/Logout";
+// import Logout from "@/components/auth/Logout";
 // import { useMounted } from "@/hooks/useMounted";
-import { MoonStar, ShoppingCart, User2Icon } from "lucide-react";
+import { LogOutIcon, MoonStar, ShoppingCart, User2Icon } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import Cart from "../Cart";
-import ThemeToggle from "../TheamToggle"; // Corrected spelling
 
+import ThemeToggle from "../TheamToggle"; // Corrected spelling
+const Logout = dynamic(() => import("@/components/auth/Logout"));
+const Cart = dynamic(() => import("@/components/Cart"));
 // This is a SKELETON. It's what the server will render.
 // It has the final icons but no client-side logic. This prevents layout shift.
 // It looks identical to the "logged out" state of the final component.
@@ -72,12 +74,15 @@ export default function NavActions() {
   // Once mounted, render the REAL components that use client-side hooks.
   return (
     <div className="flex flex-row justify-end gap-1 items-center">
+      <Logout className="nav-hover" aria-label="Logout">
+        <LogOutIcon />{" "}
+      </Logout>
       <Link className="nav-hover" href={"/login"}>
         <User2Icon />
       </Link>
 
       {/* These components will now render seamlessly on the client */}
-      <Logout className="nav-hover" />
+
       <Cart>
         <ShoppingCart className="nav-hover" />{" "}
       </Cart>

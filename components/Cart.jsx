@@ -5,8 +5,8 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 // import Modal from "./Modal";
+import { useMounted } from "@/hooks/useMounted";
 import CartPage from "./cart/CartPage";
-
 // Dynamically import CartPage. Its code will only be fetched from the server
 // when the user clicks the cart icon and `isOpen` becomes true.
 const DynamicCartPage = dynamic(() => import("./cart/CartPage"));
@@ -16,7 +16,7 @@ const Modal = dynamic(() => import("./Modal"), {
 export default function Cart({ className, children }) {
   const { totalCartQuantity } = useCart();
   const [isOpen, setIsOpen] = useState(false);
-
+  const hasMounted = useMounted();
   return (
     <>
       <div
@@ -25,7 +25,8 @@ export default function Cart({ className, children }) {
       >
         {/* <ShoppingCart className={`${className}`} /> */}
         {children}
-        {totalCartQuantity > 0 && (
+
+        {hasMounted && totalCartQuantity > 0 && (
           <span className="absolute -top-2 text-center left-2 text-white rounded-full bg-purple text-base font-bold w-5 h-5 opacity-100">
             {replaceNumbers(totalCartQuantity.toString())}
           </span>
