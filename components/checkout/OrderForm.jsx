@@ -13,10 +13,12 @@ import PaymentMethodSelector from "./PaymentMethodSelector";
 export default function OrderForm({
   setDeliveryArea,
   children,
-
   products,
   buyNow,
   deliveryCharge,
+  data,
+  initialQty,
+  variationId,
 }) {
   const { data: session } = useSession();
 

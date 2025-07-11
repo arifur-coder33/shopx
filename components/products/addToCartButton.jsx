@@ -30,6 +30,7 @@ export default function AddToCartButton(props) {
         : product?.thumbnail?.name || product?.mainImage,
       slug: product?.slug,
       id: product?.id,
+      weight: selectedVariation ? selectedVariation?.weight : product?.weight,
     };
     if (product?.variations?.length > 0 && !selectedVariation) {
       toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");

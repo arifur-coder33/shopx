@@ -14,7 +14,7 @@ export async function generateStaticParams() {
   }));
 }
 
-export default async function ProductPage({ params }) {
+export default async function BuyNowPage({ params }) {
   const { slug } = await params;
 
   const getProduct = unstable_cache(

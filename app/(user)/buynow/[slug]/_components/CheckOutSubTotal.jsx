@@ -1,34 +1,25 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
 export default function CheckOutSubTotal({
-  data,
-  productQty,
+  totalWeight,
   deliveryArea,
   discountPrice,
   regularPrice,
 }) {
-  const { insideDhaka, outSideDhaka, category } = data || {};
   let deliveryCharge = 0;
-  deliveryCharge = deliveryArea === "inside-dhaka" ? insideDhaka : outSideDhaka;
+  deliveryCharge =
+    deliveryArea === "inside-dhaka"
+      ? Number(totalWeight) * 80
+      : Number(totalWeight) * 100;
   return (
     <>
-      <Item
-        label={"পণ্যর রেগুলার মোট মুল্যঃ"}
-        value={regularPrice * productQty}
-      />
+      <Item label={"পণ্যর রেগুলার মোট মুল্যঃ"} value={regularPrice} />
 
-      <Item
-        label={"ডিস্কাউন্টঃ (-)"}
-        value={(regularPrice - discountPrice) * productQty}
-      />
-      <Item label={"ডেলিভারি চার্জঃ (+)"} value={deliveryCharge} />
-      <input
-        hidden
-        name="orderPrice"
-        defaultValue={discountPrice * productQty}
-      />
+      <Item label={"ডিস্কাউন্টঃ (-)"} value={regularPrice - discountPrice} />
+      <Item label={"ডেলিভারি চার্জঃ (+)"} value={deliveryCharge || 0} />
+      <input hidden name="orderPrice" defaultValue={discountPrice} />
       <Item
         label={"সর্বোমোট মুল্যঃ"}
-        value={discountPrice * productQty + deliveryCharge}
+        value={discountPrice + deliveryCharge || 0}
         className={
           "font-bold border-t-4 border-t-slate-800 dark:border-t-slate-200"
         }

@@ -19,22 +19,46 @@ export default function BuyNowCheckout({ data }) {
       productId: data?.id,
     },
   ];
+  const selectedVariation = data?.variations?.find((v) => v.id === variationId);
+  const productData = [
+    {
+      title: data?.title,
+      discountPrice: selectedVariation
+        ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
+        : data?.discountPrice || data?.regularPrice,
+      regularPrice: selectedVariation
+        ? selectedVariation?.regularPrice
+        : data?.regularPrice,
+      variation: selectedVariation
+        ? {
+            id: selectedVariation?.id,
+            combinations: selectedVariation?.combinations,
+          }
+        : null,
 
+      mainImageUrl: selectedVariation
+        ? selectedVariation?.thumbnail?.name
+        : data?.thumbnail?.name || data?.mainImage,
+      slug: data?.slug,
+      id: data?.id,
+      quantity: initialQty ? Number(initialQty) : 1,
+      weight: selectedVariation ? selectedVariation?.weight : data?.weight,
+    },
+  ];
+  console.log("productData", data);
   const deliveryCharge =
     deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
   return (
     <OrderForm
       setDeliveryArea={setDeliveryArea}
-      products={products}
+      products={productData}
       deliveryCharge={deliveryCharge}
       buyNow={true}
+      data={data}
+      initialQty={initialQty}
+      variationId={variationId}
     >
-      <BuyNowProductDetails
-        data={data}
-        initialQty={initialQty}
-        deliveryArea={deliveryArea}
-        variationId={variationId}
-      />
+      <BuyNowProductDetails data={productData} deliveryArea={deliveryArea} />
     </OrderForm>
   );
 }

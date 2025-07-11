@@ -74,18 +74,23 @@ export default function NavActions() {
   // Once mounted, render the REAL components that use client-side hooks.
   return (
     <div className="flex flex-row justify-end gap-1 items-center">
-      <Logout className="nav-hover" aria-label="Logout">
-        <LogOutIcon />{" "}
-      </Logout>
-      <Link className="nav-hover" href={"/login"}>
-        <User2Icon />
-      </Link>
+      <div className="h-6 w-6">
+        <Logout className="nav-hover" aria-label="Logout">
+          <LogOutIcon />{" "}
+        </Logout>
+      </div>
+      <div className="h-6 w-6 ">
+        <Link className="nav-hover" href={"/login"}>
+          <User2Icon />
+        </Link>
+      </div>
 
-      {/* These components will now render seamlessly on the client */}
+      <div className="h-6 w-6 ">
+        <Cart>
+          <ShoppingCart className="nav-hover" />{" "}
+        </Cart>
+      </div>
 
-      <Cart>
-        <ShoppingCart className="nav-hover" />{" "}
-      </Cart>
       <ThemeToggle className="nav-hover" />
     </div>
   );
