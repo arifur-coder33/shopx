@@ -10,7 +10,6 @@ export default function FloatingInput({
   const uniqueId = `input-${name}-${Math.random()
     .toString(36)
     .substring(2, 9)}`;
-  console.log("name", name);
 
   return (
     <div className={`relative my-3  col-span-${colSpan}`}>

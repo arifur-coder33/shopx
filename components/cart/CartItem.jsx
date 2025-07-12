@@ -26,12 +26,12 @@ export default function CartItem({
         <Imagecustom
           src={mainImageUrl}
           alt={title}
-          w={75}
-          h={75}
+          w={60}
+          h={60}
           objectFit="cover"
           sizes="(max-width: 480px) 75px, (max-width: 768px) 100px, 150px"
           imageClassName="transition-opacity duration-300 ease-in-out"
-          priority={false}
+          priority={true}
           quality={75}
         />
       </div>

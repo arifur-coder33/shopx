@@ -2,11 +2,8 @@ import { Truck } from "lucide-react";
 import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
-import { createOrder } from "@/backend/serverActions/orderActions";
-
 import { useSession } from "next-auth/react";
 
-import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import PaymentMethodSelector from "./PaymentMethodSelector";
@@ -33,10 +30,10 @@ export default function OrderForm({
 
     const form = e.target; // Reference to the form element
     const formData = new FormData(form); // Collect form data
-    if (buyNow) {
-      products[0].quantity = Number(formData.get("quantity"));
-    }
-    formData.append("deliveryCharge", Number(deliveryCharge));
+    // if (buyNow) {
+    //   products[0].quantity = Number(formData.get("quantity"));
+    // }
+
     if (session?.user?.id) {
       formData.append("userId", session?.user?.id);
     }
@@ -49,46 +46,46 @@ export default function OrderForm({
     // formData.append("deliveryArea", deliveryArea);
     setError(null);
     setSuccess(null);
+    console.log("Form Data:", Object.fromEntries(formData.entries()));
+    // startTransition(async () => {
+    //   const response = await createOrder(formData); // Call server action
 
-    startTransition(async () => {
-      const response = await createOrder(formData); // Call server action
+    //   if (response.success) {
+    //     trackFacebookEvent("Purchase", {
+    //       content_type: "product",
+    //       content_ids: products.map((product) => product.productId),
+    //       value: products.reduce(
+    //         (total, product) => total + product.quantity * product.price,
+    //         0
+    //       ),
+    //       currency: "BDT", // Bangladeshi Taka
+    //     });
 
-      if (response.success) {
-        trackFacebookEvent("Purchase", {
-          content_type: "product",
-          content_ids: products.map((product) => product.productId),
-          value: products.reduce(
-            (total, product) => total + product.quantity * product.price,
-            0
-          ),
-          currency: "BDT", // Bangladeshi Taka
-        });
+    //     router.push(
+    //       `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
+    //         response?.data?.phoneNumber
+    //       )}&orderSuccess=true`
+    //     );
 
-        router.push(
-          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
-            response?.data?.phoneNumber
-          )}&orderSuccess=true`
-        );
-
-        // form.reset(); // Clear the form on success
-      } else {
-        console.log(response.error);
-        // Track the "FailedOrder" event
-        console.log(products);
-        trackFacebookEvent("FailedOrder", {
-          content_type: "product",
-          content_ids: products.map((product) => product.productId),
-          value: products.reduce(
-            (total, product) => total + product.quantity * product.price,
-            0
-          ),
-          currency: "BDT",
-          reason: response.error || "Unknown error",
-        });
-        window.scrollTo(0, 0);
-        setError(response.error || "Something went wrong");
-      }
-    });
+    //     // form.reset(); // Clear the form on success
+    //   } else {
+    //     console.log(response.error);
+    //     // Track the "FailedOrder" event
+    //     console.log(products);
+    //     trackFacebookEvent("FailedOrder", {
+    //       content_type: "product",
+    //       content_ids: products.map((product) => product.productId),
+    //       value: products.reduce(
+    //         (total, product) => total + product.quantity * product.price,
+    //         0
+    //       ),
+    //       currency: "BDT",
+    //       reason: response.error || "Unknown error",
+    //     });
+    //     window.scrollTo(0, 0);
+    //     setError(response.error || "Something went wrong");
+    //   }
+    // });
   };
   return (
     <form onSubmit={handleSubmit}>

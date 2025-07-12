@@ -3,7 +3,7 @@ import { useCart } from "@/context/CartContext";
 import CartItem from "./CartItem";
 export default function CartItems() {
   const { addToCart, reduceCartQty, cartItems, totalCartPrice } = useCart();
-  console.log("cartItems", cartItems);
+
   if (cartItems?.length > 0) {
     return cartItems?.map((item, index) => (
       <Item key={item.id + index} data={item} />

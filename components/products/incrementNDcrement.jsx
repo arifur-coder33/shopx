@@ -11,6 +11,7 @@ export default function IncrementNDcrement({
   decrementHandler,
 }) {
   const [qty, setQty] = useState(initialQty);
+
   useEffect(() => {
     setQty(initialQty);
   }, [initialQty]);

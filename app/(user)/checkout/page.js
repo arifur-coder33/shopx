@@ -1,17 +1,23 @@
+"use client";
+import OrderForm from "@/components/checkout/OrderForm";
+import { useCart } from "@/context/CartContext";
+import { useState } from "react";
+import BuyNowProductDetails from "../buynow/[slug]/_components/BuyNowProductDetails";
 
-
-
-
-import CheckOutDetails from "./_components/CheckOutDetails";
-
-
-
-export default async function CheckOutPage(props) {
-  
-
+export default function CheckoutPage() {
+  const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
+  const { cartItems } = useCart();
+  if (!cartItems || cartItems.length === 0) {
+    return <div className="text-center text-red-500">Your cart is empty.</div>;
+  }
   return (
-    <div className="pt-4">
-      <CheckOutDetails  />
-    </div>
+    <OrderForm
+      setDeliveryArea={setDeliveryArea}
+      // deliveryCharge={deliveryCharge}
+      buyNow={true}
+      data={cartItems}
+    >
+      <BuyNowProductDetails data={cartItems} deliveryArea={deliveryArea} />
+    </OrderForm>
   );
 }

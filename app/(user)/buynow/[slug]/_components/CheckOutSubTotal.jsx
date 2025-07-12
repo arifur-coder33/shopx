@@ -24,6 +24,11 @@ export default function CheckOutSubTotal({
           "font-bold border-t-4 border-t-slate-800 dark:border-t-slate-200"
         }
       />
+      <input
+        hidden
+        name="deliveryCharge"
+        defaultValue={Number(deliveryCharge)}
+      />
     </>
   );
 }
