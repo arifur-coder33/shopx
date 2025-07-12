@@ -1,8 +1,6 @@
 "use client";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
-import { errorSoundWithVibrate } from "@/utils/sounds";
 import Link from "next/link";
-import { toast } from "react-toastify";
 import Button from "../button";
 import Tooltip from "../common/Tooltip";
 import KalapanaFont from "../KalapanaFont";
@@ -53,8 +51,19 @@ export default function BuyNowButton({
   };
 
   const handleVariationWarning = () => {
-    toast.error("Please select a variation before proceeding.");
-    errorSoundWithVibrate();
+         import("react-toastify").then((module) => {
+        const { toast } = module;
+         toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
+      });
+ import("@/utils/sounds").then((module) => {
+        const { errorSoundWithVibrate } = module;
+         errorSoundWithVibrate();
+      });
+         import("@/utils/uiUtils").then((module) => {
+        const { scrollToAndHighlight } = module;
+        scrollToAndHighlight("#product-variation-list");
+      });
+    
   };
 
   if (!slug && !hasVariations) {

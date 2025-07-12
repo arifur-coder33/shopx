@@ -102,7 +102,7 @@ const ProductVariationSelector = ({ variations, onVariationChange }) => {
   // --- JSX (Updated with Tooltip and Selected Variant display) ---
 
   return (
-    <div className="space-y-6">
+    <div id="product-variation-list" className="space-y-6">
       {/* Variation Options */}
       <div className="space-y-4">
         {Object.entries(options).map(([name, values]) => (

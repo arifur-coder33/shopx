@@ -1,8 +1,6 @@
 "use client";
 import { useCart } from "@/context/CartContext";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
-import { errorSoundWithVibrate } from "@/utils/sounds";
-import { toast } from "react-toastify";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
@@ -33,8 +31,22 @@ export default function AddToCartButton(props) {
       weight: selectedVariation ? selectedVariation?.weight : product?.weight,
     };
     if (product?.variations?.length > 0 && !selectedVariation) {
-      toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
-      errorSoundWithVibrate();
+ 
+   
+          import("react-toastify").then((module) => {
+        const { toast } = module;
+         toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
+      });
+
+       import("@/utils/sounds").then((module) => {
+        const { errorSoundWithVibrate } = module;
+         errorSoundWithVibrate();
+      });
+         import("@/utils/uiUtils").then((module) => {
+     
+        const { scrollToAndHighlight } = module;
+        scrollToAndHighlight("#product-variation-list");
+      });
       return;
     }
     addToCart(productData, productQty);
