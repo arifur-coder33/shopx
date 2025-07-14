@@ -1,6 +1,5 @@
 import AdminNavBar from "@/components/nav/AdminNav";
 import NavItem from "@/components/nav/NavItem";
-import { ModalProvider } from "@/context/ModalContext";
 import { SessionProvider } from "next-auth/react";
 import { Suspense } from "react";
 import { SWRConfig } from "swr";
@@ -85,9 +84,7 @@ export default function AdminLayout({ children }) {
               </div>
               {/* main content */}
               <div className="flex-1 shrink overflow-y overflow-x-auto sm:ml-64  min-h-screen ">
-                <Suspense fallback="loading...........">
-                  <ModalProvider>{children}</ModalProvider>
-                </Suspense>
+                <Suspense fallback="loading...........">{children}</Suspense>
               </div>
             </div>
           </div>

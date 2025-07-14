@@ -23,6 +23,13 @@ export default function PaymentMethodSelector({ setPaymentMethod, className }) {
           isSelected={selectedMethod === "cod"}
           onSelect={onChangeHandler}
         />
+        <RadioButton
+          id="online"
+          name="paymentMethod"
+          label="অনলাইন পেমেন্ট"
+          isSelected={selectedMethod === "online"}
+          onSelect={onChangeHandler}
+        />
       </div>
     </div>
   );

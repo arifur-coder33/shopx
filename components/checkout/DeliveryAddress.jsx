@@ -1,5 +1,5 @@
 import FloatingInput from "../input/FloatingInput";
-import DeliveryAreaSelector from "./DeliveryAreaSelector";
+import SearchableDropdown from "../input/SearchableDropdown";
 
 export default function DeliveryAddress({ setDeliveryArea }) {
   return (
@@ -19,9 +19,42 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         name={"phoneNumber"}
         inputType={"text"}
         inputMode={"numeric"}
-      
         autoComplete="tel"
       />
+
+      <SearchableDropdown
+        defaultId=""
+        label={"আপনার সিটী"}
+        name="city"
+        onSelect={setDeliveryArea}
+        dropDownLists={[
+          { id: 1, name: "ঢাকা" },
+          { id: 2, name: "চট্টগ্রাম" },
+          { id: 3, name: "রাজশাহী" },
+          { id: 4, name: "খুলনা" },
+          { id: 5, name: "বরিশাল" },
+          { id: 6, name: "সিলেট" },
+          { id: 7, name: "রংপুর" },
+          { id: 8, name: "কুমিল্লা" },
+        ]}
+        autoComplete="city"
+      />
+
+      {/* <SearchableDropdown
+        defaultId=""
+        label={"আপনার জোন"}
+        name="zone"
+        dropDownLists={[
+          { id: 1, name: "ঢাকা" },
+          { id: 2, name: "চট্টগ্রাম" },
+          { id: 3, name: "রাজশাহী" },
+          { id: 4, name: "খুলনা" },
+          { id: 5, name: "বরিশাল" },
+          { id: 6, name: "সিলেট" },
+          { id: 7, name: "রংপুর" },
+          { id: 8, name: "কুমিল্লা" },
+        ]}
+      /> */}
       <FloatingInput
         defaultValue=""
         type={"text"}
@@ -31,7 +64,15 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         autoComplete="address-line1"
       />
 
-      <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} />
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"অর্ডার নোটঃ"}
+        name={"note"}
+        inputType={"text"}
+      />
+
+      {/* <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} /> */}
     </address>
   );
 }
