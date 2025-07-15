@@ -12,7 +12,10 @@ export default function FloatingInput({
     .substring(2, 9)}`;
 
   return (
-    <div className={`relative my-3  col-span-${colSpan}`}>
+    <div
+      className={`relative my-1
+      col-span-${colSpan}`}
+    >
       <input
         type={inputType}
         className="block px-1  pt-4 text-base bg-slate-200 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500  w-full p-2.5 dark:bg-slate-600 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500  appearance-none focus:outline-none focus:ring-2 peer"

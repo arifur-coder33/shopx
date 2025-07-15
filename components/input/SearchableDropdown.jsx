@@ -13,6 +13,7 @@ export default function SearchableDropdown({
   loadLists, // Function to load dropdown lists
   onSelect = () => {}, //
   index, //the index from dropdown component if it map as array
+  colSpan, // Width of the dropdown
 }) {
   const { modalClosed, setModalClosed } = useModalContext();
   const [query, setQuery] = useState("");
@@ -34,9 +35,7 @@ export default function SearchableDropdown({
   }, [defaultId]);
 
   useEffect(() => {
-    if (dropDownLists?.length > 0) {
-      setFetchedDropDownList(dropDownLists);
-    }
+    setFetchedDropDownList(dropDownLists);
   }, [dropDownLists]);
 
   useEffect(() => {
@@ -56,7 +55,7 @@ export default function SearchableDropdown({
       if (loadLists) {
         setLoading(true);
         const data = await loadLists();
-
+        console.log("Fetched Data:", data);
         setFetchedDropDownList(data);
         setLoading(false);
       }
@@ -104,7 +103,7 @@ export default function SearchableDropdown({
   }, [isOpen]);
 
   return (
-    <div className="relative w-64 " ref={dropdownRef}>
+    <div className={`relative col-span-${colSpan} `} ref={dropdownRef}>
       <label
         // htmlFor={uniqueId}
         className="cursor-pointer block mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -155,7 +154,7 @@ export default function SearchableDropdown({
       {/* Dropdown List */}
       {isOpen && fetchedDropDownList?.length > 0 && (
         <ul
-          className={`z-20 absolute w-full borde p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40 overflow-auto ${
+          className={`z-40 absolute w-full borde p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40 overflow-auto ${
             dropdownPosition === "bottom" ? "top-full mt-1" : ""
           } ${dropdownPosition === "top" ? "bottom-full mb-1" : ""} ${
             dropdownPosition === "left" ? "right-0" : ""

@@ -8,7 +8,8 @@ export default function CheckoutProductDetails({ deliveryArea }) {
   const [orderItems, setOrderItems] = useState([]);
   const { totalCartPrice, totalCartRegularPrice } = useCart();
 
-  const deliveryCharge = deliveryArea === "inside-dhaka" ? 90 : 120;
+  const deliveryCharge = deliveryArea == "dhaka" ? 90 : 120;
+
   return (
     <>
       <div className="w-full rounded-sm flex flex-row gap-1 font-bold border-b-slate-400  border-b-2 dark:border-b-2 dark:border-b-slate-600 bg-slate-300 dark:bg-slate-800 p-2">

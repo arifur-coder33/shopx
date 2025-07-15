@@ -7,9 +7,10 @@ export default function CheckOutSubTotal({
 }) {
   let deliveryCharge = 0;
   deliveryCharge =
-    deliveryArea === "inside-dhaka"
+    deliveryArea == "dhaka"
       ? Number(totalWeight) * 80
       : Number(totalWeight) * 100;
+  console.log(deliveryArea);
   return (
     <>
       <Item label={"পণ্যর রেগুলার মোট মুল্যঃ"} value={regularPrice} />
