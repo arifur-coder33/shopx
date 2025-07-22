@@ -66,6 +66,15 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         colSpan={"full"}
       />
 
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"আপনার ইমেইলঃ (optional)"}
+        name={"email"}
+        inputType={"email"}
+        autoComplete="email"
+        colSpan={"full"}
+      />
       <SearchableDropdown
         defaultId={""}
         label={"আপনার বিভাগঃ *"}
@@ -78,7 +87,8 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         //   name: division.name,
         //   districts: division.districts,
         // }))}
-        autoComplete="address-level1"
+        // autoComplete="address-level1"
+        searchOff={true}
         colSpan={"full"}
       />
 
@@ -96,7 +106,8 @@ export default function DeliveryAddress({ setDeliveryArea }) {
               }))
             : []
         }
-        autoComplete="address-level2"
+        searchOff={true}
+        // autoComplete="address-level2"
       />
 
       <SearchableDropdown
@@ -116,7 +127,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
                 .sort((a, b) => a.name.localeCompare(b.name))
             : []
         }
-        autoComplete="address-level3"
+        searchOff={true}
       />
 
       <FloatingInput
@@ -133,7 +144,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label={"অর্ডার নোটঃ"}
+        label={"অর্ডার নোটঃ (optional)"}
         name={"note"}
         inputType={"text"}
         colSpan={"full"}

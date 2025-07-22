@@ -14,6 +14,7 @@ export default function SearchableDropdown({
   onSelect = () => {}, //
   index, //the index from dropdown component if it map as array
   colSpan, // Width of the dropdown
+  searchOff = false, // Disable search functionality
 }) {
   const { modalClosed, setModalClosed } = useModalContext();
   const [query, setQuery] = useState("");
@@ -123,6 +124,7 @@ export default function SearchableDropdown({
         <input
           type="text"
           className="z-10 w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 "
+          autoComplete="new-password"
           placeholder={
             loading
               ? "Loading..."
@@ -138,7 +140,7 @@ export default function SearchableDropdown({
             setSelected(null); // Optional: clear selected when typing
           }}
           onFocus={handleFocus}
-          readOnly={fetchedDropDownList?.length === 0} // Make readonly if no options
+          readOnly={searchOff || fetchedDropDownList?.length === 0} // Make readonly if no options
         />
         {/* Anchor Button (Click to Show Full List) */}
         <button
@@ -154,7 +156,7 @@ export default function SearchableDropdown({
       {/* Dropdown List */}
       {isOpen && fetchedDropDownList?.length > 0 && (
         <ul
-          className={`z-40 absolute w-full borde p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40 overflow-auto ${
+          className={`z-50 absolute w-full borde p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40 overflow-auto ${
             dropdownPosition === "bottom" ? "top-full mt-1" : ""
           } ${dropdownPosition === "top" ? "bottom-full mb-1" : ""} ${
             dropdownPosition === "left" ? "right-0" : ""
