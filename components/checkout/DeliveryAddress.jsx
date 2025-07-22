@@ -29,10 +29,10 @@ export default function DeliveryAddress({ setDeliveryArea }) {
 
   const loadDivisionList = async () => {
     // 1. Await the dynamic import to get the module object
-    const module = await import("@/utils/data/bd-location-bn.json");
+    const location = await import("@/utils/data/bd-location-bn.json");
 
     // 2. Access the JSON content via the `default` property
-    const bdLocation = module.default;
+    const bdLocation = location.default;
 
     // 3. Now, bdLocation is the object you expect, and you can map its `divisions`
     return bdLocation.divisions.map((division) => ({
