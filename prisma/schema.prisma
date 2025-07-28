@@ -108,6 +108,7 @@ model Product {
   weight         Float?
   mainImage   String?
   imageGallery    String[]
+  sku             String
   // One-to-One: Thumbnail Image
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
@@ -186,11 +187,13 @@ model Order {
   user           User?        @relation(fields: [userId], references: [id]) // Relation to User
   customerName   String
   phoneNumber    String
+  email          String
   orderPrice     Float                       // Price of the product at the time of order
-  deliveryCharge Float     
-  deliveryArea   String                  // Delivery charge for the order
+  deliveryCharge Float 
+  city           String?    
   deliveryAddress String 
   paymentMethod   String?                    // Address for product delivery
+  note            String?
   status         OrderStatus @default(PENDING) // Order status enumeration
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp

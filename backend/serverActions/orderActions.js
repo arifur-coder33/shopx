@@ -41,10 +41,13 @@ export async function createOrder(formData) {
         orderNo: newOrderNumber.toString(),
         customerName: data?.customerName,
         phoneNumber: data?.phoneNumber,
+        email:data?.email,
+        city:data?.district,
         deliveryCharge: Number(data?.deliveryCharge),
         orderPrice: Number(data?.orderPrice),
-        deliveryArea: data?.deliveryArea,
         deliveryAddress: data?.deliveryAddress,
+        paymentMethod:data?.paymentMethod,
+        note:data?.note
       };
       const orderItems = JSON.parse(data?.products);
       // const order = await tx.order.create({
@@ -68,9 +71,9 @@ export async function createOrder(formData) {
               productName: item?.productName,
               price: Number(item?.price),
               quantity: Number(item?.quantity),
-              productColor: item?.productColor,
-              productSize: item?.productSize,
+              variationId:item?.variation?.id,
               productId: item?.productId,
+              sku:item?.sku
             })),
           },
         },

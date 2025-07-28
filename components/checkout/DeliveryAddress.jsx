@@ -1,13 +1,28 @@
 // import bdLocation from "@/utils/data/bd-location.json";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FloatingInput from "../input/FloatingInput";
 import SearchableDropdown from "../input/SearchableDropdown";
+import { getCities_Pathao } from "@/backend/lib/pathao";
 
 export default function DeliveryAddress({ setDeliveryArea }) {
   // Use null for initial state to be more explicit about "no selection"
   const [division, setDivision] = useState(null);
   const [district, setDistrict] = useState(null);
   const [upazila, setUpazila] = useState(null);
+
+  // useEffect(() => {
+  //   const fetchCities = async () => {
+  //     try {
+  //       const data = await getCities_Pathao();  
+  //       console.log("Cities:", data);   
+  //     } catch (error) {
+  //       console.error("Failed to fetch cities:", error);
+  //     }
+  //   };
+
+  //   fetchCities(); 
+  // }, []);
+
 
   // 1. Handler for Division selection
   const handleDivisionChange = (selectedDivision) => {
@@ -42,7 +57,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
     }));
   };
 
-  console.log("district", district);
+
 
   return (
     <address className="grid grid-cols-2 gap-1">
@@ -75,6 +90,8 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         autoComplete="email"
         colSpan={"full"}
       />
+
+ 
       <SearchableDropdown
         defaultId={""}
         label={"আপনার বিভাগঃ *"}
@@ -89,7 +106,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         // }))}
         // autoComplete="address-level1"
         searchOff={true}
-        colSpan={"full"}
+       
       />
 
       <SearchableDropdown
@@ -110,7 +127,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         // autoComplete="address-level2"
       />
 
-      <SearchableDropdown
+      {/* <SearchableDropdown
         defaultId={district?.id || ""}
         label={"আপনার উপজেলা"}
         name="upazila"
@@ -128,7 +145,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
             : []
         }
         searchOff={true}
-      />
+      /> */}
 
       <FloatingInput
         defaultValue=""

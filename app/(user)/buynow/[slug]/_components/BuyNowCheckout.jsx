@@ -33,6 +33,7 @@ export default function BuyNowCheckout({ data }) {
     id: data?.id,
     quantity: productQty,
     weight: selectedVariation ? selectedVariation?.weight : data?.weight,
+    sku:selectedVariation ? selectedVariation?.sku : data?.sku,
   };
 
   const deliveryCharge =
@@ -40,7 +41,7 @@ export default function BuyNowCheckout({ data }) {
   return (
     <OrderForm
       setDeliveryArea={setDeliveryArea}
-      products={productData}
+      products={[productData]}
       deliveryCharge={deliveryCharge}
       buyNow={true}
       data={productData}

@@ -29,6 +29,7 @@ export default function AddToCartButton(props) {
       slug: product?.slug,
       id: product?.id,
       weight: selectedVariation ? selectedVariation?.weight : product?.weight,
+      sku:selectedVariation ? selectedVariation?.sku : data?.sku,
     };
     if (product?.variations?.length > 0 && !selectedVariation) {
  

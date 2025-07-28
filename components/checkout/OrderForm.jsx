@@ -23,7 +23,7 @@ export default function OrderForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
+ 
   const router = useRouter();
   const handleSubmit = (e) => {
     e.preventDefault(); // Prevent default form submission
@@ -47,45 +47,45 @@ export default function OrderForm({
     setError(null);
     setSuccess(null);
     console.log("Form Data:", Object.fromEntries(formData.entries()));
-    // startTransition(async () => {
-    //   const response = await createOrder(formData); // Call server action
+    startTransition(async () => {
+      const response = await createOrder(formData); // Call server action
 
-    //   if (response.success) {
-    //     trackFacebookEvent("Purchase", {
-    //       content_type: "product",
-    //       content_ids: products.map((product) => product.productId),
-    //       value: products.reduce(
-    //         (total, product) => total + product.quantity * product.price,
-    //         0
-    //       ),
-    //       currency: "BDT", // Bangladeshi Taka
-    //     });
+      if (response.success) {
+        trackFacebookEvent("Purchase", {
+          content_type: "product",
+          content_ids: products.map((product) => product.productId),
+          value: products.reduce(
+            (total, product) => total + product.quantity * product.price,
+            0
+          ),
+          currency: "BDT", // Bangladeshi Taka
+        });
 
-    //     router.push(
-    //       `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
-    //         response?.data?.phoneNumber
-    //       )}&orderSuccess=true`
-    //     );
+        router.push(
+          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
+            response?.data?.phoneNumber
+          )}&orderSuccess=true`
+        );
 
-    //     // form.reset(); // Clear the form on success
-    //   } else {
-    //     console.log(response.error);
-    //     // Track the "FailedOrder" event
-    //     console.log(products);
-    //     trackFacebookEvent("FailedOrder", {
-    //       content_type: "product",
-    //       content_ids: products.map((product) => product.productId),
-    //       value: products.reduce(
-    //         (total, product) => total + product.quantity * product.price,
-    //         0
-    //       ),
-    //       currency: "BDT",
-    //       reason: response.error || "Unknown error",
-    //     });
-    //     window.scrollTo(0, 0);
-    //     setError(response.error || "Something went wrong");
-    //   }
-    // });
+        // form.reset(); // Clear the form on success
+      } else {
+        console.log(response.error);
+        // Track the "FailedOrder" event
+        console.log(products);
+        trackFacebookEvent("FailedOrder", {
+          content_type: "product",
+          content_ids: products.map((product) => product.productId),
+          value: products.reduce(
+            (total, product) => total + product.quantity * product.price,
+            0
+          ),
+          currency: "BDT",
+          reason: response.error || "Unknown error",
+        });
+        window.scrollTo(0, 0);
+        setError(response.error || "Something went wrong");
+      }
+    });
   };
   return (
     <form onSubmit={handleSubmit}>

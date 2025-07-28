@@ -5,6 +5,6 @@ export const getMinMax = (arr) => {
 
   const min = Math.min(...arr);
   const max = Math.max(...arr);
-  console.log("Calculated min:", min, "max:", max);
+  
   return { min, max };
 };

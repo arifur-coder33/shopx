@@ -15,7 +15,7 @@ export default function CheckoutPage() {
       setDeliveryArea={setDeliveryArea}
       // deliveryCharge={deliveryCharge}
       buyNow={true}
-      data={cartItems}
+      products={cartItems}
     >
       <BuyNowProductDetails data={cartItems} deliveryArea={deliveryArea} />
     </OrderForm>
