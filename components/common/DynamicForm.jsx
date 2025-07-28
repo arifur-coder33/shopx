@@ -36,7 +36,6 @@ export default function DynamicForm({
   fromFields,
   children,
 }) {
-  console.log("DynamicForm data:", data);
   const { closeModal } = useModalContext();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -55,7 +54,6 @@ export default function DynamicForm({
     const form = e.target;
     const formData = new FormData(form);
     let newData = Object.fromEntries(formData.entries());
-    console.log(newData);
 
     setError(null);
     setSuccess(null);
@@ -70,7 +68,7 @@ export default function DynamicForm({
                 slug: data?.slug,
               })
             : await createAction(formData);
-        console.log(response);
+
         if (response.success) {
           setSuccess("Data saved successfully");
           toast.success("Data saved successfully!");
@@ -82,7 +80,6 @@ export default function DynamicForm({
           setError(response.message || "Something went wrong");
         }
       } catch (error) {
-        console.log(error);
         setError(error || "Something went wrongs");
       }
     });
@@ -114,8 +111,6 @@ export default function DynamicForm({
               );
             case "text":
             case "number":
-              console.log("label", field.label);
-              console.log("value", data?.[field.name]);
               return (
                 <FloatingInput
                   index={index}

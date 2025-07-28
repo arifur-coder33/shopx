@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import FloatingInput from "./FloatingInput";
 
 // --- Dynamically import Components & Icons ---
 const FileInput = dynamic(() => import("./FileInput"), {
@@ -83,6 +84,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
   initialCombinations = [],
   name = "productVariation",
 }) {
+  console.log("initialVariations", initialCombinations);
+  console.log("initialHasVariations", initialHasVariations);
   // --- ALL HOOKS AT THE TOP ---
   const derivedInitialEnabled = useMemo(
     () =>
@@ -524,29 +527,44 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     <div className={`p-6 bg-gray-50 shadow-lg rounded-xl col-span-${colSpan}`}>
       {/* Header with Toggle */}
       <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
-        <button
-          type="button"
-          onClick={toggleSectionExpand}
-          disabled={!hasVariationsEnabled}
-          className={`flex items-center space-x-2 text-left focus:outline-none group disabled:cursor-not-allowed disabled:opacity-50 ${
-            hasVariationsEnabled ? "cursor-pointer" : ""
-          }`}
-          aria-expanded={hasVariationsEnabled && isSectionExpanded}
-          aria-controls="variation-content-area"
-        >
-          <h2 className="text-xl font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors duration-150">
-            Product Variations
-          </h2>
-          {hasVariationsEnabled && (
-            <span className="text-gray-500 group-hover:text-indigo-600 transition-colors duration-150 shrink-0">
-              {isSectionExpanded ? (
-                <DynamicChevronUpIcon className="h-5 w-5" />
-              ) : (
-                <DynamicChevronDownIcon className="h-5 w-5" />
-              )}
-            </span>
-          )}
-        </button>
+        {!hasVariationsEnabled ? (
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Product Price
+            </h2>
+            <div className="flex items-center space-x-4 gap-2">
+              <FloatingInput name="regularPrice" label="Regualar Price" />
+              <FloatingInput name="discountPrice" label="Discount Price" />
+              <FloatingInput name="qty" label="Quantity" />
+              <FloatingInput name="sku" label="sku" disabled />
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleSectionExpand}
+            disabled={!hasVariationsEnabled}
+            className={`flex items-center space-x-2 text-left focus:outline-none group disabled:cursor-not-allowed disabled:opacity-50 ${
+              hasVariationsEnabled ? "cursor-pointer" : ""
+            }`}
+            aria-expanded={hasVariationsEnabled && isSectionExpanded}
+            aria-controls="variation-content-area"
+          >
+            <h2 className="text-xl font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors duration-150">
+              Product Variations
+            </h2>
+            {hasVariationsEnabled && (
+              <span className="text-gray-500 group-hover:text-indigo-600 transition-colors duration-150 shrink-0">
+                {isSectionExpanded ? (
+                  <DynamicChevronUpIcon className="h-5 w-5" />
+                ) : (
+                  <DynamicChevronDownIcon className="h-5 w-5" />
+                )}
+              </span>
+            )}
+          </button>
+        )}
+
         <label className="flex items-center space-x-2 cursor-pointer shrink-0 pl-4">
           <input
             type="checkbox"
