@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { getMinMax } from "@/utils/getMinMax";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 
@@ -59,7 +60,7 @@ function transformVariations(productVariations) {
   });
 }
 
-export async function createProductAction(formData) {
+export async function createProductActions(formData) {
   try {
     let data = Object.fromEntries(formData.entries());
 
@@ -289,6 +290,227 @@ export async function createProductAction(formData) {
     };
   }
 }
+
+export async function createProductAction(formData) {
+  try {
+    let data = Object.fromEntries(formData.entries());
+
+    // --- Basic Validation ---
+    if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
+      throw new Error(
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
+      );
+    }
+    if (
+      isNaN(parseFloat(data.regularPrice)) ||
+      parseFloat(data.regularPrice) < 0
+    ) {
+      throw new Error("Regular price must be a valid number.");
+    }
+
+    // --- Parse Product Variations ---
+    let parsedProductVariations = [];
+    if (data.variations && typeof data.variations === "string") {
+      try {
+        parsedProductVariations = JSON.parse(data.variations);
+        if (!Array.isArray(parsedProductVariations)) {
+          throw new Error("Variations data must be an array.");
+        }
+      } catch (e) {
+        throw new Error(
+          "ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format.)"
+        );
+      }
+    } else if (Array.isArray(data.variations)) {
+      parsedProductVariations = data.variations;
+    }
+
+    // --- Prisma Transaction ---
+    const result = await prisma.$transaction(async (tx) => {
+      // --- Slug Generation ---
+      const baseSlug = await generateSlug(data?.slug || data?.title);
+      const slug = await generateUniqueSlug(tx, baseSlug);
+
+      // --- Product Code Generation ---
+      let productCodeCounter = await tx.productCodeCounter.findFirst();
+      if (!productCodeCounter) {
+        productCodeCounter = await tx.ProductCodeCounter.create({
+          data: { lastProductCode: 1000 },
+        });
+      }
+      const newProductCode = (
+        productCodeCounter.lastProductCode + 1
+      ).toString();
+      await tx.ProductCodeCounter.update({
+        where: { id: productCodeCounter.id },
+        data: { lastProductCode: productCodeCounter.lastProductCode + 1 },
+      });
+
+      // --- Prepare Gallery Media IDs ---
+      const mediaIds = data?.gallery
+        ? data.gallery
+            .split(",")
+            .map((id) => id.trim())
+            .filter((id) => id)
+        : [];
+
+      // --- Filter out data not belonging to the main Product model ---
+      const {
+        gallery,
+        variations,
+        regularPrice,
+        discountPrice,
+        stock,
+        ...filteredData
+      } = data;
+
+      // --- Robust Number Parsing Helper ---
+      const parseOptionalNumber = (value, defaultValue = null) => {
+        if (
+          value === undefined ||
+          value === null ||
+          String(value).trim() === ""
+        ) {
+          return defaultValue;
+        }
+        const num = Number(value);
+        return isNaN(num) ? defaultValue : num;
+      };
+
+      // --- Prepare Main Product Data [MODIFIED] ---
+      // Price, stock are now removed from the main product create call
+      const preparedData = {
+        ...filteredData,
+        productCode: newProductCode,
+        isActive: Boolean(data?.isActive === "on" || data?.isActive === true),
+        isFeatured: Boolean(
+          data?.isFeatured === "on" || data?.isFeatured === true
+        ),
+        slug: slug,
+        category: data?.category
+          ? { connect: { id: data.category } }
+          : undefined,
+        thumbnail: { connect: { id: data.thumbnail } },
+        insideDhaka: parseOptionalNumber(data.insideDhaka),
+        outSideDhaka: parseOptionalNumber(data.outSideDhaka),
+        weight: parseOptionalNumber(data.weight), // Base weight
+        dimensions: data.dimensions || null, // Optional dimensions
+        // This flag is key for your UI to know whether to show variation options
+        hasVariations: parsedProductVariations.length > 0,
+        description: data?.description || null,
+        seoKeyWord: data?.seoKeyWord || null,
+        seoDescription: data?.seoDescription || null,
+      };
+
+      // 🔹 Create the product
+      const product = await tx.product.create({
+        data: preparedData,
+      });
+
+      // 🔹 Insert product gallery separately
+      if (mediaIds.length > 0) {
+        await tx.productGallery.createMany({
+          data: mediaIds.map((mediaId) => ({
+            productId: product.id,
+            mediaId: mediaId,
+          })),
+        });
+      }
+
+      // --- [NEW UNIFIED LOGIC] ---
+      // Always create at least one ProductVariation.
+      // If there are user-defined variations, create them.
+      // Otherwise, create a single default variation for the simple product.
+
+      if (parsedProductVariations.length > 0) {
+        // --- LOGIC FOR PRODUCTS WITH USER-DEFINED VARIATIONS ---
+        const mainProductRegularPrice = Number(data.regularPrice);
+
+        for (const variantData of parsedProductVariations) {
+          if (
+            !variantData.matcherId ||
+            !Array.isArray(variantData.combination)
+          ) {
+            continue;
+          }
+
+          const combinationsToCreate = variantData.combination
+            .map((combo) => {
+              if (!combo.variation?.id || !combo.value?.id) return null;
+              return {
+                variationNameId: combo.variation.id,
+                variationValueId: combo.value.id,
+              };
+            })
+            .filter(Boolean);
+
+          if (combinationsToCreate.length === 0) continue;
+
+          await tx.productVariation.create({
+            data: {
+              product: { connect: { id: product.id } },
+              matcherId: variantData.matcherId,
+              sku:
+                variantData.sku ||
+                `${product.productCode}-${variantData.matcherId}`,
+              stock: parseOptionalNumber(variantData.qty, 0),
+              regularPrice: parseOptionalNumber(
+                variantData.regularPrice,
+                mainProductRegularPrice
+              ),
+              discountPrice: parseOptionalNumber(
+                variantData.discountPrice,
+                parseOptionalNumber(data.discountPrice)
+              ),
+
+              thumbnail: variantData.image
+                ? { connect: { id: variantData.image } }
+                : undefined,
+              combinations: { create: combinationsToCreate },
+            },
+          });
+        }
+      } else {
+        // --- LOGIC FOR SIMPLE PRODUCTS (NO VARIATIONS) ---
+        // Create one default ProductVariation record containing the main product's info.
+        await tx.productVariation.create({
+          data: {
+            product: { connect: { id: product.id } },
+            // Use product code for SKU and matcherId for consistency
+            sku: product.productCode,
+            matcherId: product.productCode,
+            // Use the main form data for price/stock
+            stock: parseOptionalNumber(data.stock, 0),
+            regularPrice: Number(data.regularPrice),
+            discountPrice: parseOptionalNumber(data.discountPrice),
+
+            // It can use the main product's thumbnail
+            thumbnail: { connect: { id: product.thumbnailId } },
+            // No combinations for a simple product
+            combinations: { create: [] },
+          },
+        });
+      }
+
+      return product;
+    });
+
+    // --- Revalidation ---
+    revalidatePath("/admin/product");
+    revalidatePath("/");
+    revalidatePath(`/product/${result.slug}`);
+    revalidateTag("products");
+    revalidateTag(`product-${result.slug}`);
+    console.log("Product created successfully:", result);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error creating product:", error);
+    return {
+      success: false,
+      message: error.message || "প্রোডাক্ট তৈরি করতে একটি ত্রুটি ঘটেছে।",
+    };
+  }
+}
 async function getProductById(id) {
   try {
     const data = await prisma.product.findUnique({
@@ -403,9 +625,17 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
 
       // Use the new, simpler transformVariations function
       const transformedVariations = transformVariations(product.variations);
-
+      const getDiscountPrice = getMinMax(
+        product.variations.map((v) => v.discountPrice || v.regularPrice || 0)
+      );
+      const getDiscountPriceList =
+        getDiscountPrice.min === getDiscountPrice.max
+          ? getDiscountPrice.min
+          : `${getDiscountPrice.min}-${getDiscountPrice.max}`;
       return {
         ...product,
+        discountPrice: getDiscountPriceList,
+
         thumbnail: product.thumbnail
           ? { id: product.thumbnail.id, name: product.thumbnail.name }
           : null,

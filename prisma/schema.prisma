@@ -102,13 +102,9 @@ model Product {
   description    String?                        // Optional detailed description
   categoryId     String?      @db.ObjectId      // Foreign key for Category
   category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
-  regularPrice   Float?                         // Regular price of the product
-  discountPrice  Float?                         // Optional discount price
-  stock  Int         @default(0)        // Stock quantity for inventory tracking
-  weight         Float?
+  
   mainImage   String?
   imageGallery    String[]
-  sku             String
   // One-to-One: Thumbnail Image
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
@@ -128,7 +124,8 @@ model Product {
       // Many-to-Many Relationship using Join Table 
   variations      ProductVariation[] 
   orders         OrderItem[]                     // One-to-many relationship with Order
-
+  weight Float?
+  dimensions String? // Optional dimensions for the product (e.g., "10x10x10 cm")
   createdAt      DateTime    @default(now())     // Timestamp for product creation
   updatedAt      DateTime    @updatedAt          // Auto-updated timestamp
 }
@@ -151,7 +148,6 @@ model ProductVariation{
   product       Product?    @relation(fields: [productId], references: [id] ,onDelete: Cascade) // Relation to Category
   sku          String
   stock       Float?
-  weight Float?
   regularPrice   Float?                         // Regular price of the product
   discountPrice  Float?                         // Optional discount price
   thumbnailId    String?    @db.ObjectId

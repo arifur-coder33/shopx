@@ -79,26 +79,29 @@ const generateCombinations = (processedSelections) => {
 
 const ProductVariationInput = React.memo(function ProductVariationInput({
   colSpan = "full",
-  variationList = [],
+  variationList = [], // from category variationList size,color etc
   initialHasVariations = false,
   initialCombinations = [],
   name = "productVariation",
 }) {
-  console.log("initialVariations", initialCombinations);
-  console.log("initialHasVariations", initialHasVariations);
+  console.log("initialVariations", variationList);
+  console.log("initialHasVariations", initialCombinations);
   // --- ALL HOOKS AT THE TOP ---
   const derivedInitialEnabled = useMemo(
     () =>
-      initialHasVariations ||
-      (initialCombinations && initialCombinations.length > 0),
-    [initialHasVariations, initialCombinations]
+      initialCombinations &&
+      initialCombinations[0]?.combinations &&
+      initialCombinations[0].combinations?.length > 0,
+    [initialCombinations]
   );
-
+  console.log("derivedInitialEnabled", derivedInitialEnabled);
+  console.log("combinations", initialCombinations[0]?.combinations);
   const [hasVariationsEnabled, setHasVariationsEnabled] = useState(
     derivedInitialEnabled
   );
+  console.log("hasVariationsEnabled", hasVariationsEnabled);
   const [isSectionExpanded, setIsSectionExpanded] = useState(
-    derivedInitialEnabled
+    derivedInitialEnabled || false
   );
   const [expandedCategories, setExpandedCategories] = useState({});
   const [selectedValues, setSelectedValues] = useState({});
@@ -255,15 +258,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     if (!isSectionExpanded && tempInitialRows.length > 0)
       setIsSectionExpanded(true);
     setIsInitialized(true);
-  }, [
-    initialCombinations,
-    variationListMap,
-    derivedInitialEnabled,
-    generateUiKey,
-    isInitialized,
-    hasVariationsEnabled,
-    isSectionExpanded,
-  ]);
+  }, [initialCombinations, variationListMap, derivedInitialEnabled, generateUiKey, isInitialized, hasVariationsEnabled, isSectionExpanded]);
 
   // EFFECT: Clear state when variations are disabled
   useEffect(() => {
@@ -365,14 +360,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         return newRowFromUI;
       });
     });
-  }, [
-    selectedValues,
-    hasVariationsEnabled,
-    isInitialized,
-    variationListMap,
-    generateUiKey,
-    rows.length,
-  ]);
+  }, [selectedValues, hasVariationsEnabled, isInitialized, variationListMap, generateUiKey, rows.length]);
 
   // --- UI Handlers (useCallback) ---
   const handleToggleVariations = useCallback(
@@ -527,19 +515,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     <div className={`p-6 bg-gray-50 shadow-lg rounded-xl col-span-${colSpan}`}>
       {/* Header with Toggle */}
       <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
-        {!hasVariationsEnabled ? (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Product Price
-            </h2>
-            <div className="flex items-center space-x-4 gap-2">
-              <FloatingInput name="regularPrice" label="Regualar Price" />
-              <FloatingInput name="discountPrice" label="Discount Price" />
-              <FloatingInput name="qty" label="Quantity" />
-              <FloatingInput name="sku" label="sku" disabled />
-            </div>
-          </div>
-        ) : (
+        {!!hasVariationsEnabled ? (
           <button
             type="button"
             onClick={toggleSectionExpand}
@@ -563,6 +539,47 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
               </span>
             )}
           </button>
+        ) : (
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Product Price
+            </h2>
+            <div className="flex items-center space-x-4 gap-2">
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled
+                    ? ""
+                    : initialCombinations[0]?.regularPrice
+                }
+                name="regularPrice"
+                label="Regualar Price"
+              />
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled
+                    ? ""
+                    : initialCombinations[0]?.discountPrice
+                }
+                name="discountPrice"
+                label="Discount Price"
+              />
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled ? "" : initialCombinations[0]?.stock
+                }
+                name="stock"
+                label="Quantity"
+              />
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled ? "" : initialCombinations[0]?.sku
+                }
+                name="sku"
+                label="sku"
+                disabled
+              />
+            </div>
+          </div>
         )}
 
         <label className="flex items-center space-x-2 cursor-pointer shrink-0 pl-4">
