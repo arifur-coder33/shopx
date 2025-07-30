@@ -105,21 +105,15 @@ model Product {
   
   mainImage   String?
   imageGallery    String[]
-  // One-to-One: Thumbnail Image
+  
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
   videoUrl String? // Optional video URL for the product
-  // Many-to-Many: Gallery (Using Join Table)
   gallery ProductGallery[]
-
   seoKeyWord     String?
   seoDescription String?
-
   isFeatured     Boolean?    @default(false)     // Indicates if the product is featured
   isActive       Boolean?    @default(true)      // Marks if the product is active
-  insideDhaka    Float?                          // Optional delivery charge inside Dhaka
-  outSideDhaka   Float?                          // Optional delivery charge outside Dhaka
-
   hasVariations    Boolean? @default(false)           
       // Many-to-Many Relationship using Join Table 
   variations      ProductVariation[] 

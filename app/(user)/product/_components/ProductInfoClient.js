@@ -10,7 +10,7 @@ import BuyNowSection from "./BuyNowSection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
 
 export default function ProductInfoClient({ data, children }) {
-  const { variations, discountPrice, regularPrice } = data;
+  const { variations,hasVariations } = data;
   const [selectedVariation, setSelectedVariation] = useState(null);
 
   // This flag prevents hydration mismatch by ensuring the initial client render
@@ -96,8 +96,7 @@ export default function ProductInfoClient({ data, children }) {
   }, [
     selectedVariation,
     variations,
-    regularPrice,
-    discountPrice,
+   
     regularPriceRange,
     discountPriceRange,
   ]);
@@ -131,10 +130,16 @@ export default function ProductInfoClient({ data, children }) {
       </KalapanaFont>
 
       {/* The interactive variation selector replaces the static one */}
-      <ProductVariationSelector
+
+      {
+        hasVariations && variations[0]?.combinations?.length>0 && 
+             <ProductVariationSelector
         onVariationChange={onVariationChangeHandler}
         variations={variations}
+        hasVariations={hasVariations}
       />
+      }
+ 
 
       <BuyNowSection data={data} selectedVariation={selectedVariation} />
     </>

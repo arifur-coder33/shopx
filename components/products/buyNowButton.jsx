@@ -11,14 +11,8 @@ export default function BuyNowButton({
   selectedVariation,
   ...restProps
 }) {
-  // --- TOP PRIORITY RULE ---
-  // If no 'slug' prop is provided, we are on a product grid/list.
-  // The button's only purpose is to link to the product detail page.
-
-  // --- LOGIC FOR WHEN SLUG IS PROVIDED (on product detail page) ---
-
-  // Helper Constants for clarity
-  const hasVariations = product?.variations?.length > 0;
+ 
+  const hasVariations = product?.variations[0]?.combinations?.length > 0;
   const isVariationSelected = !!selectedVariation;
 
   // Determine the button's state based on priority

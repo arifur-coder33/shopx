@@ -27,7 +27,7 @@ export default async function BuyNowPage({ params }) {
   );
 
   const data = await getProduct();
-console.log(data)
+console.log("data" )
   return (
     <div className="pt-4">
       <BuyNowCheckout data={data} />

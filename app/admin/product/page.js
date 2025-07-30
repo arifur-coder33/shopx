@@ -180,7 +180,7 @@ export default function ProductListPage() {
   } = useSWR("/api/products", fetcher, {
     refreshInterval: 1000,
   });
-  console.log(products);
+  console.log('product',products);
   if (isLoading && !products) {
     return "loading";
   }

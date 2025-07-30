@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import VariationInput from "../input/VariationInput";
+import { toast } from "react-toastify";
 
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
@@ -42,11 +43,11 @@ export default function DynamicForm({
   console.log("DynamicForm data:", data);
   const router = useRouter();
 
-  useEffect(() => {
-    if (success) {
-      closeModal();
-    }
-  }, [success, closeModal]);
+  // useEffect(() => {
+  //   if (success) {
+  //     closeModal();
+  //   }
+  // }, [success, closeModal]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,17 +70,25 @@ export default function DynamicForm({
             : await createAction(formData);
 
         if (response.success) {
-          setSuccess("Data saved successfully");
           toast.success("Data saved successfully!");
+          form.reset();
+          closeModal(); // Close the modal on success
 
           form.reset();
         } else {
+
+
+           const errorMessage = response.message || "An unknown error occurred.";
           window.scrollTo(0, 0);
-          toast.warn(response.message || "Something went wrong");
-          setError(response.message || "Something went wrong");
+          toast.error(errorMessage);
+          setError(errorMessage);
         }
-      } catch (error) {
-        setError(error || "Something went wrongs");
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
+        console.error("Form submission failed:", err);
+        window.scrollTo(0, 0);
+        toast.error(errorMessage);
+        setError(errorMessage);
       }
     });
   };
@@ -193,13 +202,13 @@ export default function DynamicForm({
             case "productVariation":
               return (
                 <ProductVariationInput
-                  key={field.name}
-                  label={field.label}
-                  name={field.name}
+                  key={field?.name}
+                  label={field?.label}
+                  name={field?.name}
                   defaultValue={data?.[field.name]}
                   colSpan={field?.colSpan}
-                  labelNote={field.labelNote}
-                  variationList={field.variationList}
+                  labelNote={field?.labelNote}
+                  variationList={field?.variationList}
                   initialCombinations={data?.[field.name]}
                 />
               );

@@ -6,16 +6,22 @@ import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
   const { addToCart } = useCart();
   const { product, selectedVariation, productQty } = props;
-
-  const handleAddToCart = () => {
+const {hasVariations,variations,title,weight}=product
+const getDiscountPrice=selectedVariation? selectedVariation?.discountPrice || selectedVariation?.regularPrice
+        :!variations?.combinations?.length>0 && ( variations[0]?.discountPrice || variations[0]?.regularPrice)
+ 
+        
+const getRegularPrice=selectedVariation? selectedVariation?.regularPrice 
+        :!variations?.combinations?.length>0 && ( variations[0]?.regularPrice)
+        
+  const getSku=selectedVariation? selectedVariation?.sku 
+        :!variations?.combinations?.length>0 && ( variations[0]?.sku)
+  
+        const handleAddToCart = () => {
     const productData = {
-      title: product?.title,
-      discountPrice: selectedVariation
-        ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
-        : product?.discountPrice || product?.regularPrice,
-      regularPrice: selectedVariation
-        ? selectedVariation?.regularPrice
-        : product?.regularPrice,
+      title: title,
+      discountPrice: getDiscountPrice,
+      regularPrice: getRegularPrice,
       variation: selectedVariation
         ? {
             id: selectedVariation?.id,
@@ -26,12 +32,12 @@ export default function AddToCartButton(props) {
       mainImageUrl: selectedVariation
         ? selectedVariation?.thumbnail?.name
         : product?.thumbnail?.name || product?.mainImage,
-      slug: product?.slug,
+      slug: product?.variation?.slug,
       id: product?.id,
-      weight: selectedVariation ? selectedVariation?.weight : product?.weight,
-      sku:selectedVariation ? selectedVariation?.sku : data?.sku,
+      weight: weight,
+      sku:getSku
     };
-    if (product?.variations?.length > 0 && !selectedVariation) {
+    if (hasVariations && variations[0]?.combinations?.length > 0 && !selectedVariation) {
  
    
           import("react-toastify").then((module) => {

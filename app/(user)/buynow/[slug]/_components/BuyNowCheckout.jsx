@@ -9,16 +9,25 @@ export default function BuyNowCheckout({ data }) {
   const initialQty = searchParams.get("qty") || 1;
   const variationId = searchParams.get("v") || null;
   const [productQty, setProductQty] = useState(Number(initialQty) || 1);
-
+ const {hasVariations,variations,title,weight,id,slug}=data
   const selectedVariation = data?.variations?.find((v) => v.id === variationId);
+
+ 
+const getDiscountPrice=selectedVariation? selectedVariation?.discountPrice || selectedVariation?.regularPrice
+        :!variations?.combinations?.length>0 && ( variations[0]?.discountPrice || variations[0]?.regularPrice)
+ 
+        
+const getRegularPrice=selectedVariation? selectedVariation?.regularPrice 
+        :!variations?.combinations?.length>0 && ( variations[0]?.regularPrice)
+        
+  const getSku=selectedVariation? selectedVariation?.sku 
+        :!variations?.combinations?.length>0 && ( variations[0]?.sku)
+  
+
   const productData = {
-    title: data?.title,
-    discountPrice: selectedVariation
-      ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
-      : data?.discountPrice || data?.regularPrice,
-    regularPrice: selectedVariation
-      ? selectedVariation?.regularPrice
-      : data?.regularPrice,
+    title: title,
+    discountPrice: getDiscountPrice,
+    regularPrice: getRegularPrice,
     variation: selectedVariation
       ? {
           id: selectedVariation?.id,
@@ -29,11 +38,11 @@ export default function BuyNowCheckout({ data }) {
     mainImageUrl: selectedVariation
       ? selectedVariation?.thumbnail?.name
       : data?.thumbnail?.name || data?.mainImage,
-    slug: data?.slug,
-    id: data?.id,
+    slug: slug,
+    id: id,
     quantity: productQty,
-    weight: selectedVariation ? selectedVariation?.weight : data?.weight,
-    sku:selectedVariation ? selectedVariation?.sku : data?.sku,
+    weight: weight,
+    sku: getSku
   };
 
   const deliveryCharge =

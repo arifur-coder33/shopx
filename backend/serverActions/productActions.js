@@ -296,16 +296,10 @@ export async function createProductAction(formData) {
     let data = Object.fromEntries(formData.entries());
 
     // --- Basic Validation ---
-    if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
+    if (!data?.title  || !data?.thumbnail) {
       throw new Error(
         "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
       );
-    }
-    if (
-      isNaN(parseFloat(data.regularPrice)) ||
-      parseFloat(data.regularPrice) < 0
-    ) {
-      throw new Error("Regular price must be a valid number.");
     }
 
     // --- Parse Product Variations ---
@@ -391,8 +385,6 @@ export async function createProductAction(formData) {
           ? { connect: { id: data.category } }
           : undefined,
         thumbnail: { connect: { id: data.thumbnail } },
-        insideDhaka: parseOptionalNumber(data.insideDhaka),
-        outSideDhaka: parseOptionalNumber(data.outSideDhaka),
         weight: parseOptionalNumber(data.weight), // Base weight
         dimensions: data.dimensions || null, // Optional dimensions
         // This flag is key for your UI to know whether to show variation options
@@ -734,7 +726,7 @@ export const getProductBySlug = async (slug) => {
 //   // The 'await' here is not strictly necessary but makes the intent clear.
 //   return await cachedGetProductBySlug(slug);
 // };
-export async function updateProductAction({ id: productId, formData }) {
+export async function updateProductActions({ id: productId, formData }) {
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
   }
@@ -932,6 +924,182 @@ export async function updateProductAction({ id: productId, formData }) {
         success: false,
         message: `Slug "${data.slug}" is already in use.`,
       };
+    }
+    return { success: false, message: errorMessage };
+  }
+}
+
+
+
+export async function updateProductAction({ id: productId, formData }) {
+  if (!productId) {
+    return { success: false, message: "Product ID is required for update." };
+  }
+
+  try {
+    const data = Object.fromEntries(formData.entries());
+
+    // --- Basic Validation ---
+    if (!data?.title ||  !data?.thumbnail) {
+      throw new Error(
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
+      );
+    }
+
+    // --- Parse Product Variations ---
+    let submittedVariationsData = [];
+    if (data.variations && typeof data.variations === "string") {
+      try {
+        submittedVariationsData = JSON.parse(data.variations);
+        if (!Array.isArray(submittedVariationsData))
+          throw new Error("Variations data must be an array.");
+      } catch (e) {
+        throw new Error("Invalid variation data format.");
+      }
+    }
+    const hasSubmittedVariations = submittedVariationsData.length > 0;
+
+    // --- Robust Number Parsing Helper ---
+    const parseOptionalNumber = (value, defaultValue = null) => {
+      if (value === undefined || value === null || String(value).trim() === "")
+        return defaultValue;
+      const num = Number(value);
+      return isNaN(num) ? defaultValue : num;
+    };
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Step 1: Fetch Existing Product
+      const existingProduct = await tx.product.findUnique({
+        where: { id: productId },
+      });
+      if (!existingProduct) throw new Error("Product not found for update.");
+
+      // Step 2: Handle Slug
+      let newSlug = existingProduct.slug;
+      if (data.title && data.title !== existingProduct.title) {
+        const baseSlug = await generateSlug(data.slug || data.title);
+        newSlug = await generateUniqueSlug(tx, baseSlug, productId);
+      }
+
+      // Step 3: Prepare the update payload for the main Product model [MODIFIED]
+      // Price, stock are no longer part of the main product.
+      const productUpdateData = {
+        title: data.title,
+        slug: newSlug,
+        description: data.description || null,
+        categoryId: data.category || null,
+        thumbnailId: data.thumbnail || existingProduct.thumbnailId,
+        weight: parseOptionalNumber(data.weight), // Base weight
+        dimensions: data.dimensions || null,
+        seoKeyWord: data.seoKeyWord || null,
+        seoDescription: data.seoDescription || null,
+        isFeatured: Boolean(data.isFeatured === "on"),
+        isActive: Boolean(data.isActive === "on"),
+        // The hasVariations flag is crucial for the UI.
+        hasVariations: hasSubmittedVariations,
+      };
+
+      // Step 4: Update the Main Product Record
+      const updatedProduct = await tx.product.update({
+        where: { id: productId },
+        data: productUpdateData,
+      });
+
+      // Step 5: Update Gallery (Wipe and Replace strategy)
+      await tx.productGallery.deleteMany({
+        where: { productId: updatedProduct.id },
+      });
+      const newMediaIds = data.gallery
+        ? data.gallery
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : [];
+      if (newMediaIds.length > 0) {
+        await tx.productGallery.createMany({
+          data: newMediaIds.map((mediaId) => ({
+            productId: updatedProduct.id,
+            mediaId: mediaId,
+          })),
+        });
+      }
+
+      // Step 6: Update Variations (Wipe and Replace strategy) [MODIFIED]
+      // First, delete all existing variations for this product.
+      await tx.productVariation.deleteMany({
+        where: { productId: updatedProduct.id },
+      });
+
+      // Now, create the new set of variations based on submitted data.
+      if (hasSubmittedVariations) {
+        // --- LOGIC FOR PRODUCTS WITH USER-DEFINED VARIATIONS ---
+        const mainProductRegularPrice = Number(data.regularPrice);
+
+        for (const variantData of submittedVariationsData) {
+          if (!variantData.matcherId || !Array.isArray(variantData.combination))
+            continue;
+
+          const combinationsToCreate = variantData.combination
+            .map((combo) =>
+              combo.variation?.id && combo.value?.id
+                ? {
+                    variationNameId: combo.variation.id,
+                    variationValueId: combo.value.id,
+                  }
+                : null
+            )
+            .filter(Boolean);
+
+          if (combinationsToCreate.length === 0) continue;
+
+          await tx.productVariation.create({
+            data: {
+              product: { connect: { id: updatedProduct.id } },
+              matcherId: variantData.matcherId,
+              sku: variantData.sku || `${updatedProduct.productCode}-${variantData.matcherId}`,
+              stock: parseOptionalNumber(variantData.qty, 0),
+              regularPrice: parseOptionalNumber(variantData.regularPrice, mainProductRegularPrice),
+              discountPrice: parseOptionalNumber(variantData.discountPrice, parseOptionalNumber(data.discountPrice)),
+              thumbnail: variantData.image ? { connect: { id: variantData.image } } : undefined,
+              combinations: { create: combinationsToCreate },
+            },
+          });
+        }
+      } else {
+        // --- LOGIC FOR SIMPLE PRODUCTS (NO VARIATIONS) ---
+        // Create one default ProductVariation record.
+        await tx.productVariation.create({
+          data: {
+            product: { connect: { id: updatedProduct.id } },
+            sku: updatedProduct.productCode,
+            matcherId: updatedProduct.productCode,
+            stock: parseOptionalNumber(data.stock, 0),
+            regularPrice: Number(data.regularPrice),
+            discountPrice: parseOptionalNumber(data.discountPrice),
+            // Use the main product's thumbnail as the default
+            thumbnail: { connect: { id: updatedProduct.thumbnailId } },
+            combinations: { create: [] },
+          },
+        });
+      }
+
+      return updatedProduct;
+    });
+
+    // --- Revalidation ---
+    revalidatePath("/admin/product");
+    revalidatePath("/");
+    revalidatePath(`/product/${result.slug}`);
+    revalidateTag("products");
+    revalidateTag(`product-${result.slug}`);
+    console.log("Product updated successfully:", result);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error updating product:", error);
+    let errorMessage = "An unknown error occurred while updating the product.";
+    if (error instanceof Error) errorMessage = error.message;
+    if (error?.code === "P2002" && error.meta?.target?.includes("slug")) {
+      errorMessage = `Slug "${data.slug}" is already in use. Please choose another.`;
     }
     return { success: false, message: errorMessage };
   }

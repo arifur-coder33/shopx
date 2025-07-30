@@ -7,17 +7,20 @@ export default function ProductCard({ product, index }) {
   if (!product) {
     return <div className="text-red-500">Product not found</div>;
   }
-  const { hasVariations, regularPrice, discountPrice, variations } =
+  const { hasVariations, variations } =
     product || {};
 
-  let regularPriceValue = regularPrice;
-  let discountPriceValue = discountPrice || regularPrice;
+  let regularPriceValue = 0;
+  let discountPriceValue = 0 
 
-  if (hasVariations && Array.isArray(variations) && variations.length > 0) {
+  if (hasVariations && Array.isArray(variations[0].combinations) && variations[0]?.combinations?.length > 0) {
     regularPriceValue = Math.min(...variations.map((v) => v.regularPrice));
     discountPriceValue = Math.min(
       ...variations.map((v) => v.discountPrice ?? v.regularPrice)
     );
+  }else {
+    regularPriceValue = variations?.length===1 ? variations[0]?.regularPrice : 0
+    discountPriceValue = variations?.length===1 ? variations[0]?.discountPrice : 0
   }
 
   // If discount is not actually lower, don't show it
