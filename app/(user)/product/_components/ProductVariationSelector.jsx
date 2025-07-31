@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 // A reusable Tooltip component built with Floating UI and Tailwind
 
 // The main selector component
-const ProductVariationSelector = ({ variations, onVariationChange }) => {
+const ProductVariationSelector = ({ variations,hasVariations, onVariationChange }) => {
   const [selectedOptions, setSelectedOptions] = useState({});
 
   // This state will hold the string representation of the selected variant for display

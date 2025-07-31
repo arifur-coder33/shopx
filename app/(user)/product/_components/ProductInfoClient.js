@@ -53,10 +53,10 @@ export default function ProductInfoClient({ data, children }) {
         ? selectedVariation.discountPrice
         : selectedVariation.regularPrice;
       originalPrice = hasDiscount ? selectedVariation.regularPrice : null;
-    } else if (variations?.length > 0) {
-      const hasRangeDiscount =
-        discountPriceRange.min < regularPriceRange.min ||
-        discountPriceRange.max < regularPriceRange.max;
+    } else if (variations?.length > 0 && variations[0]?.combinations?.length>0) {
+      const hasRangeDiscount =discountPriceRange?.min >0 &&
+        (discountPriceRange?.min < regularPriceRange?.min ||
+        discountPriceRange?.max < regularPriceRange?.max);
 
       if (regularPriceRange.min === 0 && regularPriceRange.max === 0) {
         price = "Currently Unavailable";
@@ -77,12 +77,12 @@ export default function ProductInfoClient({ data, children }) {
       }
     } else {
       const hasDiscount =
-        typeof discountPrice === "number" &&
-        discountPrice > 0 &&
-        discountPrice < regularPrice;
+        typeof variations[0]?.discountPrice === "number" &&
+        variations[0]?.discountPrice > 0 &&
+        variations[0]?.discountPrice < variations[0]?.regularPrice;
 
-      price = hasDiscount ? discountPrice : regularPrice;
-      originalPrice = hasDiscount ? regularPrice : null;
+      price = hasDiscount ? variations[0]?.discountPrice : variations[0]?.regularPrice;
+      originalPrice = hasDiscount ? variations[0]?.regularPrice : null;
     }
 
     return {
@@ -123,9 +123,10 @@ export default function ProductInfoClient({ data, children }) {
           টাকা
           {originalPriceToDisplay && (
             <del className="price-del text-xl ml-2">
-              {replaceNumbers(originalPriceToDisplay.toString())}
+              {replaceNumbers(originalPriceToDisplay.toString())} 
             </del>
           )}
+         
         </p>
       </KalapanaFont>
 

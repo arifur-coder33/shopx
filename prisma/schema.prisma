@@ -201,6 +201,7 @@ model OrderItem{
   quantity       Int // Foreign key for Product
   productId      String      @db.ObjectId   
   product      Product     @relation(fields: [productId], references: [id]) // Relation to Product
+  combinations  String[]
   variationId   String @db.ObjectId
   variation     ProductVariation @relation(fields: [variationId], references: [id]) 
   status         OrderStatus @default(PENDING)

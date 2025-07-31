@@ -6,11 +6,11 @@ import { replaceNumbers } from "@/utils/engToBanNumber";
 import { getMinMax } from "@/utils/getMinMax";
 
 function calculateInitialDisplayPrice(product) {
-  const { variations, regularPrice, discountPrice } = product;
+  const { variations } = product;
   let price;
   let originalPrice = null;
 
-  if (variations?.length > 0) {
+  if (variations[0]?.combinations?.length > 0) {
     const activeVariations = variations.filter((v) => v.stock > 0);
     const regularPriceRange = getMinMax(
       activeVariations.map((v) => v.regularPrice)
@@ -42,11 +42,11 @@ function calculateInitialDisplayPrice(product) {
     }
   } else {
     const hasDiscount =
-      typeof discountPrice === "number" &&
-      discountPrice > 0 &&
-      discountPrice < regularPrice;
-    price = hasDiscount ? discountPrice : regularPrice;
-    originalPrice = hasDiscount ? regularPrice : null;
+      typeof variations[0].discountPrice === "number" &&
+      variations[0].discountPrice > 0 &&
+      variations[0].discountPrice < variations[0].regularPrice;
+    price = hasDiscount ? variations[0].discountPrice : variations[0].regularPrice;
+    originalPrice = hasDiscount ? variations[0].regularPrice : null;
   }
 
   return {
@@ -82,6 +82,7 @@ function StaticVariationSelector({ variations }) {
 
   return (
     <div className="space-y-6">
+     
       <div className="space-y-4">
         {Object.entries(options).map(([name, values]) => (
           <div
@@ -97,7 +98,7 @@ function StaticVariationSelector({ variations }) {
                   key={value}
                   className="relative flex items-center justify-center rounded-md border py-2 px-3 text-sm font-medium bg-white text-gray-900 ring-1 ring-inset ring-gray-300"
                 >
-                  <span>{value}</span>
+                  <span>{value}</span> 
                 </div>
               ))}
             </div>
