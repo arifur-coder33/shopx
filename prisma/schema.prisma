@@ -160,6 +160,7 @@ model Combination {
   variationName VariationName? @relation(fields: [variationNameId],references: [id])
   variationValueId String? @db.ObjectId
   variationValue VariationValue? @relation(fields: [variationValueId],references: [id])
+  orderItems OrderItem[] // Relationship to OrderItem
   // Additional fields can be added as needed
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -197,11 +198,15 @@ model OrderItem{
   orderItemNo    Int 
   productName    String
   sku            String
+  productCode     String?
+  thumbnail       String?
   price          Float
   quantity       Int // Foreign key for Product
   productId      String      @db.ObjectId   
   product      Product     @relation(fields: [productId], references: [id]) // Relation to Product
-  combinations  String[]
+  combinations  String? // JSON string to store combination details
+  combinationId String? @db.ObjectId
+  combination   Combination? @relation(fields: [combinationId], references: [id])
   variationId   String @db.ObjectId
   variation     ProductVariation @relation(fields: [variationId], references: [id]) 
   status         OrderStatus @default(PENDING)
@@ -209,14 +214,14 @@ model OrderItem{
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
 
 }
-model orderCounter {
+model OrderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   lastOrderNumber Int
 }
 
 
 
-model siteSetting {
+model SiteSetting {
 id              String @id @default(auto()) @map("_id") @db.ObjectId
 name   String?
 slogan  String?
@@ -234,7 +239,7 @@ updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 
 }
 
-model notice{
+model Notice{
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   notice String?
   start   DateTime?

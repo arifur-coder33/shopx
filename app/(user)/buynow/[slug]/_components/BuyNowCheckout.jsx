@@ -9,20 +9,21 @@ export default function BuyNowCheckout({ data }) {
   const initialQty = searchParams.get("qty") || 1;
   const variationId = searchParams.get("v") || null;
   const [productQty, setProductQty] = useState(Number(initialQty) || 1);
- const {hasVariations,variations,title,weight,id,slug}=data
+  const { hasVariations, variations, title, weight, id, slug } = data;
   const selectedVariation = data?.variations?.find((v) => v.id === variationId);
 
- 
-const getDiscountPrice=selectedVariation? selectedVariation?.discountPrice || selectedVariation?.regularPrice
-        :!variations?.combinations?.length>0 && ( variations[0]?.discountPrice || variations[0]?.regularPrice)
- 
-        
-const getRegularPrice=selectedVariation? selectedVariation?.regularPrice 
-        :!variations?.combinations?.length>0 && ( variations[0]?.regularPrice)
-        
-  const getSku=selectedVariation? selectedVariation?.sku 
-        :!variations?.combinations?.length>0 && ( variations[0]?.sku)
-  
+  const getDiscountPrice = selectedVariation
+    ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
+    : !variations?.combinations?.length > 0 &&
+      (variations[0]?.discountPrice || variations[0]?.regularPrice);
+
+  const getRegularPrice = selectedVariation
+    ? selectedVariation?.regularPrice
+    : !variations?.combinations?.length > 0 && variations[0]?.regularPrice;
+
+  const getSku = selectedVariation
+    ? selectedVariation?.sku
+    : !variations?.combinations?.length > 0 && variations[0]?.sku;
 
   const productData = {
     title: title,
@@ -42,7 +43,8 @@ const getRegularPrice=selectedVariation? selectedVariation?.regularPrice
     id: id,
     quantity: productQty,
     weight: weight,
-    sku: getSku
+    sku: getSku,
+    productCode: data?.productCode,
   };
 
   const deliveryCharge =

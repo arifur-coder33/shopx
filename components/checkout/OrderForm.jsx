@@ -5,6 +5,7 @@ import DeliveryAddress from "./DeliveryAddress";
 import { useSession } from "next-auth/react";
 
 import { createOrder } from "@/backend/serverActions/orderActions";
+import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import PaymentMethodSelector from "./PaymentMethodSelector";

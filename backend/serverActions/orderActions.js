@@ -6,9 +6,8 @@ export async function createOrder(formData) {
   try {
     const formDataObj = Object.fromEntries(formData.entries());
     const data = { ...formDataObj };
-
-    console.log(data);
-
+    const orderItemss = JSON.parse(data?.products);
+    console.log("Order Items:", orderItemss);
     if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
       throw new Error(
         "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।"
@@ -19,17 +18,17 @@ export async function createOrder(formData) {
     const result = await prisma.$transaction(async (tx) => {
       // Fetch the current last order number
       let counter = await tx.orderCounter.findFirst();
-
+      console.log("Counter:", counter);
       // If the counter doesn't exist, initialize it
       if (!counter) {
         counter = await tx.orderCounter.create({
-          data: { lastOrderNumber: 24000000 },
+          data: { lastOrderNumber: 240000020 },
         });
       }
 
       // Increment the order number
       const newOrderNumber = counter.lastOrderNumber + 1;
-
+      console.log("New Order Number:", newOrderNumber);
       // Update the counter with the new number
       await tx.orderCounter.update({
         where: { id: counter?.id },
@@ -61,7 +60,7 @@ export async function createOrder(formData) {
       //     orderNo: newOrderNumber.toString(),
       //   },
       // });
-
+      console.log("Order Items:", orderItems[0].variation.combinations);
       const order = await tx.order.create({
         data: {
           ...orderData,
@@ -69,12 +68,23 @@ export async function createOrder(formData) {
             create: orderItems.map((item, i) => ({
               orderNo: newOrderNumber.toString(),
               orderItemNo: i + 1,
-              productName: item?.productName,
-              price: Number(item?.price),
+              productName: item?.title,
+              price: Number(item?.discountPrice || item?.regularPrice),
               quantity: Number(item?.quantity),
               variationId: item?.variation?.id,
-              productId: item?.productId,
+              productId: item?.id,
+              productCode: item?.productCode,
               sku: item?.sku,
+              thumbnail: item?.mainImage,
+              combinationId: item?.variation?.combinationId,
+              combinations: JSON.stringify(
+                (item?.variation?.combinations.length > 0 &&
+                  item?.variation?.combinations.map((combination) => ({
+                    name: combination.variationName.name,
+                    value: combination.variationValue.value,
+                  }))) ||
+                  []
+              ),
             })),
           },
         },
@@ -84,6 +94,7 @@ export async function createOrder(formData) {
     });
     revalidatePath("/admin/order");
     revalidateTag("orders");
+    console.log("Order Created:", result);
     return { success: true, data: result }; // Return success with order data
   } catch (error) {
     console.log(error.message);
@@ -124,7 +135,7 @@ export async function getAllOrder(params) {
           include: {
             product: {
               select: {
-                mainImage: true,
+                thumbnail: true,
               },
             },
           },
@@ -136,7 +147,7 @@ export async function getAllOrder(params) {
       skip: 0, // Start from the first record
       take: 10, // Limit to 10 orders
     });
-
+    console.log("Fetched Orders:", data);
     return { success: true, data: data };
   } catch (error) {
     return { success: false, error: error.message };
