@@ -29,12 +29,16 @@ export default function BuyNowCheckout({ data }) {
     title: title,
     discountPrice: getDiscountPrice,
     regularPrice: getRegularPrice,
-    variation: selectedVariation
-      ? {
-          id: selectedVariation?.id,
-          combinations: selectedVariation?.combinations,
-        }
-      : null,
+    variation:
+      hasVariations && variations?.combinations?.length > 0 && selectedVariation
+        ? {
+            id: selectedVariation?.id,
+            combinations: selectedVariation?.combinations,
+          }
+        : {
+            id: variations[0]?.id,
+            combinations: [],
+          },
 
     mainImageUrl: selectedVariation
       ? selectedVariation?.thumbnail?.name

@@ -1,66 +1,65 @@
-// export const dynamic = "force-static";
+// app/admin/order/page.js
 
 import { getAllOrder } from "@/backend/serverActions/orderActions";
 import DynamicTable from "@/components/common/DynamicTable/";
 
-export default async function ProductListPage() {
-  const { success, data, error } = await getAllOrder();
-
-  if (!success) {
-    return "Some thing went wrong";
-  }
-
-  if (success && data.length === 0) {
-    return "No order received Yet.";
-  }
+export default async function OrderListPage() {
   const tableProperties = [
     {
       label: "+",
       field: "expand",
       type: "expand",
-      field: "orderItems",
-
+      expandSource: "orderItems",
       expandProperties: [
-        { label: "Product Name", field: "productName", type: "text" },
-        { label: "Price", field: "price", type: "text" }, // Consider adding currency formatting    }
-        { label: "qty", field: "quantity", type: "text" },
-        { label: "status", field: "status", type: "text" },
         {
           label: "thumbnail",
-          field: "thumbnail",
+          field: "product.thumbnail",
           type: "image",
           alt: "productName",
-        }, // Ensure 'thumbnail' has 'name' property if type is 'image' expects it
+        },
+        { label: "Product Name", field: "productName", type: "text" },
+        { label: "SKU", field: "sku", type: "text" },
+        { label: "Price", field: "price", type: "currency" },
+        { label: "Qty", field: "quantity", type: "text" },
+        { label: "Status", field: "status", type: "text" },
       ],
     },
     { label: "Created At", field: "createdAt", type: "date" },
     { label: "Order No", field: "orderNo", type: "text" },
-
-    { label: "Price", field: "orderPrice", type: "text" }, // Consider adding currency formatting
-    { label: "status", field: "status", type: "text" },
+    { label: "Price", field: "orderPrice", type: "currency" },
+    { label: "Status", field: "status", type: "badge" },
   ];
-  console.log("Order Data:", data);
+
+  // Initial fetch now includes tableProperties
+  const { success, data, nextCursor, error } = await getAllOrder({
+    limit: 10,
+    tableProperties,
+  });
+
+  if (!success) return `Something went wrong: ${error}`;
+  console.log("Fetched Orders:", data);
   return (
     <div>
       <DynamicTable
         filterSearchProperties={[
           { label: "Order No", field: "orderNo" },
           { label: "Status", field: "status" },
+          { label: "SKU", field: "sku" }, // SKU search is now supported!
         ]}
-        // This remains the same
         filterTagProperties={[
           { status: ["delivered", "cancelled", "pending", "processing"] },
           { time: ["last 24 hours", "last 7 days", "last 30 days"] },
         ]}
-        data={data} // Pass the combined data
+        initialData={data}
+        initialNextCursor={nextCursor} // Pass cursor instead of meta
         tableProperties={tableProperties}
-        // updateAction={updateProductAction} // Define update action
-        // deleteAction={deleteProductById} // Define delete action
+        fetchAction={getAllOrder}
+        // ... other props
         actionType={"edit"}
         componentKey={"ProductForm"}
         quickViewComponentKey={"OrderQuickView"}
         viewPageURL={"/admin/order/view/"}
-        initialItemsPerPage={25}
+        initialItemsPerPage={10}
       />
     </div>
   );

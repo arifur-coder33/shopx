@@ -116,7 +116,7 @@ export default function TableBody({
                           className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                         >
                           {expandedRows.has(item.id) ? (
-                            <Minus className="w-4 h-4 text-purple-600 rounded-full ring-2 " />
+                            <Minus className="w-4 h-4 text-purple-600 rounded-full ring-2 ring-purple-600" />
                           ) : (
                             <Plus className="w-4 h-4 text-purple-500 rounded-full ring-2 ring-purple-600" />
                           )}
@@ -161,11 +161,8 @@ export default function TableBody({
                             : "max-h-0"
                         }`}
                       >
-                        <div className="bg-slate-50 dark:bg-gray-800/50 p-4">
-                          <h4 className="text-md font-semibold mb-3 text-gray-800 dark:text-gray-200">
-                            {expandColumn.label || "Details"}
-                          </h4>
-                          <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400 rounded-lg overflow-hidden">
+                        <div className="bg-slate-100 shadow-inner shadow-black rounded-xl dark:bg-gray-800/50 p-2 ">
+                          <table className=" w-full text-sm text-left text-gray-500 dark:text-gray-400 rounded-lg overflow-hidden">
                             <thead className="text-xs text-gray-700 uppercase bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
                               <tr>
                                 {expandColumn.expandProperties.map((prop) => (
@@ -173,51 +170,28 @@ export default function TableBody({
                                     {prop.label}
                                   </th>
                                 ))}
-                                <th className="px-4 py-2 text-center">
-                                  Actions
-                                </th>
                               </tr>
                             </thead>
                             <tbody>
-                              {item[expandColumn.field]?.map((nestedItem) => (
-                                <tr
-                                  key={nestedItem.id}
-                                  className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
-                                >
-                                  {expandColumn.expandProperties.map((prop) => (
-                                    <td
-                                      key={prop.field}
-                                      className="px-4 py-2 align-middle"
-                                    >
-                                      {renderDynamicField(nestedItem, prop)}
-                                    </td>
-                                  ))}
-                                  <td className="px-4 py-2 flex items-center justify-center space-x-3 align-middle">
-                                    {/* --- NESTED ROW ACTIONS --- */}
-                                    <LazyModalButton
-                                      button={
-                                        <Edit className="w-4 h-4 text-blue-500 hover:text-blue-600" />
-                                      }
-                                      data={nestedItem}
-                                      updateAction={
-                                        expandColumn.nestedUpdateAction
-                                      }
-                                      actionType="edit"
-                                      componentKey={
-                                        expandColumn.nestedComponentKey
-                                      }
-                                    />
-                                    <DeleteItem
-                                      deleteItem={
-                                        expandColumn.nestedDeleteAction
-                                      }
-                                      id={nestedItem.id}
-                                    >
-                                      <Trash className="w-4 h-4 text-red-500 hover:text-red-600" />
-                                    </DeleteItem>
-                                  </td>
-                                </tr>
-                              ))}
+                              {item[expandColumn.expandSource]?.map(
+                                (nestedItem) => (
+                                  <tr
+                                    key={nestedItem.id}
+                                    className="bg-white border-b dark:bg-gray-800 dark:border-gray-700"
+                                  >
+                                    {expandColumn.expandProperties.map(
+                                      (prop) => (
+                                        <td
+                                          key={prop.field}
+                                          className="px-4 py-2 align-middle"
+                                        >
+                                          {renderDynamicField(nestedItem, prop)}
+                                        </td>
+                                      )
+                                    )}
+                                  </tr>
+                                )
+                              )}
                             </tbody>
                           </table>
                         </div>

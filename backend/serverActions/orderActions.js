@@ -7,7 +7,7 @@ export async function createOrder(formData) {
     const formDataObj = Object.fromEntries(formData.entries());
     const data = { ...formDataObj };
     const orderItemss = JSON.parse(data?.products);
-    console.log("Order Items:", orderItemss);
+
     if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
       throw new Error(
         "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।"
@@ -18,7 +18,7 @@ export async function createOrder(formData) {
     const result = await prisma.$transaction(async (tx) => {
       // Fetch the current last order number
       let counter = await tx.orderCounter.findFirst();
-      console.log("Counter:", counter);
+
       // If the counter doesn't exist, initialize it
       if (!counter) {
         counter = await tx.orderCounter.create({
@@ -60,32 +60,51 @@ export async function createOrder(formData) {
       //     orderNo: newOrderNumber.toString(),
       //   },
       // });
-      console.log("Order Items:", orderItems[0].variation.combinations);
+      console.log("Order Items:", orderItems);
+      console.log("Order Items data:", orderItems[0].variation);
       const order = await tx.order.create({
         data: {
           ...orderData,
           orderItems: {
-            create: orderItems.map((item, i) => ({
-              orderNo: newOrderNumber.toString(),
-              orderItemNo: i + 1,
-              productName: item?.title,
-              price: Number(item?.discountPrice || item?.regularPrice),
-              quantity: Number(item?.quantity),
-              variationId: item?.variation?.id,
-              productId: item?.id,
-              productCode: item?.productCode,
-              sku: item?.sku,
-              thumbnail: item?.mainImage,
-              combinationId: item?.variation?.combinationId,
-              combinations: JSON.stringify(
-                (item?.variation?.combinations.length > 0 &&
-                  item?.variation?.combinations.map((combination) => ({
-                    name: combination.variationName.name,
-                    value: combination.variationValue.value,
-                  }))) ||
-                  []
-              ),
-            })),
+            create: orderItems.map((item, i) => {
+              console.log("Order Item------------:", item);
+              if (!item?.variation?.id) {
+                throw new Error(
+                  `Product "${item.title}" is missing required variation data.`
+                );
+              }
+
+              return {
+                orderNo: newOrderNumber.toString(),
+                orderItemNo: i + 1,
+                productName: item?.title,
+                price: Number(item?.discountPrice || item?.regularPrice),
+                quantity: Number(item?.quantity),
+
+                productCode: item?.productCode,
+                sku: item?.sku,
+                thumbnail: item?.mainImage,
+                product: {
+                  connect: { id: item?.id },
+                },
+                variation: {
+                  connect: { id: item.variation.id },
+                },
+                combination: item?.variation?.combinationId
+                  ? { connect: { id: item.variation.combinationId } }
+                  : undefined,
+
+                combinations:
+                  (item?.variation?.combinations.length > 0 &&
+                    JSON.stringify(
+                      item?.variation?.combinations.map((combination) => ({
+                        name: combination.variationName.name,
+                        value: combination.variationValue.value,
+                      }))
+                    )) ||
+                  JSON.stringify([]),
+              };
+            }),
           },
         },
       });
@@ -102,58 +121,101 @@ export async function createOrder(formData) {
   }
 }
 
-export async function getAllOrder(params) {
-  try {
-    const { status, orderNo, startDate, endDate } = params || {};
+// A helper to dynamically create the 'select' object for Prisma
+// This ensures we only fetch data that the table actually needs.
+const getOrderSelectFields = (tableProperties) => {
+  const fields = { id: true }; // Always select ID for keys and cursors
 
-    // Build the where clause dynamically based on provided filters
-    const whereClause = {};
-
-    if (status) {
-      whereClause.status = status; // Filter by order status
+  tableProperties.forEach((prop) => {
+    if (prop.field && prop.type !== "expand") {
+      fields[prop.field] = true;
     }
 
-    if (orderNo) {
-      whereClause.orderNo = orderNo; // Filter by order number
+    // This part for selecting nested relations remains correct.
+    if (prop.type === "expand" && prop.expandSource) {
+      fields[prop.expandSource] = {
+        select: {
+          id: true,
+
+          productName: true,
+          sku: true,
+          price: true,
+          quantity: true,
+          status: true,
+          thumbnail: true,
+        },
+      };
+    }
+  });
+
+  return fields;
+};
+
+export async function getAllOrder(params) {
+  try {
+    const {
+      status,
+      orderNo,
+      sku,
+      startDate,
+      endDate,
+      limit = 10,
+      cursor, // For cursor-based pagination
+      tableProperties, // Pass table properties to select fields
+    } = params || {};
+
+    const whereClause = {};
+
+    if (status) whereClause.status = status;
+    if (orderNo)
+      whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
+
+    // Efficiently search within related orderItems for a SKU
+    if (sku) {
+      whereClause.orderItems = {
+        some: {
+          sku: { contains: sku, mode: "insensitive" },
+        },
+      };
     }
 
     if (startDate || endDate) {
       whereClause.createdAt = {};
-      if (startDate) {
-        whereClause.createdAt.gte = new Date(startDate); // Filter orders created after startDate
-      }
-      if (endDate) {
-        whereClause.createdAt.lte = new Date(endDate); // Filter orders created before endDate
-      }
+      if (startDate) whereClause.createdAt.gte = new Date(startDate);
+      if (endDate) whereClause.createdAt.lte = new Date(endDate);
     }
 
-    // Fetch orders with filters applied
+    // Dynamically generate the select clause to minimize payload size
+    const select = getOrderSelectFields(tableProperties || []);
+
     const data = await prisma.order.findMany({
+      take: limit,
+      // If a cursor is provided, start fetching from that record
+      cursor: cursor ? { id: cursor } : undefined,
+      // Skip the cursor itself if it's not the first page
+      skip: cursor ? 1 : 0,
       where: whereClause,
-      include: {
-        orderItems: {
-          include: {
-            product: {
-              select: {
-                thumbnail: true,
-              },
-            },
-          },
-        },
-      },
+      select, // Apply the minimal select clause
       orderBy: {
-        createdAt: "desc", // Sort by most recent orders
+        createdAt: "desc",
       },
-      skip: 0, // Start from the first record
-      take: 10, // Limit to 10 orders
     });
-    console.log("Fetched Orders:", data);
-    return { success: true, data: data };
+
+    // We fetch one extra item to see if there's a next page
+    const hasNextPage = data.length > limit - 1;
+    const nextCursor = hasNextPage ? data[limit - 1].id : null;
+    if (hasNextPage) data.pop(); // Remove the extra item before sending to client
+
+    return {
+      success: true,
+      data,
+      nextCursor, // Send the next cursor instead of metadata
+    };
   } catch (error) {
+    console.log("Error fetching orders:", error);
     return { success: false, error: error.message };
   }
 }
-
 export async function getOrderByOrderNo(orderNo, phoneNumber) {
   try {
     const data = await prisma.order.findUnique({

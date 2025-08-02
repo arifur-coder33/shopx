@@ -6,28 +6,35 @@ import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
   const { addToCart } = useCart();
   const { product, selectedVariation, productQty } = props;
-const {hasVariations,variations,title,weight}=product
-const getDiscountPrice=selectedVariation? selectedVariation?.discountPrice || selectedVariation?.regularPrice
-        :!variations?.combinations?.length>0 && ( variations[0]?.discountPrice || variations[0]?.regularPrice)
- 
-        
-const getRegularPrice=selectedVariation? selectedVariation?.regularPrice 
-        :!variations?.combinations?.length>0 && ( variations[0]?.regularPrice)
-        
-  const getSku=selectedVariation? selectedVariation?.sku 
-        :!variations?.combinations?.length>0 && ( variations[0]?.sku)
-  
-        const handleAddToCart = () => {
+  const { hasVariations, variations, title, weight } = product;
+  const getDiscountPrice = selectedVariation
+    ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
+    : !variations?.combinations?.length > 0 &&
+      (variations[0]?.discountPrice || variations[0]?.regularPrice);
+
+  const getRegularPrice = selectedVariation
+    ? selectedVariation?.regularPrice
+    : !variations?.combinations?.length > 0 && variations[0]?.regularPrice;
+
+  const getSku = selectedVariation
+    ? selectedVariation?.sku
+    : !variations?.combinations?.length > 0 && variations[0]?.sku;
+
+  const handleAddToCart = () => {
     const productData = {
       title: title,
       discountPrice: getDiscountPrice,
       regularPrice: getRegularPrice,
-      variation: selectedVariation
-        ? {
-            id: selectedVariation?.id,
-            combinations: selectedVariation?.combinations,
-          }
-        : null,
+      variation:
+        variations?.combinations?.length > 0 && selectedVariation
+          ? {
+              id: selectedVariation?.id,
+              combinations: selectedVariation?.combinations,
+            }
+          : {
+              id: variations[0]?.id,
+              combinations: [],
+            },
 
       mainImageUrl: selectedVariation
         ? selectedVariation?.thumbnail?.name
@@ -35,22 +42,23 @@ const getRegularPrice=selectedVariation? selectedVariation?.regularPrice
       slug: product?.variation?.slug,
       id: product?.id,
       weight: weight,
-      sku:getSku
+      sku: getSku,
     };
-    if (hasVariations && variations[0]?.combinations?.length > 0 && !selectedVariation) {
- 
-   
-          import("react-toastify").then((module) => {
+    if (
+      hasVariations &&
+      variations[0]?.combinations?.length > 0 &&
+      !selectedVariation
+    ) {
+      import("react-toastify").then((module) => {
         const { toast } = module;
-         toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
+        toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
       });
 
-       import("@/utils/sounds").then((module) => {
+      import("@/utils/sounds").then((module) => {
         const { errorSoundWithVibrate } = module;
-         errorSoundWithVibrate();
+        errorSoundWithVibrate();
       });
-         import("@/utils/uiUtils").then((module) => {
-     
+      import("@/utils/uiUtils").then((module) => {
         const { scrollToAndHighlight } = module;
         scrollToAndHighlight("#product-variation-list");
       });
