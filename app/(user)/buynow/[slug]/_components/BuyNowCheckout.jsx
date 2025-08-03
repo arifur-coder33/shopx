@@ -40,7 +40,7 @@ export default function BuyNowCheckout({ data }) {
             combinations: [],
           },
 
-    mainImageUrl: selectedVariation
+    thumbnail: selectedVariation
       ? selectedVariation?.thumbnail?.name
       : data?.thumbnail?.name || data?.mainImage,
     slug: slug,

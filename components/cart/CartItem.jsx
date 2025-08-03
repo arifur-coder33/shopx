@@ -6,7 +6,7 @@ import RemoveCartItem from "./RemoveCartItem";
 
 export default function CartItem({
   title,
-  mainImageUrl,
+  thumbnail,
   slug,
   discountPrice,
   regularPrice,
@@ -24,7 +24,7 @@ export default function CartItem({
     <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
       <div className="col-span-3">
         <Imagecustom
-          src={mainImageUrl}
+          src={thumbnail}
           alt={title}
           w={60}
           h={60}

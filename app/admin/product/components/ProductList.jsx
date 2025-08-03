@@ -145,13 +145,35 @@ export default function ProductList({ initialProductData, categoryData }) {
   return (
     <div>
       <LazyModalButton componentKey={"ProductForm"} actionType={"add"} />
-      <DynamicTable
+      {/* <DynamicTable
         data={products} // Pass the combined data
         tableProperties={tableProperties}
         updateAction={updateProductAction} // Define update action
         deleteAction={deleteProductById} // Define delete action
         actionType={"edit"}
         componentKey={"ProductForm"}
+      /> */}
+
+      <DynamicTable
+        filterSearchProperties={[
+          { label: "Product ID", field: "productCode" },
+          { label: "Name", field: "title" },
+          { label: "SKU", field: "sku" }, // SKU search is now supported!
+        ]}
+        filterTagProperties={[
+          { status: ["null", "cancelled", "pending", "processing"] },
+        ]}
+        initialData={products}
+        // initialNextCursor={nextCursor} // Pass cursor instead of meta
+        tableProperties={tableProperties}
+        // fetchAction={getAllOrder}
+        updateAction={updateProductAction} // Define update action
+        deleteAction={deleteProductById} // Define delete action
+        actionType={"edit"}
+        componentKey={"ProductForm"}
+        quickViewComponentKey={"OrderQuickView"}
+        viewPageURL={"/admin/order/view/"}
+        initialItemsPerPage={10}
       />
 
       {/* Load More Trigger & Loading Indicator */}

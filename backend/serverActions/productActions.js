@@ -296,7 +296,7 @@ export async function createProductAction(formData) {
     let data = Object.fromEntries(formData.entries());
 
     // --- Basic Validation ---
-    if (!data?.title  || !data?.thumbnail) {
+    if (!data?.title || !data?.thumbnail) {
       throw new Error(
         "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
       );
@@ -457,7 +457,7 @@ export async function createProductAction(formData) {
 
               thumbnail: variantData.image
                 ? { connect: { id: variantData.image } }
-                : undefined,
+                : { connect: { id: data.thumbnail } },
               combinations: { create: combinationsToCreate },
             },
           });
@@ -929,8 +929,6 @@ export async function updateProductActions({ id: productId, formData }) {
   }
 }
 
-
-
 export async function updateProductAction({ id: productId, formData }) {
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
@@ -940,7 +938,7 @@ export async function updateProductAction({ id: productId, formData }) {
     const data = Object.fromEntries(formData.entries());
 
     // --- Basic Validation ---
-    if (!data?.title ||  !data?.thumbnail) {
+    if (!data?.title || !data?.thumbnail) {
       throw new Error(
         "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
       );
@@ -1056,11 +1054,21 @@ export async function updateProductAction({ id: productId, formData }) {
             data: {
               product: { connect: { id: updatedProduct.id } },
               matcherId: variantData.matcherId,
-              sku: variantData.sku || `${updatedProduct.productCode}-${variantData.matcherId}`,
+              sku:
+                variantData.sku ||
+                `${updatedProduct.productCode}-${variantData.matcherId}`,
               stock: parseOptionalNumber(variantData.qty, 0),
-              regularPrice: parseOptionalNumber(variantData.regularPrice, mainProductRegularPrice),
-              discountPrice: parseOptionalNumber(variantData.discountPrice, parseOptionalNumber(data.discountPrice)),
-              thumbnail: variantData.image ? { connect: { id: variantData.image } } : undefined,
+              regularPrice: parseOptionalNumber(
+                variantData.regularPrice,
+                mainProductRegularPrice
+              ),
+              discountPrice: parseOptionalNumber(
+                variantData.discountPrice,
+                parseOptionalNumber(data.discountPrice)
+              ),
+              thumbnail: variantData.image
+                ? { connect: { id: variantData.image } }
+                : { connect: { id: updatedProduct.thumbnailId } },
               combinations: { create: combinationsToCreate },
             },
           });

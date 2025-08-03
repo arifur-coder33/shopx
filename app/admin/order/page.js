@@ -13,7 +13,7 @@ export default async function OrderListPage() {
       expandProperties: [
         {
           label: "thumbnail",
-          field: "product.thumbnail",
+          field: "thumbnail",
           type: "image",
           alt: "productName",
         },
@@ -22,6 +22,21 @@ export default async function OrderListPage() {
         { label: "Price", field: "price", type: "currency" },
         { label: "Qty", field: "quantity", type: "text" },
         { label: "Status", field: "status", type: "text" },
+        {
+          label: "+",
+          field: "expand",
+          type: "expand",
+          expandSource: "product",
+          expandProperties: [
+            {
+              label: "thumbnail",
+              field: "thumbnail",
+              type: "image",
+              alt: "productName",
+            },
+            { label: "Product Name", field: "title", type: "text" },
+          ],
+        },
       ],
     },
     { label: "Created At", field: "createdAt", type: "date" },

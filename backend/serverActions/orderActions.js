@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { getDataSelectFields } from "../utils/getDataSelectFields";
 
 export async function createOrder(formData) {
   try {
@@ -83,7 +84,7 @@ export async function createOrder(formData) {
 
                 productCode: item?.productCode,
                 sku: item?.sku,
-                thumbnail: item?.mainImage,
+                thumbnail: item?.thumbnail,
                 product: {
                   connect: { id: item?.id },
                 },
@@ -123,33 +124,6 @@ export async function createOrder(formData) {
 
 // A helper to dynamically create the 'select' object for Prisma
 // This ensures we only fetch data that the table actually needs.
-const getOrderSelectFields = (tableProperties) => {
-  const fields = { id: true }; // Always select ID for keys and cursors
-
-  tableProperties.forEach((prop) => {
-    if (prop.field && prop.type !== "expand") {
-      fields[prop.field] = true;
-    }
-
-    // This part for selecting nested relations remains correct.
-    if (prop.type === "expand" && prop.expandSource) {
-      fields[prop.expandSource] = {
-        select: {
-          id: true,
-
-          productName: true,
-          sku: true,
-          price: true,
-          quantity: true,
-          status: true,
-          thumbnail: true,
-        },
-      };
-    }
-  });
-
-  return fields;
-};
 
 export async function getAllOrder(params) {
   try {
@@ -186,7 +160,7 @@ export async function getAllOrder(params) {
     }
 
     // Dynamically generate the select clause to minimize payload size
-    const select = getOrderSelectFields(tableProperties || []);
+    const select = getDataSelectFields(tableProperties || []);
 
     const data = await prisma.order.findMany({
       take: limit,

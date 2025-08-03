@@ -49,7 +49,7 @@ export default function BuyNowProductDetails({
       ) : (
         <CartItem
           title={data.title}
-          mainImageUrl={data?.mainImageUrl}
+          thumbnail={data?.thumbnail}
           slug={data.slug}
           discountPrice={data.discountPrice}
           regularPrice={data.regularPrice}

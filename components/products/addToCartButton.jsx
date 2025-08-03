@@ -36,7 +36,7 @@ export default function AddToCartButton(props) {
               combinations: [],
             },
 
-      mainImageUrl: selectedVariation
+      thumbnail: selectedVariation
         ? selectedVariation?.thumbnail?.name
         : product?.thumbnail?.name || product?.mainImage,
       slug: product?.variation?.slug,
