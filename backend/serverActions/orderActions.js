@@ -29,7 +29,7 @@ export async function createOrder(formData) {
 
       // Increment the order number
       const newOrderNumber = counter.lastOrderNumber + 1;
-      console.log("New Order Number:", newOrderNumber);
+    
       // Update the counter with the new number
       await tx.orderCounter.update({
         where: { id: counter?.id },
