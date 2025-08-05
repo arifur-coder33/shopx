@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 
 export default function TableToolbar({
   searchTerm,
@@ -9,7 +9,6 @@ export default function TableToolbar({
   setSearchField,
   activeFilters,
   onFilterChange,
-  onReset,
   filterSearchProperties,
   filterTagProperties,
 }) {
@@ -26,7 +25,7 @@ export default function TableToolbar({
           <select
             value={searchField}
             onChange={(e) => setSearchField(e.target.value)}
-            className="py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-700 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 text-sm px-3"
+            className="cursor-pointer py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-700 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 text-sm px-3"
           >
             {filterSearchProperties.map((prop) => (
               <option key={prop.field} value={prop.field}>
@@ -52,28 +51,30 @@ export default function TableToolbar({
       <div className="flex flex-wrap items-center gap-2">
         {filterTagProperties.map((filterGroup) =>
           Object.entries(filterGroup).map(([key, options]) =>
-            options.map((option) => (
-              <button
-                key={option}
-                onClick={() => onFilterChange(key, option)}
-                className={`px-3 py-1 text-sm rounded-full transition-all duration-200 ${
-                  activeFilters[key] === option
-                    ? "bg-purple-600 text-white shadow"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                }`}
-              >
-                {option}
-              </button>
-            ))
+            options.map((option) => {
+              const isAllTag = option === "All";
+              // "All" is active if NO filter from its group is set in activeFilters
+              const isAllGroupActive = isAllTag && !activeFilters[key];
+              // Any other tag is active if it's the one selected
+              const isOptionActive = activeFilters[key] === option;
+
+              const isActive = isOptionActive || isAllGroupActive;
+
+              return (
+                <button
+                  key={option}
+                  onClick={() => onFilterChange(key, option)}
+                  className={`px-3 py-1 text-sm rounded-full transition-all duration-200 ${
+                    isActive
+                      ? "bg-purple-600 text-white shadow"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  {option}
+                </button>
+              );
+            })
           )
-        )}
-        {isFilterActive && (
-          <button
-            onClick={onReset}
-            className="flex items-center gap-1.5 px-3 py-1 text-sm text-red-600 bg-red-100 border border-red-200 rounded-full hover:bg-red-200 dark:bg-red-900/50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900 transition-colors"
-          >
-            <X className="w-4 h-4" /> Reset
-          </button>
         )}
       </div>
     </div>

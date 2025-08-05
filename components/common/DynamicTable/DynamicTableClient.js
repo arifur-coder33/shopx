@@ -2,7 +2,7 @@
 
 import { useDebounce } from "@/hooks/useDebounce"; // Assuming you have a debounce hook
 import { Inbox } from "lucide-react";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import CursorPagination from "./CursorPagination"; // We'll create this new component
 import TableBody from "./TableBody";
 import TableSkeleton from "./TableSkeleton"; // Import the skeleton
@@ -29,12 +29,17 @@ export default function DynamicTableClient({
   const [searchField, setSearchField] = useState(
     filterSearchProperties[0]?.field || ""
   );
-  const [activeFilters, setActiveFilters] = useState({});
+  const [activeFilters, setActiveFilters] = useState({ status: "ALL" });
   const [expandedRows, setExpandedRows] = useState(new Set());
+
+  const [sortConfig, setSortConfig] = useState({
+    field: "createdAt", // Default sort field
+    direction: "desc", // Default sort direction
+  });
 
   const [isPending, startTransition] = useTransition();
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
-
+  const isInitialMount = useRef(true);
   const fetchData = useCallback(
     async (cursor, isPagingBack = false) => {
       const params = {
@@ -42,6 +47,8 @@ export default function DynamicTableClient({
         cursor,
         ...activeFilters,
         tableProperties,
+        sortField: sortConfig.field,
+        sortDirection: sortConfig.direction,
       };
 
       if (debouncedSearchTerm && searchField)
@@ -89,17 +96,38 @@ export default function DynamicTableClient({
       fetchAction,
       initialItemsPerPage,
       tableProperties,
+      sortConfig,
     ]
   );
+  console.log(activeFilters);
+  const handleSort = (field) => {
+    // A. Update the state
+    setSortConfig((prevConfig) => {
+      const direction =
+        prevConfig.field === field && prevConfig.direction === "asc"
+          ? "desc"
+          : "asc";
+      return { field, direction };
+    });
+  };
+
+  useEffect(() => {
+    setPreviousCursors([]); // Reset pagination
+    fetchData(null); // Refetch data from page 1 with the new sort
+  }, [sortConfig]);
 
   // Effect for search/filter changes (resets pagination)
   useEffect(() => {
-    // Don't run on initial render
-    if (debouncedSearchTerm !== "" || Object.keys(activeFilters).length > 0) {
-      setPreviousCursors([]); // Reset pagination history
-      fetchData(null);
+    // Prevent fetching on the very first render because we already have initialData
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
-  }, [debouncedSearchTerm, activeFilters, fetchData]);
+
+    // Any change to search or filters should reset pagination and fetch from page 1
+    setPreviousCursors([]);
+    fetchData(null);
+  }, [debouncedSearchTerm, activeFilters]); // Removed fetchData from deps
 
   const handleNext = () => {
     if (nextCursor) {
@@ -116,23 +144,22 @@ export default function DynamicTableClient({
     fetchData(lastCursor, true);
   };
 
-  const handleReset = () => {
-    setSearchTerm("");
-    setActiveFilters({});
-    setPreviousCursors([]);
-    // Fetch the very first page
-    fetchData(null);
-  };
-
   const handleFilterChange = (key, value) => {
     setActiveFilters((prev) => {
       const newFilters = { ...prev };
-      if (newFilters[key] === value) delete newFilters[key];
-      else newFilters[key] = value;
+
+      // If "All" is clicked, or if the active filter is clicked again,
+      // remove the filter for that key. This reverts it to the "All" state.
+      if (value === "All" || newFilters[key] === value) {
+        delete newFilters[key];
+      } else {
+        // Otherwise, set the new filter.
+        newFilters[key] = value;
+      }
+
       return newFilters;
     });
   };
-
   return (
     <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg p-4 space-y-4">
       <TableToolbar
@@ -142,7 +169,6 @@ export default function DynamicTableClient({
         setSearchField={setSearchField}
         activeFilters={activeFilters}
         onFilterChange={handleFilterChange}
-        onReset={handleReset}
         filterSearchProperties={filterSearchProperties}
         filterTagProperties={filterTagProperties}
       />
@@ -162,6 +188,8 @@ export default function DynamicTableClient({
           <TableBody
             paginatedData={data}
             tableProperties={tableProperties}
+            sortConfig={sortConfig}
+            onSort={handleSort}
             expandedRows={expandedRows}
             setExpandedRows={setExpandedRows}
             actions={{ updateAction, deleteAction, actionType, componentKey }}

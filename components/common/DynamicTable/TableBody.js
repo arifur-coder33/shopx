@@ -4,12 +4,32 @@ import Imagecustom from "@/components/images/ImageCustom";
 import CheckBox from "@/components/input/CheckBox";
 import SearchableDropdown from "@/components/input/SearchableDropdown";
 import LazyModalButton from "@/components/modal/LazyModalButton";
-import { Edit, Eye, Minus, Plus, Search, Trash } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Edit,
+  Eye,
+  Minus,
+  Plus,
+  Search,
+  Trash,
+} from "lucide-react";
 import Link from "next/link";
 import React from "react";
 import DeleteItem from "../DeleteItem";
 
 // --- COMPONENT IMPORTS (Ensure paths are correct) ---
+const SortIcon = ({ direction }) => {
+  if (direction === "asc")
+    return (
+      <ArrowUp className="w-3 h-3 ml-1 text-gray-600 dark:text-gray-300" />
+    );
+  if (direction === "desc")
+    return (
+      <ArrowDown className="w-3 h-3 ml-1 text-gray-600 dark:text-gray-300" />
+    );
+  return null; // No icon if not sorted
+};
 
 // Helper function can live here as it's only used by the TableBody
 const renderDynamicField = (item, column) => {
@@ -76,6 +96,8 @@ export default function TableBody({
   expandedRows,
   setExpandedRows,
   actions,
+  sortConfig,
+  onSort,
 }) {
   const { updateAction, deleteAction, actionType, componentKey } = actions;
   const expandColumn = tableProperties.find((p) => p.type === "expand");
@@ -94,7 +116,23 @@ export default function TableBody({
           <tr>
             {tableProperties.map((c) => (
               <th key={c.field} scope="col" className="px-6 py-3">
-                {c.label}
+                {/* --- HEADER CELL LOGIC --- */}
+                {c.sort ? (
+                  <button
+                    className="flex items-center group"
+                    onClick={() => onSort(c.field)}
+                  >
+                    <span>{c.label}</span>
+                    {sortConfig?.field === c.field ? (
+                      <SortIcon direction={sortConfig?.direction} />
+                    ) : (
+                      // Show a faint icon on hover for non-active sort columns
+                      <ArrowDown className="w-3 h-3 ml-1 text-gray-300 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                ) : (
+                  <span>{c.label}</span>
+                )}
               </th>
             ))}
             <th scope="col" className="px-6 py-3 text-center">

@@ -29,7 +29,7 @@ export async function createOrder(formData) {
 
       // Increment the order number
       const newOrderNumber = counter.lastOrderNumber + 1;
-    
+
       // Update the counter with the new number
       await tx.orderCounter.update({
         where: { id: counter?.id },
@@ -131,11 +131,15 @@ export async function getAllOrder(params) {
       status,
       orderNo,
       sku,
+      phoneNumber,
       startDate,
       endDate,
       limit = 10,
-      cursor, // For cursor-based pagination
-      tableProperties, // Pass table properties to select fields
+      cursor,
+      tableProperties,
+
+      sortField,
+      sortDirection,
     } = params || {};
 
     const whereClause = {};
@@ -143,8 +147,8 @@ export async function getAllOrder(params) {
     if (status) whereClause.status = status;
     if (orderNo)
       whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
-
-    // Efficiently search within related orderItems for a SKU
+    if (phoneNumber)
+      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
     if (sku) {
       whereClause.orderItems = {
         some: {
@@ -159,31 +163,51 @@ export async function getAllOrder(params) {
       if (endDate) whereClause.createdAt.lte = new Date(endDate);
     }
 
-    // Dynamically generate the select clause to minimize payload size
     const select = getDataSelectFields(tableProperties || []);
+
+    // --- NEW: Dynamically build the orderBy clause ---
+    const orderBy = {};
+    if (
+      sortField &&
+      ["createdAt", "orderNo", "orderPrice"].includes(sortField)
+    ) {
+      // We ensure the sortField is a valid, direct property of the Order model
+      // to prevent potential errors or security issues.
+      orderBy[sortField] = sortDirection === "asc" ? "asc" : "desc";
+    } else {
+      // Default sort order if nothing is provided
+      orderBy.createdAt = "desc";
+    }
+
+    // The cursor-based pagination logic has been updated to work with dynamic sorting.
+    // NOTE: For cursor pagination to work reliably, the ordering must be unique and consistent.
+    // Using a secondary sort key like `id` is a robust way to ensure this.
+    const orderByWithId = [
+      orderBy,
+      { id: "asc" }, // Add a secondary, unique sort key to break ties
+    ];
 
     const data = await prisma.order.findMany({
       take: limit,
-      // If a cursor is provided, start fetching from that record
       cursor: cursor ? { id: cursor } : undefined,
-      // Skip the cursor itself if it's not the first page
       skip: cursor ? 1 : 0,
       where: whereClause,
-      select, // Apply the minimal select clause
-      orderBy: {
-        createdAt: "desc",
+      select: {
+        ...select,
+        phoneNumber: true,
       },
+      // --- UPDATED: Apply the dynamic orderBy clause ---
+      orderBy: orderByWithId,
     });
 
-    // We fetch one extra item to see if there's a next page
     const hasNextPage = data.length > limit - 1;
     const nextCursor = hasNextPage ? data[limit - 1].id : null;
-    if (hasNextPage) data.pop(); // Remove the extra item before sending to client
+    if (hasNextPage) data.pop();
 
     return {
       success: true,
       data,
-      nextCursor, // Send the next cursor instead of metadata
+      nextCursor,
     };
   } catch (error) {
     console.log("Error fetching orders:", error);

@@ -6,7 +6,7 @@ import DynamicTable from "@/components/common/DynamicTable/";
 export default async function OrderListPage() {
   const tableProperties = [
     {
-      label: "+",
+      label: "",
       field: "expand",
       type: "expand",
       expandSource: "orderItems",
@@ -23,7 +23,7 @@ export default async function OrderListPage() {
         { label: "Qty", field: "quantity", type: "text" },
         { label: "Status", field: "status", type: "text" },
         {
-          label: "+",
+          label: "",
           field: "expand",
           type: "expand",
           expandSource: "product",
@@ -39,30 +39,30 @@ export default async function OrderListPage() {
         },
       ],
     },
-    { label: "Created At", field: "createdAt", type: "date" },
-    { label: "Order No", field: "orderNo", type: "text" },
-    { label: "Price", field: "orderPrice", type: "currency" },
-    { label: "Status", field: "status", type: "badge" },
+    { label: "Created At", field: "createdAt", type: "date", sort: true },
+    { label: "Order No", field: "orderNo", type: "text", sort: true },
+    { label: "Price", field: "orderPrice", type: "currency", sort: true },
+    { label: "Status", field: "status", type: "badge", sort: false },
   ];
 
   // Initial fetch now includes tableProperties
-  const { success, data, nextCursor, error } = await getAllOrder({
+  const { success, data, nextCursor, error, meta } = await getAllOrder({
     limit: 10,
     tableProperties,
   });
 
   if (!success) return `Something went wrong: ${error}`;
-  console.log("Fetched Orders:", data);
+  console.log("Fetched Orders:", meta);
   return (
     <div>
       <DynamicTable
         filterSearchProperties={[
           { label: "Order No", field: "orderNo" },
-          { label: "Status", field: "status" },
-          { label: "SKU", field: "sku" }, // SKU search is now supported!
+          { label: "SKU", field: "sku" },
+          { label: "Phone Number", field: "phoneNumber" },
         ]}
         filterTagProperties={[
-          { status: ["delivered", "cancelled", "pending", "processing"] },
+          { status: ["ALL", "DELIVERED", "CANCELED", "PENDING", "PROCESSING"] },
           { time: ["last 24 hours", "last 7 days", "last 30 days"] },
         ]}
         initialData={data}
