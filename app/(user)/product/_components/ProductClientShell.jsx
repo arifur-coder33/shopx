@@ -34,7 +34,7 @@ export default function ProductClientShell({
       [],
     [variations]
   );
-
+  const [activeImageId, setActiveImageId] = useState();
   const staticContent = (
     <ProductImageGalleryServer
       mainImage={thumbnail || mainImage}
@@ -58,6 +58,7 @@ export default function ProductClientShell({
             variationsImage={variationsImage}
             title={title}
             videoUrl={videoUrl}
+            activeImageId={activeImageId}
           >
             {imageComponent}
           </ProductImageGallery>
@@ -66,7 +67,7 @@ export default function ProductClientShell({
 
       <div className="md:col-span-2 mt-2 md:col-start-4 md:mt-0">
         {titleComponent}
-        <ProductInfoClient data={data}>
+        <ProductInfoClient setActiveImageId={setActiveImageId} data={data}>
           <ProductInfoServer product={data} />
         </ProductInfoClient>
       </div>

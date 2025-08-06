@@ -9,8 +9,12 @@ import { useEffect, useMemo, useState } from "react";
 import BuyNowSection from "./BuyNowSection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
 
-export default function ProductInfoClient({ data, children }) {
-  const { variations,hasVariations } = data;
+export default function ProductInfoClient({
+  data,
+  children,
+  setActiveImageId,
+}) {
+  const { variations, hasVariations } = data;
   const [selectedVariation, setSelectedVariation] = useState(null);
 
   // This flag prevents hydration mismatch by ensuring the initial client render
@@ -20,6 +24,8 @@ export default function ProductInfoClient({ data, children }) {
 
   const onVariationChangeHandler = (variation) => {
     setSelectedVariation(variation);
+    setActiveImageId(variation?.thumbnailId);
+    console.log(selectedVariation);
   };
 
   // Memoize price ranges for variations on the client
@@ -53,10 +59,14 @@ export default function ProductInfoClient({ data, children }) {
         ? selectedVariation.discountPrice
         : selectedVariation.regularPrice;
       originalPrice = hasDiscount ? selectedVariation.regularPrice : null;
-    } else if (variations?.length > 0 && variations[0]?.combinations?.length>0) {
-      const hasRangeDiscount =discountPriceRange?.min >0 &&
+    } else if (
+      variations?.length > 0 &&
+      variations[0]?.combinations?.length > 0
+    ) {
+      const hasRangeDiscount =
+        discountPriceRange?.min > 0 &&
         (discountPriceRange?.min < regularPriceRange?.min ||
-        discountPriceRange?.max < regularPriceRange?.max);
+          discountPriceRange?.max < regularPriceRange?.max);
 
       if (regularPriceRange.min === 0 && regularPriceRange.max === 0) {
         price = "Currently Unavailable";
@@ -81,7 +91,9 @@ export default function ProductInfoClient({ data, children }) {
         variations[0]?.discountPrice > 0 &&
         variations[0]?.discountPrice < variations[0]?.regularPrice;
 
-      price = hasDiscount ? variations[0]?.discountPrice : variations[0]?.regularPrice;
+      price = hasDiscount
+        ? variations[0]?.discountPrice
+        : variations[0]?.regularPrice;
       originalPrice = hasDiscount ? variations[0]?.regularPrice : null;
     }
 
@@ -93,13 +105,7 @@ export default function ProductInfoClient({ data, children }) {
           ? originalPrice.toLocaleString()
           : originalPrice,
     };
-  }, [
-    selectedVariation,
-    variations,
-   
-    regularPriceRange,
-    discountPriceRange,
-  ]);
+  }, [selectedVariation, variations, regularPriceRange, discountPriceRange]);
 
   // If the component hasn't mounted yet, render the static HTML from the server.
   if (!isMounted) {
@@ -123,24 +129,21 @@ export default function ProductInfoClient({ data, children }) {
           টাকা
           {originalPriceToDisplay && (
             <del className="price-del text-xl ml-2">
-              {replaceNumbers(originalPriceToDisplay.toString())} 
+              {replaceNumbers(originalPriceToDisplay.toString())}
             </del>
           )}
-         
         </p>
       </KalapanaFont>
 
       {/* The interactive variation selector replaces the static one */}
 
-      {
-        hasVariations && variations[0]?.combinations?.length>0 && 
-             <ProductVariationSelector
-        onVariationChange={onVariationChangeHandler}
-        variations={variations}
-        hasVariations={hasVariations}
-      />
-      }
- 
+      {hasVariations && variations[0]?.combinations?.length > 0 && (
+        <ProductVariationSelector
+          onVariationChange={onVariationChangeHandler}
+          variations={variations}
+          hasVariations={hasVariations}
+        />
+      )}
 
       <BuyNowSection data={data} selectedVariation={selectedVariation} />
     </>
