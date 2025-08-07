@@ -12,7 +12,7 @@ export default async function OrderListPage() {
       expandSource: "orderItems",
       expandProperties: [
         {
-          label: "thumbnail",
+          label: "Thumbnail",
           field: "thumbnail",
           type: "image",
           alt: "productName",
@@ -21,41 +21,36 @@ export default async function OrderListPage() {
         { label: "SKU", field: "sku", type: "text" },
         { label: "Price", field: "price", type: "currency" },
         { label: "Qty", field: "quantity", type: "text" },
-        { label: "Status", field: "status", type: "text" },
-        {
-          label: "",
-          field: "expand",
-          type: "expand",
-          expandSource: "product",
-          expandProperties: [
-            {
-              label: "thumbnail",
-              field: "thumbnail",
-              type: "image",
-              alt: "productName",
-            },
-            { label: "Product Name", field: "title", type: "text" },
-          ],
-        },
       ],
     },
     { label: "Created At", field: "createdAt", type: "date", sort: true },
     { label: "Order No", field: "orderNo", type: "text", sort: true },
-    { label: "Price", field: "orderPrice", type: "currency", sort: true },
+    { label: "Customer", field: "customerName", type: "text", sort: true },
+    { label: "Total Price", field: "orderPrice", type: "currency", sort: true },
     { label: "Status", field: "status", type: "badge", sort: false },
   ];
 
-  // Initial fetch now includes tableProperties
-  const { success, data, nextCursor, error, meta } = await getAllOrder({
-    limit: 3,
+  const initialLimit = 2; // You can set your desired initial page size
+
+  const { success, data, nextCursor, error } = await getAllOrder({
+    limit: initialLimit,
     tableProperties,
   });
 
   if (!success) return `Something went wrong: ${error}`;
-  console.log("Fetched Orders:", data);
+
   return (
-    <div>
+    <div className="p-4">
+      <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
+        Orders
+      </h1>
       <DynamicTable
+        // Data and Actions
+        initialData={data}
+        initialNextCursor={nextCursor}
+        fetchAction={getAllOrder}
+        tableProperties={tableProperties}
+        // Filtering Properties
         filterSearchProperties={[
           { label: "Order No", field: "orderNo" },
           { label: "SKU", field: "sku" },
@@ -63,18 +58,16 @@ export default async function OrderListPage() {
         ]}
         filterTagProperties={[
           { status: ["ALL", "DELIVERED", "CANCELED", "PENDING", "PROCESSING"] },
-          { time: ["last 24 hours", "last 7 days", "last 30 days","Custom"] },
+          { time: ["last 24 hours", "last 7 days", "last 30 days", "Custom"] },
         ]}
-        initialData={data}
-        initialNextCursor={nextCursor} // Pass cursor instead of meta
-        tableProperties={tableProperties}
-        fetchAction={getAllOrder}
-        // ... other props
+        // Pagination Properties
+        initialItemsPerPage={initialLimit}
+        itemsPerPageOptions={[2, 5, 10, 25, 50, 100]} // Dropdown options
+        // Actions and Links
         actionType={"edit"}
-        componentKey={"ProductForm"}
+        componentKey={"OrderForm"} // Example key for a modal form
         quickViewComponentKey={"OrderQuickView"}
         viewPageURL={"/admin/order/view/"}
-        initialItemsPerPage={3}
       />
     </div>
   );

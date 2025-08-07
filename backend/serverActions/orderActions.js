@@ -128,89 +128,105 @@ export async function createOrder(formData) {
 export async function getAllOrder(params) {
   try {
     const {
-      status,
-      orderNo,
-      sku,
-      phoneNumber,
-      startDate,
-      endDate,
       limit = 10,
       cursor,
       tableProperties,
-
-      sortField,
-      sortDirection,
-    } = params || {};
+      sortField = "createdAt",
+      sortDirection = "desc",
+      // ...other filters
+      orderNo,
+      sku,
+      phoneNumber,
+      status,
+      startDate,
+      endDate,
+    } = params;
 
     const whereClause = {};
-
-    if (status) whereClause.status = status;
     if (orderNo)
       whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
-    if (phoneNumber)
-      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
-    if (sku) {
-      whereClause.orderItems = {
-        some: {
-          sku: { contains: sku, mode: "insensitive" },
-        },
+    if (status) whereClause.status = status;
+    if (startDate && endDate) {
+      whereClause.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
       };
     }
-
-    if (startDate || endDate) {
-      whereClause.createdAt = {};
-      if (startDate) whereClause.createdAt.gte = new Date(startDate);
-      if (endDate) whereClause.createdAt.lte = new Date(endDate);
+    if (sku) {
+      whereClause.orderItems = {
+        some: { sku: { contains: sku, mode: "insensitive" } },
+      };
+    }
+    if (phoneNumber) {
+      whereClause.user = { phoneNumber: { contains: phoneNumber } };
     }
 
-    const select = getDataSelectFields(tableProperties || []);
+    const selectFields = getDataSelectFields(tableProperties);
 
-    // --- NEW: Dynamically build the orderBy clause ---
-    const orderBy = {};
-    if (
-      sortField &&
-      ["createdAt", "orderNo", "orderPrice"].includes(sortField)
-    ) {
-      // We ensure the sortField is a valid, direct property of the Order model
-      // to prevent potential errors or security issues.
-      orderBy[sortField] = sortDirection === "asc" ? "asc" : "desc";
-    } else {
-      // Default sort order if nothing is provided
-      orderBy.createdAt = "desc";
-    }
-
-    // The cursor-based pagination logic has been updated to work with dynamic sorting.
-    // NOTE: For cursor pagination to work reliably, the ordering must be unique and consistent.
-    // Using a secondary sort key like `id` is a robust way to ensure this.
-    const orderByWithId = [
-      orderBy,
-      { id: "asc" }, // Add a secondary, unique sort key to break ties
-    ];
-
-    const data = await prisma.order.findMany({
-      take: limit,
-      cursor: cursor ? { id: cursor } : undefined,
-      skip: cursor ? 1 : 0,
+    const requestedLimit = Number(limit);
+    const items = await prisma.order.findMany({
+      take: requestedLimit + 1,
       where: whereClause,
-      select: {
-        ...select,
-        phoneNumber: true,
-      },
-      // --- UPDATED: Apply the dynamic orderBy clause ---
-      orderBy: orderByWithId,
+      select: selectFields,
+      cursor: cursor ? { id: cursor } : undefined,
+      // The `skip: 1` is NECESSARY and CORRECT for Prisma's cursor implementation
+      // to exclude the cursor itself and start on the next record.
+      skip: cursor ? 1 : 0,
+      orderBy: { [sortField]: sortDirection },
     });
 
-    const hasNextPage = data.length > limit - 1;
-    const nextCursor = hasNextPage ? data[limit - 1].id : null;
-    if (hasNextPage) data.pop();
+    let nextCursor = null;
+    // Check if we received more items than the requested page size.
+    if (items.length > requestedLimit) {
+      // --- THE CRITICAL FIX IS HERE ---
+      // 1. Remove the extra item that we fetched only to check for a next page.
+      items.pop();
+
+      // 2. The new cursor is the ID of the LAST item in the *remaining* array.
+      nextCursor = items[items.length - 1].id;
+    }
 
     return {
       success: true,
-      data,
-      nextCursor,
+      data: items,
+      nextCursor: nextCursor,
     };
   } catch (error) {
-    console.log("Error fetching orders:", error);
+    console.error("Failed to get orders:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getOrderCount(params) {
+  try {
+    const { orderNo, sku, phoneNumber, status, startDate, endDate } = params;
+
+    const whereClause = {};
+    if (orderNo)
+      whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
+    if (status) whereClause.status = status;
+    if (startDate && endDate) {
+      whereClause.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    }
+    if (sku) {
+      whereClause.orderItems = {
+        some: { sku: { contains: sku, mode: "insensitive" } },
+      };
+    }
+    if (phoneNumber) {
+      whereClause.user = { phoneNumber: { contains: phoneNumber } };
+    }
+
+    const count = await prisma.order.count({
+      where: whereClause,
+    });
+
+    return { success: true, count };
+  } catch (error) {
+    console.error("Failed to get order count:", error);
     return { success: false, error: error.message };
   }
 }
