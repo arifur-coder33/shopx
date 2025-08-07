@@ -47,12 +47,12 @@ export default async function OrderListPage() {
 
   // Initial fetch now includes tableProperties
   const { success, data, nextCursor, error, meta } = await getAllOrder({
-    limit: 10,
+    limit: 3,
     tableProperties,
   });
 
   if (!success) return `Something went wrong: ${error}`;
-  console.log("Fetched Orders:", meta);
+  console.log("Fetched Orders:", data);
   return (
     <div>
       <DynamicTable
@@ -63,7 +63,7 @@ export default async function OrderListPage() {
         ]}
         filterTagProperties={[
           { status: ["ALL", "DELIVERED", "CANCELED", "PENDING", "PROCESSING"] },
-          { time: ["last 24 hours", "last 7 days", "last 30 days"] },
+          { time: ["last 24 hours", "last 7 days", "last 30 days","Custom"] },
         ]}
         initialData={data}
         initialNextCursor={nextCursor} // Pass cursor instead of meta
@@ -74,7 +74,7 @@ export default async function OrderListPage() {
         componentKey={"ProductForm"}
         quickViewComponentKey={"OrderQuickView"}
         viewPageURL={"/admin/order/view/"}
-        initialItemsPerPage={10}
+        initialItemsPerPage={3}
       />
     </div>
   );
