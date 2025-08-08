@@ -2,14 +2,68 @@
 
 "use client";
 
-import { getOrderCount } from "@/backend/serverActions/orderActions";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Inbox } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import CursorPagination from "./CursorPagination";
 import TableBody from "./TableBody";
 import TableSkeleton from "./TableSkeleton";
 import TableToolbar from "./TableToolbar";
+
+// OPTIMIZATION: Extracted parameter building logic to a pure helper function.
+const buildRequestParams = (params) => {
+  const newParams = { ...params };
+
+  // Handle search term
+  if (!newParams.searchTerm || !newParams.searchField) {
+    delete newParams.searchTerm;
+    delete newParams.searchField;
+  } else {
+    newParams[newParams.searchField] = newParams.searchTerm;
+    delete newParams.searchTerm;
+    delete newParams.searchField;
+  }
+
+  // Clean up any "ALL" filters that are not meant for the API
+  // This is a safeguard for the new handleFilterChange logic
+  Object.keys(newParams).forEach((key) => {
+    if (newParams[key] === "ALL") {
+      delete newParams[key];
+    }
+  });
+
+  // Handle date filtering
+  if (newParams.time) {
+    if (newParams.time.type === "custom") {
+      newParams.startDate = newParams.time.startDate;
+      newParams.endDate = newParams.time.endDate;
+    } else if (typeof newParams.time === "string") {
+      const now = new Date();
+      let startDate;
+      if (newParams.time === "last 24 hours")
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      else if (newParams.time === "last 7 days")
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      else if (newParams.time === "last 30 days")
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      if (startDate) {
+        newParams.startDate = startDate.toISOString();
+        newParams.endDate = now.toISOString();
+      }
+    }
+    delete newParams.time;
+  }
+
+  return newParams;
+};
 
 export default function DynamicTableClient({
   initialData = [],
@@ -25,17 +79,19 @@ export default function DynamicTableClient({
   actionType,
   componentKey,
   viewPageURL,
+  getDataCount,
 }) {
   const [data, setData] = useState(initialData);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [currentCursor, setCurrentCursor] = useState(null);
   const [previousCursors, setPreviousCursors] = useState([]);
 
-  const [totalCount, setTotalCount] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [searchField, setSearchField] = useState(
     filterSearchProperties[0]?.field || ""
   );
@@ -47,49 +103,35 @@ export default function DynamicTableClient({
   });
 
   const [isPending, startTransition] = useTransition();
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const isInitialMount = useRef(true);
 
+  const baseFetchConfig = useMemo(
+    () => ({
+      ...activeFilters,
+      searchTerm: debouncedSearchTerm,
+      searchField,
+    }),
+    [activeFilters, debouncedSearchTerm, searchField]
+  );
+
   const fetchData = useCallback(
-    async (cursor) => {
-      const params = {
-        limit: itemsPerPage,
-        cursor,
-        tableProperties,
-        sortField: sortConfig.field,
-        sortDirection: sortConfig.direction,
-        ...activeFilters,
-      };
-      if (debouncedSearchTerm && searchField) {
-        params[searchField] = debouncedSearchTerm;
-      }
-
-      if (params.time?.type === "custom") {
-        params.startDate = params.time.startDate;
-        params.endDate = params.time.endDate;
-        delete params.time;
-      } else if (typeof params.time === "string") {
-        const now = new Date();
-        let startDate;
-        if (params.time === "last 24 hours")
-          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        else if (params.time === "last 7 days")
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        else if (params.time === "last 30 days")
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        if (startDate) {
-          params.startDate = startDate.toISOString();
-          params.endDate = now.toISOString();
-        }
-        delete params.time;
-      }
-
+    async (cursor, config) => {
       startTransition(async () => {
+        const params = buildRequestParams({
+          ...config,
+          limit: itemsPerPage,
+          cursor,
+          sortField: sortConfig.field,
+          sortDirection: sortConfig.direction,
+          tableProperties,
+        });
+
         const {
           success,
           data: newData,
           nextCursor: newNextCursor,
         } = await fetchAction(params);
+
         if (success) {
           setData(newData);
           setNextCursor(newNextCursor);
@@ -97,56 +139,39 @@ export default function DynamicTableClient({
         }
       });
     },
-    [
-      itemsPerPage,
-      activeFilters,
-      debouncedSearchTerm,
-      searchField,
-      fetchAction,
-      tableProperties,
-      sortConfig,
-    ]
+    [itemsPerPage, sortConfig, tableProperties, fetchAction]
   );
-
-  const fetchDataRef = useRef(fetchData);
-  useEffect(() => {
-    fetchDataRef.current = fetchData;
-  });
 
   useEffect(() => {
     if (isInitialMount.current) {
-      getOrderCount({}).then((res) => {
+      isInitialMount.current = false;
+      getDataCount({}).then((res) => {
         if (res.success) setTotalCount(res.count);
       });
-      isInitialMount.current = false;
       return;
     }
 
-    const resetAndFetch = () => {
-      startTransition(async () => {
-        const filters = { ...activeFilters };
-        if (debouncedSearchTerm && searchField) {
-          filters[searchField] = debouncedSearchTerm;
-        }
+    setCurrentPage(1);
+    setPreviousCursors([]);
+    setCurrentCursor(null);
 
-        const countResult = await getOrderCount(filters);
-        if (countResult.success) setTotalCount(countResult.count);
+    startTransition(async () => {
+      const countParams = buildRequestParams(baseFetchConfig);
+      const countResult = await getDataCount(countParams);
+      if (countResult.success) {
+        setTotalCount(countResult.count);
+      }
+    });
 
-        setPreviousCursors([]);
-        setCurrentCursor(null);
-        setCurrentPage(1);
-        fetchDataRef.current(null);
-      });
-    };
-    resetAndFetch();
-  }, [debouncedSearchTerm, activeFilters, sortConfig, itemsPerPage]);
+    fetchData(null, baseFetchConfig);
+  }, [baseFetchConfig, sortConfig, itemsPerPage, getDataCount, fetchData]);
 
   const handleNext = () => {
     if (nextCursor) {
       setPreviousCursors((prev) => [...prev, currentCursor]);
       setCurrentCursor(nextCursor);
-      fetchData(nextCursor);
       setCurrentPage((prev) => prev + 1);
+      fetchData(nextCursor, baseFetchConfig);
     }
   };
 
@@ -156,18 +181,22 @@ export default function DynamicTableClient({
       const previousPageCursor = newPreviousCursors.pop();
       setPreviousCursors(newPreviousCursors);
       setCurrentCursor(previousPageCursor);
-      fetchData(previousPageCursor);
       setCurrentPage((prev) => prev - 1);
+      fetchData(previousPageCursor, baseFetchConfig);
     }
   };
 
+  // --- MODIFIED LOGIC HERE ---
   const handleFilterChange = (key, value) => {
     setActiveFilters((prev) => {
       const newFilters = { ...prev };
-      if (
-        value === "ALL" ||
-        JSON.stringify(newFilters[key]) === JSON.stringify(value)
-      ) {
+
+      // The `TableToolbar` component's onClick logic is designed to send "ALL"
+      // when a filter should be cleared. We simplify this handler to respect that contract.
+      // This is more robust and avoids complex checks like JSON.stringify.
+      if (value === "ALL") {
+        // By deleting the key, activeFilters[key] becomes `undefined`.
+        // The `isActive` prop in TableToolbar will then correctly show "All" as active.
         delete newFilters[key];
       } else {
         newFilters[key] = value;

@@ -158,7 +158,7 @@ export async function getAllOrder(params) {
       };
     }
     if (phoneNumber) {
-      whereClause.user = { phoneNumber: { contains: phoneNumber } };
+      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
     }
 
     const selectFields = getDataSelectFields(tableProperties);
@@ -200,7 +200,8 @@ export async function getAllOrder(params) {
 export async function getOrderCount(params) {
   try {
     const { orderNo, sku, phoneNumber, status, startDate, endDate } = params;
-
+    console.log("params order", params);
+    console.log("stardate:", startDate);
     const whereClause = {};
     if (orderNo)
       whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
@@ -217,7 +218,7 @@ export async function getOrderCount(params) {
       };
     }
     if (phoneNumber) {
-      whereClause.user = { phoneNumber: { contains: phoneNumber } };
+      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
     }
 
     const count = await prisma.order.count({

@@ -1,6 +1,9 @@
 // app/admin/order/page.js
 
-import { getAllOrder } from "@/backend/serverActions/orderActions";
+import {
+  getAllOrder,
+  getOrderCount,
+} from "@/backend/serverActions/orderActions";
 import DynamicTable from "@/components/common/DynamicTable/";
 
 export default async function OrderListPage() {
@@ -57,7 +60,7 @@ export default async function OrderListPage() {
           { label: "Phone Number", field: "phoneNumber" },
         ]}
         filterTagProperties={[
-          { status: ["ALL", "DELIVERED", "CANCELED", "PENDING", "PROCESSING"] },
+          { status: ["ALL", "PENDING", "SHIPPED", "DELIVERED", "CANCELED"] },
           { time: ["last 24 hours", "last 7 days", "last 30 days", "Custom"] },
         ]}
         // Pagination Properties
@@ -68,6 +71,7 @@ export default async function OrderListPage() {
         componentKey={"OrderForm"} // Example key for a modal form
         quickViewComponentKey={"OrderQuickView"}
         viewPageURL={"/admin/order/view/"}
+        getDataCount={getOrderCount}
       />
     </div>
   );
