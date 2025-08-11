@@ -1,95 +1,73 @@
+// app/admin/layout.jsx
+
+"use client";
+
 import AdminNavBar from "@/components/nav/AdminNav";
-import NavItem from "@/components/nav/NavItem";
+import AdminSideNav from "@/components/nav/AdminSideNav";
 import { SessionProvider } from "next-auth/react";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { SWRConfig } from "swr";
 
-export const metadata = {
-  title: "Admin | আমার শপ",
-  description: "ঘরে বসে পন্য অর্ডার করুন",
-};
+// A tiny helper for conditional classnames
+const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 export default function AdminLayout({ children }) {
-  const adminNavbarList = [
-    {
-      name: "Dashboard",
-      slug: "/",
-    },
-    {
-      name: "Order List",
-      slug: "order",
-    },
-    {
-      name: "Product List",
-      slug: "product",
-    },
-    {
-      name: "Add Product",
-      slug: "product/add",
-    },
-    {
-      name: "Category List",
-      slug: "category",
-    },
-    {
-      name: "Add Category",
-      slug: "category/add",
-    },
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile view
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // For desktop view
 
-    {
-      name: "Variation",
-      slug: "variation",
-    },
-    {
-      name: "User List",
-      slug: "user",
-    },
-    {
-      name: "Media",
-      slug: "media",
-    },
-    {
-      name: "Site Setting",
-      slug: "setting",
-    },
-    {
-      name: "Banner",
-      slug: "banner",
-    },
-    {
-      name: "Notice",
-      slug: "notice",
-    },
-    {
-      name: "Site Seo",
-      slug: "seo",
-    },
-  ];
-  const isNotFound = !children;
+  // Effect to detect screen size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 640); // Tailwind's 'sm' breakpoint
+    };
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(!isSidebarOpen);
+    } else {
+      setIsSidebarCollapsed(!isSidebarCollapsed);
+    }
+  };
+
   return (
-    <>
-      <SWRConfig>
-        <SessionProvider>
-          <AdminNavBar />
-          <div className="max-w-7xl mx-auto ">
-            <div className="flex flex-row relative">
-              {/* side bar  */}
-              <div className="sm:w-64 w-36 hidden sm:block fixed shrink">
-                <div className="sm:w-64 w-36 flex flex-col min-h-screen bg-slate-950 absolute top-0 left-0 ">
-                  {adminNavbarList.length > 0 &&
-                    adminNavbarList?.map((list) => (
-                      <NavItem key={list?.slug} item={list} />
-                    ))}
-                </div>
-              </div>
-              {/* main content */}
-              <div className="flex-1 shrink overflow-y overflow-x-auto sm:ml-64  min-h-screen ">
-                <Suspense fallback="loading...........">{children}</Suspense>
-              </div>
-            </div>
+    <SWRConfig>
+      <SessionProvider>
+        {/* Pass the toggle function and state to the navbar */}
+        <AdminNavBar toggleSidebar={toggleSidebar} />
+
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-row relative">
+            {/* Pass state and setters to the sidebar */}
+            <AdminSideNav
+              isMobile={isMobile}
+              isOpen={isMobile ? isSidebarOpen : !isSidebarCollapsed}
+              setIsOpen={setIsSidebarOpen}
+              isCollapsed={isSidebarCollapsed}
+            />
+
+            {/* Main content adjusts its margin based on sidebar state */}
+            <main
+              className={cn(
+                "flex-1 min-h-screen transition-all duration-300 ease-in-out",
+                isMobile
+                  ? "w-full"
+                  : isSidebarCollapsed
+                  ? "sm:ml-20"
+                  : "sm:ml-64"
+              )}
+            >
+              <Suspense fallback={<div className="p-6">Loading...</div>}>
+                {children}
+              </Suspense>
+            </main>
           </div>
-        </SessionProvider>
-      </SWRConfig>
-    </>
+        </div>
+      </SessionProvider>
+    </SWRConfig>
   );
 }

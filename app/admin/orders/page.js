@@ -38,6 +38,8 @@ export default async function OrderListPage() {
   const { success, data, nextCursor, error } = await getAllOrder({
     limit: initialLimit,
     tableProperties,
+    time: "ALL",
+    status: "PENDING",
   });
 
   if (!success) return `Something went wrong: ${error}`;
@@ -61,7 +63,42 @@ export default async function OrderListPage() {
         ]}
         filterTagProperties={[
           { status: ["ALL", "PENDING", "SHIPPED", "DELIVERED", "CANCELED"] },
-          { time: ["last 24 hours", "last 7 days", "last 30 days", "Custom"] },
+          {
+            time: [
+              "ALL",
+              "last 24 hours",
+              "last 7 days",
+              "last 30 days",
+              "Custom",
+            ],
+          },
+        ]}
+        filterTag={[
+          {
+            label: "Status",
+            field: "status",
+            options: [
+              "ALL",
+              "PENDING",
+              "PACKED",
+              "SHIPPED",
+              "DELIVERED",
+              "CANCELED",
+            ],
+            defaultValue: "PENDING",
+          },
+          {
+            label: "Time",
+            field: "time",
+            options: [
+              "ALL",
+              "last 24 hours",
+              "last 7 days",
+              "last 30 days",
+              "Custom",
+            ],
+            defaultValue: "ALL",
+          },
         ]}
         // Pagination Properties
         initialItemsPerPage={initialLimit}
