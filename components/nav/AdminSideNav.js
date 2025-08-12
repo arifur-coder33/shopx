@@ -51,7 +51,7 @@ export default function AdminSideNav({
             href="/admin/profile"
             title={isCollapsed ? session?.user?.name || "Profile" : ""}
             className={cn(
-              "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors duration-200",
+              "flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200", // 1. Removed gap-3
               "text-slate-400 hover:bg-slate-700 hover:text-white"
             )}
             style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
@@ -61,29 +61,32 @@ export default function AdminSideNav({
             <span
               className={cn(
                 "transition-opacity",
-                isCollapsed ? "opacity-0 w-0" : "opacity-100"
+                isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3" // 2. Added conditional margin
               )}
             >
-              {session?.user?.name || "Profile"}
+              {!isCollapsed && (session?.user?.name || "Profile")}
             </span>
           </Link>
           {/* Logout Wrapper */}
           <div
             title={isCollapsed ? "Logout" : ""}
             className={cn(
-              "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors duration-200 w-full",
+              // 1. Removed gap-3 from the wrapper
+              "flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200 w-full",
               "text-slate-400 hover:bg-red-500/80 hover:text-white"
             )}
             style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
           >
-            <Logout className="p-2 rounded-md text-slate-300 hover:text-white hover:bg-slate-700 transition-colors" />
+            {/* 3. Simplified Logout component classes to avoid redundant styling */}
+            <Logout className="flex-shrink-0" />
             <span
               className={cn(
                 "transition-opacity pointer-events-none",
-                isCollapsed ? "opacity-0 w-0" : "opacity-100"
+                // 2. Added conditional margin for spacing only when expanded
+                isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3"
               )}
             >
-              Logout
+              {!isCollapsed && "Logout"}
             </span>
           </div>
         </div>
@@ -117,7 +120,7 @@ export default function AdminSideNav({
   return (
     <aside
       className={cn(
-        "hidden sm:flex flex-col h-screen bg-slate-900 dark:bg-slate-950 text-slate-200 fixed transition-all duration-300 ease-in-out",
+        "hidden sm:flex flex-col h-[calc(100vh-70px)] bg-slate-900 dark:bg-slate-950 text-slate-200 fixed transition-all duration-300 ease-in-out",
         isCollapsed ? "w-20" : "w-64"
       )}
     >

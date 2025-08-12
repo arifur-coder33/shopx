@@ -52,22 +52,23 @@ export default function ModernNavItem({
     };
   }, [isFlyoutOpen]);
 
-  const handleToggle = (e) => {
-    if (isCollapsed && isSubMenu) {
-      e.preventDefault(); // Prevent navigation for parent items in collapsed mode
-      setIsFlyoutOpen((prev) => !prev);
-    } else if (isSubMenu) {
-      setIsAccordionOpen((prev) => !prev);
-    }
-  };
-
   const href = slug === "#" ? "#" : `/admin${slug === "/" ? "" : `/${slug}`}`;
   const isActive = pathname === href;
 
-  const MainElement = slug === "#" ? "div" : Link;
+  const MainElement = (isCollapsed && isSubMenu) || slug === "#" ? "div" : Link;
 
   const handleClick = (e) => {
-    handleToggle(e);
+    const isFlyoutTrigger = isCollapsed && isSubMenu;
+
+    if (isFlyoutTrigger) {
+      setIsFlyoutOpen((prev) => !prev);
+      return;
+    }
+
+    if (isSubMenu) {
+      setIsAccordionOpen((prev) => !prev);
+    }
+
     if (slug !== "#" && onLinkClick) {
       onLinkClick();
     }
@@ -92,7 +93,10 @@ export default function ModernNavItem({
         }}
       >
         <div className="flex items-center gap-3">
-          {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+          {/* ---- FIX IS HERE ---- */}
+          {Icon && (
+            <Icon className="h-5 w-5 flex-shrink-0 pointer-events-none" />
+          )}
           <span
             className={cn(
               "transition-all duration-200",
