@@ -117,7 +117,7 @@ export default function ModernNavItem({
       </MainElement>
 
       {/* Flyout Menu (for collapsed sidebar) */}
-      {isCollapsed && isSubMenu && isFlyoutOpen && (
+      {isCollapsed && isSubMenu && (
         <div
           ref={flyoutRef}
           className="absolute left-full top-0 ml-2 z-20 w-52 rounded-lg bg-slate-800 p-2 shadow-lg"

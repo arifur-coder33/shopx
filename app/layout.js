@@ -37,7 +37,7 @@ export default function RootLayout({ children }) {
         Apply a default font to the body. 'font-sans' will be mapped to Roboto in Tailwind.
         You no longer need to add font classNames directly to the body.
       */}
-      <body className={`font-sans antialiased theam`}>
+      <body className={`font-sans antialiased theam `}>
         <NextTopLoader showSpinner={false} color="#8A2BE2" />
         <Providers>{children}</Providers>
       </body>
