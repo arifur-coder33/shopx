@@ -1,11 +1,14 @@
-// File: components/nav/ModernNavItem.jsx
-
 "use client";
 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -28,59 +31,99 @@ export default function ModernNavItem({
   const pathname = usePathname();
   const isSubMenu = subMenu && subMenu.length > 0;
 
-  const flyoutRef = useRef(null);
   const isParentActive = useMemo(
     () => isChildActive(subMenu, pathname),
     [subMenu, pathname]
   );
-
   const [isAccordionOpen, setIsAccordionOpen] = useState(isParentActive);
-  const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
-
-  // Effect to close flyout when clicking outside of it
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (flyoutRef.current && !flyoutRef.current.contains(event.target)) {
-        setIsFlyoutOpen(false);
-      }
-    }
-    if (isFlyoutOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isFlyoutOpen]);
+  const [openPopover, setOpenPopover] = useState(false);
 
   const href = slug === "#" ? "#" : `/admin${slug === "/" ? "" : `/${slug}`}`;
   const isActive = pathname === href;
 
-  const MainElement = (isCollapsed && isSubMenu) || slug === "#" ? "div" : Link;
+  const MainElement =
+    (!isCollapsed || !isSubMenu) && slug !== "#" ? Link : "div";
 
-  const handleClick = (e) => {
-    const isFlyoutTrigger = isCollapsed && isSubMenu;
-
-    if (isFlyoutTrigger) {
-      setIsFlyoutOpen((prev) => !prev);
-      return;
-    }
-
-    if (isSubMenu) {
+  const handleClick = () => {
+    if (!isCollapsed && isSubMenu) {
       setIsAccordionOpen((prev) => !prev);
     }
-
     if (slug !== "#" && onLinkClick) {
       onLinkClick();
     }
   };
 
+  // Collapsed Sidebar
+  if (isCollapsed) {
+    if (!isSubMenu) {
+      // No submenu → just icon
+      return (
+        <div
+          className={cn(
+            "flex items-center justify-center p-2 rounded-lg cursor-pointer transition-colors duration-200 group",
+            (isActive || isParentActive) &&
+              "bg-slate-700 text-white font-semibold",
+            "text-slate-300 hover:bg-slate-700"
+          )}
+        >
+          {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+        </div>
+      );
+    }
+
+    // Submenu exists → Popover hover
+    return (
+      <div
+        className="relative"
+        onMouseEnter={() => setOpenPopover(true)}
+        onMouseLeave={() => setOpenPopover(false)}
+      >
+        <Popover open={openPopover} onOpenChange={setOpenPopover}>
+          <PopoverTrigger asChild>
+            <div
+              className={cn(
+                "flex items-center justify-center p-2 rounded-lg cursor-pointer transition-colors duration-200 group",
+                (isActive || isParentActive) &&
+                  "bg-slate-700 text-white font-semibold",
+                "text-slate-300 hover:bg-slate-700"
+              )}
+            >
+              {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+            </div>
+          </PopoverTrigger>
+
+          <PopoverContent
+            side="right"
+            align="start"
+            className="w-52 p-2 bg-slate-800 text-white shadow-lg"
+          >
+            <div className="mb-2 text-sm font-semibold">{name}</div>
+            <ul className="flex flex-col gap-1">
+              {subMenu.map((subItem) => (
+                <li key={subItem.slug}>
+                  <Link
+                    href={`/admin/${subItem.slug}`}
+                    onClick={onLinkClick}
+                    className="flex w-full items-center gap-2 rounded-md p-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white"
+                  >
+                    {subItem.icon && <subItem.icon className="h-4 w-4" />}
+                    <span>{subItem.name}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
+
+  // Expanded Sidebar
   return (
     <div className="relative">
-      {/* The main clickable navigation item */}
       <MainElement
         href={href}
         onClick={handleClick}
-        title={isCollapsed ? name : ""}
         className={cn(
           "flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors duration-200 group",
           "text-slate-300 hover:bg-slate-700",
@@ -88,25 +131,14 @@ export default function ModernNavItem({
             "bg-slate-700 text-white font-semibold"
         )}
         style={{
-          paddingLeft: isCollapsed ? "0.5rem" : `${0.5 + level * 0.75}rem`,
-          justifyContent: isCollapsed ? "center" : "space-between",
+          paddingLeft: `${0.5 + level * 0.75}rem`,
         }}
       >
         <div className="flex items-center gap-3">
-          {/* ---- FIX IS HERE ---- */}
-          {Icon && (
-            <Icon className="h-5 w-5 flex-shrink-0 pointer-events-none" />
-          )}
-          <span
-            className={cn(
-              "transition-all duration-200",
-              isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-            )}
-          >
-            {name}
-          </span>
+          {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+          <span>{name}</span>
         </div>
-        {isSubMenu && !isCollapsed && (
+        {isSubMenu && (
           <ChevronDown
             className={cn(
               "h-5 w-5 transform transition-transform duration-300",
@@ -116,37 +148,8 @@ export default function ModernNavItem({
         )}
       </MainElement>
 
-      {/* Flyout Menu (for collapsed sidebar) */}
-      {isCollapsed && isSubMenu && (
-        <div
-          ref={flyoutRef}
-          className="absolute left-full top-0 ml-2 z-20 w-52 rounded-lg bg-slate-800 p-2 shadow-lg"
-        >
-          <div className="mb-2 px-2 text-sm font-semibold text-white">
-            {name}
-          </div>
-          <ul className="flex flex-col gap-1">
-            {subMenu.map((subItem) => (
-              <li key={subItem.slug}>
-                <Link
-                  href={`/admin/${subItem.slug}`}
-                  onClick={() => {
-                    setIsFlyoutOpen(false);
-                    if (onLinkClick) onLinkClick();
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md p-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white"
-                >
-                  {subItem.icon && <subItem.icon className="h-4 w-4" />}
-                  <span>{subItem.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Accordion SubMenu (for expanded sidebar) */}
-      {!isCollapsed && isSubMenu && (
+      {/* Accordion Submenu */}
+      {isSubMenu && (
         <div
           className={cn(
             "overflow-hidden transition-all duration-300 ease-in-out grid",
