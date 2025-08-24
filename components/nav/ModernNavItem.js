@@ -100,16 +100,7 @@ export default function ModernNavItem({
             <div className="mb-2 text-sm font-semibold">{name}</div>
             <ul className="flex flex-col gap-1">
               {subMenu.map((subItem) => (
-                <li key={subItem.slug}>
-                  <Link
-                    href={`/admin/${subItem.slug}`}
-                    onClick={onLinkClick}
-                    className="flex w-full items-center gap-2 rounded-md p-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white"
-                  >
-                    {subItem.icon && <subItem.icon className="h-4 w-4" />}
-                    <span>{subItem.name}</span>
-                  </Link>
-                </li>
+                <ModernNavItem item={subItem} key={subItem?.name} />
               ))}
             </ul>
           </PopoverContent>

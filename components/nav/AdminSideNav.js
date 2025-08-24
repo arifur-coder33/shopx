@@ -2,7 +2,7 @@
 
 "use client";
 
-import { adminMenuItems } from "@/lib/adminMenuItems"; // You must have this file
+import { adminMenuItems } from "@/lib/adminMenuItems";
 import { User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
