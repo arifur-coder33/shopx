@@ -61,19 +61,19 @@ export default async function OrderListPage() {
           { label: "SKU", field: "sku" },
           { label: "Phone Number", field: "phoneNumber" },
         ]}
+        // filterTagProperties={[
+        //   { status: ["ALL", "PENDING", "SHIPPED", "DELIVERED", "CANCELED"] },
+        //   {
+        //     time: [
+        //       "ALL",
+        //       "last 24 hours",
+        //       "last 7 days",
+        //       "last 30 days",
+        //       "Custom",
+        //     ],
+        //   },
+        // ]}
         filterTagProperties={[
-          { status: ["ALL", "PENDING", "SHIPPED", "DELIVERED", "CANCELED"] },
-          {
-            time: [
-              "ALL",
-              "last 24 hours",
-              "last 7 days",
-              "last 30 days",
-              "Custom",
-            ],
-          },
-        ]}
-        filterTag={[
           {
             label: "Status",
             field: "status",

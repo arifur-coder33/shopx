@@ -32,7 +32,6 @@ const buildRequestParams = (params) => {
   }
 
   // Clean up any "ALL" filters that are not meant for the API
-  // This is a safeguard for the new handleFilterChange logic
   Object.keys(newParams).forEach((key) => {
     if (newParams[key] === "ALL") {
       delete newParams[key];
@@ -65,6 +64,21 @@ const buildRequestParams = (params) => {
   return newParams;
 };
 
+// --- NEW HELPER FUNCTION ---
+// Initializes the filter state from the default values in filterTagProperties
+const initializeFilters = (filters) => {
+  const initial = {};
+  if (filters && Array.isArray(filters)) {
+    filters.forEach((filter) => {
+      // Set the filter only if a defaultValue is provided and it's not "ALL"
+      if (filter.defaultValue && filter.defaultValue !== "ALL") {
+        initial[filter.field] = filter.defaultValue;
+      }
+    });
+  }
+  return initial;
+};
+
 export default function DynamicTableClient({
   initialData = [],
   initialNextCursor,
@@ -95,7 +109,12 @@ export default function DynamicTableClient({
   const [searchField, setSearchField] = useState(
     filterSearchProperties[0]?.field || ""
   );
-  const [activeFilters, setActiveFilters] = useState({});
+
+  // --- MODIFIED STATE INITIALIZATION ---
+  const [activeFilters, setActiveFilters] = useState(() =>
+    initializeFilters(filterTagProperties)
+  );
+
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [sortConfig, setSortConfig] = useState({
     field: "createdAt",
@@ -145,7 +164,11 @@ export default function DynamicTableClient({
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      getDataCount({}).then((res) => {
+      // Fetch initial total count based on default filters
+      const initialCountParams = buildRequestParams(
+        initializeFilters(filterTagProperties)
+      );
+      getDataCount(initialCountParams).then((res) => {
         if (res.success) setTotalCount(res.count);
       });
       return;
@@ -164,7 +187,7 @@ export default function DynamicTableClient({
     });
 
     fetchData(null, baseFetchConfig);
-  }, [baseFetchConfig, sortConfig, itemsPerPage, getDataCount, fetchData]);
+  }, [baseFetchConfig, sortConfig, itemsPerPage, getDataCount, fetchData]); // filterTagProperties removed from deps
 
   const handleNext = () => {
     if (nextCursor) {
@@ -186,17 +209,12 @@ export default function DynamicTableClient({
     }
   };
 
-  // --- MODIFIED LOGIC HERE ---
   const handleFilterChange = (key, value) => {
     setActiveFilters((prev) => {
       const newFilters = { ...prev };
-
-      // The `TableToolbar` component's onClick logic is designed to send "ALL"
-      // when a filter should be cleared. We simplify this handler to respect that contract.
-      // This is more robust and avoids complex checks like JSON.stringify.
+      // If the new value is "ALL", remove the filter key entirely.
+      // This makes the logic cleaner elsewhere (e.g., checking !activeFilters[key]).
       if (value === "ALL") {
-        // By deleting the key, activeFilters[key] becomes `undefined`.
-        // The `isActive` prop in TableToolbar will then correctly show "All" as active.
         delete newFilters[key];
       } else {
         newFilters[key] = value;

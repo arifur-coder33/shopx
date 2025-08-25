@@ -21,7 +21,7 @@ export default function TableToolbar({
     "Search";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 sticky top-16 z-10 bg-white dark:bg-gray-900 py-2 ">
       {/* Search Input Section */}
       <div className="flex items-center w-full md:w-auto">
         <div className="flex rounded-md shadow-sm w-full md:w-2/5 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900">
@@ -51,44 +51,48 @@ export default function TableToolbar({
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="space-y-3">
-        {filterTagProperties.map((filterGroup) =>
-          Object.entries(filterGroup).map(([key, options]) => (
-            <div key={key}>
-              {key === "time" ? (
-                <TimeFilter
-                  activeTimeFilter={activeFilters.time}
-                  onTimeChange={(value) => onFilterChange("time", value)}
-                />
-              ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize mr-2">{`${key}:`}</span>
-                  {options.map((option) => (
-                    <FilterTagButton
-                      key={option}
-                      label={option}
-                      // --- MODIFIED LOGIC HERE ---
-                      // A button is active if it's the current filter.
-                      // OR if the button is "All" and no filter is set for this key (value is falsy or "ALL").
-                      isActive={
-                        activeFilters[key] === option ||
-                        (option === "All" &&
-                          (!activeFilters[key] || activeFilters[key] === "ALL"))
-                      }
-                      onClick={() =>
-                        onFilterChange(
-                          key,
-                          activeFilters[key] === option ? "ALL" : option
-                        )
-                      }
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        )}
+      {/* --- MODIFIED FILTERS SECTION --- */}
+      <div className="space-y-3 ">
+        {filterTagProperties.map((filterGroup) => (
+          <div key={filterGroup.field}>
+            {filterGroup.field === "time" ? (
+              <TimeFilter
+                activeTimeFilter={activeFilters[filterGroup.field]}
+                onTimeChange={(value) =>
+                  onFilterChange(filterGroup.field, value)
+                }
+                options={filterGroup.options}
+              />
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap ">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 mr-2">
+                  {`${filterGroup.label}:`}
+                </span>
+                {filterGroup.options.map((option) => (
+                  <FilterTagButton
+                    key={option}
+                    label={option}
+                    // A button is active if it's the current filter,
+                    // OR if the button is "ALL" and no filter is set for this key.
+                    isActive={
+                      activeFilters[filterGroup.field] === option ||
+                      (option === "ALL" && !activeFilters[filterGroup.field])
+                    }
+                    onClick={() =>
+                      onFilterChange(
+                        filterGroup.field,
+                        // If the clicked button is already active, set filter to "ALL" to clear it
+                        activeFilters[filterGroup.field] === option
+                          ? "ALL"
+                          : option
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
