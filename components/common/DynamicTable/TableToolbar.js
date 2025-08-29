@@ -13,8 +13,8 @@ export default function TableToolbar({
   setSearchField,
   activeFilters,
   onFilterChange,
-  filterSearchProperties,
-  filterTagProperties,
+  filterSearchProperties = [],
+  filterTagProperties = [],
 }) {
   const selectedSearchLabel =
     filterSearchProperties.find((p) => p.field === searchField)?.label ||
@@ -53,8 +53,8 @@ export default function TableToolbar({
 
       {/* --- MODIFIED FILTERS SECTION --- */}
       <div className="space-y-3 ">
-        {filterTagProperties.map((filterGroup) => (
-          <div key={filterGroup.field}>
+        {filterTagProperties?.map((filterGroup, i) => (
+          <div key={filterGroup?.field || i}>
             {filterGroup.field === "time" ? (
               <TimeFilter
                 activeTimeFilter={activeFilters[filterGroup.field]}
@@ -68,7 +68,7 @@ export default function TableToolbar({
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 mr-2">
                   {`${filterGroup.label}:`}
                 </span>
-                {filterGroup.options.map((option) => (
+                {filterGroup?.options?.map((option) => (
                   <FilterTagButton
                     key={option}
                     label={option}

@@ -95,11 +95,13 @@ export default function TableBody({
   tableProperties,
   expandedRows,
   setExpandedRows,
-  actions,
+  updateAction,
+  deleteAction,
+  actionType,
+  componentKey,
   sortConfig,
   onSort,
 }) {
-  const { updateAction, deleteAction, actionType, componentKey } = actions;
   const expandColumn = tableProperties.find((p) => p.type === "expand");
 
   const toggleRow = (id) => {

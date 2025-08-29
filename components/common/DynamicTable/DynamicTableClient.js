@@ -93,7 +93,7 @@ export default function DynamicTableClient({
   actionType,
   componentKey,
   viewPageURL,
-  getDataCount,
+  getDataCount = () => Promise.resolve(null),
 }) {
   const [data, setData] = useState(initialData);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
@@ -168,6 +168,7 @@ export default function DynamicTableClient({
       const initialCountParams = buildRequestParams(
         initializeFilters(filterTagProperties)
       );
+
       getDataCount(initialCountParams).then((res) => {
         if (res.success) setTotalCount(res.count);
       });

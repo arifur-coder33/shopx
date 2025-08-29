@@ -263,6 +263,7 @@ model banner{
 // Enumeration for order status
 enum OrderStatus {
   PENDING
+  PACKED
   PROCESSING
   SHIPPED
   DELIVERED

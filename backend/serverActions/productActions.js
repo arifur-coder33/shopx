@@ -567,6 +567,40 @@ export const getProducts = async () => {
   }
 };
 
+export async function getProductCount(params) {
+  try {
+    const { orderNo, sku, phoneNumber, status, startDate, endDate } = params;
+    console.log("params order", params);
+    console.log("stardate:", startDate);
+    const whereClause = {};
+    if (orderNo)
+      whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
+    if (status) whereClause.status = status;
+    if (startDate && endDate) {
+      whereClause.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    }
+    if (sku) {
+      whereClause.orderItems = {
+        some: { sku: { contains: sku, mode: "insensitive" } },
+      };
+    }
+    if (phoneNumber) {
+      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
+    }
+
+    const count = await prisma.product.count({
+      where: whereClause,
+    });
+
+    return { success: true, count };
+  } catch (error) {
+    console.error("Failed to get order count:", error);
+    return { success: false, error: error.message };
+  }
+}
 export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
   try {
     const offset = (page - 1) * limit;
