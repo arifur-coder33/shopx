@@ -21,10 +21,10 @@ export default function TableToolbar({
     "Search";
 
   return (
-    <div className="space-y-4 sticky top-16 z-10 bg-white dark:bg-gray-900 py-2 ">
+    <div className="sticky top-16 z-10 bg-white dark:bg-gray-900 py-2 flex md:flex-row flex-col gap-2 text-[10px] ">
       {/* Search Input Section */}
       <div className="flex items-center w-full md:w-auto">
-        <div className="flex rounded-md shadow-sm w-full md:w-2/5 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900">
+        <div className="flex rounded-md shadow-sm w-full  focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900">
           <select
             value={searchField}
             onChange={(e) => setSearchField(e.target.value)}

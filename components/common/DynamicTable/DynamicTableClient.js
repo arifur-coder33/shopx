@@ -233,7 +233,7 @@ export default function DynamicTableClient({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg p-4 space-y-4">
+    <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg p-4 space-y-4 ">
       <TableToolbar
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}

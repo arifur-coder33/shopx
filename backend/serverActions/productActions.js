@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getMinMax } from "@/utils/getMinMax";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
+import { getDataSelectFields } from "../utils/getDataSelectFields";
 
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
@@ -567,28 +568,126 @@ export const getProducts = async () => {
   }
 };
 
+export async function getAllProduct(params) {
+  try {
+    const {
+      limit,
+      cursor,
+      tableProperties,
+      sortField = "createdAt",
+      sortDirection = "desc",
+      title,
+      productCode, // New filter for productCode
+      status,
+      sku, // For filtering by variation SKU
+    } = params;
+    console.log("params:", params);
+
+    const whereClause = {};
+
+    if (title) whereClause.title = { contains: title, mode: "insensitive" };
+    if (productCode)
+      whereClause.productCode = { contains: productCode, mode: "insensitive" };
+    if (status && status !== "ALL") whereClause.status = status; // Handle "ALL" explicitly
+
+    // Filtering by SKU within variations
+    if (sku) {
+      whereClause.variations = {
+        some: {
+          sku: { contains: sku, mode: "insensitive" },
+        },
+      };
+    }
+
+    const selectFields = getDataSelectFields(tableProperties);
+
+    const requestedLimit = Number(limit);
+    const products = await prisma.product.findMany({
+      // *** FIX: Querying Product model ***
+      take: requestedLimit + 1,
+      where: whereClause,
+      select: {
+        ...selectFields,
+        // Include variations to calculate minPrice if it's not already in selectFields
+        variations: {
+          select: {
+            discountPrice: true,
+            regularPrice: true,
+          },
+        },
+        // Include thumbnail relation for the main product image
+        thumbnail: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        // Include category relation to display category name
+        category: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
+      orderBy: { [sortField]: sortDirection },
+    });
+
+    let nextCursor = null;
+    if (products.length > requestedLimit) {
+      products.pop();
+      nextCursor = products[products.length - 1].id;
+    }
+
+    // Post-processing to add derived fields like minPrice
+    const processedProducts = products.map((product) => {
+      let minPrice = null;
+      if (product.variations && product.variations.length > 0) {
+        // Find the minimum discountPrice, otherwise regularPrice
+        minPrice = product.variations.reduce((min, variation) => {
+          const price =
+            variation.discountPrice !== null
+              ? variation.discountPrice
+              : variation.regularPrice;
+          return min === null || price < min ? price : min;
+        }, null);
+      }
+      // Remove variations from the final product object if not needed for the table directly
+      const { variations, ...rest } = product;
+      return {
+        ...rest,
+        minPrice: minPrice !== null ? minPrice.toFixed(2) : "N/A", // Format price
+      };
+    });
+
+    return {
+      success: true,
+      data: processedProducts,
+      nextCursor: nextCursor,
+    };
+  } catch (error) {
+    console.error("Failed to get products:", error);
+    return { success: false, error: error.message };
+  }
+}
 export async function getProductCount(params) {
   try {
-    const { orderNo, sku, phoneNumber, status, startDate, endDate } = params;
+    const { orderNo, sku, phoneNumber, status, startDate, endDate, title } =
+      params;
     console.log("params order", params);
     console.log("stardate:", startDate);
     const whereClause = {};
-    if (orderNo)
-      whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
+
     if (status) whereClause.status = status;
-    if (startDate && endDate) {
-      whereClause.createdAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
-    }
+
     if (sku) {
-      whereClause.orderItems = {
+      whereClause.variations = {
         some: { sku: { contains: sku, mode: "insensitive" } },
       };
     }
-    if (phoneNumber) {
-      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
+    if (title) {
+      whereClause.title = { contains: title, mode: "insensitive" };
     }
 
     const count = await prisma.product.count({

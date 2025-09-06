@@ -4,6 +4,7 @@ import Imagecustom from "@/components/images/ImageCustom";
 import CheckBox from "@/components/input/CheckBox";
 import SearchableDropdown from "@/components/input/SearchableDropdown";
 import LazyModalButton from "@/components/modal/LazyModalButton";
+import getNestedValue from "@/utils/getNestedValue";
 import {
   ArrowDown,
   ArrowUp,
@@ -17,7 +18,6 @@ import {
 import Link from "next/link";
 import React from "react";
 import DeleteItem from "../DeleteItem";
-
 // --- COMPONENT IMPORTS (Ensure paths are correct) ---
 const SortIcon = ({ direction }) => {
   if (direction === "asc")
@@ -35,8 +35,8 @@ const SortIcon = ({ direction }) => {
 const renderDynamicField = (item, column) => {
   const { field, type, alt, dropDownLists, action, objectPropertyName } =
     column;
-  const value = item?.[field];
-
+  // const value = item?.[field];
+  const value = getNestedValue(item, field);
   switch (type) {
     case "image":
       const imageUrl = value?.name || item?.mainImage || value;
@@ -112,9 +112,9 @@ export default function TableBody({
   };
 
   return (
-    <div className="relative overflow-x-auto border-t border-gray-200 dark:border-gray-700">
-      <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+    <div className=" overflow-x-auto border-t border-gray-200 dark:border-gray-700 ">
+      <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400  ">
+        <thead className="text-xs text-gray-700 uppercase bg-gray-300 dark:bg-gray-700 dark:text-gray-400 0   z-10">
           <tr>
             {tableProperties.map((c) => (
               <th key={c.field} scope="col" className="px-6 py-3">

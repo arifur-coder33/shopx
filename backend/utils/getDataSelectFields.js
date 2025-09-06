@@ -32,7 +32,21 @@ export const getDataSelectFields = (tableProperties = []) => {
   const fields = { id: true };
 
   for (const prop of tableProperties) {
-    if (prop.field && prop.type !== "expand") {
+    // Handle nested fields like "thumbnail.url" or "category.name"
+    if (prop.field && prop.field.includes(".")) {
+      const path = prop.field.split(".");
+      let current = fields;
+      for (let i = 0; i < path.length; i++) {
+        const key = path[i];
+        if (i === path.length - 1) {
+          current[key] = true; // Mark the final field for selection
+        } else {
+          current[key] = current[key] || { select: {} };
+          current = current[key].select;
+        }
+      }
+    } else if (prop.field && prop.type !== "expand") {
+      // Direct fields
       fields[prop.field] = true;
     }
 

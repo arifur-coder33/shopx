@@ -114,6 +114,7 @@ model Product {
   seoDescription String?
   isFeatured     Boolean?    @default(false)     // Indicates if the product is featured
   isActive       Boolean?    @default(true)      // Marks if the product is active
+  status         ProductStatus? @default(ACTIVE) // Product status enumeration
   hasVariations    Boolean? @default(false)           
       // Many-to-Many Relationship using Join Table 
   variations      ProductVariation[] 
@@ -269,6 +270,13 @@ enum OrderStatus {
   DELIVERED
   CANCELED
   RETURNED
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+  DELETED
 }
 
 // Enumeration for user roles
