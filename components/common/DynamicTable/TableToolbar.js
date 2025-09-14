@@ -21,7 +21,7 @@ export default function TableToolbar({
     "Search";
 
   return (
-    <div className="sticky top-16 z-10 bg-white dark:bg-gray-900 py-2 flex md:flex-row flex-col gap-2 text-[10px] ">
+    <div className=" z-10 bg-white dark:bg-gray-900 py-2 flex md:flex-row flex-col gap-2 text-[10px] ">
       {/* Search Input Section */}
       <div className="flex items-center w-full md:w-auto">
         <div className="flex rounded-md shadow-sm w-full  focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900">

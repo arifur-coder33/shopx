@@ -13,9 +13,23 @@ export default async function ProductListPage() {
     },
     { label: "Created At", field: "createdAt", type: "date", sort: true },
     { label: "Name", field: "title", type: "text", sort: true },
+
     {
       label: "Category",
       field: "category.name",
+      type: "text",
+      sort: false, // Assuming category name is not directly sortable on product table
+    },
+
+    {
+      label: "price",
+      field: "price",
+      type: "text",
+      sort: false, // Assuming category name is not directly sortable on product table
+    },
+    {
+      label: "stock",
+      field: "stock",
       type: "text",
       sort: false, // Assuming category name is not directly sortable on product table
     },

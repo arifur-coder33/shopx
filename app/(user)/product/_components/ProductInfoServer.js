@@ -2,61 +2,8 @@
 
 // NO "use client". This is a Server Component.
 import KalapanaFont from "@/components/KalapanaFont";
+import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import { getMinMax } from "@/utils/getMinMax";
-
-function calculateInitialDisplayPrice(product) {
-  const { variations } = product;
-  let price;
-  let originalPrice = null;
-
-  if (variations[0]?.combinations?.length > 0) {
-    const activeVariations = variations.filter((v) => v.stock > 0);
-    const regularPriceRange = getMinMax(
-      activeVariations.map((v) => v.regularPrice)
-    );
-    const discountPriceRange = getMinMax(
-      activeVariations.map((v) => v.discountPrice)
-    );
-
-    const hasRangeDiscount =
-      discountPriceRange.min < regularPriceRange.min ||
-      discountPriceRange.max < regularPriceRange.max;
-
-    if (regularPriceRange.min === 0 && regularPriceRange.max === 0) {
-      price = "Currently Unavailable";
-    } else if (hasRangeDiscount) {
-      price =
-        discountPriceRange.min === discountPriceRange.max
-          ? `${discountPriceRange.min}`
-          : `${discountPriceRange.min} - ${discountPriceRange.max}`;
-      originalPrice =
-        regularPriceRange.min === regularPriceRange.max
-          ? `${regularPriceRange.min}`
-          : `${regularPriceRange.min} - ${regularPriceRange.max}`;
-    } else {
-      price =
-        regularPriceRange.min === regularPriceRange.max
-          ? `${regularPriceRange.min}`
-          : `${regularPriceRange.min} - ${regularPriceRange.max}`;
-    }
-  } else {
-    const hasDiscount =
-      typeof variations[0].discountPrice === "number" &&
-      variations[0].discountPrice > 0 &&
-      variations[0].discountPrice < variations[0].regularPrice;
-    price = hasDiscount ? variations[0].discountPrice : variations[0].regularPrice;
-    originalPrice = hasDiscount ? variations[0].regularPrice : null;
-  }
-
-  return {
-    priceToDisplay: typeof price === "number" ? price.toLocaleString() : price,
-    originalPriceToDisplay:
-      typeof originalPrice === "number"
-        ? originalPrice.toLocaleString()
-        : originalPrice,
-  };
-}
 
 /**
  * Renders a non-interactive, static list of variation options.
@@ -82,7 +29,6 @@ function StaticVariationSelector({ variations }) {
 
   return (
     <div className="space-y-6">
-     
       <div className="space-y-4">
         {Object.entries(options).map(([name, values]) => (
           <div
@@ -98,7 +44,7 @@ function StaticVariationSelector({ variations }) {
                   key={value}
                   className="relative flex items-center justify-center rounded-md border py-2 px-3 text-sm font-medium bg-white text-gray-900 ring-1 ring-inset ring-gray-300"
                 >
-                  <span>{value}</span> 
+                  <span>{value}</span>
                 </div>
               ))}
             </div>
@@ -121,7 +67,7 @@ function StaticVariationSelector({ variations }) {
 
 export default function ProductInfoServer({ product }) {
   const { priceToDisplay, originalPriceToDisplay } =
-    calculateInitialDisplayPrice(product);
+    calculateInitialDisplayPrice(product.variations);
 
   return (
     <>

@@ -1,11 +1,12 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import arraySum from "@/utils/arraySum";
+import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
-
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
     return [];
@@ -579,27 +580,81 @@ export async function getAllProduct(params) {
       title,
       productCode, // New filter for productCode
       status,
+      stock: stockStatus,
       sku, // For filtering by variation SKU
     } = params;
-    console.log("params:", params);
 
     const whereClause = {};
 
-    if (title) whereClause.title = { contains: title, mode: "insensitive" };
+    if (title) {
+      // Normalize the search query for better matching
+      const normalizedSearch = title
+        .toLowerCase()
+        .replace(/[^\w\s]/g, "") // Remove special characters
+        .replace(/\s+/g, " ") // Collapse multiple spaces
+        .trim();
+
+      // Split into individual search terms
+      const searchTerms = normalizedSearch
+        .split(" ")
+        .filter((term) => term.length > 0);
+
+      if (searchTerms.length > 0) {
+        // Create regex patterns for each term for flexible matching
+        const searchConditions = searchTerms.map((term) => ({
+          OR: [
+            {
+              title: {
+                contains: term,
+                mode: "insensitive",
+              },
+            },
+            {
+              slug: {
+                contains: term,
+                mode: "insensitive",
+              },
+            },
+            // Additional fuzzy matching with regex for better results
+          ],
+        }));
+
+        // Use AND to ensure all search terms are matched
+        whereClause.AND = searchConditions;
+      }
+    }
+
     if (productCode)
       whereClause.productCode = { contains: productCode, mode: "insensitive" };
     if (status && status !== "ALL") whereClause.status = status; // Handle "ALL" explicitly
 
     // Filtering by SKU within variations
     if (sku) {
-      whereClause.variations = {
-        some: {
-          sku: { contains: sku, mode: "insensitive" },
-        },
-      };
+      whereClause.variations = {};
     }
 
+    if (stockStatus) {
+      if (!whereClause.variations) {
+        whereClause.variations = {};
+      }
+
+      if (stockStatus === "IN STOCK") {
+        whereClause.variations.some = {
+          stock: { gt: 0 }, // At least one variation has stock > 0
+        };
+      } else if (stockStatus == "OUT STOCK") {
+        whereClause.variations.none = {
+          stock: { gt: 0 },
+        };
+      } else if (stockStatus == "LESS STOCK") {
+        whereClause.variations.some = {
+          stock: { gt: 0, lte: 5 }, // Example: at least one variation has 1-5 stock
+        };
+      }
+    }
     const selectFields = getDataSelectFields(tableProperties);
+
+    const { price, stock, ...restSelectFields } = selectFields;
 
     const requestedLimit = Number(limit);
     const products = await prisma.product.findMany({
@@ -607,27 +662,24 @@ export async function getAllProduct(params) {
       take: requestedLimit + 1,
       where: whereClause,
       select: {
-        ...selectFields,
+        ...restSelectFields,
         // Include variations to calculate minPrice if it's not already in selectFields
         variations: {
           select: {
             discountPrice: true,
             regularPrice: true,
+            stock: true,
+            combinations: {
+              select: {
+                variationName: { select: { id: true, name: true } },
+                variationValue: { select: { id: true, value: true } },
+              },
+            },
           },
         },
         // Include thumbnail relation for the main product image
-        thumbnail: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+
         // Include category relation to display category name
-        category: {
-          select: {
-            name: true,
-          },
-        },
       },
       cursor: cursor ? { id: cursor } : undefined,
       skip: cursor ? 1 : 0,
@@ -640,24 +692,18 @@ export async function getAllProduct(params) {
       nextCursor = products[products.length - 1].id;
     }
 
-    // Post-processing to add derived fields like minPrice
     const processedProducts = products.map((product) => {
-      let minPrice = null;
-      if (product.variations && product.variations.length > 0) {
-        // Find the minimum discountPrice, otherwise regularPrice
-        minPrice = product.variations.reduce((min, variation) => {
-          const price =
-            variation.discountPrice !== null
-              ? variation.discountPrice
-              : variation.regularPrice;
-          return min === null || price < min ? price : min;
-        }, null);
-      }
-      // Remove variations from the final product object if not needed for the table directly
+      const { priceToDisplay, originalPriceToDisplay } =
+        calculateInitialDisplayPrice(product.variations);
+      const stock = arraySum(
+        product.variations.map((v) => Number(v.stock) || 0)
+      );
       const { variations, ...rest } = product;
       return {
         ...rest,
-        minPrice: minPrice !== null ? minPrice.toFixed(2) : "N/A", // Format price
+
+        price: priceToDisplay || "N/A", // Format price
+        stock: stock, // Total stock from variations
       };
     });
 
@@ -673,10 +719,17 @@ export async function getAllProduct(params) {
 }
 export async function getProductCount(params) {
   try {
-    const { orderNo, sku, phoneNumber, status, startDate, endDate, title } =
-      params;
-    console.log("params order", params);
-    console.log("stardate:", startDate);
+    const {
+      orderNo,
+      sku,
+      phoneNumber,
+      status,
+      startDate,
+      endDate,
+      title,
+      stock: stockStatus,
+    } = params;
+
     const whereClause = {};
 
     if (status) whereClause.status = status;
@@ -687,7 +740,78 @@ export async function getProductCount(params) {
       };
     }
     if (title) {
-      whereClause.title = { contains: title, mode: "insensitive" };
+      // Step 1: Normalize the search input
+      // This converts "I phone" or "I-Phone" into "iphone" for consistent matching.
+      const normalizedSearchInput = title.replace(/[\s-]/g, "").toLowerCase();
+
+      // Step 2: Split the original title by spaces and hyphens to get individual words.
+      // This is for matching "i" and "phone" separately if the full normalized string doesn't match.
+      const individualTerms = title
+        .toLowerCase()
+        .split(/[\s-]+/)
+        .filter((term) => term.length > 0);
+
+      // Construct an OR clause to find products matching any of these conditions:
+      const titleOrConditions = [];
+
+      // Option A: Match the product title against the normalized search input.
+      // This will catch "iPhone" when searching "i phone", "i-phone", or "iphone".
+      titleOrConditions.push({
+        title: {
+          contains: normalizedSearchInput,
+          mode: "insensitive",
+        },
+      });
+
+      // Option B: If the search input had multiple individual terms,
+      // create an AND condition for each term to be present in the title.
+      // This is useful for "Apple watch" matching a title like "Apple Series 7 Watch".
+      if (individualTerms.length > 1) {
+        titleOrConditions.push({
+          AND: individualTerms.map((term) => ({
+            title: {
+              contains: term,
+              mode: "insensitive",
+            },
+          })),
+        });
+      } else if (
+        individualTerms.length === 1 &&
+        individualTerms[0] !== normalizedSearchInput
+      ) {
+        // If there's only one term and it's different from the normalized input
+        // (e.g., searching "i" for "iPhone"), explicitly add a contains for the single term.
+        // This handles cases where the user might just type a part of a word.
+        titleOrConditions.push({
+          title: {
+            contains: individualTerms[0],
+            mode: "insensitive",
+          },
+        });
+      }
+
+      // Assign the built OR conditions to the whereClause.title, or if it needs to be top-level
+      whereClause.OR = titleOrConditions;
+    }
+
+    if (stockStatus) {
+      if (!whereClause.variations) {
+        whereClause.variations = {};
+      }
+
+      if (stockStatus === "IN STOCK") {
+        whereClause.variations.some = {
+          stock: { gt: 0 }, // At least one variation has stock > 0
+        };
+      } else if (stockStatus == "OUT STOCK") {
+        whereClause.variations.none = {
+          stock: { gt: 0 },
+        };
+      } else if (stockStatus == "LESS STOCK") {
+        whereClause.variations.some = {
+          stock: { gt: 0, lte: 5 }, // Example: at least one variation has 1-5 stock
+        };
+      }
     }
 
     const count = await prisma.product.count({
