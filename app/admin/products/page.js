@@ -1,6 +1,9 @@
 import {
+  deleteProductById,
   getAllProduct,
+  getProductById,
   getProductCount,
+  updateProductAction,
 } from "@/backend/serverActions/productActions";
 import DynamicTable from "@/components/common/DynamicTable/";
 export default async function ProductListPage() {
@@ -49,9 +52,6 @@ export default async function ProductListPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-        Products
-      </h1>
       <DynamicTable
         // Data and Actions
         initialData={data}
@@ -80,12 +80,23 @@ export default async function ProductListPage() {
         // Pagination Properties
         initialItemsPerPage={initialLimit}
         itemsPerPageOptions={[2, 5, 10, 25, 50, 100]} // Dropdown options
+        tableName={"Product List"}
         // Actions and Links
         actionType={"edit"}
         componentKey={"ProductForm"} // Example key for a modal form
+        itemAddFormKey={"ProductForm"} // Key for the add item form
+        itemUpdateFormKey={"ProductForm"} // Key for the update item form
         quickViewComponentKey={"ProductQuickView"} // Assuming you'll create one
         viewPageURL={"/admin/product/view/"}
         getDataCount={getProductCount} // Ensure getProductCount is updated too
+        actions={{
+          getItemDataAction: getProductById,
+          itemUpdateFormKey: "ProductForm",
+          updateAction: updateProductAction,
+          deleteAction: deleteProductById,
+          actionType: "edit",
+          viewPageURL: "/admin/product/view/",
+        }}
       />
     </div>
   );

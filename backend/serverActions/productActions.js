@@ -510,9 +510,30 @@ async function getProductById(id) {
     const data = await prisma.product.findUnique({
       where: { id: id },
       include: {
-        category: {
-          select: {
-            name: true, // Include only the category name
+        category: true,
+        thumbnail: {
+          select: { id: true, name: true },
+        },
+        gallery: {
+          include: {
+            media: { select: { id: true, name: true } },
+          },
+        },
+        // [UPDATED] New include structure for variations
+        variations: {
+          include: {
+            thumbnail: { select: { id: true, name: true } },
+            // Include the combinations for each variation
+            combinations: {
+              orderBy: {
+                // Optional: ensure combination order is consistent
+                createdAt: "asc",
+              },
+              include: {
+                variationName: { select: { id: true, name: true } },
+                variationValue: { select: { id: true, value: true } },
+              },
+            },
           },
         },
       },

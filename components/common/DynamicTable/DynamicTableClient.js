@@ -2,6 +2,7 @@
 
 "use client";
 
+import LazyModalButton from "@/components/modal/LazyModalButton";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Inbox } from "lucide-react";
 import {
@@ -81,6 +82,7 @@ const initializeFilters = (filters) => {
 
 export default function DynamicTableClient({
   initialData = [],
+  getItemDataAction,
   initialNextCursor,
   tableProperties = [],
   filterSearchProperties = [],
@@ -91,9 +93,13 @@ export default function DynamicTableClient({
   updateAction,
   deleteAction,
   actionType,
+  tableName,
   componentKey,
   viewPageURL,
+  itemAddFormKey,
+  itemUpdateFormKey,
   getDataCount = () => Promise.resolve(null),
+  actions = {},
 }) {
   const [data, setData] = useState(initialData);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
@@ -234,6 +240,14 @@ export default function DynamicTableClient({
 
   return (
     <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg p-4 space-y-4 ">
+      {itemAddFormKey && (
+        <div className="flex items-center  gap-2">
+          <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
+            {tableName}
+          </h1>
+          <LazyModalButton componentKey={itemAddFormKey} actionType={"add"} />{" "}
+        </div>
+      )}
       <TableToolbar
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -260,13 +274,7 @@ export default function DynamicTableClient({
             onSort={handleSort}
             expandedRows={expandedRows}
             setExpandedRows={setExpandedRows}
-            actions={{
-              updateAction,
-              deleteAction,
-              actionType,
-              componentKey,
-              viewPageURL,
-            }}
+            actions={actions}
           />
           <CursorPagination
             onNext={handleNext}

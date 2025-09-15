@@ -95,13 +95,21 @@ export default function TableBody({
   tableProperties,
   expandedRows,
   setExpandedRows,
-  updateAction,
-  deleteAction,
-  actionType,
+
   componentKey,
   sortConfig,
   onSort,
+  actions,
 }) {
+  const {
+    getItemDataAction,
+    itemUpdateFormKey,
+    updateAction,
+    deleteAction,
+    actionType,
+
+    viewPageURL,
+  } = actions;
   const expandColumn = tableProperties.find((p) => p.type === "expand");
 
   const toggleRow = (id) => {
@@ -182,9 +190,10 @@ export default function TableBody({
                           <Edit className="w-5 h-5 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
                         }
                         data={item}
+                        getItemDataAction={getItemDataAction}
                         updateAction={updateAction}
-                        actionType={actionType}
-                        componentKey={componentKey}
+                        actionType={"edit"}
+                        componentKey={itemUpdateFormKey}
                       />
                       <DeleteItem deleteItem={deleteAction} id={item.id}>
                         <Trash className="w-5 h-5 text-red-500 hover:text-red-600 hover:scale-110 transition-transform" />

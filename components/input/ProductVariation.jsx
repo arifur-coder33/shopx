@@ -585,7 +585,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         <label className="flex items-center space-x-2 cursor-pointer shrink-0 pl-4">
           <input
             type="checkbox"
-            checked={hasVariationsEnabled}
+            defaultChecked={hasVariationsEnabled}
             onChange={handleToggleVariations}
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0"
           />

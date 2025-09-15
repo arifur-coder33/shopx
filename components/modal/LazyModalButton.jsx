@@ -11,6 +11,7 @@ export default function LazyModalButton({
   data,
   updateAction,
   actionType,
+  getItemDataAction,
 }) {
   const [LoadedComponent, setLoadedComponent] = useState(null);
   const { openModal } = useModalContext();
@@ -30,6 +31,7 @@ export default function LazyModalButton({
           data={data}
           updateAction={updateAction}
           actionType={actionType}
+          getItemDataAction={getItemDataAction}
         />
       );
     } else {
@@ -38,6 +40,7 @@ export default function LazyModalButton({
           data={data}
           updateAction={updateAction}
           actionType={actionType}
+          getItemDataAction={getItemDataAction}
         />
       );
     }
