@@ -190,7 +190,7 @@ export default function TableBody({
                           <Edit className="w-5 h-5 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
                         }
                         data={item}
-                        getItemDataAction={getItemDataAction}
+                        itemId={item.id}
                         updateAction={updateAction}
                         actionType={"edit"}
                         componentKey={itemUpdateFormKey}

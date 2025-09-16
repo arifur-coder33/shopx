@@ -3,9 +3,9 @@
 import { useModalContext } from "@/context/ModalContext";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
-import VariationInput from "../input/VariationInput";
+import { useState, useTransition } from "react";
 import { toast } from "react-toastify";
+import VariationInput from "../input/VariationInput";
 
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
@@ -76,15 +76,14 @@ export default function DynamicForm({
 
           form.reset();
         } else {
-
-
-           const errorMessage = response.message || "An unknown error occurred.";
+          const errorMessage = response.message || "An unknown error occurred.";
           window.scrollTo(0, 0);
           toast.error(errorMessage);
           setError(errorMessage);
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
+        const errorMessage =
+          err instanceof Error ? err.message : "An unexpected error occurred.";
         console.error("Form submission failed:", err);
         window.scrollTo(0, 0);
         toast.error(errorMessage);
@@ -179,6 +178,7 @@ export default function DynamicForm({
               );
 
             case "file":
+              console.log("Rendering FileInput for field:", field);
               return (
                 <FileInput
                   key={field.name}

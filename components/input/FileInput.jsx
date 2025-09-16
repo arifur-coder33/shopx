@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import ImageCustom from "../images/ImageCustom";
 import ModalButton from "../modal/ModalButton";
 import MediaSelector from "./MediaSelector";
-
 export default function FileInput({
   name,
   label,
@@ -23,7 +22,7 @@ export default function FileInput({
     if (!defaultValue) return [];
     return Array.isArray(defaultValue) ? defaultValue : [defaultValue];
   });
-
+  console.log("FileInput: Current images state:", images); // Vercel Log
   // Input value derived from current images state
   const [inputValue, setInputValue] = useState(
     images.map((img) => img.id).join(",")
@@ -79,7 +78,7 @@ export default function FileInput({
 
       <div className="flex flex-wrap gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50 min-h-[100px]">
         {/* Display selected images */}
-        {images.map((image) => (
+        {images?.map((image) => (
           <div
             key={image?.id}
             className={`relative group w-[${w}px] h-[${h}px]  flex-shrink-0`} // Fixed size for previews
@@ -92,6 +91,7 @@ export default function FileInput({
               h={h}
               alt={image?.alt || `Selected image ${image?.id}`} // Add alt text
             />
+
             <button
               type="button" // Prevent form submission
               onClick={() => removeImage(image?.id)}

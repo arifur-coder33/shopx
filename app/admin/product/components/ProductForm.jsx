@@ -5,15 +5,17 @@ import { createProductAction as createAction } from "@/backend/serverActions/pro
 import { getVariationByCategoryId } from "@/backend/serverActions/variantionAction";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import { productFormFields } from "./productFormFields";
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
   loading: () => <p>Loading form...</p>,
 });
 
-export default function ProductForm({ actionType, data, updateAction }) {
+export default function ProductForm({ actionType, updateAction, id }) {
   const [categoryDropdownList, setCategoryDropdownList] = useState([]);
   const [productVariationList, setProductVariationList] = useState([]);
+  const [data, setData] = useState({});
   const loadCategoryDropDownLists = async () => {
     try {
       const getData = await getCategory();
@@ -22,6 +24,7 @@ export default function ProductForm({ actionType, data, updateAction }) {
       console.error("Failed to load categories", error);
     }
   };
+  console.log(id);
   const debounce = (func, delay) => {
     let timeout;
     return (...args) => {
@@ -56,6 +59,35 @@ export default function ProductForm({ actionType, data, updateAction }) {
     [] // Empty dependency array for useCallback, debounce handles stability
   );
 
+  useEffect(() => {
+    try {
+      const loadInitialData = async () => {
+        if (id) {
+          const { getProductById } = await import(
+            "@/backend/serverActions/productActions"
+          );
+          const productData = await getProductById(id);
+
+          if (productData.success) {
+            setData(productData.data || {});
+          } else {
+            toast.error("Failed to load product data");
+          }
+
+          console.log(
+            "ProductForm: Loaded product data for ID:",
+            id,
+            productData
+          );
+        }
+      };
+      if (actionType === "edit") {
+        loadInitialData();
+      }
+    } catch (error) {
+      console.error("ProductForm: Failed to load product data", error);
+    }
+  }, [id]);
   useEffect(() => {
     // For initial load if data.category is present (e.g., on edit)
     if (data?.category) {

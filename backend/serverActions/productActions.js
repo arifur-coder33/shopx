@@ -505,9 +505,9 @@ export async function createProductAction(formData) {
     };
   }
 }
-async function getProductById(id) {
+export async function getProductById(id) {
   try {
-    const data = await prisma.product.findUnique({
+    const product = await prisma.product.findUnique({
       where: { id: id },
       include: {
         category: true,
@@ -538,7 +538,34 @@ async function getProductById(id) {
         },
       },
     });
-    return { success: true, data }; // Return success with product data
+
+    // Transform gallery
+    const transformedGallery = product?.gallery?.map((g) => ({
+      id: g.media.id,
+      name: g.media.name,
+    }));
+
+    // Use the new, simpler transformVariations function
+    const transformedVariations = transformVariations(product.variations);
+    const getDiscountPrice = getMinMax(
+      product.variations.map((v) => v.discountPrice || v.regularPrice || 0)
+    );
+    const getDiscountPriceList =
+      getDiscountPrice.min === getDiscountPrice.max
+        ? getDiscountPrice.min
+        : `${getDiscountPrice.min}-${getDiscountPrice.max}`;
+    const transformedProducts = {
+      ...product,
+      discountPrice: getDiscountPriceList,
+
+      thumbnail: product.thumbnail
+        ? { id: product.thumbnail.id, name: product.thumbnail.name }
+        : null,
+      gallery: transformedGallery,
+      variations: transformedVariations,
+    };
+
+    return { success: true, data: transformedProducts }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
   }
