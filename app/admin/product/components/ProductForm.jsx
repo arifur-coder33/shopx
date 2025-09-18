@@ -3,18 +3,20 @@
 import { getCategory } from "@/backend/serverActions/catagoryActions";
 import { createProductAction as createAction } from "@/backend/serverActions/productActions";
 import { getVariationByCategoryId } from "@/backend/serverActions/variantionAction";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { productFormFields } from "./productFormFields";
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
-  loading: () => <p>Loading form...</p>,
+  loading: () => <LoadingSpinner />,
 });
 
 export default function ProductForm({ actionType, updateAction, id }) {
   const [categoryDropdownList, setCategoryDropdownList] = useState([]);
   const [productVariationList, setProductVariationList] = useState([]);
+  const [loadingProductData, setLoadingProductData] = useState(true);
   const [data, setData] = useState({});
   const loadCategoryDropDownLists = async () => {
     try {
@@ -60,9 +62,10 @@ export default function ProductForm({ actionType, updateAction, id }) {
   );
 
   useEffect(() => {
-    try {
-      const loadInitialData = async () => {
-        if (id) {
+    const loadInitialProductData = async () => {
+      if (actionType === "edit" && id) {
+        setLoadingProductData(true); // Start loading
+        try {
           const { getProductById } = await import(
             "@/backend/serverActions/productActions"
           );
@@ -73,21 +76,24 @@ export default function ProductForm({ actionType, updateAction, id }) {
           } else {
             toast.error("Failed to load product data");
           }
-
           console.log(
             "ProductForm: Loaded product data for ID:",
             id,
             productData
           );
+        } catch (error) {
+          console.error("ProductForm: Failed to load product data", error);
+          toast.error("Failed to load product data due to an error");
+        } finally {
+          setLoadingProductData(false); // End loading
         }
-      };
-      if (actionType === "edit") {
-        loadInitialData();
+      } else {
+        setLoadingProductData(false); // Not in edit mode or no ID, so no loading needed
       }
-    } catch (error) {
-      console.error("ProductForm: Failed to load product data", error);
-    }
-  }, [id]);
+    };
+
+    loadInitialProductData();
+  }, [id, actionType]);
   useEffect(() => {
     // For initial load if data.category is present (e.g., on edit)
     if (data?.category) {
@@ -116,6 +122,10 @@ export default function ProductForm({ actionType, updateAction, id }) {
 
   const handleCreateAction = createAction;
   const handleUpdateAction = updateAction;
+
+  if (loadingProductData && actionType === "edit") {
+    return <LoadingSpinner />; // Display loading message for edit mode
+  }
   return (
     <DynamicForm
       fromFields={fromFields}

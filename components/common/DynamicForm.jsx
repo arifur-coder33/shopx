@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "react-toastify";
+import Imagecustom from "../images/ImageCustom";
 import VariationInput from "../input/VariationInput";
 
 // Dynamically imported components
@@ -178,7 +179,6 @@ export default function DynamicForm({
               );
 
             case "file":
-              console.log("Rendering FileInput for field:", field);
               return (
                 <FileInput
                   key={field.name}
@@ -187,6 +187,21 @@ export default function DynamicForm({
                   defaultValue={data?.[field.name]}
                   multipleSelect={field.multiple}
                 />
+              );
+            case "image":
+              return (
+                <div className="col-span-full" key={field.name}>
+                  <p>{field.name}</p>
+                  <Imagecustom
+                    key={field.name}
+                    src={data?.[field.name]}
+                    h={50}
+                    w={50}
+                    alt={field.label}
+                    colSpan={field?.colSpan}
+                    name={field.name}
+                  />
+                </div>
               );
             case "variation":
               return (

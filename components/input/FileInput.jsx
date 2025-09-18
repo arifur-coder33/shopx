@@ -17,12 +17,16 @@ export default function FileInput({
   w = 96,
   h = 96,
 }) {
+  console.log("FileInput: Received defaultValue:", defaultValue);
+  console.log(
+    Array.isArray(defaultValue) ? "It's an array." : "It's not an array."
+  );
   // Initialize state ensuring defaultValue is always treated as an array internally
   const [images, setImages] = useState(() => {
     if (!defaultValue) return [];
     return Array.isArray(defaultValue) ? defaultValue : [defaultValue];
   });
-  console.log("FileInput: Current images state:", images); // Vercel Log
+
   // Input value derived from current images state
   const [inputValue, setInputValue] = useState(
     images.map((img) => img.id).join(",")

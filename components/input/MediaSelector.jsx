@@ -153,8 +153,9 @@ import Button from "@/components/button";
 import Imagecustom from "@/components/images/ImageCustom";
 import FileUploader from "@/components/input/FileUploader";
 import { useModalContext } from "@/context/ModalContext";
-import { CheckCircle2, ImageOff, Loader2, UploadCloudIcon } from "lucide-react";
+import { CheckCircle2, ImageOff, UploadCloudIcon } from "lucide-react";
 import React, { memo, useCallback, useEffect, useState } from "react"; // Import memo and useCallback
+import LoadingSpinner from "../common/LoadingSpinner";
 import ModalButton from "../modal/ModalButton";
 
 // --- 1. Create a Memoized Media Item Component ---
@@ -332,10 +333,7 @@ const MediaSelector = memo(
         {/* Media Grid & Upload Area */}
         <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
           {loading && !isUploading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-              <span className="ml-2 text-gray-600">Loading Media...</span>
-            </div>
+            <LoadingSpinner message="Loading media..." />
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4">
               {/* Upload Card */}
