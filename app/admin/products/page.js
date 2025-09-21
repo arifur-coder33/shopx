@@ -91,6 +91,7 @@ export default async function ProductListPage() {
         getDataCount={getProductCount} // Ensure getProductCount is updated too
         actions={{
           getItemDataAction: getProductById,
+          itemAddFormKey: "ProductForm",
           itemUpdateFormKey: "ProductForm",
           updateAction: updateProductAction,
           deleteAction: deleteProductById,

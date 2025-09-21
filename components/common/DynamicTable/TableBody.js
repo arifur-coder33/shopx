@@ -95,8 +95,6 @@ export default function TableBody({
   tableProperties,
   expandedRows,
   setExpandedRows,
-
-  componentKey,
   sortConfig,
   onSort,
   actions,
@@ -107,7 +105,6 @@ export default function TableBody({
     updateAction,
     deleteAction,
     actionType,
-
     viewPageURL,
   } = actions;
   const expandColumn = tableProperties.find((p) => p.type === "expand");

@@ -61,18 +61,6 @@ export default async function OrderListPage() {
           { label: "SKU", field: "sku" },
           { label: "Phone Number", field: "phoneNumber" },
         ]}
-        // filterTagProperties={[
-        //   { status: ["ALL", "PENDING", "SHIPPED", "DELIVERED", "CANCELED"] },
-        //   {
-        //     time: [
-        //       "ALL",
-        //       "last 24 hours",
-        //       "last 7 days",
-        //       "last 30 days",
-        //       "Custom",
-        //     ],
-        //   },
-        // ]}
         filterTagProperties={[
           {
             label: "Status",
@@ -100,12 +88,10 @@ export default async function OrderListPage() {
             defaultValue: "ALL",
           },
         ]}
-        // Pagination Properties
         initialItemsPerPage={initialLimit}
         itemsPerPageOptions={[2, 5, 10, 25, 50, 100]} // Dropdown options
-        // Actions and Links
         actionType={"edit"}
-        componentKey={"OrderForm"} // Example key for a modal form
+        componentKey={"OrderForm"}
         quickViewComponentKey={"OrderQuickView"}
         viewPageURL={"/admin/order/view/"}
         getDataCount={getOrderCount}

@@ -10,10 +10,12 @@ export async function uploadImagesAction(formData) {
     let imageGalleryUploads = [];
     const imageGalleryFiles = formData.getAll("imageGallery");
     const validFiles = imageGalleryFiles.filter((file) => file.size > 0);
-    console.log(imageGalleryFiles);
+    console.log("imageGalleryFiles", imageGalleryFiles);
+    console.log("validFiles", validFiles);
     if (validFiles.length > 0) {
       imageGalleryUploads = await Promise.all(
         validFiles.map(async (file, index) => {
+          console.log("promisfile", file);
           try {
             const fileName = file.name;
             const slug =
@@ -25,13 +27,19 @@ export async function uploadImagesAction(formData) {
             }
             const imageSlug = await newSlug(slug);
             // Ensure file is valid and properly passed to Cloudinary
+            console.log("upload data", {
+              image: file,
+              tag: imageSlug,
+              slug: `${imageSlug}_${index + 1}`,
+              perifix: "_galleryImage",
+            });
             const upload = await cloudinaryUpload({
               image: file,
               tag: imageSlug,
               slug: `${imageSlug}_${index + 1}`,
               perifix: "_galleryImage",
             });
-
+            console.log("cloudinary upload response", upload);
             if (!upload || !upload.secure_url) {
               console.error("Cloudinary upload returned invalid data", upload);
               return null;

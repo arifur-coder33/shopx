@@ -1,18 +1,29 @@
 import cloudinary from "@/lib/cloudinary";
 // export async function cloudinaryUpload({ image, tag, slug, perifix }) {
+//   console.log("entered cloudinary upload function");
+//   console.log("image", image);
+//   console.log("tag", tag);
 //   const imagebuffer = Buffer.from(await image.arrayBuffer());
+//   console.log("imagebuffer", imagebuffer);
 //   const base64 = imagebuffer.toString("base64");
 //   const formatimage = `data:${image.type};base64,${base64}`;
-//   console.log(process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER)
-//   const uploadResult = await cloudinary.uploader.upload(formatimage, {
+
+//   console.log("fplder", process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER);
+//   console.log("upload param", {
 //     folder: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
 //     public_id: slug + perifix + "_" + Date.now(),
 //     tags: [process.env?.NEXT_SHOP_NAME, ...tag],
 //   });
-
+//   const uploadResult = await cloudinary.uploader.upload(formatimage, {
+//     folder: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
+//     public_id: slug + perifix + "_" + Date.now(),
+//     tags: [process.env?.NEXT_SHOP_NAME],
+//   });
+//   console.log("uploadResult", uploadResult);
 //   return uploadResult;
 // }
-function withTimeout(promise, ms = 15000) {
+
+function withTimeout(promise, ms = 60000) {
   return Promise.race([
     promise,
     new Promise((_, reject) =>
@@ -31,8 +42,9 @@ export async function cloudinaryUpload({ image, tag, slug, perifix }) {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER,
-          public_id: slug + perifix + "_" + Date.now(),
-          tags: [process.env?.NEXT_SHOP_NAME, ...tag],
+          public_id: `${slug}${perifix}_${Date.now()}`,
+          tags: [process.env.NEXT_SHOP_NAME ?? "app", tag],
+          timeout: 60000,
         },
         (error, result) => {
           if (error) return reject(error);
