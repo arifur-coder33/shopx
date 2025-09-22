@@ -27,7 +27,7 @@ export default function ProductClientShell({
     variations,
     videoUrl,
   } = data;
-  console.log("ProductClientShell data:", data);
+
   const variationsImage = useMemo(
     () =>
       variations?.map((variation) => variation?.thumbnail).filter(Boolean) ||

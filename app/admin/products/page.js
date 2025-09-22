@@ -16,6 +16,7 @@ export default async function ProductListPage() {
     },
     { label: "Created At", field: "createdAt", type: "date", sort: true },
     { label: "Name", field: "title", type: "text", sort: true },
+    { label: "Product Code", field: "productCode", type: "text", sort: true },
 
     {
       label: "Category",

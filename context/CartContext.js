@@ -29,6 +29,8 @@ export const CartProvider = ({ children }) => {
 
   // ✅ Add to cart
   const addToCart = (product, qty) => {
+    console.log("product", product);
+
     setCartItems((prevItems) => {
       const existingItem = prevItems.find((item) =>
         isSameCartItem(item, product)

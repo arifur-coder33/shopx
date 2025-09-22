@@ -7,6 +7,7 @@ export default function AddToCartButton(props) {
   const { addToCart } = useCart();
   const { product, selectedVariation, productQty } = props;
   const { hasVariations, variations, title, weight } = product;
+
   const getDiscountPrice = selectedVariation
     ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
     : !variations?.combinations?.length > 0 &&
@@ -26,7 +27,7 @@ export default function AddToCartButton(props) {
       discountPrice: getDiscountPrice,
       regularPrice: getRegularPrice,
       variation:
-        variations?.combinations?.length > 0 && selectedVariation
+        variations[0]?.combinations?.length > 0 && selectedVariation
           ? {
               id: selectedVariation?.id,
               combinations: selectedVariation?.combinations,
@@ -39,7 +40,7 @@ export default function AddToCartButton(props) {
       thumbnail: selectedVariation
         ? selectedVariation?.thumbnail?.name
         : product?.thumbnail?.name || product?.mainImage,
-      slug: product?.variation?.slug,
+      slug: product?.slug,
       id: product?.id,
       weight: weight,
       sku: getSku,

@@ -30,7 +30,9 @@ export default function BuyNowCheckout({ data }) {
     discountPrice: getDiscountPrice,
     regularPrice: getRegularPrice,
     variation:
-      hasVariations && variations?.combinations?.length > 0 && selectedVariation
+      hasVariations &&
+      variations[0]?.combinations?.length > 0 &&
+      selectedVariation
         ? {
             id: selectedVariation?.id,
             combinations: selectedVariation?.combinations,

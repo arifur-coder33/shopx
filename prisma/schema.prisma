@@ -96,7 +96,7 @@ model Media {
 
 model Product {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  productCode    String? 
+  productCode    String? @unique
   title          String                        // Product title
   slug           String      @unique           // Unique slug for URL identification
   description    String?                        // Optional detailed description
