@@ -4,7 +4,7 @@ import {
   getAllOrder,
   getOrderCount,
 } from "@/backend/serverActions/orderActions";
-import DynamicTable from "@/components/common/DynamicTable/";
+import DynamicTable from "@/components/common/DynamicTables";
 
 export default async function OrderListPage() {
   const tableProperties = [
