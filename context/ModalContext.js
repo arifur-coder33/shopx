@@ -1,47 +1,7 @@
-// // contexts/ModalContext.js
-// "use client";
-
-// import { createContext, useContext, useState } from "react";
-
-// const ModalContext = createContext();
-
-// export const useModalContext = () => {
-//   const context = useContext(ModalContext);
-//   if (!context) {
-//     throw new Error("useModalContext must be used within a ModalProvider");
-//   }
-//   return context;
-// };
-
-// export const ModalProvider = ({ children }) => {
-//   const [isOpen, setIsOpen] = useState(false);
-//   const [content, setContent] = useState(null); // Store the modal content
-
-//   const openModal = (modalContent) => {
-//     setContent(modalContent);
-//     setIsOpen(true);
-//   };
-
-//   const closeModal = () => {
-//     setIsOpen(false);
-//     setContent(null); // Clear the content when closing
-//   };
-
-//   const value = {
-//     isOpen,
-//     openModal,
-//     closeModal,
-//     content, // Expose the content
-//   };
-
-//   return (
-//     <ModalContext.Provider value={value}>{children}</ModalContext.Provider>
-//   );
-// };
 "use client";
-
 import Modal from "@/components/modal/Modal";
-import { createContext, useContext, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const ModalContext = createContext();
 
@@ -56,7 +16,20 @@ export const useModalContext = () => {
 export const ModalProvider = ({ children }) => {
   const [modals, setModals] = useState([]);
   const [props, setProps] = useState({});
-  const [modalClosed, setModalClosed] = useState(false); // ✅ NEW
+  const [modalClosed, setModalClosed] = useState(false);
+
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const fullUrl = useMemo(() => {
+    return `${pathname}?${searchParams.toString()}`;
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    closeModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullUrl]);
+
   const openModal = (modalContent) => {
     setModals((prev) => [...prev, modalContent]); // Push new modal content
     setModalClosed(false); // When opening, reset

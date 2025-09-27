@@ -1,7 +1,6 @@
 import {
   deleteProductById,
   getAllProduct,
-  getProductById,
   getProductCount,
   updateProductAction,
 } from "@/backend/serverActions/productActions";
@@ -82,18 +81,14 @@ export default async function ProductListPage() {
         initialItemsPerPage={initialLimit}
         itemsPerPageOptions={[2, 5, 10, 25, 50, 100]} // Dropdown options
         tableName={"Product List"}
-        // Actions and Links
-        actionType={"edit"}
-        componentKey={"ProductForm"} // Example key for a modal form
-        itemAddFormKey={"ProductForm"} // Key for the add item form
-        itemUpdateFormKey={"ProductForm"} // Key for the update item form
-        quickViewComponentKey={"ProductQuickView"} // Assuming you'll create one
+        // Assuming you'll create one
         viewPageURL={"/admin/product/view/"}
         getDataCount={getProductCount} // Ensure getProductCount is updated too
         actions={{
-          getItemDataAction: getProductById,
+          getItemDataAction: "",
           itemAddFormKey: "ProductForm",
           itemUpdateFormKey: "ProductForm",
+          quickViewComponentKey: "ProductQuickView",
           updateAction: updateProductAction,
           deleteAction: deleteProductById,
           actionType: "edit",

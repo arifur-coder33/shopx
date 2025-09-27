@@ -120,7 +120,7 @@ export default function AdminSideNav({
   return (
     <aside
       className={cn(
-        "hidden sm:flex flex-col h-[calc(100vh-70px)] bg-slate-900 dark:bg-slate-950 text-slate-200 fixed transition-all duration-300 ease-in-out",
+        "hidden sm:flex flex-col h-[calc(100vh-70px)] bg-slate-900 dark:bg-slate-950 text-slate-200 fixed transition-all duration-300 ease-in-out z-10",
         isCollapsed ? "w-20" : "w-64"
       )}
     >

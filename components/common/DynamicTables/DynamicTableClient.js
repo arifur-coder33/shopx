@@ -267,15 +267,17 @@ export default function DynamicTableClient({
         </div>
       ) : (
         <>
-          <TableBody
-            paginatedData={data}
-            tableProperties={tableProperties}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            expandedRows={expandedRows}
-            setExpandedRows={setExpandedRows}
-            actions={actions}
-          />
+          <div className="relative ">
+            <TableBody
+              paginatedData={data}
+              tableProperties={tableProperties}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+              expandedRows={expandedRows}
+              setExpandedRows={setExpandedRows}
+              actions={actions}
+            />
+          </div>
           <CursorPagination
             onNext={handleNext}
             onPrevious={handlePrevious}
