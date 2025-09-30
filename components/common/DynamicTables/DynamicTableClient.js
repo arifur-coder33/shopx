@@ -82,7 +82,6 @@ const initializeFilters = (filters) => {
 
 export default function DynamicTableClient({
   initialData = [],
-  getItemDataAction,
   initialNextCursor,
   tableProperties = [],
   filterSearchProperties = [],
@@ -90,14 +89,9 @@ export default function DynamicTableClient({
   fetchAction,
   initialItemsPerPage = 10,
   itemsPerPageOptions = [10, 25, 50],
-  updateAction,
-  deleteAction,
-  actionType,
+
   tableName,
-  componentKey,
-  viewPageURL,
-  itemAddFormKey,
-  itemUpdateFormKey,
+ 
   getDataCount = () => Promise.resolve(null),
   actions = {},
 }) {
@@ -240,14 +234,16 @@ export default function DynamicTableClient({
 
   return (
     <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg p-4 space-y-4 ">
-      {itemAddFormKey && (
+      
         <div className="flex items-center  gap-2">
           <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
             {tableName}
           </h1>
-          <LazyModalButton componentKey={itemAddFormKey} actionType={"add"} />{" "}
-        </div>
-      )}
+        {actions?.itemAddFormKey && 
+          <LazyModalButton componentKey={actions?.itemAddFormKey} actionType={"add"} />
+    }
+          </div>
+      
       <TableToolbar
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}

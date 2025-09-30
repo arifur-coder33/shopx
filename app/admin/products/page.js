@@ -61,6 +61,7 @@ export default async function ProductListPage() {
         // Filtering Properties
         filterSearchProperties={[
           { label: "Name", field: "title" },
+           { label: "Category", field: "name" },
           { label: "Product Code", field: "productCode" }, // Add productCode filter
         ]}
         filterTagProperties={[

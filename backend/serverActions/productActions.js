@@ -627,6 +627,7 @@ export async function getAllProduct(params) {
       sortDirection = "desc",
       title,
       productCode, // New filter for productCode
+      name,
       status,
       stock: stockStatus,
       sku, // For filtering by variation SKU
@@ -680,6 +681,13 @@ export async function getAllProduct(params) {
     if (sku) {
       whereClause.variations = {};
     }
+  
+    if (name) {
+      whereClause.category = {
+         name: { contains: name, mode: "insensitive" } ,
+      };
+    }
+      
 
     if (stockStatus) {
       if (!whereClause.variations) {
@@ -775,18 +783,28 @@ export async function getProductCount(params) {
       startDate,
       endDate,
       title,
+      name,
       stock: stockStatus,
     } = params;
 
     const whereClause = {};
 
     if (status) whereClause.status = status;
-
+    if (name) {
+      whereClause.category = {};
+    }
     if (sku) {
       whereClause.variations = {
         some: { sku: { contains: sku, mode: "insensitive" } },
       };
     }
+
+        if (name) {
+      whereClause.category = {
+         name: { contains: name, mode: "insensitive" } ,
+      };
+    }
+
     if (title) {
       // Step 1: Normalize the search input
       // This converts "I phone" or "I-Phone" into "iphone" for consistent matching.

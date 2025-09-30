@@ -33,7 +33,7 @@ export default async function OrderListPage() {
     { label: "Status", field: "status", type: "badge", sort: false },
   ];
 
-  const initialLimit = 2; // You can set your desired initial page size
+  const initialLimit = 2;
 
   const { success, data, nextCursor, error } = await getAllOrder({
     limit: initialLimit,
@@ -46,11 +46,10 @@ export default async function OrderListPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-        Orders
-      </h1>
-      <DynamicTable
+      
+      <DynamicTable 
         // Data and Actions
+        tableName={"Order List"}
         initialData={data}
         initialNextCursor={nextCursor}
         fetchAction={getAllOrder}

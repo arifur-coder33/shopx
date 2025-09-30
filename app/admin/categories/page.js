@@ -1,53 +1,72 @@
-export const dynamic = "force-static";
-// Example of using dynamic form in the page
+// app/admin/order/page.js
+
 import {
-  deleteCategoryAction,
-  getCategory,
+  getcategoryCount,
+  getAllCategoriesList,
   updateCategoryAction,
-} from "@/backend/serverActions/catagoryActions";
-import DynamicTable from "@/components/common/DynamicTable";
-import LazyModalButton from "@/components/modal/LazyModalButton";
-import { categoryFormFields } from "./components/categoryFormFields";
+  deleteCategoryAction
+} from "@/backend/serverActions/catagoryActions"
+import DynamicTable from "@/components/common/DynamicTables";
 
-const tableProperties = [
-  { label: "Thumbnail", field: "thumbnail", type: "image", alt: "name" },
+export default async function CategoriesPage() {
+  const tableProperties = [
+    { label: "Thumbnail", field: "thumbnail", type: "image", alt: "name" },
   { label: "Name", field: "name", type: "text" },
-  {
+    {
     label: "Parent Category",
-    field: "parentCategory",
-    type: "dropdown",
-    options: [],
-  }, // Assuming category has a 'name' property
+    field: "parentCategory.name",
+    type: "text",
+  
+  },
 
-  // { label: "Status", field: "status", type: "dropdown", options: categoryData?.data, }, // Example of dropdown
+   
+  ];
 
-  { label: "Created At", field: "createdAt", type: "date" },
-];
-export default async function ProductListPage() {
-  // const getTableData = await getCategory();
-  let tableData = [];
-  try {
-    const getTableData = await getCategory();
-    tableData = getTableData?.data || [];
-  } catch (error) {
-    console.error("Failed to fetch category data:", error);
-  }
-  // const tableData = await getTableData?.data;
-  tableProperties[2].options = tableData;
-  const fromFields = categoryFormFields({ dropdownList: tableData });
+  const initialLimit = 2;
+
+  const { success, data, nextCursor, error } = await getAllCategoriesList({
+    limit: initialLimit,
+    tableProperties,
+  });
+
+  
+  if (!success) return `Something went wrong: ${error}`;
 
   return (
     <div className="p-4">
-      <LazyModalButton componentKey={"CategoryForm"} />
-
-      <DynamicTable
-        data={tableData}
+      
+      <DynamicTable 
+        // Data and Actions
+        tableName={"Categories List"}
+        initialData={data}
+        initialNextCursor={nextCursor}
+        fetchAction={getAllCategoriesList}
         tableProperties={tableProperties}
-        fromFields={fromFields}
-        updateAction={updateCategoryAction}
-        deleteAction={deleteCategoryAction}
+        // Filtering Properties
+        filterSearchProperties={[
+       
+          { label: " Category Name", field: "name" },
+        ]}
+        filterTagProperties={[
+      
+        
+        ]}
+        initialItemsPerPage={initialLimit}
+        itemsPerPageOptions={[2, 5, 10, 25, 50, 100]} // Dropdown options
         actionType={"edit"}
         componentKey={"CategoryForm"}
+        getDataCount={getcategoryCount}
+
+              actions={{
+                  getItemDataAction: "",
+                  itemAddFormKey: "CategoryForm",
+                  itemUpdateFormKey: "CategoryForm",
+                  quickViewComponentKey: "",
+                  updateAction: updateCategoryAction,
+                  deleteAction: deleteCategoryAction,
+                  actionType: "edit",
+                  viewPageURL: "",
+                }}
       />
     </div>
   );
