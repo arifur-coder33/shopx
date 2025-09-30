@@ -218,8 +218,10 @@ export async function getCategory() {
   console.log(" category backend call");
   try {
     const data = await prisma.category.findMany({
-      include: {
-        parentCategory: true,
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
         thumbnail: {
           select: {
             id: true,
@@ -232,16 +234,17 @@ export async function getCategory() {
             name: true,
           },
         },
-        variations: {
-          include: {
-            variation: true,
-          },
-        },
+        // variations: {
+        //   include: {
+        //     variation: true,
+        //   },
+        // },
       },
     });
-
+    console.log(data);
     return { success: true, data }; // Return success with user data
   } catch (error) {
+    console.log(error);
     return { success: false, error: error.message }; // Return structured error
   }
 }
@@ -269,7 +272,7 @@ export async function getAllCategoryWithproduct() {
               select: {
                 regularPrice: true,
                 discountPrice: true,
-                combinations:true,
+                combinations: true,
               },
             },
             thumbnail: {
@@ -349,18 +352,13 @@ export async function getAllCategoriesList(params) {
       sortDirection = "desc",
       // ...other filters
       name,
-     
     } = params;
 
     const whereClause = {};
 
-
-
-    
     if (name) {
-      whereClause.name =  { contains: name, mode: "insensitive" };
+      whereClause.name = { contains: name, mode: "insensitive" };
     }
-  
 
     const selectFields = getDataSelectFields(tableProperties);
 
@@ -400,14 +398,13 @@ export async function getAllCategoriesList(params) {
 
 export async function getcategoryCount(params) {
   try {
-    const { name} = params;
+    const { name } = params;
 
     const whereClause = {};
 
- if (name) {
-      whereClause.name =  { contains: name, mode: "insensitive" };
+    if (name) {
+      whereClause.name = { contains: name, mode: "insensitive" };
     }
- 
 
     const count = await prisma.category.count({
       where: whereClause,
@@ -428,8 +425,8 @@ async function getCategoryTree() {
   // Helper to build tree recursively
   function buildTree(parentId = null) {
     return allCategories
-      .filter(cat => cat.parentCategoryId === parentId)
-      .map(cat => ({
+      .filter((cat) => cat.parentCategoryId === parentId)
+      .map((cat) => ({
         ...cat,
         subCategories: buildTree(cat.id),
       }));

@@ -1,35 +1,54 @@
-export const dynamic = "force-static";
-
-// Example of using dynamic form in the page
+// app/admin/order/page.js
 import {
   deleteVariationAction,
-  getVariations,
+  getAllVariationList,
+  getVariationsCount,
   updateVariationAction,
 } from "@/backend/serverActions/variantionAction";
-import DynamicTable from "@/components/common/DynamicTable";
-import LazyModalButton from "@/components/modal/LazyModalButton";
+import DynamicTable from "@/components/common/DynamicTables";
 
-export default async function VariationtPage() {
-  const getTableData = await getVariations();
-
-  const tableData = await getTableData?.data;
-  console.log(tableData);
-  const fromFields = [
-    { type: "text", label: "Variation Name", name: "name", colSpan: "full" },
-  ];
-
+export default async function VariationsPage() {
   const tableProperties = [
-    { label: "Variation Name", field: "name", type: "text" },
+    { label: "Name", field: "name", type: "text", sort: true },
   ];
+
+  const initialLimit = 10;
+  const defaultSort = { field: "name", order: "asc" };
+
+  const { success, data, nextCursor, error } = await getAllVariationList({
+    limit: initialLimit,
+    tableProperties,
+  });
+
+  if (!success) return `Something went wrong: ${error}`;
+
   return (
     <div className="p-4">
-      <LazyModalButton componentKey={"VariationForm"} />
       <DynamicTable
-        data={tableData}
+        // Data and Actions
+        tableName={"Variation List"}
+        initialData={data}
+        initialNextCursor={nextCursor}
+        fetchAction={getAllVariationList}
         tableProperties={tableProperties}
-        fromFields={fromFields}
-        updateAction={updateVariationAction}
-        deleteAction={deleteVariationAction}
+        // Filtering Properties
+        filterSearchProperties={[{ label: "  Name", field: "name" }]}
+        filterTagProperties={[]}
+        initialItemsPerPage={initialLimit}
+        itemsPerPageOptions={[2, 5, 10, 25, 50, 100]} // Dropdown options
+        actionType={"edit"}
+        componentKey={"CategoryForm"}
+        getDataCount={getVariationsCount}
+        actions={{
+          getItemDataAction: "",
+          itemAddFormKey: "VariationForm",
+          itemUpdateFormKey: "VariationForm",
+          quickViewComponentKey: "",
+          updateAction: updateVariationAction,
+          deleteAction: deleteVariationAction,
+          actionType: "edit",
+          viewPageURL: "",
+        }}
       />
     </div>
   );

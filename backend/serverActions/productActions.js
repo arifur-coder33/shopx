@@ -681,13 +681,12 @@ export async function getAllProduct(params) {
     if (sku) {
       whereClause.variations = {};
     }
-  
+
     if (name) {
       whereClause.category = {
-         name: { contains: name, mode: "insensitive" } ,
+        name: { contains: name, mode: "insensitive" },
       };
     }
-      
 
     if (stockStatus) {
       if (!whereClause.variations) {
@@ -754,12 +753,19 @@ export async function getAllProduct(params) {
       const stock = arraySum(
         product.variations.map((v) => Number(v.stock) || 0)
       );
+      const orderQty = arraySum(
+        product.orders
+          .filter((v) => v.status !== "CANCELED" && v.status !== "RETURNED")
+          .map((v) => Number(v.quantity) || 0)
+      );
+
       const { variations, ...rest } = product;
       return {
         ...rest,
 
         price: priceToDisplay || "N/A", // Format price
         stock: stock, // Total stock from variations
+        orders: orderQty || 0, // Total orders from variations
       };
     });
 
@@ -799,9 +805,9 @@ export async function getProductCount(params) {
       };
     }
 
-        if (name) {
+    if (name) {
       whereClause.category = {
-         name: { contains: name, mode: "insensitive" } ,
+        name: { contains: name, mode: "insensitive" },
       };
     }
 

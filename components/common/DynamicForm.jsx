@@ -41,7 +41,7 @@ export default function DynamicForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  console.log("DynamicForm data:", data);
+
   const router = useRouter();
 
   // useEffect(() => {
@@ -58,7 +58,7 @@ export default function DynamicForm({
 
     setError(null);
     setSuccess(null);
-    console.log("Form Data:", newData);
+
     startTransition(async () => {
       try {
         const response =

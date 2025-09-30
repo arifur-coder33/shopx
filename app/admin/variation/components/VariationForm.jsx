@@ -13,7 +13,7 @@ const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   loading: () => <p>Loading form...</p>,
 });
 
-export default function VariationForm() {
+export default function VariationForm({ actionType, updateAction, id }) {
   const [tableData, setTableData] = useState([]);
 
   const loadCategoryDropDownList = async () => {

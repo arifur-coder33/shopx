@@ -33,8 +33,14 @@ export default async function ProductListPage() {
     {
       label: "stock",
       field: "stock",
-      type: "text",
-      sort: false, // Assuming category name is not directly sortable on product table
+      type: "number",
+      // sort: true,
+    },
+    {
+      label: "Orders",
+      field: "orders",
+      type: "number",
+      // sort: true,
     },
 
     { label: "Status", field: "status", type: "badge", sort: true }, // Use 'status' enum directly
@@ -61,7 +67,7 @@ export default async function ProductListPage() {
         // Filtering Properties
         filterSearchProperties={[
           { label: "Name", field: "title" },
-           { label: "Category", field: "name" },
+          { label: "Category", field: "name" },
           { label: "Product Code", field: "productCode" }, // Add productCode filter
         ]}
         filterTagProperties={[

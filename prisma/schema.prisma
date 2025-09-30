@@ -48,7 +48,7 @@ model Category {
   products        Product[]                   // One-to-many relationship with Product
 
   createdAt       DateTime   @default(now())  // Timestamp for category creation
-  updatedAt       DateTime   @updatedAt      // Auto-updated timestamp
+  updatedAt       DateTime  @updatedAt      // Auto-updated timestamp
 }
 
 // Variation Model (Size, Color, etc.)
@@ -59,6 +59,8 @@ model VariationName {
   category   Category? @relation(fields: [categoryId], references: [id])            
   values VariationValue[] // Example: "Size", "Color"
   combinations Combination[]
+   createdAt       DateTime   @default(now())  // Timestamp for category creation
+  updatedAt       DateTime   @updatedAt      // Auto-updated timestamp
 }
 
 // Variation Value Model (Specific options like XL, Red, etc.)
@@ -72,6 +74,8 @@ model VariationValue {
   // Many-to-Many Relationship using Join Table
  
   combinations Combination[] // Many-to-Many Relationship using Join Table
+   createdAt       DateTime   @default(now())  // Timestamp for category creation
+  updatedAt       DateTime   @updatedAt      // Auto-updated timestamp
 }
 
 model ProductCodeCounter{

@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getDataSelectFields } from "../utils/getDataSelectFields";
 
 export async function createVariationAction(formData) {
   const data = Object.fromEntries(formData.entries());
@@ -137,5 +138,81 @@ export async function getVariationById(id) {
     return { success: true, data }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
+  }
+}
+
+export async function getAllVariationList(params) {
+  try {
+    const {
+      limit = 10,
+      cursor,
+      tableProperties,
+      sortField,
+      sortDirection,
+      // ...other filters
+      defaultSort = { field: "createdAt", direction: "desc" },
+      name,
+    } = params;
+
+    const whereClause = {};
+
+    if (name) {
+      whereClause.name = { contains: name, mode: "insensitive" };
+    }
+
+    const selectFields = getDataSelectFields(tableProperties);
+
+    const requestedLimit = Number(limit);
+    const items = await prisma.variationName.findMany({
+      take: requestedLimit + 1,
+      where: whereClause,
+      select: selectFields,
+      cursor: cursor ? { id: cursor } : undefined,
+      // The `skip: 1` is NECESSARY and CORRECT for Prisma's cursor implementation
+      // to exclude the cursor itself and start on the next record.
+      skip: cursor ? 1 : 0,
+      // orderBy: { [sortField]: sortDirection },
+    });
+
+    let nextCursor = null;
+    // Check if we received more items than the requested page size.
+    if (items.length > requestedLimit) {
+      // --- THE CRITICAL FIX IS HERE ---
+      // 1. Remove the extra item that we fetched only to check for a next page.
+      items.pop();
+
+      // 2. The new cursor is the ID of the LAST item in the *remaining* array.
+      nextCursor = items[items.length - 1].id;
+    }
+    console.log(items);
+    return {
+      success: true,
+      data: items,
+      nextCursor: nextCursor,
+    };
+  } catch (error) {
+    console.error("Failed to get category count:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getVariationsCount(params) {
+  try {
+    const { name } = params;
+
+    const whereClause = {};
+
+    if (name) {
+      whereClause.name = { contains: name, mode: "insensitive" };
+    }
+
+    const count = await prisma.variationName.count({
+      where: whereClause,
+    });
+
+    return { success: true, count };
+  } catch (error) {
+    console.error("Failed to get category count:", error);
+    return { success: false, error: error.message };
   }
 }

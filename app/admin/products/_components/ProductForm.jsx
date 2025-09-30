@@ -18,9 +18,12 @@ export default function ProductForm({ actionType, updateAction, id }) {
   const [productVariationList, setProductVariationList] = useState([]);
   const [loadingProductData, setLoadingProductData] = useState(true);
   const [data, setData] = useState({});
+
   const loadCategoryDropDownLists = async () => {
+    console.log("Loading categories for dropdown");
     try {
       const getData = await getCategory();
+      console.log("Categories loaded:", getData);
       setCategoryDropdownList(getData?.data || []);
     } catch (error) {
       console.error("Failed to load categories", error);
