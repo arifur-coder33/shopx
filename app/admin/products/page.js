@@ -4,7 +4,7 @@ import {
   getProductCount,
   updateProductAction,
 } from "@/backend/serverActions/productActions";
-import DynamicTable from "@/components/common/DynamicTables";
+import DynamicTable from "@/components/common/DynamicTables/Index";
 export default async function ProductListPage() {
   const tableProperties = [
     {

@@ -5,7 +5,7 @@ import {
   getVariationsCount,
   updateVariationAction,
 } from "@/backend/serverActions/variantionAction";
-import DynamicTable from "@/components/common/DynamicTables";
+import DynamicTable from "@/components/common/DynamicTables/Index";
 
 export default async function VariationsPage() {
   const tableProperties = [

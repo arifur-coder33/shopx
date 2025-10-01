@@ -6,7 +6,7 @@ import {
   getcategoryCount,
   updateCategoryAction,
 } from "@/backend/serverActions/catagoryActions";
-import DynamicTable from "@/components/common/DynamicTables";
+import DynamicTable from "@/components/common/DynamicTables/Index";
 
 export default async function CategoriesPage() {
   const tableProperties = [
