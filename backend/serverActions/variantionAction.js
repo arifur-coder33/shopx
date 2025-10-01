@@ -147,8 +147,8 @@ export async function getAllVariationList(params) {
       limit = 10,
       cursor,
       tableProperties,
-      sortField,
-      sortDirection,
+      sortField="name",
+      sortDirection="asc",
       // ...other filters
       defaultSort = { field: "createdAt", direction: "desc" },
       name,
@@ -171,7 +171,7 @@ export async function getAllVariationList(params) {
       // The `skip: 1` is NECESSARY and CORRECT for Prisma's cursor implementation
       // to exclude the cursor itself and start on the next record.
       skip: cursor ? 1 : 0,
-      // orderBy: { [sortField]: sortDirection },
+      orderBy: { [sortField]: sortDirection },
     });
 
     let nextCursor = null;

@@ -6,7 +6,7 @@ import {
   getVariations,
   updateVariationAction,
 } from "@/backend/serverActions/variantionAction";
-import DynamicTable from "@/components/common/DynamicTable";
+import DynamicTable from "@/components/common/DynamicTabledd";
 import LazyModalButton from "@/components/modal/LazyModalButton";
 
 export default async function VariationtPage() {

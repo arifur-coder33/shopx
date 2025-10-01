@@ -89,6 +89,8 @@ export default function ProductForm({ actionType, updateAction, id }) {
 
     loadInitialProductData();
   }, [id, actionType]);
+
+  
   useEffect(() => {
     // For initial load if data.category is present (e.g., on edit)
     if (data?.category) {
