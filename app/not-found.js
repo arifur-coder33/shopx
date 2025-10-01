@@ -3,10 +3,12 @@
 import Image from "next/image";
 import NotFoundImage from "@/public/images/404-image.svg" // Place your SVG in the public folder
 import { Link } from "lucide-react";
+import { Suspense } from "react";
 
-export default function NotFound() {
+function NotFoundContent() {
+  // ❌ if you are using useSearchParams/usePathname here, they need Suspense
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-slate-900 text-white">
+      <div className="flex flex-col justify-center items-center min-h-screen bg-slate-900 text-white">
       <div className="mb-4">
         <Image
           src={NotFoundImage}
@@ -21,5 +23,12 @@ export default function NotFound() {
         Go back to Home
       </Link>
     </div>
+  );
+}
+export default function NotFound() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <NotFoundContent />
+    </Suspense>
   );
 }
