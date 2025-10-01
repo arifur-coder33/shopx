@@ -45,6 +45,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "3mb",
     },
+    globalNotFound: true,
     // optimizeCss: true,
     // workerThreads: true,
     // partytown: true,

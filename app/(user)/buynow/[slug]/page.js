@@ -5,6 +5,7 @@ import {
 } from "@/backend/serverActions/productActions";
 
 import { unstable_cache } from "next/cache";
+import { Suspense } from "react";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
 
 export async function generateStaticParams() {
@@ -30,7 +31,9 @@ export default async function BuyNowPage({ params }) {
 
   return (
     <div className="pt-4">
-      <BuyNowCheckout data={data} />
+      <Suspense>
+        <BuyNowCheckout data={data} />
+      </Suspense>
     </div>
   );
 }

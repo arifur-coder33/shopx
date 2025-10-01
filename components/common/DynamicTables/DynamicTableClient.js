@@ -91,7 +91,7 @@ export default function DynamicTableClient({
   itemsPerPageOptions = [10, 25, 50],
 
   tableName,
- 
+
   getDataCount = () => Promise.resolve(null),
   actions = {},
 }) {
@@ -188,6 +188,8 @@ export default function DynamicTableClient({
     });
 
     fetchData(null, baseFetchConfig);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseFetchConfig, sortConfig, itemsPerPage, getDataCount, fetchData]); // filterTagProperties removed from deps
 
   const handleNext = () => {
@@ -234,16 +236,18 @@ export default function DynamicTableClient({
 
   return (
     <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg p-4 space-y-4 ">
-      
-        <div className="flex items-center  gap-2">
-          <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-            {tableName}
-          </h1>
-        {actions?.itemAddFormKey && 
-          <LazyModalButton componentKey={actions?.itemAddFormKey} actionType={"add"} />
-    }
-          </div>
-      
+      <div className="flex items-center  gap-2">
+        <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
+          {tableName}
+        </h1>
+        {actions?.itemAddFormKey && (
+          <LazyModalButton
+            componentKey={actions?.itemAddFormKey}
+            actionType={"add"}
+          />
+        )}
+      </div>
+
       <TableToolbar
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
