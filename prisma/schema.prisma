@@ -147,6 +147,8 @@ model ProductVariation{
   product       Product?    @relation(fields: [productId], references: [id] ,onDelete: Cascade) // Relation to Category
   sku          String
   stock       Float?
+    weight Float?
+  dimensions String?
   regularPrice   Float?                         // Regular price of the product
   discountPrice  Float?                         // Optional discount price
   thumbnailId    String?    @db.ObjectId

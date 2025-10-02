@@ -1258,7 +1258,7 @@ export async function updateProductActions({ id: productId, formData }) {
   }
 }
 
-export async function updateProductAction({ id: productId, formData }) {
+export async function updateProductActionOld({ id: productId, formData }) {
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
   }
@@ -1437,6 +1437,356 @@ export async function updateProductAction({ id: productId, formData }) {
     if (error instanceof Error) errorMessage = error.message;
     if (error?.code === "P2002" && error.meta?.target?.includes("slug")) {
       errorMessage = `Slug "${data.slug}" is already in use. Please choose another.`;
+    }
+    return { success: false, message: errorMessage };
+  }
+}
+export async function updateProductAction({ id: productId, formData }) {
+  if (!productId) {
+    return { success: false, message: "Product ID is required for update." };
+  }
+
+  // --- Initialize an array to collect deletion-related errors/warnings ---
+  // IMPORTANT: This must be declared here, outside the transaction,
+  // so it's accessible in the catch block and final return.
+  const variationDeletionErrors = [];
+
+  try {
+    const data = Object.fromEntries(formData.entries());
+
+    // --- Basic Validation ---
+    if (!data?.title || !data?.thumbnail) {
+      throw new Error(
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Thumbnail are required)"
+      );
+    }
+
+    // --- Parse Product Variations ---
+    let submittedVariationsData = [];
+    if (data.variations && typeof data.variations === "string") {
+      try {
+        submittedVariationsData = JSON.parse(data.variations);
+        if (!Array.isArray(submittedVariationsData))
+          throw new Error("Variations data must be an array.");
+      } catch (e) {
+        throw new Error("Invalid variation data format.");
+      }
+    }
+    const hasSubmittedVariations = submittedVariationsData.length > 0;
+
+    // --- Robust Number Parsing Helper ---
+    const parseOptionalNumber = (value, defaultValue = null) => {
+      if (value === undefined || value === null || String(value).trim() === "")
+        return defaultValue;
+      const num = Number(value);
+      return isNaN(num) ? defaultValue : num;
+    };
+
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Step 1: Fetch Existing Product
+      const existingProduct = await tx.product.findUnique({
+        where: { id: productId },
+      });
+      if (!existingProduct) throw new Error("Product not found for update.");
+
+      // Step 2: Handle Slug
+      let newSlug = existingProduct.slug;
+      if (data.title && data.title !== existingProduct.title) {
+        const baseSlug = await generateSlug(data.slug || data.title);
+        newSlug = await generateUniqueSlug(tx, baseSlug, productId);
+      }
+
+      // Step 3: Prepare the update payload for the main Product model
+      const productUpdateData = {
+        title: data.title,
+        slug: newSlug,
+        description: data.description || null,
+        categoryId: data.category || null,
+        thumbnailId: data.thumbnail || existingProduct.thumbnailId,
+        weight: parseOptionalNumber(data.weight), // Base weight
+        dimensions: data.dimensions || null,
+        seoKeyWord: data.seoKeyWord || null,
+        seoDescription: data.seoDescription || null,
+        isFeatured: Boolean(data.isFeatured === "on"),
+        isActive: Boolean(data.isActive === "on"),
+        hasVariations: hasSubmittedVariations, // Crucial for UI and logic flow
+      };
+
+      // Step 4: Update the Main Product Record
+      const updatedProduct = await tx.product.update({
+        where: { id: productId },
+        data: productUpdateData,
+      });
+
+      // Step 5: Update Gallery (Wipe and Replace strategy)
+      await tx.productGallery.deleteMany({
+        where: { productId: updatedProduct.id },
+      });
+      const newMediaIds = data.gallery
+        ? data.gallery
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : [];
+      if (newMediaIds.length > 0) {
+        await tx.productGallery.createMany({
+          data: newMediaIds.map((mediaId) => ({
+            productId: updatedProduct.id,
+            mediaId: mediaId,
+          })),
+        });
+      }
+
+      // --- Step 6: Update Variations (Intelligent Handling for both simple & variable products) ---
+
+      // Fetch existing variations for the product
+      const existingVariations = await tx.productVariation.findMany({
+        where: { productId: updatedProduct.id },
+        include: { combinations: true }, // Include combinations to manage them
+      });
+
+      const existingVariationMap = new Map(
+        existingVariations.map((v) => [v.matcherId, v])
+      );
+
+      if (hasSubmittedVariations) {
+        // --- LOGIC FOR PRODUCTS WITH USER-DEFINED VARIATIONS ---
+
+        for (const variantData of submittedVariationsData) {
+          if (
+            !variantData.matcherId ||
+            !Array.isArray(variantData.combination) ||
+            variantData.combination.length === 0
+          ) {
+            console.warn(
+              "Skipping invalid submitted variation data due to missing matcherId or combinations:",
+              variantData
+            );
+            continue;
+          }
+
+          const variantSku =
+            variantData.sku ||
+            `${updatedProduct.productCode}-${variantData.matcherId}`;
+          const variantStock = parseOptionalNumber(variantData.qty, 0);
+          const variantRegularPrice = parseOptionalNumber(
+            variantData.regularPrice
+          );
+          const variantDiscountPrice = parseOptionalNumber(
+            variantData.discountPrice
+          );
+          // Use product's base weight if variant weight is not provided
+          const variantWeight = parseOptionalNumber(
+            variantData.weight,
+            updatedProduct.weight
+          );
+
+          let variantThumbnailId = updatedProduct.thumbnailId; // Default to product thumbnail
+          if (
+            typeof variantData.image === "string" &&
+            variantData.image.length > 0
+          ) {
+            variantThumbnailId = variantData.image;
+          } else if (
+            typeof variantData.image === "object" &&
+            variantData.image?.id
+          ) {
+            variantThumbnailId = variantData.image.id;
+          }
+
+          const combinationsToProcess = variantData.combination
+            .map((combo) =>
+              combo.variation?.id && combo.value?.id
+                ? {
+                    variationNameId: combo.variation.id,
+                    variationValueId: combo.value.id,
+                  }
+                : null
+            )
+            .filter(Boolean);
+
+          if (combinationsToProcess.length === 0) {
+            console.warn(
+              "Skipping variation due to no valid combinations to create/update:",
+              variantData
+            );
+            continue;
+          }
+
+          const existingVariant = existingVariationMap.get(
+            variantData.matcherId
+          );
+
+          if (existingVariant) {
+            // Update existing variation
+            await tx.productVariation.update({
+              where: { id: existingVariant.id },
+              data: {
+                sku: variantSku,
+                stock: variantStock,
+                regularPrice: variantRegularPrice,
+                discountPrice: variantDiscountPrice,
+                weight: variantWeight,
+                thumbnailId: variantThumbnailId,
+                combinations: {
+                  deleteMany: {}, // Delete all existing combinations
+                  create: combinationsToProcess, // Create new ones
+                },
+              },
+            });
+            existingVariationMap.delete(variantData.matcherId); // Mark as processed
+          } else {
+            // Create new variation
+            await tx.productVariation.create({
+              data: {
+                productId: updatedProduct.id,
+                matcherId: variantData.matcherId,
+                sku: variantSku,
+                stock: variantStock,
+                regularPrice: variantRegularPrice,
+                discountPrice: variantDiscountPrice,
+                weight: variantWeight,
+                thumbnailId: variantThumbnailId,
+                combinations: { create: combinationsToProcess },
+              },
+            });
+          }
+        }
+
+        // Delete variations that were not submitted (and have no orders)
+        for (const [matcherId, variantToDelete] of existingVariationMap) {
+          // Check if the variation has any associated orders
+          const ordersCount = await tx.orderItem.count({
+            where: { variationId: variantToDelete.id }, // FIX: Changed productVariationId to variationId
+          });
+
+          if (ordersCount > 0) {
+            variationDeletionErrors.push(
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`
+            );
+          } else {
+            // Delete associated combinations first due to foreign key constraints
+            await tx.productVariationCombination.deleteMany({
+              where: { productVariationId: variantToDelete.id },
+            });
+            // Then delete the variation itself
+            await tx.productVariation.delete({
+              where: { id: variantToDelete.id },
+            });
+          }
+        }
+      } else {
+        // --- LOGIC FOR SIMPLE PRODUCTS (NO VARIATIONS SUBMITTED) ---
+
+        // Find the existing default variation (if any).
+        // For a simple product, we expect at most one variation.
+        const defaultVariation = existingVariations.find(v => v.combinations.length === 0);
+
+        const defaultSku = updatedProduct.productCode;
+        const defaultStock = parseOptionalNumber(data.stock, 0);
+        const defaultRegularPrice = parseOptionalNumber(data.regularPrice);
+        const defaultDiscountPrice = parseOptionalNumber(data.discountPrice);
+
+        // Basic validation for simple product prices
+        if (defaultRegularPrice === null) {
+          throw new Error("Simple product must have a Regular Price.");
+        }
+
+        if (defaultVariation) {
+          // Update the existing default ProductVariation record
+          await tx.productVariation.update({
+            where: { id: defaultVariation.id },
+            data: {
+              sku: defaultSku,
+              stock: defaultStock,
+              regularPrice: defaultRegularPrice,
+              discountPrice: defaultDiscountPrice,
+              thumbnailId: updatedProduct.thumbnailId, // Always use main product thumbnail for simple
+              // Ensure no combinations for a simple product
+              combinations: { deleteMany: {} },
+            },
+          });
+          existingVariationMap.delete(defaultVariation.matcherId); // Mark as processed
+        } else {
+          // Create one default ProductVariation record
+          await tx.productVariation.create({
+            data: {
+              productId: updatedProduct.id,
+              matcherId: defaultSku, // Using product code as matcherId for simple product
+              sku: defaultSku,
+              stock: defaultStock,
+              regularPrice: defaultRegularPrice,
+              discountPrice: defaultDiscountPrice,
+              thumbnailId: updatedProduct.thumbnailId,
+              combinations: { create: [] }, // Simple products have no combinations
+            },
+          });
+          // If a new default was created, ensure it's not considered for deletion
+          // (though it won't be in existingVariationMap anyway if it was new)
+        }
+
+        // Delete any *other* variations that might exist (e.g., if product transitioned from variable to simple)
+        // and that were not the one just processed as the default.
+        for (const [matcherId, variantToDelete] of existingVariationMap) {
+          // Check if this variantToDelete is the default one we just updated/created
+          if (defaultVariation && variantToDelete.id === defaultVariation.id) {
+            continue; // Skip the default variation as it was handled
+          }
+
+          const ordersCount = await tx.orderItem.count({
+            where: { variationId: variantToDelete.id }, // FIX: Changed productVariationId to variationId
+          });
+
+          if (ordersCount > 0) {
+            variationDeletionErrors.push(
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`
+            );
+          } else {
+            await tx.productVariationCombination.deleteMany({
+              where: { productVariationId: variantToDelete.id },
+            });
+            await tx.productVariation.delete({
+              where: { id: variantToDelete.id },
+            });
+          }
+        }
+      } // End of hasSubmittedVariations conditional
+
+      console.log("Updated product with variations:", updatedProduct);
+      return updatedProduct;
+    }); // End of transaction
+
+    // --- Revalidation ---
+    revalidatePath("/admin/product");
+    revalidatePath("/");
+    revalidatePath(`/product/${result.slug}`);
+    revalidateTag("products");
+    revalidateTag(`product-${result.slug}`);
+
+    // Return success message potentially with variation deletion warnings
+    let successMessage = "Product updated successfully.";
+    if (variationDeletionErrors.length > 0) {
+      successMessage +=
+        " However, some variations could not be deleted due to existing orders: " +
+        variationDeletionErrors.join("; ");
+    }
+
+    return { success: true, data: result, message: successMessage };
+  } catch (error) {
+    console.error("Error updating product:", error);
+    let errorMessage = "An unknown error occurred while updating the product.";
+    if (error instanceof Error) errorMessage = error.message;
+    if (error?.code === "P2002" && error.meta?.target?.includes("slug")) {
+      errorMessage = `Slug "${data.slug}" is already in use. Please choose another.`;
+    }
+    // Append variation deletion errors to the main error message if an exception occurred
+    // variationDeletionErrors is defined outside the try/catch, so it's always available
+    if (variationDeletionErrors.length > 0) {
+      errorMessage +=
+        " (Also, some variation deletion issues: " +
+        variationDeletionErrors.join("; ") +
+        ")";
     }
     return { success: false, message: errorMessage };
   }
