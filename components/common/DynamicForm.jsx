@@ -71,7 +71,14 @@ export default function DynamicForm({
             : await createAction(formData);
 
         if (response.success) {
-          toast.success("Data saved successfully!");
+          if (response.warnMsg) {
+            toast.warn(response.warnMsg);
+          } else if (response.message) {
+            toast.success(response.message);
+          } else {
+            toast.success("Data saved successfully!");
+          }
+
           form.reset();
           closeModal(); // Close the modal on success
 

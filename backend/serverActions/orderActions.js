@@ -112,7 +112,7 @@ export async function createOrder(formData) {
 
       return order;
     });
-    revalidatePath("/admin/order");
+    revalidatePath("/admin/orders");
     revalidateTag("orders");
     console.log("Order Created:", result);
     return { success: true, data: result }; // Return success with order data

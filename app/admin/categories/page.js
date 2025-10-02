@@ -1,5 +1,6 @@
 // app/admin/order/page.js
-
+export const revalidate = 60;
+export const dynamic = "force-static";
 import {
   deleteCategoryAction,
   getAllCategoriesList,

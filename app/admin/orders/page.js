@@ -1,5 +1,6 @@
 // app/admin/order/page.js
-
+export const revalidate = 60;
+export const dynamic = "force-static";
 import {
   getAllOrder,
   getOrderCount,
@@ -33,7 +34,7 @@ export default async function OrderListPage() {
     { label: "Status", field: "status", type: "badge", sort: false },
   ];
 
-  const initialLimit = 2;
+  const initialLimit = 5;
 
   const { success, data, nextCursor, error } = await getAllOrder({
     limit: initialLimit,
@@ -46,8 +47,7 @@ export default async function OrderListPage() {
 
   return (
     <div className="p-4">
-      
-      <DynamicTable 
+      <DynamicTable
         // Data and Actions
         tableName={"Order List"}
         initialData={data}
@@ -89,11 +89,19 @@ export default async function OrderListPage() {
         ]}
         initialItemsPerPage={initialLimit}
         itemsPerPageOptions={[2, 5, 10, 25, 50, 100]} // Dropdown options
-        actionType={"edit"}
-        componentKey={"OrderForm"}
         quickViewComponentKey={"OrderQuickView"}
         viewPageURL={"/admin/order/view/"}
         getDataCount={getOrderCount}
+        actions={{
+          getItemDataAction: "",
+          itemAddFormKey: "",
+          itemUpdateFormKey: "",
+          quickViewComponentKey: "",
+          updateAction: "",
+          deleteAction: "deleteProductById",
+          actionType: "edit",
+          viewPageURL: "/admin/product/view/",
+        }}
       />
     </div>
   );
