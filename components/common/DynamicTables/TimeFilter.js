@@ -103,7 +103,7 @@ export default function TimeFilter({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 mr-2">
+      <span className=" font-semibold text-gray-700 dark:text-gray-300 mr-2">
         Time:
       </span>
       {presetOptions.map((option) => (
@@ -119,7 +119,7 @@ export default function TimeFilter({
         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger asChild>
             <button
-              className={`px-3 py-1 text-sm rounded-full flex items-center gap-2 transition-all duration-200 ${
+              className={`px-3 py-1  rounded-full flex items-center gap-2 transition-all duration-200 ${
                 selectedCustomRange
                   ? "bg-purple-600 text-white shadow-md hover:bg-purple-700"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"

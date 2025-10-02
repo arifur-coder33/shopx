@@ -53,7 +53,7 @@ export default function AdminLayout({ children }) {
             {/* Main content adjusts its margin based on sidebar state */}
             <main
               className={cn(
-                "flex-1 min-h-screen transition-all duration-300 ease-in-out",
+                "flex-1 min-h-screen transition-all duration-300 ease-in-out overflow-auto",
                 isMobile
                   ? "w-full"
                   : isSidebarCollapsed

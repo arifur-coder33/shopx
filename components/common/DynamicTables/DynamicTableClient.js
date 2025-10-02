@@ -235,9 +235,9 @@ export default function DynamicTableClient({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg p-4 space-y-4 ">
-      <div className="flex items-center  gap-2">
-        <h1 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
+    <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg  ">
+      <div className="flex items-center  gap-2 bg-purple dark:bg-gray-700  border-b-2  border-slate-500 p-2">
+        <h1 className="text-xl sm:text-xl font-semibold   dark:text-gray-200 ">
           {tableName}
         </h1>
         {actions?.itemAddFormKey && (
@@ -247,50 +247,51 @@ export default function DynamicTableClient({
           />
         )}
       </div>
-
-      <TableToolbar
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        searchField={searchField}
-        setSearchField={setSearchField}
-        activeFilters={activeFilters}
-        onFilterChange={handleFilterChange}
-        filterSearchProperties={filterSearchProperties}
-        filterTagProperties={filterTagProperties}
-      />
-      {isPending ? (
-        <TableSkeleton rows={itemsPerPage} columns={tableProperties.length} />
-      ) : data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center text-gray-500 p-10">
-          <Inbox className="w-16 h-16 mb-4 text-gray-400" />
-          <p className="text-lg font-semibold">No Results Found</p>
-        </div>
-      ) : (
-        <>
-          <div className="relative ">
-            <TableBody
-              paginatedData={data}
-              tableProperties={tableProperties}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-              expandedRows={expandedRows}
-              setExpandedRows={setExpandedRows}
-              actions={actions}
-            />
+      <div className="px-2 sm:px-4">
+        <TableToolbar
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          searchField={searchField}
+          setSearchField={setSearchField}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          filterSearchProperties={filterSearchProperties}
+          filterTagProperties={filterTagProperties}
+        />
+        {isPending ? (
+          <TableSkeleton rows={itemsPerPage} columns={tableProperties.length} />
+        ) : data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-gray-500 p-10">
+            <Inbox className="w-16 h-16 mb-4 text-gray-400" />
+            <p className="text-lg font-semibold">No Results Found</p>
           </div>
-          <CursorPagination
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            hasNextPage={!!nextCursor}
-            hasPreviousPage={previousCursors.length > 0}
-            currentPage={currentPage}
-            totalCount={totalCount}
-            itemsPerPage={itemsPerPage}
-            setItemsPerPage={setItemsPerPage}
-            itemsPerPageOptions={itemsPerPageOptions}
-          />
-        </>
-      )}
+        ) : (
+          <>
+            <div className="relative ">
+              <TableBody
+                paginatedData={data}
+                tableProperties={tableProperties}
+                sortConfig={sortConfig}
+                onSort={handleSort}
+                expandedRows={expandedRows}
+                setExpandedRows={setExpandedRows}
+                actions={actions}
+              />
+            </div>
+            <CursorPagination
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              hasNextPage={!!nextCursor}
+              hasPreviousPage={previousCursors.length > 0}
+              currentPage={currentPage}
+              totalCount={totalCount}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+              itemsPerPageOptions={itemsPerPageOptions}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }

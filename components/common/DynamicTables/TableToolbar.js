@@ -21,7 +21,7 @@ export default function TableToolbar({
     "Search";
 
   return (
-    <div className=" z-10 bg-white dark:bg-gray-900 py-2 flex md:flex-row flex-col gap-2 text-[10px] ">
+    <div className=" z-10 bg-white dark:bg-gray-900 py-2 flex md:flex-row flex-col gap-2 md:text-sm text-[10px] ">
       {/* Search Input Section */}
       <div className="flex items-center w-full md:w-auto">
         <div className="flex rounded-md shadow-sm w-full  focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900">
@@ -56,39 +56,43 @@ export default function TableToolbar({
         {filterTagProperties?.map((filterGroup, i) => (
           <div key={filterGroup?.field || i}>
             {filterGroup.field === "time" ? (
-              <TimeFilter
-                activeTimeFilter={activeFilters[filterGroup.field]}
-                onTimeChange={(value) =>
-                  onFilterChange(filterGroup.field, value)
-                }
-                options={filterGroup.options}
-              />
+              <span className="flex flex-row overflow-x-auto scrollbar-hide">
+                <TimeFilter
+                  activeTimeFilter={activeFilters[filterGroup.field]}
+                  onTimeChange={(value) =>
+                    onFilterChange(filterGroup.field, value)
+                  }
+                  options={filterGroup.options}
+                />
+              </span>
             ) : (
-              <div className="flex items-center gap-2 flex-wrap ">
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 mr-2">
+              <div className="flex flex-row items-center gap-2 ">
+                <span className=" font-semibold text-gray-700 dark:text-gray-300 mr-2">
                   {`${filterGroup.label}:`}
                 </span>
-                {filterGroup?.options?.map((option) => (
-                  <FilterTagButton
-                    key={option}
-                    label={option}
-                    // A button is active if it's the current filter,
-                    // OR if the button is "ALL" and no filter is set for this key.
-                    isActive={
-                      activeFilters[filterGroup.field] === option ||
-                      (option === "ALL" && !activeFilters[filterGroup.field])
-                    }
-                    onClick={() =>
-                      onFilterChange(
-                        filterGroup.field,
-                        // If the clicked button is already active, set filter to "ALL" to clear it
-                        activeFilters[filterGroup.field] === option
-                          ? "ALL"
-                          : option
-                      )
-                    }
-                  />
-                ))}
+                <span className=" overflow-x-auto scrollbar-hide flex flex-row gap-2">
+                  {filterGroup?.options?.map((option) => (
+                    <FilterTagButton
+                      key={option}
+                      label={option}
+                      // A button is active if it's the current filter,
+                      // OR if the button is "ALL" and no filter is set for this key.
+                      isActive={
+                        activeFilters[filterGroup.field] === option ||
+                        (option === "ALL" && !activeFilters[filterGroup.field])
+                      }
+                      onClick={() =>
+                        onFilterChange(
+                          filterGroup.field,
+                          // If the clicked button is already active, set filter to "ALL" to clear it
+                          activeFilters[filterGroup.field] === option
+                            ? "ALL"
+                            : option
+                        )
+                      }
+                    />
+                  ))}
+                </span>
               </div>
             )}
           </div>

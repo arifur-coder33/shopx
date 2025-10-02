@@ -17,7 +17,7 @@ export default function CursorPagination({
   const totalPages = totalCount ? Math.ceil(totalCount / itemsPerPage) : null;
 
   return (
-    <div className="flex items-center justify-between py-4 text-sm text-gray-600 dark:text-gray-400">
+    <div className="flex items-center justify-between py-4 text-[10px] md:text-sm text-gray-600 dark:text-gray-400">
       <div className="flex items-center gap-4">
         <div className="font-medium">
           {totalCount !== null ? `${totalCount} results` : ` `}
@@ -28,7 +28,7 @@ export default function CursorPagination({
             id="items-per-page"
             value={itemsPerPage}
             onChange={(e) => setItemsPerPage(Number(e.target.value))}
-            className="rounded-md border-gray-300 bg-white py-1.5 pl-2 pr-8 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800"
+            className="rounded-md border-gray-300 bg-white py-1.5 pl-2 pr-2 text-[10px] md:text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800"
           >
             {itemsPerPageOptions.map((option) => (
               <option key={option} value={option}>
@@ -45,7 +45,7 @@ export default function CursorPagination({
       <div className="flex items-center space-x-2">
         <Button
           variant="outline"
-          className="h-8 w-8 p-0"
+          className="md:p-2 p-1"
           onClick={onPrevious}
           disabled={!hasPreviousPage}
         >
@@ -53,14 +53,14 @@ export default function CursorPagination({
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <div className="flex w-[100px] items-center justify-center font-medium">
+        <div className="flex items-center justify-center font-medium">
           Page {currentPage}
           {totalPages && ` of ${totalPages}`}
         </div>
 
         <Button
           variant="outline"
-          className="h-8 w-8 p-0"
+          className="md:p-2 p-1"
           onClick={onNext}
           disabled={!hasNextPage}
         >
