@@ -26,7 +26,7 @@ export const ModalProvider = ({ children }) => {
   const [modals, setModals] = useState([]);
   // props and modalClosed states seem unused in the provided logic, can be removed if not needed elsewhere
   // const [props, setProps] = useState({});
-  // const [modalClosed, setModalClosed] = useState(false);
+  const [modalClosed, setModalClosed] = useState(false);
 
   // 3. REMOVE the route-watching logic from here
   // const pathname = usePathname();
@@ -36,6 +36,7 @@ export const ModalProvider = ({ children }) => {
 
   const openModal = useCallback((modalContent) => {
     setModals((prev) => [...prev, modalContent]);
+      setModalClosed(false);
   }, []);
 
   const closeModal = useCallback(() => {
@@ -50,6 +51,7 @@ export const ModalProvider = ({ children }) => {
       modals,
       openModal,
       closeModal,
+      setModalClosed
     }),
     [modals, openModal, closeModal]
   );

@@ -15,7 +15,7 @@ export default function LazyModalButton({
 }) {
   const [LoadedComponent, setLoadedComponent] = useState(null);
   const { openModal } = useModalContext();
-
+console.log("componentkey",componentKey)
   const handleClick = async () => {
     if (!LoadedComponent) {
       const loadComponent = componentsMap[componentKey];
