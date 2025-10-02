@@ -1730,7 +1730,7 @@ export async function updateProductAction({ id: productId, formData }) {
       return updatedProduct; // This 'result' is the updated product
     });
 
-    revalidatePath("/admin/product");
+    revalidatePath("/admin/products");
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
