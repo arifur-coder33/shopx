@@ -64,7 +64,7 @@ const renderDynamicField = (item, column) => {
       return <CheckBox value={!!value} action={action} id={item?.id} />;
     case "date":
       return value ? (
-        <span className="whitespace-nowrap flex flex-col gap-0">
+        <span className="whitespace-nowrap flex flex-col gap-0 leading-tight">
           <span>
             {new Date(value).toLocaleDateString("en-US", {
               year: "numeric",

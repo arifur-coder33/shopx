@@ -512,460 +512,471 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
 
   // --- JSX Render ---
   return (
-    <div className={`p-6 bg-gray-50 shadow-lg rounded-xl col-span-${colSpan}`}>
+    <div className={` bg-gray-50 shadow-lg rounded-xl col-span-${colSpan}`}>
       {/* Header with Toggle */}
-      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
-        {!!hasVariationsEnabled ? (
-          <button
-            type="button"
-            onClick={toggleSectionExpand}
-            disabled={!hasVariationsEnabled}
-            className={`flex items-center space-x-2 text-left focus:outline-none group disabled:cursor-not-allowed disabled:opacity-50 ${
-              hasVariationsEnabled ? "cursor-pointer" : ""
-            }`}
-            aria-expanded={hasVariationsEnabled && isSectionExpanded}
-            aria-controls="variation-content-area"
-          >
-            <h2 className="text-xl font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors duration-150">
-              Product Variations
-            </h2>
-            {hasVariationsEnabled && (
-              <span className="text-gray-500 group-hover:text-indigo-600 transition-colors duration-150 shrink-0">
-                {isSectionExpanded ? (
-                  <DynamicChevronUpIcon className="h-5 w-5" />
-                ) : (
-                  <DynamicChevronDownIcon className="h-5 w-5" />
-                )}
-              </span>
-            )}
-          </button>
-        ) : (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Product Price
-            </h2>
-            <div className="flex items-center space-x-4 gap-2">
-              <FloatingInput
-                defaultValue={
-                  derivedInitialEnabled
-                    ? ""
-                    : initialCombinations[0]?.regularPrice
-                }
-                name="regularPrice"
-                label="Regualar Price"
-              />
-              <FloatingInput
-                defaultValue={
-                  derivedInitialEnabled
-                    ? ""
-                    : initialCombinations[0]?.discountPrice
-                }
-                name="discountPrice"
-                label="Discount Price"
-              />
-              <FloatingInput
-                defaultValue={
-                  derivedInitialEnabled ? "" : initialCombinations[0]?.stock
-                }
-                name="stock"
-                label="Quantity"
-              />
-              <FloatingInput
-                defaultValue={
-                  derivedInitialEnabled ? "" : initialCombinations[0]?.sku
-                }
-                name="sku"
-                label="sku"
-                disabled
-              />
-            </div>
-          </div>
-        )}
 
+      <div className="flex justify-between items-center mb-4 border-b-2 border-gray-200 p-2 bg-slate-100">
+        <span className="text-md font-bold">Product Price & Variations</span>
         <label className="flex items-center space-x-2 cursor-pointer shrink-0 pl-4">
           <input
             type="checkbox"
             defaultChecked={hasVariationsEnabled}
             onChange={handleToggleVariations}
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0"
+            className="h-4 w-4 rounded border-gray-300 cursor-pointer text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0"
           />
           <span className="text-sm font-medium text-gray-700">
             Has Variations
           </span>
         </label>
       </div>
-
-      {/* Variation Content Area */}
-      <AnimatePresence initial={false}>
-        {hasVariationsEnabled && isSectionExpanded && (
-          <motion.div
-            id="variation-content-area"
-            key="variation-content"
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={sectionVariants}
-            className="space-y-6 overflow-hidden"
-          >
-            {/* Variation Selection Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {variationList && variationList.length > 0 ? (
-                variationList.map((variationItem) => {
-                  if (!variationItem?.variation?.name) return null;
-                  const variationName = variationItem.variation.name;
-                  const isCatExpanded = !!expandedCategories[variationName];
-                  const selectionCount =
-                    selectedValues[variationName]?.length ?? 0;
-                  const categoryKey =
-                    variationItem.variation.id || variationName;
-                  return (
-                    <div
-                      key={categoryKey}
-                      className="border border-gray-200 rounded-lg shadow-sm bg-white overflow-hidden"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleCategoryExpand(variationName)}
-                        className={`flex items-center justify-between w-full p-3 text-left transition-colors duration-150 ease-in-out ${
-                          isCatExpanded ? "bg-gray-100" : "hover:bg-gray-50"
-                        }`}
-                        aria-expanded={isCatExpanded}
-                      >
-                        <div className="flex items-center space-x-2">
-                          {selectionCount > 0 ? (
-                            <DynamicCheckCircleIcon className="h-5 w-5 text-indigo-600 shrink-0" />
-                          ) : (
-                            <span className="h-5 w-5 block border-2 border-gray-300 rounded-full shrink-0"></span>
-                          )}
-                          <span className="font-semibold text-gray-700 text-base">
-                            {variationName}
-                          </span>
-                          {selectionCount > 0 && (
-                            <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
-                              {selectionCount} selected
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-gray-400 shrink-0">
-                          {isCatExpanded ? (
-                            <DynamicChevronUpIcon className="h-5 w-5" />
-                          ) : (
-                            <DynamicChevronDownIcon className="h-5 w-5" />
-                          )}
-                        </span>
-                      </button>
-                      <AnimatePresence initial={false}>
-                        {isCatExpanded && (
-                          <motion.div
-                            key={`${categoryKey}-content`}
-                            initial="collapsed"
-                            animate="open"
-                            exit="collapsed"
-                            variants={{
-                              open: { opacity: 1, height: "auto" },
-                              collapsed: { opacity: 0, height: 0 },
-                            }}
-                            transition={{ duration: 0.25, ease: "easeInOut" }}
-                            className="border-t border-gray-200"
-                          >
-                            <div className="p-3 space-y-2 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
-                              {variationItem.values &&
-                              variationItem.values.length > 0 ? (
-                                variationItem.values.map((valueItem) => {
-                                  if (!valueItem) return null;
-                                  const valueKey =
-                                    valueItem.id || valueItem.value;
-                                  return (
-                                    <label
-                                      key={valueKey}
-                                      className="flex items-center space-x-2.5 p-1.5 rounded-md hover:bg-gray-100 cursor-pointer transition-colors"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={
-                                          selectedValues[
-                                            variationName
-                                          ]?.includes(
-                                            String(valueItem.value)
-                                          ) ?? false
-                                        }
-                                        onChange={() =>
-                                          handleSelectValue(
-                                            variationName,
-                                            String(valueItem.value)
-                                          )
-                                        }
-                                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
-                                      />
-                                      <span className="text-gray-700 select-none text-sm">
-                                        {valueItem.value}
-                                      </span>
-                                    </label>
-                                  );
-                                })
-                              ) : (
-                                <p className="text-xs text-gray-400 px-1.5 py-2">
-                                  No values defined.
-                                </p>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="md:col-span-2 lg:col-span-3 text-center py-6 px-4 border border-dashed border-gray-300 rounded-lg bg-white">
-                  <p className="text-sm text-gray-500">
-                    No variation types (attributes) have been defined for this
-                    product yet. Configure them in settings.
-                  </p>
-                </div>
+      <div className="p-2">
+        <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
+          {!!hasVariationsEnabled ? (
+            <button
+              type="button"
+              onClick={toggleSectionExpand}
+              disabled={!hasVariationsEnabled}
+              className={`flex items-center space-x-2 text-left focus:outline-none group disabled:cursor-not-allowed disabled:opacity-50 ${
+                hasVariationsEnabled ? "cursor-pointer" : ""
+              }`}
+              aria-expanded={hasVariationsEnabled && isSectionExpanded}
+              aria-controls="variation-content-area"
+            >
+              <h2 className="text-base font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors duration-150">
+                Product Variations
+              </h2>
+              {hasVariationsEnabled && (
+                <span className="text-gray-500 group-hover:text-indigo-600 transition-colors duration-150 shrink-0">
+                  {isSectionExpanded ? (
+                    <DynamicChevronUpIcon className="h-5 w-5" />
+                  ) : (
+                    <DynamicChevronDownIcon className="h-5 w-5" />
+                  )}
+                </span>
               )}
+            </button>
+          ) : (
+            //// Product Price
+            <div className="w-full">
+              <h2 className="text-base font-semibold text-gray-800">
+                Product Price
+              </h2>
+              <div className="grid md:grid-cols-4 gap-2 ">
+                <FloatingInput
+                  defaultValue={
+                    derivedInitialEnabled
+                      ? ""
+                      : initialCombinations[0]?.regularPrice
+                  }
+                  name="regularPrice"
+                  label="Regualar Price"
+                />
+                <FloatingInput
+                  defaultValue={
+                    derivedInitialEnabled
+                      ? ""
+                      : initialCombinations[0]?.discountPrice
+                  }
+                  name="discountPrice"
+                  label="Discount Price"
+                />
+                <FloatingInput
+                  defaultValue={
+                    derivedInitialEnabled ? "" : initialCombinations[0]?.stock
+                  }
+                  name="stock"
+                  label="Quantity"
+                />
+                <FloatingInput
+                  defaultValue={
+                    derivedInitialEnabled ? "" : initialCombinations[0]?.sku
+                  }
+                  name="sku"
+                  label="sku"
+                  disabled
+                />
+              </div>
             </div>
+          )}
+        </div>
 
-            {/* Variation Table Area */}
-            <AnimatePresence mode="wait">
-              {rows.length > 0 ? (
-                <motion.div
-                  key="variation-table"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-x-auto shadow rounded-lg border border-gray-200 bg-white"
-                >
-                  <table className="min-w-full text-sm text-left text-gray-600">
-                    <thead className="bg-gray-100 border-b border-gray-200 text-xs text-gray-700 uppercase tracking-wider">
-                      <tr>
-                        {tableHeaders.map((header) => (
-                          <th
-                            key={header}
-                            scope="col"
-                            className="px-4 py-2 font-semibold"
-                          >
-                            {header}
-                          </th>
-                        ))}
-                        <th
-                          scope="col"
-                          className="px-4 py-2 font-semibold w-40"
+        {/* Variation Content Area */}
+        <AnimatePresence initial={false}>
+          {hasVariationsEnabled && isSectionExpanded && (
+            <motion.div
+              id="variation-content-area"
+              key="variation-content"
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={sectionVariants}
+              className="w-full overflow-scroll"
+            >
+              {/* Variation Selection Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {variationList && variationList.length > 0 ? (
+                  variationList.map((variationItem) => {
+                    if (!variationItem?.variation?.name) return null;
+                    const variationName = variationItem.variation.name;
+                    const isCatExpanded = !!expandedCategories[variationName];
+                    const selectionCount =
+                      selectedValues[variationName]?.length ?? 0;
+                    const categoryKey =
+                      variationItem.variation.id || variationName;
+                    return (
+                      <div
+                        key={categoryKey}
+                        className="border border-gray-200 rounded-lg shadow-sm bg-white overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleCategoryExpand(variationName)}
+                          className={`flex items-center justify-between w-full p-3 text-left transition-colors duration-150 ease-in-out ${
+                            isCatExpanded ? "bg-gray-100" : "hover:bg-gray-50"
+                          }`}
+                          aria-expanded={isCatExpanded}
                         >
-                          Image
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-4 py-2 font-semibold w-28"
-                        >
-                          SKU
-                        </th>
-                        {/* MODIFIED: Table Headers */}
-                        <th
-                          scope="col"
-                          className="px-4 py-2 font-semibold w-28"
-                        >
-                          Regular Price
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-4 py-2 font-semibold w-28"
-                        >
-                          Discount Price
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-4 py-2 font-semibold w-20"
-                        >
-                          Qty
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-4 py-2 font-semibold w-16 text-center"
-                        >
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <motion.tbody layout className="divide-y divide-gray-200">
-                      <AnimatePresence initial={false}>
-                        {rows.map((row, index) => (
-                          <motion.tr
-                            key={row.uiKey}
-                            layout
-                            variants={rowVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            className={`${
-                              index % 2 === 0 ? "bg-white" : "bg-gray-50/70"
-                            } hover:bg-indigo-50/50 transition-colors duration-100`}
-                          >
-                            {tableHeaders.map((header) => (
-                              <td
-                                key={`${row.uiKey}-${header}`}
-                                className="px-4 py-2 whitespace-nowrap font-medium text-gray-800"
-                              >
-                                {row.variationValues?.[header] ?? (
-                                  <span className="text-gray-400">-</span>
+                          <div className="flex items-center space-x-2">
+                            {selectionCount > 0 ? (
+                              <DynamicCheckCircleIcon className="h-5 w-5 text-indigo-600 shrink-0" />
+                            ) : (
+                              <span className="h-5 w-5 block border-2 border-gray-300 rounded-full shrink-0"></span>
+                            )}
+                            <span className="font-semibold text-gray-700 text-base">
+                              {variationName}
+                            </span>
+                            {selectionCount > 0 && (
+                              <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                                {selectionCount} selected
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-gray-400 shrink-0">
+                            {isCatExpanded ? (
+                              <DynamicChevronUpIcon className="h-5 w-5" />
+                            ) : (
+                              <DynamicChevronDownIcon className="h-5 w-5" />
+                            )}
+                          </span>
+                        </button>
+                        <AnimatePresence initial={false}>
+                          {isCatExpanded && (
+                            <motion.div
+                              key={`${categoryKey}-content`}
+                              initial="collapsed"
+                              animate="open"
+                              exit="collapsed"
+                              variants={{
+                                open: { opacity: 1, height: "auto" },
+                                collapsed: { opacity: 0, height: 0 },
+                              }}
+                              transition={{ duration: 0.25, ease: "easeInOut" }}
+                              className="border-t border-gray-200"
+                            >
+                              <div className="p-3 space-y-2 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
+                                {variationItem.values &&
+                                variationItem.values.length > 0 ? (
+                                  variationItem.values.map((valueItem) => {
+                                    if (!valueItem) return null;
+                                    const valueKey =
+                                      valueItem.id || valueItem.value;
+                                    return (
+                                      <label
+                                        key={valueKey}
+                                        className="flex items-center space-x-2.5 p-1.5 rounded-md hover:bg-gray-100 cursor-pointer transition-colors"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={
+                                            selectedValues[
+                                              variationName
+                                            ]?.includes(
+                                              String(valueItem.value)
+                                            ) ?? false
+                                          }
+                                          onChange={() =>
+                                            handleSelectValue(
+                                              variationName,
+                                              String(valueItem.value)
+                                            )
+                                          }
+                                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+                                        />
+                                        <span className="text-gray-700 select-none text-sm">
+                                          {valueItem.value}
+                                        </span>
+                                      </label>
+                                    );
+                                  })
+                                ) : (
+                                  <p className="text-xs text-gray-400 px-1.5 py-2">
+                                    No values defined.
+                                  </p>
                                 )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="md:col-span-2 lg:col-span-3 text-center py-6 px-4 border border-dashed border-gray-300 rounded-lg bg-white">
+                    <p className="text-sm text-gray-500">
+                      No variation types (attributes) have been defined for this
+                      product yet. Configure them in settings.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Variation Table Area */}
+              <AnimatePresence mode="wait">
+                {rows.length > 0 ? (
+                  // <motion.div
+                  //   key="variation-table"
+                  //   initial={{ opacity: 0, y: 10 }}
+                  //   animate={{ opacity: 1, y: 0 }}
+                  //   exit={{ opacity: 0, y: -10 }}
+                  //   transition={{ duration: 0.3 }}
+                  //   className=" shadow rounded-lg border border-gray-200 bg-white"
+                  // >
+                  <div className="overflow-x-auto ">
+                    <table className=" text-sm text-left text-gray-600   ">
+                      <thead
+                        className="
+                      bg-gray-100 border-b border-gray-200 text-xs text-gray-700 uppercase tracking-wider"
+                      >
+                        <tr>
+                          {tableHeaders.map((header) => (
+                            <th
+                              key={header}
+                              scope="col"
+                              className="px-4 py-2 font-semibold"
+                            >
+                              {header}
+                            </th>
+                          ))}
+                          <th
+                            scope="col"
+                            className="px-4 py-2 font-semibold w-40"
+                          >
+                            Image
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-2 font-semibold w-28"
+                          >
+                            SKU
+                          </th>
+                          {/* MODIFIED: Table Headers */}
+                          <th
+                            scope="col"
+                            className="px-4 py-2 font-semibold w-28"
+                          >
+                            Regular Price
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-2 font-semibold w-28"
+                          >
+                            Discount Price
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-2 font-semibold w-20"
+                          >
+                            Qty
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-2 font-semibold w-16 text-center"
+                          >
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <motion.tbody layout className="divide-y divide-gray-200">
+                        <AnimatePresence initial={false}>
+                          {rows.map((row, index) => (
+                            <motion.tr
+                              key={row.uiKey}
+                              layout
+                              variants={rowVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                              className={`${
+                                index % 2 === 0 ? "bg-white" : "bg-gray-50/70"
+                              } hover:bg-indigo-50/50 transition-colors duration-100`}
+                            >
+                              {tableHeaders.map((header) => (
+                                <td
+                                  key={`${row.uiKey}-${header}`}
+                                  className="px-4 py-2 whitespace-nowrap font-medium text-gray-800"
+                                >
+                                  {row.variationValues?.[header] ?? (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                              ))}
+                              <td className="px-4 py-2 align-middle">
+                                <FileInput
+                                  multipleSelect={false}
+                                  defaultValue={row.image}
+                                  onImageSelect={(selectedImages) =>
+                                    handleImageChange(selectedImages, row.uiKey)
+                                  }
+                                  showLabel={false}
+                                  imagePreviewClassName="h-12 w-12 rounded-md object-cover border border-gray-200"
+                                  placeholderIconSize="h-6 w-6"
+                                  buttonClassName="p-0 m-0"
+                                  containerClassName="w-full"
+                                />
                               </td>
-                            ))}
-                            <td className="px-4 py-2 align-middle">
-                              <FileInput
-                                multipleSelect={false}
-                                defaultValue={row.image}
-                                onImageSelect={(selectedImages) =>
-                                  handleImageChange(selectedImages, row.uiKey)
-                                }
-                                showLabel={false}
-                                imagePreviewClassName="h-12 w-12 rounded-md object-cover border border-gray-200"
-                                placeholderIconSize="h-6 w-6"
-                                buttonClassName="p-0 m-0"
-                                containerClassName="w-full"
-                              />
-                            </td>
-                            <td className="px-4 py-2 align-middle">
-                              <input
-                                type="text"
-                                placeholder="SKU"
-                                aria-label={`SKU for ${row.uiKey}`}
-                                value={row.sku ?? ""}
-                                onChange={(e) =>
-                                  handleInputChange(e, row.uiKey, "sku")
-                                }
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                              />
-                            </td>
-                            {/* MODIFIED: Table Data Cells for Prices */}
-                            <td className="px-4 py-2 align-middle">
-                              <input
-                                type="number"
-                                placeholder="0.00"
-                                aria-label={`Regular Price for ${row.uiKey}`}
-                                step="0.01"
-                                min="0"
-                                value={row.regularPrice ?? ""}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    e,
-                                    row.uiKey,
-                                    "regularPrice"
-                                  )
-                                }
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                            </td>
-                            <td className="px-4 py-2 align-middle">
-                              <input
-                                type="number"
-                                placeholder="0.00"
-                                aria-label={`Discount Price for ${row.uiKey}`}
-                                step="0.01"
-                                min="0"
-                                value={row.discountPrice ?? ""}
-                                onChange={(e) =>
-                                  handleInputChange(
-                                    e,
-                                    row.uiKey,
-                                    "discountPrice"
-                                  )
-                                }
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                            </td>
-                            <td className="px-4 py-2 align-middle">
-                              <input
-                                type="number"
-                                placeholder="0"
-                                aria-label={`Quantity for ${row.uiKey}`}
-                                step="1"
-                                min="0"
-                                value={row.qty ?? ""}
-                                onChange={(e) =>
-                                  handleInputChange(e, row.uiKey, "qty")
-                                }
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              />
-                            </td>
-                            <td className="px-4 py-2 align-middle text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteRow(row.uiKey)}
-                                className="text-gray-400 hover:text-red-600 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
-                                aria-label={`Delete ${row.uiKey}`}
-                              >
-                                <DynamicTrashIcon className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </AnimatePresence>
-                    </motion.tbody>
-                  </table>
-                </motion.div>
-              ) : (
-                /* Placeholders for no rows */
-                hasVariationsEnabled &&
-                isSectionExpanded &&
-                (Object.keys(selectedValues).length > 0 &&
-                Object.values(selectedValues).some(
-                  (arr) => arr && arr.length > 0
-                ) ? (
-                  <motion.div
-                    key="no-combos-placeholder"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
-                  >
-                    <DynamicXCircleIcon className="mx-auto h-10 w-10 text-amber-400 mb-2" />
-                    <h3 className="text-base font-medium text-gray-600">
-                      No combinations generated.
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Review your selections or variation definitions.
-                    </p>
-                  </motion.div>
-                ) : variationList && variationList.length > 0 ? (
-                  <motion.div
-                    key="select-options-placeholder"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
-                  >
-                    <DynamicPhotoIcon className="mx-auto h-10 w-10 text-gray-400 mb-2" />
-                    <h3 className="text-base font-medium text-gray-600">
-                      Select variation options
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Choose values to generate specific product variations.
-                    </p>
-                  </motion.div>
-                ) : !isInitialized && variationListMap.size === 0 ? null : (
-                  <motion.div
-                    key="no-variation-types-placeholder"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
-                  >
-                    <DynamicXCircleIcon className="mx-auto h-10 w-10 text-gray-400 mb-2" />
-                    <h3 className="text-base font-medium text-gray-600">
-                      No Variation Types Defined.
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Please configure variation attributes (like Color, Size)
-                      in your product settings first.
-                    </p>
-                  </motion.div>
-                ))
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                              <td className="px-4 py-2 align-middle">
+                                <input
+                                  type="text"
+                                  placeholder="SKU"
+                                  aria-label={`SKU for ${row.uiKey}`}
+                                  value={row.sku ?? ""}
+                                  onChange={(e) =>
+                                    handleInputChange(e, row.uiKey, "sku")
+                                  }
+                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </td>
+                              {/* MODIFIED: Table Data Cells for Prices */}
+                              <td className="px-4 py-2 align-middle">
+                                <input
+                                  type="number"
+                                  placeholder="0.00"
+                                  aria-label={`Regular Price for ${row.uiKey}`}
+                                  step="0.01"
+                                  min="0"
+                                  value={row.regularPrice ?? ""}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      e,
+                                      row.uiKey,
+                                      "regularPrice"
+                                    )
+                                  }
+                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </td>
+                              <td className="px-4 py-2 align-middle">
+                                <input
+                                  type="number"
+                                  placeholder="0.00"
+                                  aria-label={`Discount Price for ${row.uiKey}`}
+                                  step="0.01"
+                                  min="0"
+                                  value={row.discountPrice ?? ""}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      e,
+                                      row.uiKey,
+                                      "discountPrice"
+                                    )
+                                  }
+                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </td>
+                              <td className="px-4 py-2 align-middle">
+                                <input
+                                  type="number"
+                                  placeholder="0"
+                                  aria-label={`Quantity for ${row.uiKey}`}
+                                  step="1"
+                                  min="0"
+                                  value={row.qty ?? ""}
+                                  onChange={(e) =>
+                                    handleInputChange(e, row.uiKey, "qty")
+                                  }
+                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </td>
+                              <td className="px-4 py-2 align-middle text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteRow(row.uiKey)}
+                                  className="text-gray-400 hover:text-red-600 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                  aria-label={`Delete ${row.uiKey}`}
+                                >
+                                  <DynamicTrashIcon className="h-4 w-4" />
+                                </button>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </AnimatePresence>
+                      </motion.tbody>
+                    </table>
+                  </div>
+                ) : (
+                  // </motion.div>
+                  /* Placeholders for no rows */
+                  hasVariationsEnabled &&
+                  isSectionExpanded &&
+                  (Object.keys(selectedValues).length > 0 &&
+                  Object.values(selectedValues).some(
+                    (arr) => arr && arr.length > 0
+                  ) ? (
+                    <motion.div
+                      key="no-combos-placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
+                    >
+                      <DynamicXCircleIcon className="mx-auto h-10 w-10 text-amber-400 mb-2" />
+                      <h3 className="text-base font-medium text-gray-600">
+                        No combinations generated.
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Review your selections or variation definitions.
+                      </p>
+                    </motion.div>
+                  ) : variationList && variationList.length > 0 ? (
+                    <motion.div
+                      key="select-options-placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
+                    >
+                      <DynamicPhotoIcon className="mx-auto h-10 w-10 text-gray-400 mb-2" />
+                      <h3 className="text-base font-medium text-gray-600">
+                        Select variation options
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Choose values to generate specific product variations.
+                      </p>
+                    </motion.div>
+                  ) : !isInitialized && variationListMap.size === 0 ? null : (
+                    <motion.div
+                      key="no-variation-types-placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
+                    >
+                      <DynamicXCircleIcon className="mx-auto h-10 w-10 text-gray-400 mb-2" />
+                      <h3 className="text-base font-medium text-gray-600">
+                        No Variation Types Defined.
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Please configure variation attributes (like Color, Size)
+                        in your product settings first.
+                      </p>
+                    </motion.div>
+                  ))
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       <input name={name} type="hidden" value={hiddenInputValue} readOnly />
     </div>
