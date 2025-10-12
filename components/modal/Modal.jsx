@@ -25,7 +25,7 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
       }`}
     >
       <div
-        className={` bg-white max-w-6xl dark:bg-slate-900 rounded border-2 shadow-xl shadow-black dark:shadow-slate-500 p-4 md:p-6 lg:p-8 m-4 relative transition-all duration-500 ease-in-out transform ${
+        className={` bg-white max-w-[calc(100vw-20px)] md:max-w-6xl dark:bg-slate-900 rounded border-2 shadow-xl shadow-black dark:shadow-slate-500 p-4 md:p-6 lg:p-8 m-4 relative transition-all duration-500 ease-in-out transform ${
           isAnimating ? "scale-100 opacity-100" : "scale-0 opacity-50 "
         } `}
         onClick={(e) => e.stopPropagation()}

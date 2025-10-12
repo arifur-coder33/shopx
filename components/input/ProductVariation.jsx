@@ -529,78 +529,80 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
           </span>
         </label>
       </div>
-      <div className="p-2">
-        <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
-          {!!hasVariationsEnabled ? (
-            <button
-              type="button"
-              onClick={toggleSectionExpand}
-              disabled={!hasVariationsEnabled}
-              className={`flex items-center space-x-2 text-left focus:outline-none group disabled:cursor-not-allowed disabled:opacity-50 ${
-                hasVariationsEnabled ? "cursor-pointer" : ""
-              }`}
-              aria-expanded={hasVariationsEnabled && isSectionExpanded}
-              aria-controls="variation-content-area"
-            >
-              <h2 className="text-base font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors duration-150">
-                Product Variations
-              </h2>
-              {hasVariationsEnabled && (
-                <span className="text-gray-500 group-hover:text-indigo-600 transition-colors duration-150 shrink-0">
-                  {isSectionExpanded ? (
-                    <DynamicChevronUpIcon className="h-5 w-5" />
-                  ) : (
-                    <DynamicChevronDownIcon className="h-5 w-5" />
-                  )}
-                </span>
-              )}
-            </button>
-          ) : (
-            //// Product Price
-            <div className="w-full">
-              <h2 className="text-base font-semibold text-gray-800">
-                Product Price
-              </h2>
-              <div className="grid md:grid-cols-4 gap-2 ">
-                <FloatingInput
-                  defaultValue={
-                    derivedInitialEnabled
-                      ? ""
-                      : initialCombinations[0]?.regularPrice
-                  }
-                  name="regularPrice"
-                  label="Regualar Price"
-                />
-                <FloatingInput
-                  defaultValue={
-                    derivedInitialEnabled
-                      ? ""
-                      : initialCombinations[0]?.discountPrice
-                  }
-                  name="discountPrice"
-                  label="Discount Price"
-                />
-                <FloatingInput
-                  defaultValue={
-                    derivedInitialEnabled ? "" : initialCombinations[0]?.stock
-                  }
-                  name="stock"
-                  label="Quantity"
-                />
-                <FloatingInput
-                  defaultValue={
-                    derivedInitialEnabled ? "" : initialCombinations[0]?.sku
-                  }
-                  name="sku"
-                  label="sku"
-                  disabled
-                />
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Variation Content Area */}
+      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
+        {!!hasVariationsEnabled ? (
+          <button
+            type="button"
+            onClick={toggleSectionExpand}
+            disabled={!hasVariationsEnabled}
+            className={`flex items-center space-x-2 text-left focus:outline-none group disabled:cursor-not-allowed disabled:opacity-50 ${
+              hasVariationsEnabled ? "cursor-pointer" : ""
+            }`}
+            aria-expanded={hasVariationsEnabled && isSectionExpanded}
+            aria-controls="variation-content-area"
+          >
+            <h2 className="text-base font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors duration-150">
+              Product Variations
+            </h2>
+            {hasVariationsEnabled && (
+              <span className="text-gray-500 group-hover:text-indigo-600 transition-colors duration-150 shrink-0">
+                {isSectionExpanded ? (
+                  <DynamicChevronUpIcon className="h-5 w-5" />
+                ) : (
+                  <DynamicChevronDownIcon className="h-5 w-5" />
+                )}
+              </span>
+            )}
+          </button>
+        ) : (
+          //// Product Price
+          <div className="w-full">
+            <h2 className="text-base font-semibold text-gray-800">
+              Product Price
+            </h2>
+            <div className="grid md:grid-cols-4 gap-2 ">
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled
+                    ? ""
+                    : initialCombinations[0]?.regularPrice
+                }
+                name="regularPrice"
+                label="Regualar Price"
+              />
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled
+                    ? ""
+                    : initialCombinations[0]?.discountPrice
+                }
+                name="discountPrice"
+                label="Discount Price"
+              />
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled ? "" : initialCombinations[0]?.stock
+                }
+                name="stock"
+                label="Quantity"
+              />
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled ? "" : initialCombinations[0]?.sku
+                }
+                name="sku"
+                label="sku"
+                disabled
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Variation Content Area */}
+
+      <div className="max-w-screen">
         <AnimatePresence initial={false}>
           {hasVariationsEnabled && isSectionExpanded && (
             <motion.div
@@ -610,7 +612,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
               animate="visible"
               exit="hidden"
               variants={sectionVariants}
-              className="w-full overflow-scroll"
             >
               {/* Variation Selection Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -733,188 +734,192 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
               {/* Variation Table Area */}
               <AnimatePresence mode="wait">
                 {rows.length > 0 ? (
-                  // <motion.div
-                  //   key="variation-table"
-                  //   initial={{ opacity: 0, y: 10 }}
-                  //   animate={{ opacity: 1, y: 0 }}
-                  //   exit={{ opacity: 0, y: -10 }}
-                  //   transition={{ duration: 0.3 }}
-                  //   className=" shadow rounded-lg border border-gray-200 bg-white"
-                  // >
-                  <div className="overflow-x-auto ">
-                    <table className=" text-sm text-left text-gray-600   ">
-                      <thead
-                        className="
+                  <motion.div
+                    key="variation-table"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className=" shadow rounded-lg border border-gray-200 "
+                  >
+                    <div className="md:w-full max-w-[calc(100vw-20px)] overflow-x-auto ">
+                      <table className=" text-sm text-left text-gray-600 bg-red-500 w-full ">
+                        <thead
+                          className="
                       bg-gray-100 border-b border-gray-200 text-xs text-gray-700 uppercase tracking-wider"
-                      >
-                        <tr>
-                          {tableHeaders.map((header) => (
+                        >
+                          <tr>
+                            {tableHeaders.map((header) => (
+                              <th
+                                key={header}
+                                scope="col"
+                                className="px-4 py-2 font-semibold"
+                              >
+                                {header}
+                              </th>
+                            ))}
                             <th
-                              key={header}
                               scope="col"
-                              className="px-4 py-2 font-semibold"
+                              className="px-4 py-2 font-semibold w-40"
                             >
-                              {header}
+                              Image
                             </th>
-                          ))}
-                          <th
-                            scope="col"
-                            className="px-4 py-2 font-semibold w-40"
-                          >
-                            Image
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-4 py-2 font-semibold w-28"
-                          >
-                            SKU
-                          </th>
-                          {/* MODIFIED: Table Headers */}
-                          <th
-                            scope="col"
-                            className="px-4 py-2 font-semibold w-28"
-                          >
-                            Regular Price
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-4 py-2 font-semibold w-28"
-                          >
-                            Discount Price
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-4 py-2 font-semibold w-20"
-                          >
-                            Qty
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-4 py-2 font-semibold w-16 text-center"
-                          >
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <motion.tbody layout className="divide-y divide-gray-200">
-                        <AnimatePresence initial={false}>
-                          {rows.map((row, index) => (
-                            <motion.tr
-                              key={row.uiKey}
-                              layout
-                              variants={rowVariants}
-                              initial="hidden"
-                              animate="visible"
-                              exit="exit"
-                              className={`${
-                                index % 2 === 0 ? "bg-white" : "bg-gray-50/70"
-                              } hover:bg-indigo-50/50 transition-colors duration-100`}
+                            <th
+                              scope="col"
+                              className="px-4 py-2 font-semibold w-28"
                             >
-                              {tableHeaders.map((header) => (
-                                <td
-                                  key={`${row.uiKey}-${header}`}
-                                  className="px-4 py-2 whitespace-nowrap font-medium text-gray-800"
-                                >
-                                  {row.variationValues?.[header] ?? (
-                                    <span className="text-gray-400">-</span>
-                                  )}
+                              SKU
+                            </th>
+                            {/* MODIFIED: Table Headers */}
+                            <th
+                              scope="col"
+                              className="px-4 py-2 font-semibold w-28"
+                            >
+                              Regular Price
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-4 py-2 font-semibold w-28"
+                            >
+                              Discount Price
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-4 py-2 font-semibold w-20"
+                            >
+                              Qty
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-4 py-2 font-semibold w-16 text-center"
+                            >
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <motion.tbody
+                          layout
+                          className="divide-y divide-gray-200"
+                        >
+                          <AnimatePresence initial={false}>
+                            {rows.map((row, index) => (
+                              <motion.tr
+                                key={row.uiKey}
+                                layout
+                                variants={rowVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                className={`${
+                                  index % 2 === 0 ? "bg-white" : "bg-gray-50/70"
+                                } hover:bg-indigo-50/50 transition-colors duration-100`}
+                              >
+                                {tableHeaders.map((header) => (
+                                  <td
+                                    key={`${row.uiKey}-${header}`}
+                                    className="px-4 py-2  font-medium text-gray-800"
+                                  >
+                                    {row.variationValues?.[header] ?? (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </td>
+                                ))}
+                                <td className="px-4 py-2 align-middle">
+                                  <FileInput
+                                    multipleSelect={false}
+                                    defaultValue={row.image}
+                                    onImageSelect={(selectedImages) =>
+                                      handleImageChange(
+                                        selectedImages,
+                                        row.uiKey
+                                      )
+                                    }
+                                    showLabel={false}
+                                    w="60"
+                                    h="60"
+                                  />
                                 </td>
-                              ))}
-                              <td className="px-4 py-2 align-middle">
-                                <FileInput
-                                  multipleSelect={false}
-                                  defaultValue={row.image}
-                                  onImageSelect={(selectedImages) =>
-                                    handleImageChange(selectedImages, row.uiKey)
-                                  }
-                                  showLabel={false}
-                                  imagePreviewClassName="h-12 w-12 rounded-md object-cover border border-gray-200"
-                                  placeholderIconSize="h-6 w-6"
-                                  buttonClassName="p-0 m-0"
-                                  containerClassName="w-full"
-                                />
-                              </td>
-                              <td className="px-4 py-2 align-middle">
-                                <input
-                                  type="text"
-                                  placeholder="SKU"
-                                  aria-label={`SKU for ${row.uiKey}`}
-                                  value={row.sku ?? ""}
-                                  onChange={(e) =>
-                                    handleInputChange(e, row.uiKey, "sku")
-                                  }
-                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                              </td>
-                              {/* MODIFIED: Table Data Cells for Prices */}
-                              <td className="px-4 py-2 align-middle">
-                                <input
-                                  type="number"
-                                  placeholder="0.00"
-                                  aria-label={`Regular Price for ${row.uiKey}`}
-                                  step="0.01"
-                                  min="0"
-                                  value={row.regularPrice ?? ""}
-                                  onChange={(e) =>
-                                    handleInputChange(
-                                      e,
-                                      row.uiKey,
-                                      "regularPrice"
-                                    )
-                                  }
-                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
-                              </td>
-                              <td className="px-4 py-2 align-middle">
-                                <input
-                                  type="number"
-                                  placeholder="0.00"
-                                  aria-label={`Discount Price for ${row.uiKey}`}
-                                  step="0.01"
-                                  min="0"
-                                  value={row.discountPrice ?? ""}
-                                  onChange={(e) =>
-                                    handleInputChange(
-                                      e,
-                                      row.uiKey,
-                                      "discountPrice"
-                                    )
-                                  }
-                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
-                              </td>
-                              <td className="px-4 py-2 align-middle">
-                                <input
-                                  type="number"
-                                  placeholder="0"
-                                  aria-label={`Quantity for ${row.uiKey}`}
-                                  step="1"
-                                  min="0"
-                                  value={row.qty ?? ""}
-                                  onChange={(e) =>
-                                    handleInputChange(e, row.uiKey, "qty")
-                                  }
-                                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
-                              </td>
-                              <td className="px-4 py-2 align-middle text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteRow(row.uiKey)}
-                                  className="text-gray-400 hover:text-red-600 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
-                                  aria-label={`Delete ${row.uiKey}`}
-                                >
-                                  <DynamicTrashIcon className="h-4 w-4" />
-                                </button>
-                              </td>
-                            </motion.tr>
-                          ))}
-                        </AnimatePresence>
-                      </motion.tbody>
-                    </table>
-                  </div>
+                                <td className="px-4 py-2 align-middle">
+                                  <input
+                                    type="text"
+                                    placeholder="SKU"
+                                    aria-label={`SKU for ${row.uiKey}`}
+                                    value={row.sku ?? ""}
+                                    onChange={(e) =>
+                                      handleInputChange(e, row.uiKey, "sku")
+                                    }
+                                    className=" px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                  />
+                                </td>
+                                {/* MODIFIED: Table Data Cells for Prices */}
+                                <td className="px-4 py-2 align-middle">
+                                  <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    aria-label={`Regular Price for ${row.uiKey}`}
+                                    step="0.01"
+                                    min="0"
+                                    value={row.regularPrice ?? ""}
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        e,
+                                        row.uiKey,
+                                        "regularPrice"
+                                      )
+                                    }
+                                    className=" px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </td>
+                                <td className="px-4 py-2 align-middle">
+                                  <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    aria-label={`Discount Price for ${row.uiKey}`}
+                                    step="0.01"
+                                    min="0"
+                                    value={row.discountPrice ?? ""}
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        e,
+                                        row.uiKey,
+                                        "discountPrice"
+                                      )
+                                    }
+                                    className="px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </td>
+                                <td className="px-4 py-2 align-middle">
+                                  <input
+                                    type="number"
+                                    placeholder="0"
+                                    aria-label={`Quantity for ${row.uiKey}`}
+                                    step="1"
+                                    min="0"
+                                    value={row.qty ?? ""}
+                                    onChange={(e) =>
+                                      handleInputChange(e, row.uiKey, "qty")
+                                    }
+                                    className=" px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </td>
+                                <td className="px-4 py-2 align-middle text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRow(row.uiKey)}
+                                    className="text-gray-400 hover:text-red-600 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                    aria-label={`Delete ${row.uiKey}`}
+                                  >
+                                    <DynamicTrashIcon className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </motion.tr>
+                            ))}
+                          </AnimatePresence>
+                        </motion.tbody>
+                      </table>
+                    </div>
+                  </motion.div>
                 ) : (
-                  // </motion.div>
                   /* Placeholders for no rows */
                   hasVariationsEnabled &&
                   isSectionExpanded &&
@@ -977,7 +982,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
           )}
         </AnimatePresence>
       </div>
-
       <input name={name} type="hidden" value={hiddenInputValue} readOnly />
     </div>
   );
