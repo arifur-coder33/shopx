@@ -1,6 +1,6 @@
 "use client";
 
-import { useModalContext } from "@/context/ModalContext";
+import { useModalContext } from "@/context/ModalContext new";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";

@@ -1,7 +1,7 @@
 "use client";
 
 import { uploadImagesAction } from "@/backend/serverActions/fileUploadAction";
-import { useModalContext } from "@/context/ModalContext";
+import { useModalContext } from "@/context/ModalContext new";
 import { Upload, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";

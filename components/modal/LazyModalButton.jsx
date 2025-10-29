@@ -1,6 +1,6 @@
 "use client";
 
-import { useModalContext } from "@/context/ModalContext";
+import { useModalContext } from "@/context/ModalContext new";
 import { useState } from "react";
 import AddItem from "../common/AddItem";
 import { componentsMap } from "./componentsMap";

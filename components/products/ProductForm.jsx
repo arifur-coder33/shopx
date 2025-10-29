@@ -6,7 +6,7 @@ import {
 } from "@/backend/serverActions/productActions";
 import Button from "@/components/button";
 import FloatingInput from "@/components/input/FloatingInput";
-import { useModalContext } from "@/context/ModalContext";
+import { useModalContext } from "@/context/ModalContext new";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
