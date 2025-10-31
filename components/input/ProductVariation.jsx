@@ -760,7 +760,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                             ))}
                             <th
                               scope="col"
-                              className="px-4 py-2 font-semibold w-40"
+                              className="px-4 py-2 font-semibold "
                             >
                               Image
                             </th>
@@ -824,7 +824,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                     )}
                                   </td>
                                 ))}
-                                <td className="px-4 py-2 align-middle">
+                                <td className="">
                                   <FileInput
                                     multipleSelect={false}
                                     defaultValue={row.image}
@@ -835,11 +835,11 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                       )
                                     }
                                     showLabel={false}
-                                    w="60"
-                                    h="60"
+                                    w="96"
+                                    h="96"
                                   />
                                 </td>
-                                <td className="px-4 py-2 align-middle">
+                                <td className="px-4 py-2 align-middle ">
                                   <input
                                     type="text"
                                     placeholder="SKU"
@@ -851,8 +851,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                     className=" px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"
                                   />
                                 </td>
-                                {/* MODIFIED: Table Data Cells for Prices */}
-                                <td className="px-4 py-2 align-middle">
+
+                                <td className="px-4 py-2 align-middle ">
                                   <input
                                     type="number"
                                     placeholder="0.00"

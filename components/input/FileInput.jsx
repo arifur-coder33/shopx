@@ -76,15 +76,17 @@ export default function FileInput({
       {/* Hidden input for form submission */}
       <input type="hidden" name={name} value={inputValue} />
 
-      <div className="flex flex-wrap gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50 min-h-[100px]">
+      <div
+        className={`flex  flex-wrap gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50   `}
+      >
         {/* Display selected images */}
         {images?.map((image) => (
           <div
             key={image?.id}
-            className={`relative group w-[${w}px] h-[${h}px]  flex-shrink-0`} // Fixed size for previews
+            className={`relative group w-[${w}px] h-[${h}px]  flex-shrink-0`}
           >
             <ImageCustom
-              className="rounded-md object-cover w-full h-full shadow-sm" // Ensure image covers the area
+              className="rounded-md object-cover shadow-sm" // Ensure image covers the area
               placeholder="blur" // Keep placeholder if ImageCustom supports it
               src={image?.name} // Assuming name is the URL or path
               w={w} // Provide appropriate dimensions for ImageCustom's optimization
@@ -120,6 +122,7 @@ export default function FileInput({
                   hover:border-indigo-500 hover:text-indigo-600
                   transition-colors duration-200 ease-in-out
                   focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 focus-within:border-transparent
+                
                 `}
                 // Make it keyboard accessible if ModalButton doesn't handle it
                 tabIndex={0}
