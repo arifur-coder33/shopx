@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import LazyModalButton from "../modal/LazyModalButton";
 
-import { useModalContext } from "@/context/ModalContext new";
+import { useModalContext } from "@/context/ModalContext";
 
 export default function SearchableDropdown({
   name,

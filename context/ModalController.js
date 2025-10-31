@@ -3,7 +3,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
-import { useModalContext } from "./ModalContext new"; // Import your context hook
+import { useModalContext } from "./ModalContext"; // Import your context hook
 
 export default function ModalController() {
   // Get the closeModal function from your existing context

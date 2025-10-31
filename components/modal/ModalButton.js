@@ -20,7 +20,7 @@
 // }
 "use client";
 
-import { useModalContext } from "@/context/ModalContext new";
+import { useModalContext } from "@/context/ModalContext";
 
 export default function ModalButton({ children, buttonName }) {
   const { openModal } = useModalContext();

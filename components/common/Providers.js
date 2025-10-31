@@ -2,7 +2,7 @@
 "use client";
 
 import { CartProvider } from "@/context/CartContext";
-import { ModalProvider } from "@/context/ModalContext new";
+import { ModalProvider } from "@/context/ModalContext";
 import { SessionProvider } from "next-auth/react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Import toast styles here

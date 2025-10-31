@@ -152,7 +152,7 @@ import { getAllMedia } from "@/backend/serverActions/fileUploadAction";
 import Button from "@/components/button";
 import Imagecustom from "@/components/images/ImageCustom";
 import FileUploader from "@/components/input/FileUploader";
-import { useModalContext } from "@/context/ModalContext new";
+import { useModalContext } from "@/context/ModalContext";
 import { CheckCircle2, ImageOff, UploadCloudIcon } from "lucide-react";
 import React, { memo, useCallback, useEffect, useState } from "react"; // Import memo and useCallback
 import LoadingSpinner from "../common/LoadingSpinner";
