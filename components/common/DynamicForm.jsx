@@ -122,6 +122,7 @@ export default function DynamicForm({
                   colSpan={field.colSpan}
                   action={field.toggleAction}
                   id={data?.id}
+                  required={field.required}
                 />
               );
             case "text":
@@ -139,6 +140,7 @@ export default function DynamicForm({
                   onChange={
                     field.name === "mainImage" ? handleMainImageChange : null
                   }
+                  required={field.required}
                 />
               );
             case "tag":
@@ -149,6 +151,7 @@ export default function DynamicForm({
                   label={field.label}
                   defaultValue={data?.[field.name]}
                   colSpan={field.colSpan}
+                  required={field.required}
                 />
               );
             case "select":
@@ -163,6 +166,7 @@ export default function DynamicForm({
                     addForm={field.addForm}
                     colSpan={field.colSpan}
                     onSelect={field.onSelect}
+                    required={field.required}
                   />
                   {/* <SelectInput
                     index={index}
@@ -181,6 +185,7 @@ export default function DynamicForm({
                     name={field.name}
                     defaultValue={data?.[field.name]}
                     colSpan={field?.colSpan}
+                    required={field.required}
                   />
                 </div>
               );
@@ -207,6 +212,7 @@ export default function DynamicForm({
                     alt={field.label}
                     colSpan={field?.colSpan}
                     name={field.name}
+                    required={field.required}
                   />
                 </div>
               );
@@ -219,6 +225,7 @@ export default function DynamicForm({
                   defaultValue={data?.[field.name]}
                   colSpan={field?.colSpan}
                   labelNote={field.labelNote}
+                  required={field.required}
                 />
               );
             case "productVariation":
@@ -232,6 +239,7 @@ export default function DynamicForm({
                   labelNote={field?.labelNote}
                   variationList={field?.variationList}
                   initialCombinations={data?.[field.name]}
+                  required={field.required}
                 />
               );
             default:

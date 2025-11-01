@@ -106,7 +106,7 @@ model Product {
   description    String?                        // Optional detailed description
   categoryId     String?      @db.ObjectId      // Foreign key for Category
   category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
-  
+  canonicalUrl     String?
   mainImage   String?
   imageGallery    String[]
   
@@ -122,7 +122,8 @@ model Product {
   hasVariations    Boolean? @default(false)           
       // Many-to-Many Relationship using Join Table 
   variations      ProductVariation[] 
-  orders         OrderItem[]                     // One-to-many relationship with Order
+  orders         OrderItem[] 
+                      // One-to-many relationship with Order
   weight Float?
   dimensions String? // Optional dimensions for the product (e.g., "10x10x10 cm")
   createdAt      DateTime    @default(now())     // Timestamp for product creation

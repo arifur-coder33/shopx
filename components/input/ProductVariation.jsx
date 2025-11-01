@@ -561,7 +561,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
             <h2 className="text-base font-semibold text-gray-800">
               Product Price
             </h2>
-            <div className="grid md:grid-cols-4 gap-2 ">
+            <div className="grid md:grid-cols-7 gap-2 ">
               <FloatingInput
                 defaultValue={
                   derivedInitialEnabled
@@ -570,6 +570,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                 }
                 name="regularPrice"
                 label="Regualar Price"
+                required
               />
               <FloatingInput
                 defaultValue={
@@ -586,6 +587,24 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                 }
                 name="stock"
                 label="Quantity"
+              />
+
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled ? "" : initialCombinations[0]?.weight
+                }
+                name="weight (kg)"
+                label="weight"
+                required
+              />
+              <FloatingInput
+                defaultValue={
+                  derivedInitialEnabled ? "" : initialCombinations[0]?.weight
+                }
+                label="Pakage dimensions (L×W×H cm)"
+                name="dimensions"
+                required
+                colSpan={2}
               />
               <FloatingInput
                 defaultValue={
@@ -648,7 +667,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                             </span>
                             {selectionCount > 0 && (
                               <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
-                                {selectionCount} selected
+                                ল {selectionCount} selected
                               </span>
                             )}
                           </div>
@@ -711,7 +730,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                   })
                                 ) : (
                                   <p className="text-xs text-gray-400 px-1.5 py-2">
-                                    No values defined.
+                                    | No values defined.
                                   </p>
                                 )}
                               </div>
@@ -841,6 +860,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                 </td>
                                 <td className="px-4 py-2 align-middle ">
                                   <input
+                                    disabled
                                     type="text"
                                     placeholder="SKU"
                                     aria-label={`SKU for ${row.uiKey}`}

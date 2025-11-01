@@ -19,31 +19,37 @@ export const productFormFields = ({
     name: "isFeatured",
     colSpan: "1",
   },
-  { type: "file", label: "Main Image*", name: "thumbnail", colSpan: "full" },
-  { type: "text", label: "Product Name*", name: "title", colSpan: "full" },
+  {
+    type: "file",
+    label: "Main Image",
+    name: "thumbnail",
+    colSpan: "full",
+    required: true,
+  },
+  {
+    type: "text",
+    label: "Product Name",
+    name: "title",
+    colSpan: "full",
+    required: true,
+  },
   { type: "text", label: "Product Slug", name: "slug", colSpan: "full" },
   {
+    type: "text",
+    label: "Canonical URL",
+    name: "canonicalUrl",
+    colSpan: "full",
+  },
+  {
     type: "select",
-    label: "Category*",
+    label: "Category",
     name: "category",
     loadLists: loadCategoryDropDownLists,
     dropDownLists: categoryDropdownList,
     colSpan: "2",
     addForm: "CategoryForm",
     onSelect: onSelectCategoryHandler,
-  },
-
-  {
-    type: "text",
-    label: "Product Weight (kg)*",
-    name: "weight",
-    colSpan: "2",
-  },
-  {
-    type: "text",
-    label: "Product Dimensions (e.g., 10x10x10 cm)*",
-    name: "dimensions",
-    colSpan: "2",
+    required: true,
   },
 
   {
@@ -57,7 +63,7 @@ export const productFormFields = ({
     type: "text",
     label: "Video URL",
     name: "videoUrl",
-    colSpan: "2",
+    colSpan: "full",
   },
   {
     type: "tag",
