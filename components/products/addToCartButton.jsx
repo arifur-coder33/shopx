@@ -2,7 +2,6 @@
 import { useCart } from "@/context/CartContext";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import Button from "../button";
-import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
   const { addToCart } = useCart();
   const { product } = props;
@@ -24,7 +23,7 @@ export default function AddToCartButton(props) {
       onClick={handleAddToCart}
       {...props}
     >
-      <KalapanaFont>ব্যাগে রাখুন</KalapanaFont>{" "}
+      Add to cart
     </Button>
   );
 }

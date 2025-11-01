@@ -2,7 +2,6 @@
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import Link from "next/link";
 import Button from "../button";
-import KalapanaFont from "../KalapanaFont";
 
 export default function BuyNowButton({ product, slug, ...restProps }) {
   // Track the Initiate Checkout event
@@ -23,7 +22,7 @@ export default function BuyNowButton({ product, slug, ...restProps }) {
           className={"bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
           {...restProps}
         >
-          <KalapanaFont>এখনি কিনুন</KalapanaFont>{" "}
+          Buy Now
         </Button>
       </Link>
 
