@@ -36,30 +36,38 @@
 //   );
 // }
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function SelectInput({ defaultValue, onChange, ...restProps }) {
   const [value, setValue] = useState(defaultValue || "-");
 
+  // Keep in sync if defaultValue changes from outside
+  useEffect(() => {
+    setValue(defaultValue);
+  }, [defaultValue]);
+
   const handleChange = (e) => {
-    setValue(e.target.value);
     if (onChange) {
-      onChange(e); // ✅ call the parent onChange
+      onChange(e, setValue); // pass setValue to parent so it can revert if needed
+    } else {
+      setValue(e.target.value);
     }
   };
 
   return (
     <>
-      <label
-        htmlFor={restProps?.name}
-        className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-      >
-        {restProps?.label}
-      </label>
+      {restProps?.label && (
+        <label
+          htmlFor={restProps?.name}
+          className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+        >
+          {restProps?.label}
+        </label>
+      )}
       <select
         {...restProps}
         value={value}
-        onChange={handleChange} // ✅ use the combined handler
+        onChange={handleChange}
         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg 
                    focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 
                    dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 

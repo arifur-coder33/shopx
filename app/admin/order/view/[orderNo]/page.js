@@ -17,8 +17,8 @@ export default async function OrderDetailsPage({ params, searchParams }) {
         <span className="bg-orange-500 p-2 rounded-2xl">{data?.status}</span>
       </div>
       <div className="mx-2 my-2  col-span-full  ">
-        Updated date:{" "}
-        <span className="bg-orange-500 p-2 rounded-2xl">
+        Status Last Updated :{" "}
+        <span className=" p-2 rounded-2xl">
           {" "}
           {dateConvertToLocalString(data?.updatedAt)}
         </span>
