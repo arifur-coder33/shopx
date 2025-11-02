@@ -17,7 +17,9 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       {orderSuccess && (
         <h1 className="bg-green-300 p-2 rounded-md dark:text-slate-800 flex flex-row">
           <Heart /> ধন্যবাদ। <Heart /> আমরা আপনার অর্ডারটি পেয়েছি। খুব দ্রুত
-          আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবে।
+          আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবে। অথবা বিশেষ প্রয়োজনে আপনি
+          আমাদের হেল্পলাইন নাম্বারে কল করতে পারেন। হেল্পলাইন নাম্বার:{" "}
+          <a href="tel:+8801915109059">01915-109059</a>
         </h1>
       )}
 
