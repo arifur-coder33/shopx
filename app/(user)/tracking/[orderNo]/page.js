@@ -167,8 +167,8 @@ export default async function OrderTrackingPage({ params, searchParams }) {
         </div>
       )}
 
-      <div className="my-3 space-y-2 flex flex-row gap-2">
-        <p>
+      <div className="my-3 space-y-2 ">
+        <p cla>
           বিশেষ প্রয়োজনে আপনি আমাদের হেল্পলাইন নাম্বারে কল করতে পারেন। হেল্পলাইন
           নাম্বার:{" "}
           <a

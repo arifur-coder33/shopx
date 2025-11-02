@@ -52,11 +52,11 @@ export default function Footer() {
 
   if (!siteData) return null; // Loading state
 
-  const phoneNumber = siteData.phoneNumber1 || "01915-109159";
+  const phoneNumber = siteData.phoneNumber1 || "8801915109159";
   const whatsappMessage = encodeURIComponent(
     `হ্যালো, আমি আপনার সাথে যোগাযোগ করতে চাই।\nলিঙ্ক: ${currentUrl}`
   );
-  const whatsappLink = `https://wa.me/88${phoneNumber}?text=${whatsappMessage}`;
+  const whatsappLink = `https://wa.me/${phoneNumber}?text=${whatsappMessage}`;
 
   return (
     <footer className="bg-gradient-to-br from-slate-800 via-black to-slate-800 text-slate-200 shadow-md p-4">
@@ -65,7 +65,7 @@ export default function Footer() {
           <h1 className="text-xl font-semibold">যোগাযোগ</h1>
 
           <a
-            href={`tel:+88${phoneNumber}`}
+            href={`tel:+${phoneNumber}`}
             className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition"
           >
             <PhoneCall />
@@ -88,4 +88,4 @@ export default function Footer() {
       </div>
     </footer>
   );
-}
+}=
