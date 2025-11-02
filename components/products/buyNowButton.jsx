@@ -19,10 +19,10 @@ export default function BuyNowButton({ product, slug, ...restProps }) {
       <Link href={`/buynow/${slug || product?.slug}`}>
         <Button
           onClick={handleBuyNowClick}
-          className={"bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
+          className={"bg-cyan-500  border-b-4 border-b-cyan-700 p-2"}
           {...restProps}
         >
-          Buy Now
+          Order Now
         </Button>
       </Link>
 

@@ -9,5 +9,10 @@ export const dateConvertToLocalString = (isoDate) => {
     hour12: true,
   };
 
-  return date.toLocaleString("bn-BD", options).replace(",", ";");
+  return date
+    .toLocaleString("bn-BD", {
+      ...options,
+      timeZone: "Asia/Dhaka",
+    })
+    .replace(",", ";");
 };

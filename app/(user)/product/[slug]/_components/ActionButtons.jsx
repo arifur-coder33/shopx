@@ -6,7 +6,7 @@ export default function ActionButtons({ product, productQty }) {
     <div className="grid grid-cols-2 z-50 gap-2 mt-4 fixed bottom-1 left-0 w-full sm:static">
       {/* Add to cart button  */}
 
-      <AddToCartButton product={product} className={" w-full   text-4xl"} />
+      <AddToCartButton product={product} className={" w-full   text-xl"} />
 
       {/* buy now button  */}
       <div className="relative ">
@@ -15,7 +15,7 @@ export default function ActionButtons({ product, productQty }) {
           slug={`${product?.slug}?qty=${productQty}`}
           bgcolor="bg-purple"
           className={
-            " w-full hover:bg-orange-600 hover:border-b-orange-900 text-white  border-b-4  border-orange-800  py-2 text-4xl "
+            " w-full hover:bg-orange-600 hover:border-b-orange-900 text-white  border-b-4  border-orange-800  py-2 text-xl "
           }
         />
 
