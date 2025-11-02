@@ -126,7 +126,7 @@ export default function OrderForm({
         type={"submit"}
         className="w-full z-30 bg-purple p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 "
       >
-        {isPending ? "অর্ডার নিশ্চিত হচ্ছে " : "অর্ডার নিশ্চিত করুন"}
+        {isPending ? "অর্ডার নিশ্চিত হচ্ছে.... " : "অর্ডার নিশ্চিত করুন"}
       </Button>
     </form>
   );
