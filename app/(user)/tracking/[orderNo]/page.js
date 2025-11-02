@@ -47,6 +47,7 @@ import CopyLinkButton from "@/components/common/CopyLinkButton";
 
 import OrderDeliveryDetails from "@/components/tracking/OrderDeliveryDetails";
 import OrderItemTable from "@/components/tracking/OrderItemTable";
+import { dateConvertToLocalString } from "@/utils/dateConvert";
 import { Heart } from "lucide-react";
 
 export default async function OrderTrackingPage({ params, searchParams }) {
@@ -75,8 +76,8 @@ export default async function OrderTrackingPage({ params, searchParams }) {
 
       <div className="my-3">
         <p>
-          অথবা বিশেষ প্রয়োজনে আপনি আমাদের হেল্পলাইন নাম্বারে কল করতে পারেন।
-          হেল্পলাইন নাম্বার:{" "}
+          বিশেষ প্রয়োজনে আপনি আমাদের হেল্পলাইন নাম্বারে কল করতে পারেন। হেল্পলাইন
+          নাম্বার:{" "}
           <a
             href="tel:+8801915109059"
             className="text-blue-600 hover:underline"
@@ -103,6 +104,12 @@ export default async function OrderTrackingPage({ params, searchParams }) {
         <div className="mx-2 my-2 col-span-full">
           Status:{" "}
           <span className="bg-orange-500 p-2 rounded-2xl">{data?.status}</span>
+        </div>
+        <div className="mx-2 my-2 col-span-full">
+          Status Last updated:{" "}
+          <span className="p-2 rounded-2xl">
+            {dateConvertToLocalString(data?.updatedAt)}
+          </span>
         </div>
         <OrderItemTable data={data} />
       </div>
