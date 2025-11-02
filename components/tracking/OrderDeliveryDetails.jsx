@@ -9,6 +9,7 @@ export default function OrderDeliveryDetails({ data }) {
       <div className="">
         <div className="text-xl my-4 font-bold">ডেলিভারি ঠিকানা</div>
         <div>
+          <p>তারিখঃ {dateConvertToLocalString(data?.createdAt)} </p>
           <p>নামঃ {data?.customerName} </p>
           <p>মোবাইল নংঃ {data?.phoneNumber}</p>
           <p> ঠিকানাঃ {data?.deliveryAddress}</p>

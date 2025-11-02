@@ -66,7 +66,7 @@ const Item = ({ data, orderData }) => {
   return (
     <>
       <tr className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-        <td className="px-6 py-4">
+        <td className="px-6 py-4 max-w-16 break-words whitespace-normal">
           {dateConvertToLocalString(data?.createdAt)}
         </td>
         <th
@@ -78,16 +78,16 @@ const Item = ({ data, orderData }) => {
         {/* <td className="px-6 py-4">
           <Imagecustom src={data?.images[0]} w={50} h={50} alt={data?.title} />
         </td> */}
-        <th
+        <td
           scope="row"
-          className="px-6 py-4 max-w-20 font-medium text-gray-900 break-words whitespace-normal dark:text-white"
+          className="px-6 py-4 max-w-28 font-medium text-gray-900 break-words whitespace-normal dark:text-white"
         >
           {data.productName}
-        </th>
+        </td>
         <td className="px-6 py-4">{data?.price}</td>
 
         <td className="px-6 py-4">{data?.quantity}</td>
-        <td className="px-6 py-4">
+        <td className="px-6 py-4 max-w-24">
           <OrderStatusUpdate
             status={orderData?.status}
             orderId={orderData?.id}
