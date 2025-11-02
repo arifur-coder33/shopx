@@ -71,7 +71,7 @@ const Item = ({ data, orderData }) => {
         </td>
         <th
           scope="row"
-          className="px-6 py-4 font-medium text-gray-900 whitespace-normal break-words dark:text-white"
+          className="px-6 py-4 font-medium text-gray-900  dark:text-white"
         >
           {data.orderNo}
         </th>
@@ -80,7 +80,7 @@ const Item = ({ data, orderData }) => {
         </td> */}
         <th
           scope="row"
-          className="px-6 py-4 max-w-12 font-medium text-gray-900 whitespace-nowrap dark:text-white"
+          className="px-6 py-4 max-w-20 font-medium text-gray-900 break-words whitespace-normal dark:text-white"
         >
           {data.productName}
         </th>

@@ -23,7 +23,7 @@ export default function AddToCartButton(props) {
       onClick={handleAddToCart}
       {...props}
     >
-      Add to cart
+      Add to Cart
     </Button>
   );
 }
