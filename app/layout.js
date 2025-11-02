@@ -24,7 +24,7 @@ export const metadata = {
   appleMobileWebAppTitle: process.env.NEXT_SHOP_NAME,
   openGraph: {
     title: process.env.NEXT_SHOP_NAME + "-" + process.env.NEXT_SHOP_TITLE,
-    description: "ShopX - The best place to shop online.",
+    description: " - The best place to shop online.",
     url: process.env.NEXT_PUBLIC_SITE_URL,
     // Add your actual website URL here
     site_name: process.env.NEXT_SHOP_NAME,

@@ -140,8 +140,8 @@ export default async function OrderTrackingPage({ params, searchParams }) {
   const productNames =
     data?.orderItems?.map((item) => item.productName).join(", ") ||
     "নির্ধারিত হয়নি";
-  const totalPrice = data?.totalPrice
-    ? `${data.totalPrice} BDT`
+  const totalPrice = data?.orderPrice
+    ? `${data.orderPrice} BDT`
     : "নির্ধারিত হয়নি";
 
   // ✅ WhatsApp pre-filled message
@@ -167,7 +167,7 @@ export default async function OrderTrackingPage({ params, searchParams }) {
         </div>
       )}
 
-      <div className="my-3 space-y-2">
+      <div className="my-3 space-y-2 flex flex-row gap-2">
         <p>
           বিশেষ প্রয়োজনে আপনি আমাদের হেল্পলাইন নাম্বারে কল করতে পারেন। হেল্পলাইন
           নাম্বার:{" "}
@@ -176,6 +176,14 @@ export default async function OrderTrackingPage({ params, searchParams }) {
             className="text-blue-600 hover:underline"
           >
             01915-109159
+          </a>
+          <a
+            href={whatsappLink}
+            target="_blank"
+            className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition"
+          >
+            <MessageCircle className="w-5 h-5" />
+            WhatsApp এ চ্যাট করুন
           </a>
         </p>
 
@@ -190,16 +198,6 @@ export default async function OrderTrackingPage({ params, searchParams }) {
           </a>{" "}
           <CopyLinkButton link={trackingLink} />
         </p>
-
-        {/* ✅ WhatsApp Chat Button */}
-        <a
-          href={whatsappLink}
-          target="_blank"
-          className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition"
-        >
-          <MessageCircle className="w-5 h-5" />
-          WhatsApp এ চ্যাট করুন
-        </a>
       </div>
 
       <div className="grid sm:grid-cols-2 px-4 border mt-2 rounded-2xl">

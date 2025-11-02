@@ -7,7 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SessionProvider } from "next-auth/react";
 import Script from "next/script";
 export const metadata = {
-  title: " আমার শপ",
+  title: " বিডিমার্ট24.অনলাইন - ঘরে বসে পন্য অর্ডার করুন",
   description: "ঘরে বসে পন্য অর্ডার করুন",
   links: [{ rel: "preconnect", href: "https://res.cloudinary.com" }],
 };
