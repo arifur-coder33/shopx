@@ -515,7 +515,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     <div className={` bg-gray-50 shadow-lg rounded-xl col-span-${colSpan}`}>
       {/* Header with Toggle */}
 
-      <div className="flex justify-between items-center mb-4 border-b-2 border-gray-200 p-2 bg-slate-100">
+      <div className="flex  justify-between items-center mb-4 border-b-2 border-gray-200 p-2 bg-slate-100">
         <span className="text-md font-bold">Product Price & Variations</span>
         <label className="flex items-center space-x-2 cursor-pointer shrink-0 pl-4">
           <input
@@ -524,9 +524,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
             onChange={handleToggleVariations}
             className="h-4 w-4 rounded border-gray-300 cursor-pointer text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0"
           />
-          <span className="text-sm font-medium text-gray-700">
-            Has Variations
-          </span>
+          <span className=" font-medium text-gray-700">Has Variations</span>
         </label>
       </div>
 
@@ -558,7 +556,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         ) : (
           //// Product Price
           <div className="w-full">
-            <h2 className="text-base font-semibold text-gray-800">
+            <h2 className="text-[10px] md:text-base font-semibold text-gray-800">
               Product Price
             </h2>
             <div className="grid md:grid-cols-7 gap-2 ">
@@ -667,7 +665,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                             </span>
                             {selectionCount > 0 && (
                               <span className="text-xs font-medium bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
-                                ল {selectionCount} selected
+                                {selectionCount} selected
                               </span>
                             )}
                           </div>
@@ -722,7 +720,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                           }
                                           className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
                                         />
-                                        <span className="text-gray-700 select-none text-sm">
+                                        <span className="text-gray-700 select-none ">
                                           {valueItem.value}
                                         </span>
                                       </label>
@@ -741,8 +739,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                     );
                   })
                 ) : (
-                  <div className="md:col-span-2 lg:col-span-3 text-center py-6 px-4 border border-dashed border-gray-300 rounded-lg bg-white">
-                    <p className="text-sm text-gray-500">
+                  <div className="md:col-span-2 lg:col-span-3 text-center py-6 px-2 border border-dashed border-gray-300 rounded-lg bg-white">
+                    <p className=" text-gray-500">
                       No variation types (attributes) have been defined for this
                       product yet. Configure them in settings.
                     </p>
@@ -762,55 +760,67 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                     className=" shadow rounded-lg border border-gray-200 "
                   >
                     <div className="md:w-full max-w-[calc(100vw-20px)] overflow-x-auto ">
-                      <table className=" text-sm text-left text-gray-600 bg-red-500 w-full ">
+                      <table className="  text-left text-gray-600  w-full ">
                         <thead
                           className="
-                      bg-gray-100 border-b border-gray-200 text-xs text-gray-700 uppercase tracking-wider"
+                      bg-gray-100 border-b border-gray-200  text-gray-700 uppercase tracking-wider"
                         >
                           <tr>
                             {tableHeaders.map((header) => (
                               <th
                                 key={header}
                                 scope="col"
-                                className="px-4 py-2 font-semibold"
+                                className="px-2 py-2 font-semibold"
                               >
                                 {header}
                               </th>
                             ))}
                             <th
                               scope="col"
-                              className="px-4 py-2 font-semibold "
+                              className="px-2 py-2 font-semibold w-28 "
                             >
                               Image
                             </th>
                             <th
                               scope="col"
-                              className="px-4 py-2 font-semibold w-28"
+                              className="px-2 py-2 font-semibold "
                             >
                               SKU
                             </th>
                             {/* MODIFIED: Table Headers */}
                             <th
                               scope="col"
-                              className="px-4 py-2 font-semibold w-28"
+                              className="px-2 py-2 font-semibold "
                             >
                               Regular Price
                             </th>
                             <th
                               scope="col"
-                              className="px-4 py-2 font-semibold w-28"
+                              className="px-2 py-2 font-semibold "
                             >
                               Discount Price
                             </th>
                             <th
                               scope="col"
-                              className="px-4 py-2 font-semibold w-20"
+                              className="px-2 py-2 font-semibold "
                             >
                               Qty
                             </th>
                             <th
                               scope="col"
-                              className="px-4 py-2 font-semibold w-16 text-center"
+                              className="px-2 py-2 font-semibold w-4"
+                            >
+                              Weight (KG)
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-2 py-2 font-semibold w-8"
+                            >
+                              Pakage dimensions (L×W×H cm)
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-2 py-2 font-semibold w-16 text-center"
                             >
                               Action
                             </th>
@@ -836,7 +846,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                 {tableHeaders.map((header) => (
                                   <td
                                     key={`${row.uiKey}-${header}`}
-                                    className="px-4 py-2  font-medium text-gray-800"
+                                    className="px-2 py-2  font-medium text-gray-800"
                                   >
                                     {row.variationValues?.[header] ?? (
                                       <span className="text-gray-400">-</span>
@@ -854,11 +864,11 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                       )
                                     }
                                     showLabel={false}
-                                    w="96"
-                                    h="96"
+                                    w="50"
+                                    h="50"
                                   />
                                 </td>
-                                <td className="px-4 py-2 align-middle ">
+                                <td className="px-2 py-2 align-middle ">
                                   <input
                                     disabled
                                     type="text"
@@ -868,11 +878,11 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                     onChange={(e) =>
                                       handleInputChange(e, row.uiKey, "sku")
                                     }
-                                    className=" px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                    className=" px-2 w-20 py-1.5 border border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500"
                                   />
                                 </td>
 
-                                <td className="px-4 py-2 align-middle ">
+                                <td className="px-2 py-2 align-middle ">
                                   <input
                                     type="number"
                                     placeholder="0.00"
@@ -887,10 +897,10 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                         "regularPrice"
                                       )
                                     }
-                                    className=" px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className=" px-2 py-1.5 w-16 border border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </td>
-                                <td className="px-4 py-2 align-middle">
+                                <td className="px-2 py-2 align-middle">
                                   <input
                                     type="number"
                                     placeholder="0.00"
@@ -905,10 +915,10 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                         "discountPrice"
                                       )
                                     }
-                                    className="px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="px-2 py-1.5 border w-16 border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </td>
-                                <td className="px-4 py-2 align-middle">
+                                <td className="px-2 py-2 align-middle">
                                   <input
                                     type="number"
                                     placeholder="0"
@@ -919,10 +929,40 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                     onChange={(e) =>
                                       handleInputChange(e, row.uiKey, "qty")
                                     }
-                                    className=" px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className=" px-2 py-1.5 border w-16 border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </td>
-                                <td className="px-4 py-2 align-middle text-center">
+                                <td className="px-2 py-2 align-middle">
+                                  <input
+                                    type="number"
+                                    placeholder="0"
+                                    aria-label={`Weight for ${row.uiKey}`}
+                                    step="1"
+                                    min="0"
+                                    value={row.weight ?? ""}
+                                    onChange={(e) =>
+                                      handleInputChange(e, row.uiKey, "weight")
+                                    }
+                                    className=" px-2 py-1.5 border w-16 border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </td>
+                                <td className="px-2 py-2 align-middle">
+                                  <input
+                                    type="text"
+                                    aria-label={`Dimention for ${row.uiKey}`}
+                                    placeholder={"100X50X30"}
+                                    value={row.dimensions ?? ""}
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        e,
+                                        row.uiKey,
+                                        "dimensions"
+                                      )
+                                    }
+                                    className=" px-2 py-1.5 w-32 border border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                </td>
+                                <td className="px-2 py-2 align-middle text-center">
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteRow(row.uiKey)}
@@ -952,13 +992,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
+                      className="text-center py-8 px-2 border border-dashed border-gray-300 rounded-lg bg-white"
                     >
                       <DynamicXCircleIcon className="mx-auto h-10 w-10 text-amber-400 mb-2" />
                       <h3 className="text-base font-medium text-gray-600">
                         No combinations generated.
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className=" text-gray-500 mt-1">
                         Review your selections or variation definitions.
                       </p>
                     </motion.div>
@@ -968,13 +1008,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
+                      className="text-center py-8 px-2 border border-dashed border-gray-300 rounded-lg bg-white"
                     >
                       <DynamicPhotoIcon className="mx-auto h-10 w-10 text-gray-400 mb-2" />
                       <h3 className="text-base font-medium text-gray-600">
                         Select variation options
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className=" text-gray-500 mt-1">
                         Choose values to generate specific product variations.
                       </p>
                     </motion.div>
@@ -984,13 +1024,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="text-center py-8 px-4 border border-dashed border-gray-300 rounded-lg bg-white"
+                      className="text-center py-8 px-2 border border-dashed border-gray-300 rounded-lg bg-white"
                     >
                       <DynamicXCircleIcon className="mx-auto h-10 w-10 text-gray-400 mb-2" />
                       <h3 className="text-base font-medium text-gray-600">
                         No Variation Types Defined.
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className=" text-gray-500 mt-1">
                         Please configure variation attributes (like Color, Size)
                         in your product settings first.
                       </p>

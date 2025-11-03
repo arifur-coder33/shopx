@@ -59,8 +59,8 @@ model VariationName {
   category   Category? @relation(fields: [categoryId], references: [id])            
   values VariationValue[] // Example: "Size", "Color"
   combinations Combination[]
-   createdAt       DateTime   @default(now())  // Timestamp for category creation
-  updatedAt       DateTime   @updatedAt      // Auto-updated timestamp
+   createdAt       DateTime?   @default(now())  // Timestamp for category creation
+  updatedAt       DateTime?   @updatedAt      // Auto-updated timestamp
 }
 
 // Variation Value Model (Specific options like XL, Red, etc.)
@@ -74,8 +74,8 @@ model VariationValue {
   // Many-to-Many Relationship using Join Table
  
   combinations Combination[] // Many-to-Many Relationship using Join Table
-   createdAt       DateTime   @default(now())  // Timestamp for category creation
-  updatedAt       DateTime   @updatedAt      // Auto-updated timestamp
+   createdAt       DateTime?   @default(now())  // Timestamp for category creation
+  updatedAt       DateTime?   @updatedAt      // Auto-updated timestamp
 }
 
 model ProductCodeCounter{
@@ -230,20 +230,20 @@ model OrderCounter {
 
 
 model SiteSetting {
-id              String @id @default(auto()) @map("_id") @db.ObjectId
-name   String?
-slogan  String?
-logo   String?
-phoneNumber1 String?
-phoneNumber2 String?
-adress1 String?
-adress2 String?
-googleMap String?
-email String?
-fbLink  String?
-youTubeLink String?
-createdAt      DateTime    @default(now()) // Timestamp for order placement
-updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  name   String?
+  slogan  String?
+  logo   String?
+  phoneNumber1 String?
+  phoneNumber2 String?
+  adress1 String?
+  adress2 String?
+  googleMap String?
+  email String?
+  fbLink  String?
+  youTubeLink String?
+  createdAt      DateTime    @default(now()) // Timestamp for order placement
+  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
 
 }
 

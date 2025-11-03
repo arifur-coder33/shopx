@@ -30,6 +30,7 @@ export default function VariationInput({
   //   }
   //   getVariationsList();
   // }, []);
+  console.log("defaultvalue", defaultValue);
   useEffect(() => {
     if (defaultValue) {
       setRows(defaultValue);
@@ -105,9 +106,11 @@ export default function VariationInput({
 
   const loadVariations = async () => {
     const getData = await getVariations();
+
     setVariationsList(getData?.data || []);
     // return getData?.data || [];
   };
+  console.log("varitionList", variationsList);
 
   return (
     <div
