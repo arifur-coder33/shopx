@@ -29,25 +29,22 @@
 // }
 
 
-
 import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
-import { PhoneCall } from "lucide-react";
-
-
+import { PhoneCall, MapPin } from "lucide-react";
 import WhatsAppChat from "../common/Chat/WhatsAppChat";
 
 export default async function Footer() {
+  const { data } = await getSiteSetting();
 
-const {data}= await getSiteSetting()
+  if (!data) return null;
 
-  if (!siteData) return null; // Loading state
-
-  const phoneNumber = data.phoneNumber1 || "8801915109159";
-
+  const phoneNumber = data?.phoneNumber1 || "8801915109159";
+  const address = data?.adress1 || "ঢাকা, বাংলাদেশ"; 
 
   return (
     <footer className="bg-gradient-to-br from-slate-800 via-black to-slate-800 text-slate-200 shadow-md p-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+     
         <div className="flex flex-col gap-2">
           <h1 className="text-xl font-semibold">যোগাযোগ</h1>
 
@@ -58,11 +55,20 @@ const {data}= await getSiteSetting()
             <PhoneCall />
             ফোন করুন: {phoneNumber}
           </a>
-<WhatsAppChat WAnumber={phoneNumber}/>
+
+          {/* WhatsApp Chat */}
+          <WhatsAppChat WAnumber={phoneNumber} />
+
+          {/* Address */}
+          <div className="flex items-start gap-2 mt-2">
+            <MapPin className="mt-1" />
+            <span>{address}</span>
+          </div>
         </div>
 
+        {/* কপিরাইট অংশ */}
         <div className="text-center sm:text-right text-sm mt-2 sm:mt-0">
-          © কপিরাইট-বিডিমার্ট24.অনলাইন - ২০২৫
+          © কপিরাইট - বিডিমার্ট24.অনলাইন - ২০২৫
         </div>
       </div>
     </footer>
