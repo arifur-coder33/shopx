@@ -1,26 +1,25 @@
 "use client";
 
-import { MessageCircle, PhoneCall } from "lucide-react";
-import { headers } from 'next/headers';
+import { MessageCircle,  } from "lucide-react";
+
 import { usePathname, useSearchParams } from 'next/navigation';
 
-export default function WhatsAppChat({WAnumber}) {
+export default function WhatsAppChat({WAnumber,Message}) {
   
 
-const headersList = headers();
-  const host = headersList.get('host');
-  const protocol = headersList.get('x-forwarded-proto') || 'http';
+
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const query = searchParams.toString();
-  const fullUrl = `${protocol}://${host}${pathname}${query ? `?${query}` : ''}`;
+//   const fullUrl = `${protocol}://${host}${pathname}${query ? `?${query}` : ''}`;
 
+  const fullUrl = `https://www.bdmart24.online/${pathname}${query ? `?${query}` : ''}`;
 
   if (!WAnumber) return null; // Loading state
 
   const phoneNumber = WAnumber ;
-  const whatsappMessage = encodeURIComponent(
+  const whatsappMessage = Message || encodeURIComponent(
     `হ্যালো, আমি আপনার সাথে যোগাযোগ করতে চাই।\nলিঙ্ক: ${fullUrl}`
   );
   const whatsappLink = `https://wa.me/${phoneNumber}?text=${whatsappMessage}`;

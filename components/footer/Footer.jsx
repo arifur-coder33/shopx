@@ -40,8 +40,6 @@ export default async function Footer() {
 
 const {data}= await getSiteSetting()
 
- 
-
   if (!siteData) return null; // Loading state
 
   const phoneNumber = data.phoneNumber1 || "8801915109159";

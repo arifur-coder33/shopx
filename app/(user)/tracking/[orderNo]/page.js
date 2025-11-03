@@ -117,6 +117,7 @@
 //   );
 // }
 import { getOrderByOrderNo } from "@/backend/serverActions/orderActions";
+import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
 import CopyLinkButton from "@/components/common/CopyLinkButton";
 import OrderDeliveryDetails from "@/components/tracking/OrderDeliveryDetails";
 import OrderItemTable from "@/components/tracking/OrderItemTable";
@@ -125,8 +126,9 @@ import { Heart, MessageCircle } from "lucide-react";
 
 export default async function OrderTrackingPage({ params, searchParams }) {
   const { orderNo } = await params;
+  
   const { p, orderSuccess } = await searchParams;
-
+const {data:siteSetting}= await getSiteSetting()
   const { success, data, error } = await getOrderByOrderNo(orderNo, p);
   if ((!success && error) || !data) {
     return <p>কোন ডাটা পাওয়া যায়নি।</p>;
