@@ -28,35 +28,24 @@
 //   );
 // }
 
-"use client";
+
 
 import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
-import { MessageCircle, PhoneCall } from "lucide-react";
-import { useEffect, useState } from "react";
+import { PhoneCall } from "lucide-react";
 
-export default function Footer() {
-  const [siteData, setSiteData] = useState(null);
-  const [currentUrl, setCurrentUrl] = useState("");
 
-  useEffect(() => {
-    // Get current URL
-    setCurrentUrl(window.location.href);
+import WhatsAppChat from "../common/Chat/WhatsAppChat";
 
-    // Fetch site setting
-    async function fetchData() {
-      const { data } = await getSiteSetting();
-      setSiteData(data);
-    }
-    fetchData();
-  }, []);
+export default async function Footer() {
+
+const {data}= await getSiteSetting()
+
+ 
 
   if (!siteData) return null; // Loading state
 
-  const phoneNumber = siteData.phoneNumber1 || "8801915109159";
-  const whatsappMessage = encodeURIComponent(
-    `হ্যালো, আমি আপনার সাথে যোগাযোগ করতে চাই।\nলিঙ্ক: ${currentUrl}`
-  );
-  const whatsappLink = `https://wa.me/${phoneNumber}?text=${whatsappMessage}`;
+  const phoneNumber = data.phoneNumber1 || "8801915109159";
+
 
   return (
     <footer className="bg-gradient-to-br from-slate-800 via-black to-slate-800 text-slate-200 shadow-md p-4">
@@ -71,15 +60,7 @@ export default function Footer() {
             <PhoneCall />
             ফোন করুন: {phoneNumber}
           </a>
-
-          <a
-            href={whatsappLink}
-            target="_blank"
-            className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 rounded-md transition"
-          >
-            <MessageCircle />
-            WhatsApp চ্যাট
-          </a>
+<WhatsAppChat WAnumber={phoneNumber}/>
         </div>
 
         <div className="text-center sm:text-right text-sm mt-2 sm:mt-0">

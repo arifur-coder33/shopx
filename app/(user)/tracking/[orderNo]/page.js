@@ -160,10 +160,10 @@ export default async function OrderTrackingPage({ params, searchParams }) {
     <div>
       {orderSuccess && (
         <div>
-          <h1 className="bg-green-300 p-2 rounded-md dark:text-slate-800 flex flex-row items-center gap-1">
+          <p className="bg-green-300 p-2 rounded-md dark:text-slate-800  gap-1">
             <Heart /> ধন্যবাদ। <Heart /> আমরা আপনার অর্ডারটি পেয়েছি। খুব দ্রুত
             আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবে।
-          </h1>
+          </p>
         </div>
       )}
 
