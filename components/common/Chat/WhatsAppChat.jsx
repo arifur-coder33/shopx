@@ -32,7 +32,7 @@ export default function WhatsAppChat({WAnumber,Message,label}) {
             className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 rounded-md transition"
           >
             <MessageCircle />
-            {label || "WhatsApp চ্যাট"}
+            {label || "WhatsApp চ্যাট"} chat
           </a>
         </div>
 
