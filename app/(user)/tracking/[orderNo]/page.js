@@ -181,7 +181,7 @@ export default async function OrderTrackingPage({ params, searchParams }) {
           <a
             href={whatsappLink}
             target="_blank"
-            className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition"
+            className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-2 mx-2 rounded-full hover:bg-green-600 transition"
           >
             <MessageCircle className="w-5 h-5" />
             WhatsApp এ চ্যাট করুন
