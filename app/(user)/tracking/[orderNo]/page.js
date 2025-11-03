@@ -122,6 +122,7 @@ import CopyLinkButton from "@/components/common/CopyLinkButton";
 import OrderDeliveryDetails from "@/components/tracking/OrderDeliveryDetails";
 import OrderItemTable from "@/components/tracking/OrderItemTable";
 import { dateConvertToLocalString } from "@/utils/dateConvert";
+import { MessageCircle } from "lucide-react";
 
 export default async function OrderTrackingPage({ params, searchParams }) {
   const { orderNo } = await params;
@@ -153,8 +154,8 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       `ট্র্যাকিং লিঙ্ক: ${trackingLink}`
   );
 
-  // const whatsappNumber = "8801915109159";
-  // const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+  const whatsappNumber = "8801915109159";
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   return (
     <div>
@@ -168,7 +169,7 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       )}
 
       <div className="my-3 space-y-2 ">
-        <p cla>
+        <p >
           বিশেষ প্রয়োজনে আপনি আমাদের হেল্পলাইন নাম্বারে কল করতে পারেন। হেল্পলাইন
           নাম্বার:{" "}
           <a
@@ -177,14 +178,14 @@ export default async function OrderTrackingPage({ params, searchParams }) {
           >
             01915-109159
           </a>
-          {/* <a
+          <a
             href={whatsappLink}
             target="_blank"
             className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition"
           >
             <MessageCircle className="w-5 h-5" />
             
-          </a> */}
+          </a>
           <WhatsAppChat Message={whatsappMessage} label={"WhatsApp এ চ্যাট করুন"}/>
         </p>
 
