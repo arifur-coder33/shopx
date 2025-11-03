@@ -122,7 +122,6 @@ import CopyLinkButton from "@/components/common/CopyLinkButton";
 import OrderDeliveryDetails from "@/components/tracking/OrderDeliveryDetails";
 import OrderItemTable from "@/components/tracking/OrderItemTable";
 import { dateConvertToLocalString } from "@/utils/dateConvert";
-import { Heart, MessageCircle } from "lucide-react";
 
 export default async function OrderTrackingPage({ params, searchParams }) {
   const { orderNo } = await params;
