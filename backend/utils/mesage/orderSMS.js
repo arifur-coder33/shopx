@@ -16,6 +16,7 @@ export async function notifyNewOrder(result) {
 ✅ <b>নতুন অর্ডার এসেছে!</b>
 🆔 <b>Order No:</b> ${result?.orderNo}
 📞 <b>ফোন:</b> ${result?.phoneNumber}
+💰 <b>মূল্য:</b> ${result?.orderPrice}
 📦<b> <a href="${orderUrl}">Order Tracking Link ${orderUrl} </a> </b>
 
 `;
