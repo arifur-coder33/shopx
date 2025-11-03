@@ -117,7 +117,7 @@
 //   );
 // }
 import { getOrderByOrderNo } from "@/backend/serverActions/orderActions";
-import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
+import WhatsAppChat from "@/components/common/Chat/WhatsAppChat";
 import CopyLinkButton from "@/components/common/CopyLinkButton";
 import OrderDeliveryDetails from "@/components/tracking/OrderDeliveryDetails";
 import OrderItemTable from "@/components/tracking/OrderItemTable";
@@ -126,14 +126,14 @@ import { Heart, MessageCircle } from "lucide-react";
 
 export default async function OrderTrackingPage({ params, searchParams }) {
   const { orderNo } = await params;
-  
+
   const { p, orderSuccess } = await searchParams;
   const { success, data, error } = await getOrderByOrderNo(orderNo, p);
   if ((!success && error) || !data) {
     return <p>কোন ডাটা পাওয়া যায়নি।</p>;
   }
 
-  const trackingLink = `https://www.bdmart24.online/tracking/${
+  const trackingLink = `${process.env.NEXT_PUBLIC_SITE_URL}/tracking/${
     data?.orderNo
   }?p=${encodeURIComponent(data?.phoneNumber)}`;
 
@@ -154,15 +154,15 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       `ট্র্যাকিং লিঙ্ক: ${trackingLink}`
   );
 
-  const whatsappNumber = "8801915109159";
-  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+  // const whatsappNumber = "8801915109159";
+  // const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   return (
     <div>
       {orderSuccess && (
-        <div>
-          <p className="bg-green-300 p-2 rounded-md dark:text-slate-800  gap-1">
-            <Heart /> ধন্যবাদ। <Heart /> আমরা আপনার অর্ডারটি পেয়েছি। খুব দ্রুত
+        <div className="">
+          <p className="bg-green-300 p-2 rounded-md dark:text-slate-800 ">
+             ধন্যবাদ!! আমরা আপনার অর্ডারটি পেয়েছি। খুব দ্রুত
             আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবে।
           </p>
         </div>
@@ -178,14 +178,15 @@ export default async function OrderTrackingPage({ params, searchParams }) {
           >
             01915-109159
           </a>
-          <a
+          {/* <a
             href={whatsappLink}
             target="_blank"
             className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition"
           >
             <MessageCircle className="w-5 h-5" />
-            WhatsApp এ চ্যাট করুন
-          </a>
+            
+          </a> */}
+          <WhatsAppChat Message={whatsappMessage} label={"WhatsApp এ চ্যাট করুন"}/>
         </p>
 
         <p>

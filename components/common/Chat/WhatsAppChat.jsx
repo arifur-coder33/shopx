@@ -4,7 +4,7 @@ import { MessageCircle,  } from "lucide-react";
 
 import { usePathname, useSearchParams } from 'next/navigation';
 
-export default function WhatsAppChat({WAnumber,Message}) {
+export default function WhatsAppChat({WAnumber,Message,label}) {
   
 
 
@@ -14,7 +14,7 @@ export default function WhatsAppChat({WAnumber,Message}) {
   const query = searchParams.toString();
 //   const fullUrl = `${protocol}://${host}${pathname}${query ? `?${query}` : ''}`;
 
-  const fullUrl = `https://www.bdmart24.online/${pathname}${query ? `?${query}` : ''}`;
+  const fullUrl = `/${process.env.NEXT_PUBLIC_SITE_URL+pathname}${query ? `?${query}` : ''}`;
 
   if (!WAnumber) return null; // Loading state
 
@@ -32,7 +32,7 @@ export default function WhatsAppChat({WAnumber,Message}) {
             className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 rounded-md transition"
           >
             <MessageCircle />
-            WhatsApp চ্যাট
+            {label || "WhatsApp চ্যাট"}
           </a>
         </div>
 
