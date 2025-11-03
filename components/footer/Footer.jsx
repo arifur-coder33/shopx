@@ -66,7 +66,8 @@ export default async function Footer() {
           </div>
         </div>
 
-        {/* কপিরাইট অংশ */}
+
+        {/* কপিরাইট  */}
         <div className="text-center sm:text-right text-sm mt-2 sm:mt-0">
           © কপিরাইট - বিডিমার্ট24.অনলাইন - ২০২৫
         </div>
