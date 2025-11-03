@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { notifyNewOrder } from "../utils/mesage/orderSMS";
 
 export async function createOrder(formData) {
   try {
@@ -80,6 +81,7 @@ export async function createOrder(formData) {
     });
     revalidatePath("/admin/order");
     revalidateTag("orders");
+    await notifyNewOrder(result)
     return { success: true, data: result }; // Return success with order data
   } catch (error) {
     console.log(error.message);
