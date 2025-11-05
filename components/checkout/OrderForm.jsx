@@ -9,6 +9,8 @@ import { useSession } from "next-auth/react";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "react-toastify";
+import LoadingSpinner from "../common/LoadingSpinner";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 export default function OrderForm({
   setDeliveryArea,
@@ -24,11 +26,13 @@ export default function OrderForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
-
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
     const form = e.target; // Reference to the form element
     const formData = new FormData(form); // Collect form data
     if (buyNow) {
@@ -45,48 +49,47 @@ export default function OrderForm({
     formData.append("products", JSON.stringify(products));
     console.log(products);
     // formData.append("deliveryArea", deliveryArea);
-    setError(null);
-    setSuccess(null);
 
-    startTransition(async () => {
-      const response = await createOrder(formData); // Call server action
+    const response = await createOrder(formData); // Call server action
 
-      if (response.success) {
-        trackFacebookEvent("Purchase", {
-          content_type: "product",
-          content_ids: products.map((product) => product.productId),
-          value: products.reduce(
-            (total, product) => total + product.quantity * product.price,
-            0
-          ),
-          currency: "BDT", // Bangladeshi Taka
-        });
+    if (response.success) {
+      toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
+      setLoading(false);
 
-        router.push(
-          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
-            response?.data?.phoneNumber
-          )}&orderSuccess=true`
-        );
+      router.push(
+        `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
+          response?.data?.phoneNumber
+        )}&orderSuccess=true`
+      );
+      trackFacebookEvent("Purchase", {
+        content_type: "product",
+        content_ids: products.map((product) => product.productId),
+        value: products.reduce(
+          (total, product) => total + product.quantity * product.price,
+          0
+        ),
+        currency: "BDT", // Bangladeshi Taka
+      });
 
-        // form.reset(); // Clear the form on success
-      } else {
-        console.log(response.error);
-        // Track the "FailedOrder" event
-        console.log(products);
-        trackFacebookEvent("FailedOrder", {
-          content_type: "product",
-          content_ids: products.map((product) => product.productId),
-          value: products.reduce(
-            (total, product) => total + product.quantity * product.price,
-            0
-          ),
-          currency: "BDT",
-          reason: response.error || "Unknown error",
-        });
-        window.scrollTo(0, 0);
-        setError(response.error || "Something went wrong");
-      }
-    });
+      // form.reset(); // Clear the form on success
+    } else {
+      console.log(response.error);
+      // Track the "FailedOrder" event
+      console.log(products);
+      setLoading(false);
+      trackFacebookEvent("FailedOrder", {
+        content_type: "product",
+        content_ids: products.map((product) => product.productId),
+        value: products.reduce(
+          (total, product) => total + product.quantity * product.price,
+          0
+        ),
+        currency: "BDT",
+        reason: response.error || "Unknown error",
+      });
+      window.scrollTo(0, 0);
+      setError(response.error || "Something went wrong");
+    }
   };
   return (
     <form onSubmit={handleSubmit}>
@@ -126,8 +129,14 @@ export default function OrderForm({
         type={"submit"}
         className="w-full z-30 bg-purple p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 "
       >
-        {isPending ? "অর্ডার নিশ্চিত হচ্ছে.... " : "অর্ডার নিশ্চিত করুন"}
+        অর্ডার নিশ্চিত করুন
       </Button>
+
+      {loading && (
+        <div className="fixed top-0 left-0 w-screen h-screen bg-black bg-opacity-30 z-30 flex items-center justify-center">
+          <LoadingSpinner message="অর্ডার নিশ্চিত হচ্ছে ..." />
+        </div>
+      )}
     </form>
   );
 }

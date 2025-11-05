@@ -79,9 +79,15 @@ export async function createOrder(formData) {
 
       return order;
     });
-    revalidatePath("/admin/order");
-    revalidateTag("orders");
-    await notifyNewOrder(result)
+    // revalidatePath("/admin/order");
+    // revalidateTag("orders");
+    // await notifyNewOrder(result)
+    Promise.allSettled([
+      notifyNewOrder(result),
+      revalidatePath("/admin/order"),
+      revalidateTag("orders"),
+    ]);
+
     return { success: true, data: result }; // Return success with order data
   } catch (error) {
     console.log(error.message);
