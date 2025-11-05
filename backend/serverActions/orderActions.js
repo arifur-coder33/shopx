@@ -82,13 +82,13 @@ export async function createOrder(formData) {
     // revalidatePath("/admin/order");
     // revalidateTag("orders");
     // await notifyNewOrder(result)
-    setTimeout(() => {
-      Promise.allSettled([
-        notifyNewOrder(result),
-        revalidatePath("/admin/order"),
-        revalidateTag("orders"),
-      ]);
-    }, 0);
+
+    Promise.allSettled([
+      notifyNewOrder(result),
+      revalidatePath("/admin/order"),
+      revalidateTag("orders"),
+    ]);
+
     return {
       success: true,
       data: { orderNo: result.orderNo, phoneNumber: result.phoneNumber },
