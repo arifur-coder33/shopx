@@ -83,7 +83,7 @@ export async function createOrder(formData) {
     // revalidateTag("orders");
     // await notifyNewOrder(result)
 
-    Promise.allSettled([
+    Promise.all([
       notifyNewOrder(result),
       revalidatePath("/admin/order"),
       revalidateTag("orders"),
