@@ -82,13 +82,17 @@ export async function createOrder(formData) {
     // revalidatePath("/admin/order");
     // revalidateTag("orders");
     // await notifyNewOrder(result)
-    Promise.allSettled([
-      notifyNewOrder(result),
-      revalidatePath("/admin/order"),
-      revalidateTag("orders"),
-    ]);
-
-    return { success: true, data: result }; // Return success with order data
+    setTimeout(() => {
+      Promise.allSettled([
+        notifyNewOrder(result),
+        revalidatePath("/admin/order"),
+        revalidateTag("orders"),
+      ]);
+    }, 0);
+    return {
+      success: true,
+      data: { orderNo: result.orderNo, phoneNumber: result.phoneNumber },
+    };
   } catch (error) {
     console.log(error.message);
     return { success: false, error: error.message }; // Return structured error

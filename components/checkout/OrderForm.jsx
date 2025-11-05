@@ -28,6 +28,10 @@ export default function OrderForm({
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  useEffect(() => {
+    router.prefetch("/tracking/text");
+  }, [router]);
+
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
     setError(null);
