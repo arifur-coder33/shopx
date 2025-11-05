@@ -2,8 +2,6 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
-import { sendTelegramMessage } from "../lib/mesage/Telegram";
-import { notifyNewOrder } from "../lib/mesage/orderSMS";
 
 export async function createOrder(formData) {
   try {
@@ -114,10 +112,14 @@ export async function createOrder(formData) {
 
       return order;
     });
-    revalidatePath("/admin/orders");
-    revalidateTag("orders");
+
     console.log("Order Created:", result);
-await notifyNewOrder(result)
+
+    Promise.all([
+      // notifyNewOrder(result).catch((err) => console.error("SMS error:", err)),
+      revalidatePath("/admin/orders"),
+      revalidateTag("orders"),
+    ]);
     return { success: true, data: result }; // Return success with order data
   } catch (error) {
     console.log(error.message);
