@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../common/LoadingSpinner";
 import PaymentMethodSelector from "./PaymentMethodSelector";
