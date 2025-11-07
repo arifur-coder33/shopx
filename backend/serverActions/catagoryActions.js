@@ -66,6 +66,47 @@ export async function createCategoryAction(formData) {
   }
 }
 
+export async function getCategoryById(id) {
+  try {
+    const data = await prisma.category.findUnique({
+      where: { id: id },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+
+        thumbnail: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        banner: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        parentCategory: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        variations: {
+          include: {
+            variation: true,
+          },
+        },
+      },
+    });
+    console.log("getCategoryById data:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.log(error);
+    return { success: false, error: error.message }; // Return structured error
+  }
+}
 export async function updateCategoryAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
 

@@ -22,7 +22,8 @@ export default function FileInput({
     if (!defaultValue) return [];
     return Array.isArray(defaultValue) ? defaultValue : [defaultValue];
   });
-
+  console.log("default value in file input", defaultValue);
+  console.log("images in file input", images);
   // Input value derived from current images state
   const [inputValue, setInputValue] = useState(
     images.map((img) => img.id).join(",")

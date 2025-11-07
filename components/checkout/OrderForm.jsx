@@ -106,7 +106,7 @@ export default function OrderForm({
           </div>
         )}
       </div>
-      <div className="flex md:flex-nowrap flex-wrap-reverse md:gap-12 gap-3  ">
+      <div className="flex md:flex-nowrap flex-wrap-reverse md:gap-12 gap-3 text-base ">
         <div className="w-full md:w-1/2">
           {/* <BuyNowProductDetails
               data={data}
