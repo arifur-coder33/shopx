@@ -79,15 +79,15 @@ export async function createOrder(formData) {
 
       return order;
     });
-    // revalidatePath("/admin/order");
-    // revalidateTag("orders");
-    // await notifyNewOrder(result)
+    revalidatePath("/admin/order");
+    revalidateTag("orders");
+    await notifyNewOrder(result);
 
-    Promise.all([
-      notifyNewOrder(result),
-      revalidatePath("/admin/order"),
-      revalidateTag("orders"),
-    ]);
+    // Promise.all([
+    //   notifyNewOrder(result),
+    //   revalidatePath("/admin/order"),
+    //   revalidateTag("orders"),
+    // ]);
 
     return {
       success: true,
