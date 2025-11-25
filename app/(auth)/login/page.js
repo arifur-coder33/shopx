@@ -27,7 +27,7 @@ export default function LoginPage() {
                 href={"/register"}
                 className="text-blue-500 hover:underline decoration-blue-500"
               >
-                নতুন একাউন্ট খুলুন।
+                নতুন একাউন্ট খুলুন
               </Link>
             </div>
           </div>
