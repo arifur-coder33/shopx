@@ -2,18 +2,16 @@ import prisma from "@/lib/prisma";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { htmlToText } from "html-to-text";
 
-
 export async function GET(req) {
   const products = await prisma.product.findMany({
     where: { isActive: true }, // Only include active products
   });
 
-    
   const rows = products.map((product) => ({
     id: product.id,
     title: product.title,
     description: htmlToText(product.description) || "",
-    link: `${process?.env?.NEXT_PUBLIC_SITE_URL}/${product.slug}`,
+    link: `${process?.env?.NEXT_PUBLIC_SITE_URL}/product/${product.slug}`,
     image_link: cloudinaryMainImage(product?.mainImage, 800, 800),
     availability: "in_stock",
     price: `${product.regularPrice} BDT`,
@@ -37,14 +35,13 @@ export async function GET(req) {
     "custom_label_0",
   ];
 
-  const csvContent =
-    [csvHeaders.join(",")]
-      .concat(
-        rows.map((row) =>
-          csvHeaders.map((header) => JSON.stringify(row[header] || "")).join(",")
-        )
+  const csvContent = [csvHeaders.join(",")]
+    .concat(
+      rows.map((row) =>
+        csvHeaders.map((header) => JSON.stringify(row[header] || "")).join(",")
       )
-      .join("\n");
+    )
+    .join("\n");
 
   // Prepend BOM for proper encoding of Bengali text
   const utf8BOM = "\uFEFF";
