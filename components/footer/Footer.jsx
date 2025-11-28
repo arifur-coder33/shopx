@@ -66,12 +66,10 @@ export default async function Footer() {
         </div>
 
         <div className="flex items-start gap-2 mt-2">
-          <Link
-            href="/return-policy"
-            className="text-sm hover:underline"
-            রিটার্ন
-            পলিসি
-          ></Link>
+          <Link href="/return-policy" className="text-sm hover:underline">
+            {" "}
+            রিটার্ন পলিসি
+          </Link>
         </div>
 
         {/* কপিরাইট  */}
