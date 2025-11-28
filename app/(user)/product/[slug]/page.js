@@ -208,6 +208,7 @@ export default async function ProductPage({ params }) {
     discountPrice,
     description,
     mainImage,
+    insideDhaka,
 
     category: { name },
   } = data;
@@ -307,7 +308,7 @@ export default async function ProductPage({ params }) {
           "@type": "OfferShippingDetails",
           shippingRate: {
             "@type": "MonetaryAmount",
-            value: product.insideDhaka || 60,
+            value: insideDhaka || 60,
             currency: "BDT",
           },
           shippingDestination: {
