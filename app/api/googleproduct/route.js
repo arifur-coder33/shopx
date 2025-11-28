@@ -6,7 +6,10 @@ export async function GET(req) {
   const products = await prisma.product.findMany({
     where: { isActive: true }, // Only include active products
   });
-
+  const encodeCloudinaryUrl = (url) => {
+    if (!url) return "";
+    return url.replace(/,/g, "%2C");
+  };
   const rows = products.map((product) => ({
     id: product.id,
     title: product.title.trim(),
@@ -16,7 +19,7 @@ export async function GET(req) {
     additional_image_link:
       product.imageGallery
         ?.slice(0, 10)
-        .map((url) => cloudinaryMainImage(url, 800, 800)) // same transformation as main image
+        .map((url) => encodeCloudinaryUrl(cloudinaryMainImage(url, 800, 800))) // same transformation as main image
         .join(",") || "",
     price: `${Number(product.regularPrice).toFixed(2)} BDT`,
     sale_price: product.discountPrice
@@ -42,7 +45,9 @@ export async function GET(req) {
     ].join("|"),
 
     // Optional but helpful
-    shipping_weight: product.weight ? `${product.weight} kg` : "1 kg",
+    shipping_weight: product.weight
+      ? `${Number(product.weight).toFixed(2)} kg`
+      : "1.00 kg",
     custom_label_0: product.isFeatured ? "featured" : "regular",
   }));
 
