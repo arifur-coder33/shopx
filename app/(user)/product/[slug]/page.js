@@ -244,28 +244,99 @@ export default async function ProductPage({ params }) {
   };
 
   /// google product Listing
+  // const schemaGoogle = {
+  //   "@context": "https://schema.org/",
+  //   "@type": "Product",
+  //   "@id": url + "#product",
+  //   name: title,
+  //   description: htmlToText(description),
+  //   image: imageUrl,
+  //   url: discountPrice,
+  //   sku: id,
+  //   brand: {
+  //     "@type": "Brand",
+  //     name: "BDMART24",
+  //   },
+
+  //   offers: {
+  //     "@type": "Offer",
+  //     priceCurrency: "BDT",
+  //     price: discountPrice,
+  //     itemCondition: "https://schema.org/NewCondition",
+  //     availability: "https://schema.org/InStock",
+  //   },
+  // };
+
   const schemaGoogle = {
     "@context": "https://schema.org/",
     "@type": "Product",
     name: title,
-    description: htmlToText(description),
-    image: imageUrl,
-    url: discountPrice,
+    description: htmlToText(description).slice(0, 300), // Shorten for better performance
+    image: [
+      cloudinaryMainImage(mainImage, 800, 800),
+      ...(imageGallery?.map((img) => cloudinaryMainImage(img, 800, 800)) || []),
+    ],
     sku: id,
+    mpn: id,
     brand: {
       "@type": "Brand",
-      name: "BDMART24",
+      name: "bdmart24",
     },
-
     offers: {
       "@type": "Offer",
+      url: url,
       priceCurrency: "BDT",
-      price: discountPrice,
+      price: discountPrice || regularPrice,
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
       itemCondition: "https://schema.org/NewCondition",
       availability: "https://schema.org/InStock",
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "BD", // Bangladesh
+        returnPolicyCategory:
+          "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 3, // ৩ দিনের রিটার্ন
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/ReturnShippingFees",
+        refundType: "https://schema.org/RefundViaOriginalPaymentMethod",
+      },
+      shippingDetails: [
+        {
+          "@type": "OfferShippingDetails",
+          shippingRate: {
+            "@type": "MonetaryAmount",
+            value: product.insideDhaka || 60,
+            currency: "BDT",
+          },
+          shippingDestination: {
+            "@type": "DefinedRegion",
+            addressCountry: "BD",
+          },
+          deliveryTime: {
+            "@type": "ShippingDeliveryTime",
+            handlingTime: {
+              "@type": "QuantitativeValue",
+              minValue: 1,
+              maxValue: 2,
+              unitText: "day",
+            },
+            transitTime: {
+              "@type": "QuantitativeValue",
+              minValue: 1,
+              maxValue: 3,
+              unitText: "day",
+            },
+          },
+        },
+      ],
+      seller: {
+        "@type": "Organization",
+        name: "bdmart24",
+      },
     },
   };
-
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
