@@ -132,6 +132,22 @@ export default function ProductForm({ category, data, actionType }) {
             data={category}
           />
         </div>
+
+        <FloatingInput
+          label={"Google Product Category"}
+          name={"google_product_category"}
+          type={"text"}
+          defaultValue={data?.google_product_category}
+          colSpan="2"
+        />
+
+        <FloatingInput
+          label={"FB Product Category"}
+          name={"fb_product_category"}
+          type={"text"}
+          defaultValue={data?.fb_product_category}
+          colSpan="2"
+        />
         <FloatingInput
           label={"Regular Price"}
           name={"regularPrice"}

@@ -30,7 +30,6 @@ export async function GET(req) {
     brand: "bdmart24", // or real brand
     mpn: product.productCode || product.id, // VERY important
     identifier_exists: "FALSE", // because no GTIN
-    // gtin: leave out completely if no real GTIN
 
     // Apparel only – add these when relevant
     item_group_id: product?.hasVariations ? product.id : "", // same base product ID for variants
@@ -49,6 +48,8 @@ export async function GET(req) {
       ? `${Number(product.weight).toFixed(2)} kg`
       : "1.00 kg",
     custom_label_0: product.isFeatured ? "featured" : "regular",
+    google_product_category: product.google_product_category, // Added category
+    fb_product_category: product?.fb_product_category || "",
   }));
 
   const csvHeaders = [
@@ -73,6 +74,8 @@ export async function GET(req) {
     "shipping",
     "shipping_weight",
     "custom_label_0",
+    "google_product_category",
+    "fb_product_category",
   ];
   const csvContent = [csvHeaders.join(",")]
     .concat(

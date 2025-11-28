@@ -64,6 +64,8 @@ model Product {
   weight         Float?  
   hasVariations    Boolean? @default(false)               // Product weight for shipping purposes
   orders         OrderItem[]                    // One-to-many relationship with Order
+  google_product_category  String?         // Google product category for integration
+  fb_product_category     String?         // Facebook product category for integration
   createdAt      DateTime    @default(now()) // Timestamp for product creation
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
