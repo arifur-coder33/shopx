@@ -67,6 +67,13 @@ export async function GET(req) {
     where: {
       isActive: true,
     },
+    include: {
+      category: {
+        select: {
+          name: true, // Include only the category name
+        },
+      },
+    },
   });
 
   const encodeUrl = (url) => (url ? url.replace(/,/g, "%2C") : "");

@@ -4,7 +4,14 @@ import { htmlToText } from "html-to-text";
 
 export async function GET(req) {
   const products = await prisma.product.findMany({
-    where: { isActive: true }, // Only include active products
+    where: { isActive: true },
+    include: {
+      category: {
+        select: {
+          name: true, // Include only the category name
+        },
+      },
+    },
   });
   const encodeCloudinaryUrl = (url) => {
     if (!url) return "";
@@ -48,6 +55,7 @@ export async function GET(req) {
       ? `${Number(product.weight).toFixed(2)} kg`
       : "1.00 kg",
     custom_label_0: product.isFeatured ? "featured" : "regular",
+    custom_label_1: product.category?.name || "General",
     google_product_category: product.google_product_category, // Added category
     fb_product_category: product?.fb_product_category || "",
   }));
@@ -74,6 +82,7 @@ export async function GET(req) {
     "shipping",
     "shipping_weight",
     "custom_label_0",
+    "custom_label_1",
     "google_product_category",
     "fb_product_category",
   ];
