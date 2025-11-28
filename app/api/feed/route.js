@@ -19,6 +19,7 @@ export async function GET(req) {
     brand: "bdmart24", // Replace with your brand name
     condition: "new", // All products marked as new
     custom_label_0: product.isFeatured ? "featured" : "standard",
+    shipping_weight: product.weight ? `${product.weight} kg` : "1 kg",
   }));
 
   const csvHeaders = [
@@ -33,6 +34,7 @@ export async function GET(req) {
     "brand",
     "condition",
     "custom_label_0",
+    "shipping_weight",
   ];
 
   const csvContent = [csvHeaders.join(",")]
