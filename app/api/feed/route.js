@@ -11,7 +11,7 @@ export async function GET(req) {
     id: product.id,
     title: product.title,
     description: htmlToText(product.description) || "",
-    link: `${process?.env?.NEXT_PUBLIC_SITE_URL}/product/${product.slug}`,
+    link: `${process?.env?.NEXT_PUBLIC_SITE_URL}product/${product.slug}`,
     image_link: cloudinaryMainImage(product?.mainImage, 800, 800),
     availability: "in_stock",
     price: `${product.regularPrice} BDT`,
