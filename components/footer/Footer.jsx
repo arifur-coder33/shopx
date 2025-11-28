@@ -28,9 +28,9 @@
 //   );
 // }
 
-
 import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
-import { PhoneCall, MapPin } from "lucide-react";
+import { MapPin, PhoneCall } from "lucide-react";
+import Link from "next/link";
 import WhatsAppChat from "../common/Chat/WhatsAppChat";
 
 export default async function Footer() {
@@ -39,12 +39,11 @@ export default async function Footer() {
   if (!data) return null;
 
   const phoneNumber = data?.phoneNumber1 || "8801915109159";
-  const address = data?.adress1 || "ঢাকা, বাংলাদেশ"; 
+  const address = data?.adress1 || "ঢাকা, বাংলাদেশ";
 
   return (
     <footer className="bg-gradient-to-br from-slate-800 via-black to-slate-800 text-slate-200 shadow-md p-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-     
         <div className="flex flex-col gap-2">
           <h1 className="text-xl font-semibold">যোগাযোগ</h1>
 
@@ -66,11 +65,19 @@ export default async function Footer() {
           </div>
         </div>
 
+        <div className="flex items-start gap-2 mt-2">
+          <Link
+            href="/return-policy"
+            className="text-sm hover:underline"
+            রিটার্ন
+            পলিসি
+          ></Link>
+        </div>
 
         {/* কপিরাইট  */}
-        <div className="text-center sm:text-right text-sm mt-2 sm:mt-0">
-          © কপিরাইট - বিডিমার্ট24.অনলাইন - ২০২৫
-        </div>
+      </div>
+      <div className="text-center sm:text-right text-sm mt-2 sm:mt-0">
+        © কপিরাইট - বিডিমার্ট24.অনলাইন - ২০২৫
       </div>
     </footer>
   );
