@@ -140,6 +140,7 @@ export async function GET(req) {
     "link",
     "image_link",
     "brand",
+    "video",
     "sale_price",
     "additional_image_links",
     "mpn",
