@@ -91,7 +91,7 @@ export async function GET(req) {
     link: `${process.env.NEXT_PUBLIC_SITE_URL}product/${p.slug}`,
     image_link: cloudinaryMainImage(p.mainImage, 800, 800),
     brand: "bdmart24",
-
+    video: p?.vedioLink || "",
     sale_price:
       p.discountPrice && p.discountPrice < p.regularPrice
         ? `${Number(p.discountPrice).toFixed(2)} BDT`

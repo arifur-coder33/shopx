@@ -271,6 +271,14 @@ export default function ProductForm({ category, data, actionType }) {
             </p>
           </div>
         )}
+
+        <FloatingInput
+          label={"Vedio Link"}
+          name={"vedioLink"}
+          type={"text"}
+          defaultValue={data?.vedioLink}
+          colSpan={"full"}
+        />
         <FloatingInput
           label={"SEO Keyword"}
           name={"seoKeyWord"}

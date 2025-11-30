@@ -66,6 +66,7 @@ model Product {
   orders         OrderItem[]                    // One-to-many relationship with Order
   google_product_category  String?         // Google product category for integration
   fb_product_category     String?         // Facebook product category for integration
+  vedioLink     String?
   createdAt      DateTime    @default(now()) // Timestamp for product creation
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
