@@ -34,7 +34,7 @@ export default function PaymentMethodSelector({ setPaymentMethod, className }) {
 
       {selectedMethod === "bkash" && (
         <div className="mt-2 p-2 bg-slate-300 dark:bg-slate-700 rounded-md">
-          <p className="font-bold mb-1">বিকাশ পেমেন্ট নির্দেশনাঃ</p>
+          <p className="font-bold mb-1"> বিকাশ পেমেন্ট নির্দেশনাঃ</p>
           <ol className="list-decimal list-inside">
             <li>আপনার বিকাশ অ্যাপ খুলুন।</li>
             <li>“Send Money” অপশন সিলেক্ট করুন।</li>
