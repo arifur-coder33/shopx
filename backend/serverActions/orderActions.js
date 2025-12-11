@@ -46,6 +46,9 @@ export async function createOrder(formData) {
         orderPrice: Number(data?.orderPrice),
         deliveryArea: data?.deliveryArea,
         deliveryAddress: data?.deliveryAddress,
+        orderNotes: data?.orderNotes,
+        email: data?.email,
+        paymentMethod: data?.paymentMethod,
       };
       const orderItems = JSON.parse(data?.products);
       // const order = await tx.order.create({

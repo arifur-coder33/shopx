@@ -24,6 +24,29 @@ export default function PaymentMethodSelector({ setPaymentMethod, className }) {
           onSelect={onChangeHandler}
         />
       </div>
+      <RadioButton
+        id="bkash"
+        name="paymentMethod"
+        label="বিকাশ"
+        isSelected={selectedMethod === "bkash"}
+        onSelect={onChangeHandler}
+      />
+      {selectedMethod === "bkash" && (
+        <div className="mt-2 p-2 bg-slate-300 dark:bg-slate-700 rounded-md">
+          <p className="font-bold mb-1">বিকাশ পেমেন্ট নির্দেশনাঃ</p>
+          <ol className="list-decimal list-inside">
+            <li>আপনার বিকাশ অ্যাপ খুলুন।</li>
+            <li>“Send Money” অপশন সিলেক্ট করুন।</li>
+            <li>
+              নিচের বিকাশ নাম্বারে টাকা পাঠানঃ{" "}
+              <span className="font-bold">01723228741</span>
+            </li>
+            <li>
+              অর্ডার কনফার্মেশন এর জন্য ট্রাঞ্জেকশন আইডি অর্ডার নোট এ লিখুন।
+            </li>
+          </ol>
+        </div>
+      )}
     </div>
   );
 }

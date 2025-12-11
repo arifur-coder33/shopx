@@ -19,8 +19,16 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         name={"phoneNumber"}
         inputType={"text"}
         inputMode={"numeric"}
-      
         autoComplete="tel"
+      />
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"আপনার ইমেইল (ঐচ্ছিক)"}
+        name={"email"}
+        inputType={"email"}
+        inputMode={"numeric"}
+        autoComplete="email"
       />
       <FloatingInput
         defaultValue=""
@@ -29,6 +37,14 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         name={"deliveryAddress"}
         inputType={"text"}
         autoComplete="address-line1"
+      />
+
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"ডেলিভারি সংক্রান্ত নোট (ঐচ্ছিক)"}
+        name={"orderNotes"}
+        inputType={"text"}
       />
 
       <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} />
