@@ -13,7 +13,6 @@ import FacebookEventTrac from "../_components/FacebookEventTrack";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
 import { ProductImageGallery } from "./_components/Images/ProductImagegallery";
-
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
@@ -338,6 +337,7 @@ export default async function ProductPage({ params }) {
       },
     },
   };
+
   return (
     <div className="mb-16">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
