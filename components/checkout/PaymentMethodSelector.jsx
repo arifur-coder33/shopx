@@ -23,14 +23,15 @@ export default function PaymentMethodSelector({ setPaymentMethod, className }) {
           isSelected={selectedMethod === "cod"}
           onSelect={onChangeHandler}
         />
+        <RadioButton
+          id="bkash"
+          name="paymentMethod"
+          label="বিকাশ"
+          isSelected={selectedMethod === "bkash"}
+          onSelect={onChangeHandler}
+        />
       </div>
-      <RadioButton
-        id="bkash"
-        name="paymentMethod"
-        label="বিকাশ"
-        isSelected={selectedMethod === "bkash"}
-        onSelect={onChangeHandler}
-      />
+
       {selectedMethod === "bkash" && (
         <div className="mt-2 p-2 bg-slate-300 dark:bg-slate-700 rounded-md">
           <p className="font-bold mb-1">বিকাশ পেমেন্ট নির্দেশনাঃ</p>
