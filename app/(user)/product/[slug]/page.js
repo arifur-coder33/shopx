@@ -229,9 +229,6 @@ export default async function ProductPage({ params }) {
                       <del className="text-gray-500 text-xl ml-3">
                         {replaceNumbers(p.regularPrice.toString())}
                       </del>
-                      <span className="inline-block ml-4 bg-orange-500 text-white font-bold px-4 py-2 rounded-full -rotate-12 text-lg">
-                        বাঁচলেন {replaceNumbers(savings.toString())} টাকা!
-                      </span>
                     </>
                   )}
                 </p>
