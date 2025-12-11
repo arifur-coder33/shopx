@@ -10,6 +10,9 @@ export const metadata = {
   title: " ",
   description: "ঘরে বসে পন্য অর্ডার করুন",
   links: [{ rel: "preconnect", href: "https://res.cloudinary.com" }],
+  verification: {
+    google: "RhEUL_-hL1O7iK2ojfqS-ADzvS-uoODAoCkNetv0iBI", // Google Search Console
+  },
 };
 
 export default function UserLayout({ children }) {
