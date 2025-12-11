@@ -20,24 +20,21 @@
 //   return <div></div>;
 // }
 
-import Script from "next/script";
+"use client";
+import { useEffect } from "react";
 
 export default function FacebookEventTrack({ product }) {
-  const value = product?.discountPrice || product?.regulartPrice;
+  useEffect(() => {
+    if (typeof fbq !== "undefined" && product) {
+      fbq("track", "ViewContent", {
+        content_name: product?.title,
+        content_ids: [product?.id],
+        content_type: "product",
+        value: product?.discountPrice || product?.regulartPrice,
+        currency: "BDT",
+      });
+    }
+  }, [product]);
 
-  return (
-    <>
-      <Script id="fb-viewcontent" strategy="afterInteractive">
-        {`
-          fbq('track', 'ViewContent', {
-            content_name: '${product?.title}',
-            content_ids: ['${product?.id}'],
-            content_type: 'product',
-            value: ${value},
-            currency: 'BDT'
-          });
-        `}
-      </Script>
-    </>
-  );
+  return null;
 }
