@@ -20,28 +20,28 @@
 //   return <div></div>;
 // }
 
-import Script from "next/script";
+// components/FacebookEventTrack.js
+"use client";
+
+import { useEffect } from "react";
 
 export default function FacebookEventTrack({ product }) {
-  const value = product?.discountPrice || product?.regulartPrice;
+  useEffect(() => {
+    if (!product || typeof window === "undefined" || !window.fbq) return;
 
-  return (
-    <>
-      <Script
-        id="fb-viewcontent"
-        strategy="afterInteractive"
-        onReady={() => {
-          if (typeof fbq !== "undefined" && product) {
-            fbq("track", "ViewContent", {
-              content_name: product?.title,
-              content_ids: [product?.id],
-              content_type: "product",
-              value: value,
-              currency: "BDT",
-            });
-          }
-        }}
-      />
-    </>
-  );
+    const value = product.discountPrice || product.regularPrice;
+
+    window.fbq("track", "ViewContent", {
+      content_name: product.title,
+      content_ids: [product.id.toString()],
+      content_type: "product",
+      content_category: product.category?.name || "Unknown",
+      value: value,
+      currency: "BDT",
+    });
+
+    console.log("ViewContent fired:", product.title); // debug করার জন্য
+  }, [product]);
+
+  return null; // কিছুই রেন্ডার করবে না
 }
