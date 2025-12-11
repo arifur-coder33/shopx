@@ -13,7 +13,11 @@ export default function OrderDeliveryDetails({ data }) {
           <p>তারিখঃ {dateConvertToLocalString(data?.createdAt)} </p>
           <p>নামঃ {data?.customerName} </p>
           <p>মোবাইল নংঃ {data?.phoneNumber}</p>
+          <p>ইমেইল {data?.email}</p>
           <p> ঠিকানাঃ {data?.deliveryAddress}</p>
+
+          <p> পেমেন্ট মেথড {data?.paymentMethod}</p>
+          <p> অর্ডার নোটঃ {data?.orderNotes}</p>
         </div>
       </div>
     </>
