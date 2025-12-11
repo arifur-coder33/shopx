@@ -33,8 +33,8 @@ export default function FacebookEventTrack({ product }) {
         onReady={() => {
           if (typeof fbq !== "undefined" && product) {
             fbq("track", "ViewContent", {
-              content_name: product.title,
-              content_ids: [product.id],
+              content_name: product?.title,
+              content_ids: [product?.id],
               content_type: "product",
               value: value,
               currency: "BDT",
