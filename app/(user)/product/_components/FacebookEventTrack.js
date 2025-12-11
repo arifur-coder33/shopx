@@ -21,27 +21,44 @@
 // }
 
 // components/FacebookEventTrack.js
+// components/FacebookEventTrack.js  (শুধু JavaScript)
 "use client";
 
 import { useEffect } from "react";
 
 export default function FacebookEventTrack({ product }) {
   useEffect(() => {
-    if (!product || typeof window === "undefined" || !window.fbq) return;
+    // যদি প্রোডাক্ট না থাকে বা window না থাকে, তাহলে…
+    if (!product || typeof window === "undefined") return;
 
     const value = product.discountPrice || product.regularPrice;
 
-    window.fbq("track", "ViewContent", {
-      content_name: product.title,
-      content_ids: [product.id.toString()],
+    const eventData = {
+      content_name: product?.title,
+      content_ids: [product?.id.toString()],
       content_type: "product",
-      content_category: product.category?.name || "Unknown",
-      value: value,
+      content_category: product?.category?.name || "Unknown",
+      value: Number(value),
       currency: "BDT",
-    });
+    };
 
-    console.log("ViewContent fired:", product.title); // debug করার জন্য
+    // fbq already loaded হলে সাথে সাথে পাঠাবে
+    if (window.fbq) {
+      window.fbq("track", "ViewContent", eventData);
+      console.log("ViewContent fired instantly:", product.title);
+    }
+    // fbq এখনো load হয়নি → queue তে রেখে দিবে (Facebook নিজেই পরে নিবে)
+    else {
+      // _fbq queue তৈরি করা থাকলে push করবে, না থাকলে নতুন তৈরি করবে
+      window._fbq = window._fbq || [];
+      window._fbq.push(["track", "ViewContent", eventData]);
+      console.log(
+        "ViewContent queued (will fire when pixel loads):",
+        product.title
+      );
+    }
   }, [product]);
 
-  return null; // কিছুই রেন্ডার করবে না
+  // কিছু রেন্ডার করবে না
+  return null;
 }
