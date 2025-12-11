@@ -15,7 +15,7 @@ import Script from "next/script";
 import FacebookEventTrac from "../_components/FacebookEventTrack";
 import BuyNowSection from "./_components/BuyNowSection";
 import Images from "./_components/Images";
-import { ProductImageGallery } from "./components/Images/ProductImagegallery";
+import { ProductImageGallery } from "./_components/Images/ProductImagegallery";
 
 // SSG – সব প্রোডাক্টের slug আগে থেকে জেনারেট করবে
 export async function generateStaticParams() {
