@@ -20,21 +20,28 @@
 //   return <div></div>;
 // }
 
-"use client";
-import { useEffect } from "react";
+import Script from "next/script";
 
 export default function FacebookEventTrack({ product }) {
-  useEffect(() => {
-    if (typeof fbq !== "undefined" && product) {
-      fbq("track", "ViewContent", {
-        content_name: product?.title,
-        content_ids: [product?.id],
-        content_type: "product",
-        value: product?.discountPrice || product?.regulartPrice,
-        currency: "BDT",
-      });
-    }
-  }, [product]);
+  const value = product?.discountPrice || product?.regulartPrice;
 
-  return null;
+  return (
+    <>
+      <Script
+        id="fb-viewcontent"
+        strategy="afterInteractive"
+        onReady={() => {
+          if (typeof fbq !== "undefined" && product) {
+            fbq("track", "ViewContent", {
+              content_name: product.title,
+              content_ids: [product.id],
+              content_type: "product",
+              value: value,
+              currency: "BDT",
+            });
+          }
+        }}
+      />
+    </>
+  );
 }
