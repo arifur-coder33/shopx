@@ -113,22 +113,22 @@ export const ModalProvider = ({ children }) => {
   const closeModal = useCallback(() => {
     // This will close the topmost modal.
     setModals((prev) => prev.slice(0, prev.length - 1));
-    // Set modalClosed to true only if all modals are closed, or if this state is used for something specific
-    // For now, let's assume it should reflect if a modal just closed.
-    if (modals.length === 1) {
-      // If this was the last modal
-      setModalClosed(true);
-    }
-  }, [modals.length]); // Add modals.length to dependency array if you need it for setModalClosed logic
+
+    // if (modals.length === 1) {
+    //   setModalClosed(true);
+    // }  // changed on 12.12.2025
+    setModalClosed(true);
+  }, [modals.length]);
 
   const value = useMemo(
     () => ({
       modals,
       openModal,
       closeModal,
+      modalClosed,
       setModalClosed, // Retain if needed elsewhere for explicit state updates
     }),
-    [modals, openModal, closeModal]
+    [modals, openModal, closeModal, modalClosed]
   );
 
   return (

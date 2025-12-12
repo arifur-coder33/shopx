@@ -135,7 +135,7 @@ export default function OrderForm({
       >
         অর্ডার নিশ্চিত করুন
       </Button>
-      {loading && (
+      {loading && !error && (
         <div className="fixed top-0 left-0 w-screen h-screen bg-black bg-opacity-30 z-30 flex items-center justify-center">
           <LoadingSpinner message="অর্ডার নিশ্চিত হচ্ছে ..." />
         </div>

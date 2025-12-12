@@ -96,7 +96,7 @@ export default async function OrderListPage() {
           getItemDataAction: "",
           itemAddFormKey: "",
           itemUpdateFormKey: "",
-          quickViewComponentKey: "",
+          quickViewComponentKey: "OrderQuickView",
           updateAction: "",
           deleteAction: "deleteProductById",
           actionType: "edit",
