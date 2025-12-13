@@ -157,7 +157,7 @@ export default function TableBody({
                     )}
                   </th>
                 ))}
-                <th scope="col" className="px-4 py-2 text-center">
+                <th scope="col" className="sticky bg-slate-400 right-0 px-4 py-2 text-center">
                   {/* Adjusted padding for actions */}
                   Actions
                 </th>
@@ -191,7 +191,7 @@ export default function TableBody({
                           )}
                         </td>
                       ))}
-                      <td className="px-4 py-2 flex items-center justify-center space-x-2 align-middle">
+                      <td className="px-4 sticky bg-slate-200 right-0 py-2 flex items-center justify-center space-x-2 align-middle">
                         {/* Adjusted padding and space-x */}
                         {/* --- PARENT ROW ACTIONS --- */}
                         {item?.slug && (
