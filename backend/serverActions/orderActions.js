@@ -259,6 +259,27 @@ export async function getOrderByOrderNo(orderNo, phoneNumber) {
   }
 }
 
+export async function getOrderById(orderId) {
+  console.log("order id in server action:", orderId);
+  try {
+    const data = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            variation: true,
+            combination: true,
+          },
+        },
+      },
+    });
+    console.log("data", data);
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function deleteOrderById(orderId) {
   try {
     // Delete the order by its ID

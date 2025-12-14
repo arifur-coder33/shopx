@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { generateInvoicePDF } from "./GenerateInvoice"; // আপনার ইম্পোর্ট
 import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
 import DocumentActions from "./components/DocumentActions";
+import { generateInvoicePDF } from "./components/GenerateInvoice"; // আপনার ইম্পোর্ট
 import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
 import OrderSummary from "./components/OrderSummary";
@@ -11,7 +11,7 @@ import OrderTimeline from "./components/OrderTimeline";
 
 export default function OrderDetailsPage({ order }) {
   // Global State for the order
-  const [status, setStatus] = useState(order.status || "PENDING");
+  const [status, setStatus] = useState(order.status || "DELIVERED");
   const [courier, setCourier] = useState(order.courier || "");
   const [discount, setDiscount] = useState(order.discount || 0);
   const [note, setNote] = useState(order.note || "");
@@ -30,13 +30,13 @@ export default function OrderDetailsPage({ order }) {
       console.log("Generate PDF Function called for:", type);
     }
   };
-
+  console.log("order in details page:", order);
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans text-slate-800">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
         <OrderHeader
-          orderId={order.id}
+          orderId={order.orderNo}
           status={status}
           date={order.createdAt || "N/A"}
         />
@@ -48,12 +48,12 @@ export default function OrderDetailsPage({ order }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Items & Customer Info (Takes 2 parts on Desktop) */}
           <div className="lg:col-span-2 space-y-6">
-            <OrderItemsTable items={order.items} />
+            <OrderItemsTable items={order?.orderItems} />
             <OrderSummary
-              subtotal={order.subtotal}
+              subtotal={order.orderPrice}
               delivery={order.deliveryCharge}
               discount={discount}
-              total={order.amount}
+              total={order.orderPrice + order.deliveryCharge - discount}
             />
             {/* Mobile-first: Customer info stays with details usually, or move to sidebar */}
             <div className="block lg:hidden">

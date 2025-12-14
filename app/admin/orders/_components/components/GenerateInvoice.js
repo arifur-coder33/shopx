@@ -54,7 +54,7 @@ const order = {
   paymentMethod: "Cash on Delivery",
 };
 
-export async function generateInvoicePDF({ actionType }) {
+export async function generateInvoicePDF({ actionType, orderData }) {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -142,7 +142,7 @@ export async function generateInvoicePDF({ actionType }) {
 
   doc.text("Invoice #:", pageWidth - 55, headerRightY, { align: "left" });
   doc.setFont("helvetica", "bold");
-  doc.text(order.invoiceNumber, pageWidth - marginX, headerRightY, {
+  doc.text(orderData.orderNo, pageWidth - marginX, headerRightY, {
     align: "right",
   });
 
@@ -150,13 +150,20 @@ export async function generateInvoicePDF({ actionType }) {
   doc.setFont("helvetica", "normal");
   doc.text("Date:", pageWidth - 55, headerRightY, { align: "left" });
   doc.setFont("helvetica", "bold");
-  doc.text(order.date, pageWidth - marginX, headerRightY, { align: "right" });
+  doc.text(
+    new Date(orderData.createdAt).toLocaleDateString("en-BD"),
+    pageWidth - marginX,
+    headerRightY,
+    {
+      align: "right",
+    }
+  );
 
   headerRightY += 5;
   doc.setFont("helvetica", "normal");
   doc.text("Due Date:", pageWidth - 55, headerRightY, { align: "left" });
   doc.setFont("helvetica", "bold");
-  doc.text(order.dueDate, pageWidth - marginX, headerRightY, {
+  doc.text(orderData?.dueDate || "", pageWidth - marginX, headerRightY, {
     align: "right",
   });
 
@@ -181,24 +188,24 @@ export async function generateInvoicePDF({ actionType }) {
 
   // Bill To Content
   doc.setFont("helvetica", "bold");
-  doc.text(order.billTo.name, marginX, currentY);
+  doc.text(orderData.customerName, marginX, currentY);
   doc.setFont("helvetica", "normal");
-  const billLines = doc.splitTextToSize(order.billTo.address, 85);
+  const billLines = doc.splitTextToSize(orderData.deliveryAddress, 85);
   doc.text(billLines, marginX, currentY + 5);
   let billH = billLines.length * 5 + 5;
-  doc.text(order.billTo.phone, marginX, currentY + billH + 5);
-  doc.text(order.billTo.email, marginX, currentY + billH + 10);
+  doc.text(orderData.customerName, marginX, currentY + billH + 5);
+  doc.text(orderData.phoneNumber, marginX, currentY + billH + 10);
   const totalBillH = billH + 15;
 
   // Ship To Content
-  const ship = order.shipTo || order.billTo;
+  const ship = orderData || orderData.billTo;
   doc.setFont("helvetica", "bold");
-  doc.text(ship.name, pageWidth / 2 + 5, currentY);
+  doc.text(ship.customerName, pageWidth / 2 + 5, currentY);
   doc.setFont("helvetica", "normal");
-  const shipLines = doc.splitTextToSize(ship.address, 85);
+  const shipLines = doc.splitTextToSize(ship.deliveryAddress, 85);
   doc.text(shipLines, pageWidth / 2 + 5, currentY + 5);
   let shipH = shipLines.length * 5 + 5;
-  doc.text(ship.phone, pageWidth / 2 + 5, currentY + shipH + 5);
+  doc.text(ship.phoneNumber, pageWidth / 2 + 5, currentY + shipH + 5);
   doc.text(ship.email, pageWidth / 2 + 5, currentY + shipH + 10);
   const totalShipH = shipH + 15;
 
@@ -207,15 +214,33 @@ export async function generateInvoicePDF({ actionType }) {
   // ====================================================================
   // --- ৩. টেবিল ---
   // ====================================================================
-  const tableData = order.items.map((item, index) => [
+  const formatCombinations = (combinations) => {
+    try {
+      if (!combinations) return "";
+
+      const parsed =
+        typeof combinations === "string"
+          ? JSON.parse(combinations)
+          : combinations;
+
+      if (!Array.isArray(parsed)) return "";
+
+      return parsed.map((c) => `${c.name}: ${c.value}`).join(", ");
+    } catch (e) {
+      return "";
+    }
+  };
+  const tableData = orderData.orderItems.map((item, index) => [
     index + 1,
     {
-      content: `${item.name}\n${item.description || ""}`,
+      content: `${item.productName}\n${
+        formatCombinations(item.combinations) || ""
+      }`,
       styles: { fontStyle: "normal" },
     },
-    item.qty,
+    item.quantity,
     fmt(item.price),
-    { content: fmt(item.qty * item.price), styles: { halign: "right" } },
+    { content: fmt(item.quantity * item.price), styles: { halign: "right" } },
   ]);
 
   autoTable(doc, {
@@ -250,25 +275,31 @@ export async function generateInvoicePDF({ actionType }) {
   // ====================================================================
   // --- ৪. টোটাল হিসাব ---
   // ====================================================================
-  const subTotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);
-  const total = subTotal + subTotal * order.taxRate + order.shipping;
+
+  const subTotal = orderData.orderItems.reduce(
+    (s, i) => s + i.quantity * i.price,
+    0
+  );
+  const total = subTotal + orderData?.deliveryCharge;
   const totalsXLabel = pageWidth - 70;
   const totalsXValue = pageWidth - marginX;
 
   doc.text("Subtotal:", totalsXLabel, currentY, { align: "right" });
   doc.text(fmt(subTotal), totalsXValue, currentY, { align: "right" });
 
-  if (order.taxRate > 0) {
+  if (orderData?.taxRate > 0) {
     currentY += 6;
     doc.text(`Tax:`, totalsXLabel, currentY, { align: "right" });
-    doc.text(fmt(subTotal * order.taxRate), totalsXValue, currentY, {
+    doc.text(fmt(subTotal * orderData?.taxRate), totalsXValue, currentY, {
       align: "right",
     });
   }
-  if (order.shipping > 0) {
+  if (orderData.deliveryCharge > 0) {
     currentY += 6;
     doc.text("Shipping:", totalsXLabel, currentY, { align: "right" });
-    doc.text(fmt(order.shipping), totalsXValue, currentY, { align: "right" });
+    doc.text(fmt(orderData?.deliveryCharge), totalsXValue, currentY, {
+      align: "right",
+    });
   }
 
   currentY += 2;
@@ -285,7 +316,7 @@ export async function generateInvoicePDF({ actionType }) {
   // ====================================================================
 
   // ইনভয়েসের লিংক তৈরি (উদাহরণস্বরূপ)
-  const invoiceLink = `https://www.bdmart24.com/invoices/${order.invoiceNumber}`;
+  const invoiceLink = `${process.env.NEXT_PUBLIC_SITE_URL}/${orderData.orderNo}`;
 
   // QR Code জেনারেট করা
   try {
@@ -317,22 +348,22 @@ export async function generateInvoicePDF({ actionType }) {
   doc.setTextColor(secondaryColor);
 
   // পেমেন্ট মেথড
-  if (order.paymentMethod) {
+  if (orderData.paymentMethod) {
     doc.setFont("helvetica", "bold");
     doc.text("Payment Info:", marginX, notesY);
     doc.setFont("helvetica", "normal");
-    doc.text(order.paymentMethod, marginX + 25, notesY);
+    doc.text(orderData.paymentMethod, marginX + 25, notesY);
     notesY += 6;
   }
 
   // নোটস
-  if (order.notes) {
+  if (orderData.note) {
     doc.setFont("helvetica", "bold");
     doc.text("Notes:", marginX, notesY);
     doc.setFont("helvetica", "normal");
     // QR Code এর সাথে যাতে ধাক্কা না লাগে তাই প্রস্থ একটু কমিয়ে দেওয়া হয়েছে
     const notesWidth = pageWidth - marginX - 50;
-    doc.text(order.notes, marginX, notesY + 5, { maxWidth: notesWidth });
+    doc.text(orderData.note, marginX, notesY + 5, { maxWidth: notesWidth });
   }
 
   // --- ফুটার লাইন ---
@@ -350,7 +381,7 @@ export async function generateInvoicePDF({ actionType }) {
     align: "center",
   });
 
-  //   doc.save(`Invoice-${order.invoiceNumber}.pdf`);
+  //   doc.save(`Invoice-${orderData.invoiceNumber}.pdf`);
 
   if (actionType == "view") {
     const pdfBlobUrl = doc.output("bloburl");
@@ -358,6 +389,6 @@ export async function generateInvoicePDF({ actionType }) {
     // ২. নতুন ট্যাবে ওপেন করুন
     window.open(pdfBlobUrl, "_blank");
   } else {
-    doc.save(`Invoice-${order.invoiceNumber}.pdf`);
+    doc.save(`Invoice-${orderData.orderNo}.pdf`);
   }
 }

@@ -1,5 +1,3 @@
-import OrderDetailsPage from "./OrderManager";
-
 export const sampleOrder = {
   id: "ORD-20251212-00123",
 
@@ -15,7 +13,7 @@ export const sampleOrder = {
   amount: 3420, // final total (subtotal + delivery - discount)
 
   // Status & Courier
-  status: "PENDING",
+  status: "DELIVERED",
   courier: "", // SteadFast / RedX / Pathao / Sundarban
   courierTrackingId: "", // after courier order create
 
@@ -50,10 +48,39 @@ export const sampleOrder = {
   updatedAt: "2025-12-12T12:15:00Z",
 };
 
+('use client";');
+
+import { getOrderById } from "@/backend/serverActions/orderActions";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { useEffect, useState } from "react";
+import OrderDetailsPage from "./OrderDetailsPage";
 export default function OrderView({ id }) {
-  return (
-    <>
-      <OrderDetailsPage order={sampleOrder} />
-    </>
-  );
+  const [data, setData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  console.log("order id:", id);
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const fatchData = await getOrderById(id);
+        setData(fatchData.data);
+      } catch (error) {
+        setError("Failed to load product data.");
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getData();
+  }, [id]);
+  console.log("order data:", data);
+  if (loading)
+    return (
+      <div>
+        <LoadingSpinner message="Just a second.. " />
+      </div>
+    );
+  if (error) return <div>{error}</div>;
+  if (!data) return <div>No Data Found</div>;
+  return <OrderDetailsPage order={data} />;
 }

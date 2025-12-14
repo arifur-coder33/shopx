@@ -233,11 +233,11 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useState } from "react";
-import { generateInvoicePDF } from "./GenerateInvoice";
-export default function OrderDetailsPage({ order }) {
+import { generateInvoicePDF } from "./components/GenerateInvoice";
+export default function OrdeManager({ order }) {
   const [status, setStatus] = useState(order.status || "PENDING");
-  const [courier, setCourier] = useState(order.courier || "");
-  const [discount, setDiscount] = useState(order.discount || 0);
+  const [courier, setCourier] = useState(order?.courier || "");
+  const [discount, setDiscount] = useState(order?.discount || 0);
   const [note, setNote] = useState(order.note || "");
 
   const updateStatus = () => {
@@ -315,16 +315,16 @@ export default function OrderDetailsPage({ order }) {
           <h2 className="text-2xl font-bold mb-3">Order Details</h2>
           <div className="text-sm space-y-1">
             <p>
-              <strong>Order ID:</strong> {order.id}
+              <strong>Order ID:</strong> {order.orderNo}
             </p>
             <p>
               <strong>Customer:</strong> {order.customerName}
             </p>
             <p>
-              <strong>Phone:</strong> {order.phone}
+              <strong>Phone:</strong> {order.phoneNumber}
             </p>
             <p>
-              <strong>Address:</strong> {order.address}
+              <strong>Address:</strong> {order.deliveryAddress}
             </p>
             <p>
               <strong>Payment Method:</strong> {order.paymentMethod}

@@ -1,3 +1,5 @@
+import Imagecustom from "@/components/images/ImageCustom";
+
 export default function OrderItemsTable({ items }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -22,11 +24,12 @@ export default function OrderItemsTable({ items }) {
             {/* Product Info */}
             <div className="col-span-6 flex items-center gap-4 w-full">
               <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
+                {item.thumbnail ? (
+                  <Imagecustom
+                    w={70}
+                    h={70}
+                    src={item.thumbnail}
+                    alt={item.productName || "Product Image"}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -35,10 +38,20 @@ export default function OrderItemsTable({ items }) {
                 )}
               </div>
               <div>
-                <p className="font-medium text-gray-900">{item.name}</p>
-                {item.variant && (
-                  <p className="text-sm text-gray-500">{item.variant}</p>
+                <p className="font-medium text-gray-900">{item.productName}</p>
+
+                {item.combinations && (
+                  <div className="flex">
+                    {JSON.parse(item.combinations).map((variation, index) => (
+                      <span key={index} className="text-sm text-gray-500 mr-2">
+                        {variation.name}:{variation?.value}
+                      </span>
+                    ))}
+                  </div>
                 )}
+                <span className="text-xs text-gray-500 mr-2">
+                  {item?.sku && `SKU: ${item.sku}`}
+                </span>
               </div>
             </div>
 
@@ -47,17 +60,21 @@ export default function OrderItemsTable({ items }) {
               <span className="md:hidden text-gray-500 text-sm">
                 Unit Price:
               </span>
-              <span className="text-gray-700">{item.unitPrice} ৳</span>
+              <span className="text-gray-700">{item.price} ৳</span>
             </div>
 
             <div className="col-span-2 flex justify-between w-full md:block md:text-center">
               <span className="md:hidden text-gray-500 text-sm">Quantity:</span>
-              <span className="text-gray-700 font-medium">x {item.qty}</span>
+              <span className="text-gray-700 font-medium">
+                x {item.quantity}
+              </span>
             </div>
 
             <div className="col-span-2 flex justify-between w-full md:block md:text-right">
               <span className="md:hidden text-gray-500 text-sm">Subtotal:</span>
-              <span className="text-gray-900 font-bold">{item.total} ৳</span>
+              <span className="text-gray-900 font-bold">
+                {item.quantity * item?.price} ৳
+              </span>
             </div>
           </div>
         ))}

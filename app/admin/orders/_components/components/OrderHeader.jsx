@@ -1,3 +1,4 @@
+import { dateConvertToLocalString } from "@/utils/dateConvert";
 import { Package } from "lucide-react";
 
 export default function OrderHeader({ orderId, status, date }) {
@@ -22,7 +23,9 @@ export default function OrderHeader({ orderId, status, date }) {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Order #{orderId}</h1>
-          <p className="text-sm text-gray-500">Placed on {date}</p>
+          <p className="text-sm text-gray-500">
+            Placed on {dateConvertToLocalString(date)}
+          </p>
         </div>
       </div>
       <div
