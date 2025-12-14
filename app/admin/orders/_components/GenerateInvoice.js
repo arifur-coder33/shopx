@@ -232,16 +232,21 @@ export async function generateInvoicePDF({ actionType }) {
     body: tableData,
     theme: "grid",
     headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: "bold" },
-    styles: { fontSize: 9, cellPadding: 3 },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+      overflow: "linebreak", // এটা যোগ করুন – টেক্সট অটো র‍্যাপ হবে
+      // cellWidth: "wrap",        // অপশনাল, কিন্তু overflow: linebreak থাকলে দরকার নেই
+    },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: "wrap" }, // Item & Description কলামকে wrap করতে দিন (সবচেয়ে গুরুত্বপূর্ণ)
       2: { cellWidth: 15, halign: "center" },
       3: { cellWidth: 30, halign: "right" },
       4: { cellWidth: 30, halign: "right" },
     },
     didDrawPage: (data) => (currentY = data.cursor.y + 10),
   });
-
   // ====================================================================
   // --- ৪. টোটাল হিসাব ---
   // ====================================================================
