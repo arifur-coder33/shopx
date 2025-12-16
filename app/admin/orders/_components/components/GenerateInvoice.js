@@ -1,23 +1,22 @@
+import { addSiyamrupaliFont } from "@/app/fonts/Siyamrupali-normal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode"; // ১. QR কোড লাইব্রেরি ইমপোর্ট করুন
-
 const logoUrl = "/android-chrome-192x192.png"; // আপনার লোগোর পাথ
-
 const order = {
   invoiceNumber: "INV-2025-0012",
   date: "2025-12-12",
   dueDate: "2026-01-12",
   company: {
     name: "BD Mart 24",
-    address: "House 1, Road 2, Block C, Mirpur DOHS, Dhaka",
+    address: "Uttara Dhaka, Bangladesh",
     phone: "+880 1XXXXXXXXX",
     email: "hello@bdmart24.com",
     website: "www.bdmart24.com",
   },
   billTo: {
     name: "Md. Rahim",
-    address: "House 12, Road 4, Section 6, Mirpur, Dhaka-1216",
+    address: "Uttara Dhaka, Bangladesh",
     phone: "+880 17XXXXXXXX",
     email: "rahim@example.com",
   },
@@ -60,7 +59,8 @@ export async function generateInvoicePDF({ actionType, orderData }) {
     unit: "mm",
     format: "a4",
   });
-
+  addSiyamrupaliFont(doc);
+  doc.setFont("Siyamrupali");
   // --- সেটিংস ---
   const primaryColor = "#007BFF";
   const secondaryColor = "#343A40";
@@ -193,7 +193,7 @@ export async function generateInvoicePDF({ actionType, orderData }) {
   const billLines = doc.splitTextToSize(orderData.deliveryAddress, 85);
   doc.text(billLines, marginX, currentY + 5);
   let billH = billLines.length * 5 + 5;
-  doc.text(orderData.customerName, marginX, currentY + billH + 5);
+  doc.text(orderData.email, marginX, currentY + billH + 5);
   doc.text(orderData.phoneNumber, marginX, currentY + billH + 10);
   const totalBillH = billH + 15;
 
@@ -236,7 +236,7 @@ export async function generateInvoicePDF({ actionType, orderData }) {
       content: `${item.productName}\n${
         formatCombinations(item.combinations) || ""
       }`,
-      styles: { fontStyle: "normal" },
+      styles: { fontStyle: "normal", font: "Siyamrupali" },
     },
     item.quantity,
     fmt(item.price),
@@ -258,10 +258,15 @@ export async function generateInvoicePDF({ actionType, orderData }) {
     theme: "grid",
     headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: "bold" },
     styles: {
+      font: "Siyamrupali",
       fontSize: 9,
+      overflow: "linebreak",
       cellPadding: 3,
-      overflow: "linebreak", // এটা যোগ করুন – টেক্সট অটো র‍্যাপ হবে
-      // cellWidth: "wrap",        // অপশনাল, কিন্তু overflow: linebreak থাকলে দরকার নেই
+    },
+    headStyles: {
+      font: "Siyamrupali",
+      fillColor: primaryColor,
+      textColor: 255,
     },
     columnStyles: {
       0: { cellWidth: 10, halign: "center" },

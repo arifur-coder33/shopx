@@ -1,4 +1,5 @@
 "use client";
+import InvoiceButton from "@/components/PDF/getInvoice";
 import { useState } from "react";
 import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
@@ -8,7 +9,6 @@ import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
 import OrderSummary from "./components/OrderSummary";
 import OrderTimeline from "./components/OrderTimeline";
-
 export default function OrderDetailsPage({ order }) {
   // Global State for the order
   const [status, setStatus] = useState(order.status || "DELIVERED");
@@ -29,6 +29,9 @@ export default function OrderDetailsPage({ order }) {
     } else {
       console.log("Generate PDF Function called for:", type);
     }
+  };
+  const handleServerDownload = () => {
+    downloadInvoice(order);
   };
   console.log("order in details page:", order);
   return (
@@ -86,6 +89,7 @@ export default function OrderDetailsPage({ order }) {
               onView={() => handleDownloadInvoice("view")}
               onAWB={() => alert("Downloading AWB...")}
             />
+            <InvoiceButton orderData={order} actionType={"view"} />
           </div>
         </div>
       </div>
