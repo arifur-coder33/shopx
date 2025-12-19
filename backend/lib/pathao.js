@@ -1,6 +1,6 @@
-'use server'
+"use server";
 
-const BASE_URL = "https://courier-api-sandbox.pathao.com/aladdin/api/v1"; // Sandbox URL (switch to production when live)
+const BASE_URL = process.env.PATHAO_BASE_URI || "https://api-hermes.pathao.com";
 const CLIENT_ID = process.env.PATHAO_CLIENT_ID;
 const CLIENT_SECRET = process.env.PATHAO_CLIENT_SECRET;
 const USERNAME = process.env.PATHAO_USERNAME;
@@ -45,7 +45,12 @@ export async function getAccessToken() {
 /**
  * ✅ Calculate Delivery Charge
  */
-export async function calculateDeliveryCharge({ store_id, city_id, zone_id, weight = 0.5 }) {
+export async function calculateDeliveryCharge({
+  store_id,
+  city_id,
+  zone_id,
+  weight = 0.5,
+}) {
   const token = await getAccessToken();
 
   const response = await fetch(`${BASE_URL}/merchant/price-plan`, {
@@ -56,8 +61,8 @@ export async function calculateDeliveryCharge({ store_id, city_id, zone_id, weig
     },
     body: JSON.stringify({
       store_id,
-      item_type: 2,        // 1=Document, 2=Parcel
-      delivery_type: 48,   // 48=Normal Delivery
+      item_type: 2, // 1=Document, 2=Parcel
+      delivery_type: 48, // 48=Normal Delivery
       item_weight: weight,
       recipient_city: city_id,
       recipient_zone: zone_id,
@@ -151,9 +156,22 @@ export async function getStores() {
 /**
  * ✅ Create a Single Order
  */
-export async function createOrder(orderData) {
+export async function createPathaoOrder(orderData) {
   const token = await getAccessToken();
-
+  const data = {
+    store_id: orderData.store_id,
+    merchant_order_id: orderData.merchant_order_id,
+    recipient_name: orderData.recipient_name,
+    recipient_phone: orderData.recipient_phone,
+    recipient_address: orderData.recipient_address,
+    delivery_type: orderData.delivery_type || 48, // 48 for Normal Delivery, 12 for On Demand Delivery
+    item_type: orderData.item_type || 2, // 1 for Document, 2 for Parcel
+    special_instruction: orderData.special_instruction || "",
+    item_quantity: orderData.item_quantity || 1,
+    item_weight: orderData.item_weight || 0.5,
+    item_description: orderData.item_description || "Goods",
+    amount_to_collect: orderData.amount_to_collect || 0,
+  };
   const response = await fetch(`${BASE_URL}/orders`, {
     method: "POST",
     headers: {

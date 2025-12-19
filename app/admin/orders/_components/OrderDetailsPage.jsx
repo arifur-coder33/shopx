@@ -7,8 +7,10 @@ import DocumentActions from "./components/DocumentActions";
 import { generateInvoicePDF } from "./components/GenerateInvoice"; // আপনার ইম্পোর্ট
 import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
+import OrderNote from "./components/OrderNote";
 import OrderSummary from "./components/OrderSummary";
 import OrderTimeline from "./components/OrderTimeline";
+import CourierManagement from "./courier/CourierManagement";
 export default function OrderDetailsPage({ order }) {
   // Global State for the order
   const [status, setStatus] = useState(order.status || "DELIVERED");
@@ -58,6 +60,9 @@ export default function OrderDetailsPage({ order }) {
               discount={discount}
               total={order.orderPrice + order.deliveryCharge - discount}
             />
+            <OrderNote note={order?.note} />
+
+            <CourierManagement order={order} />
             {/* Mobile-first: Customer info stays with details usually, or move to sidebar */}
             <div className="block lg:hidden">
               <CustomerInfo customer={order} />

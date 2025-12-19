@@ -51,7 +51,7 @@ export default function AdminActions({
       </div>
 
       {/* Courier Selection */}
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <label className="text-xs font-semibold text-gray-500 uppercase">
           Assign Courier
         </label>
@@ -74,7 +74,7 @@ export default function AdminActions({
             Book
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Note & Discount */}
       <div className="space-y-3 pt-4 border-t border-gray-100">
