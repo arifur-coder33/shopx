@@ -20,7 +20,7 @@ export async function getAccessToken() {
     return cachedToken;
   }
 
-  const response = await fetch(`${BASE_URL}/issue-token`, {
+  const response = await fetch(`${BASE_URL}/aladdin/api/v1/issue-token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -158,21 +158,8 @@ export async function getStores() {
  */
 export async function createPathaoOrder(orderData) {
   const token = await getAccessToken();
-  const data = {
-    store_id: orderData.store_id,
-    merchant_order_id: orderData.merchant_order_id,
-    recipient_name: orderData.recipient_name,
-    recipient_phone: orderData.recipient_phone,
-    recipient_address: orderData.recipient_address,
-    delivery_type: orderData.delivery_type || 48, // 48 for Normal Delivery, 12 for On Demand Delivery
-    item_type: orderData.item_type || 2, // 1 for Document, 2 for Parcel
-    special_instruction: orderData.special_instruction || "",
-    item_quantity: orderData.item_quantity || 1,
-    item_weight: orderData.item_weight || 0.5,
-    item_description: orderData.item_description || "Goods",
-    amount_to_collect: orderData.amount_to_collect || 0,
-  };
-  const response = await fetch(`${BASE_URL}/orders`, {
+
+  const response = await fetch(`${BASE_URL}/aladdin/api/v1/orders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -182,11 +169,12 @@ export async function createPathaoOrder(orderData) {
   });
 
   const result = await response.json();
-  if (!response.ok || result.code !== 200) {
+  console.log("Pathao Order Response:", result);
+  if (result.code !== 200) {
     throw new Error("❌ Failed to create order");
   }
 
-  return result.data; // ✅ Returns order info (consignment_id, delivery_fee, etc.)
+  return result; // ✅ Returns order info (consignment_id, delivery_fee, etc.)
 }
 
 /**

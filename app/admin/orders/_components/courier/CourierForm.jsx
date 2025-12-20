@@ -1,6 +1,25 @@
 const STORES = [
-  { id: "WH-01", name: "Main Warehouse", address: "Dhaka, BD" },
-  { id: "WH-02", name: "Chittagong Branch", address: "CTG, BD" },
+  {
+    id: "WH-01",
+    name: "ArifSoft",
+    address: "Olipur, shayestaganj",
+    storeId: "224192",
+    courierName: "pathao",
+  },
+  {
+    id: "WH-02",
+    name: "ArifSoft",
+    address: "Olipur, shayestaganj",
+    storeId: "224192",
+    courierName: "stedyFast",
+  },
+  {
+    id: "WH-03",
+    name: "ArifSoft1",
+    address: "Olipur, shayestaganj",
+    storeId: "224192",
+    courierName: "pathao",
+  },
 ];
 
 export default function CourierForm({
@@ -19,15 +38,15 @@ export default function CourierForm({
       {/* Pickup Selection */}
       <div className="space-y-1">
         <label className="text-[11px] font-bold text-slate-500 uppercase">
-          Pickup Store
+          Pickup Store {courierName}
         </label>
         <select
           name="storeId"
           onChange={onChange}
           className="w-full p-3 border border-slate-200 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          {STORES.map((s) => (
-            <option key={s.id} value={s.id}>
+          {STORES.filter((s) => s.courierName === courierName).map((s) => (
+            <option key={s.id} value={s.storeId}>
               {s.name} ({s.address})
             </option>
           ))}

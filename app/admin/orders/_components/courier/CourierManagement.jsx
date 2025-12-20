@@ -1,4 +1,5 @@
 "use client";
+import { createCourierDelivery } from "@/backend/serverActions/courierAction";
 import { useState } from "react";
 import CourierForm from "./CourierForm";
 import CourierSelector from "./CourierSelector";
@@ -7,9 +8,12 @@ import CourierStatus from "./CourierStatus";
 export default function CourierManagement({ order }) {
   const [view, setView] = useState("list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [courierDetails, setCourierDetails] = useState(
     order?.courierDetails || null
   );
+
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -25,19 +29,37 @@ export default function CourierManagement({ order }) {
   const handleCreate = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Logic for API call here
-    setTimeout(() => {
-      setCourierDetails({
-        courierId: selectedCourier.id,
-        courierName: selectedCourier.name,
-        cnNumber: "PATH-992031",
-        status: "PENDING",
-        date: new Date().toLocaleDateString(),
-        storeName: "Main Warehouse",
-      });
-      setLoading(false);
+    const form = e.target;
+    const formData = new FormData(form);
+    formData.append("courierName", selectedCourier.name);
+    let newData = Object.fromEntries(formData.entries());
+    console.log("Submitting courier data:", newData);
+    const response = await createCourierDelivery({ formData });
+    if (response.success) {
+      setCourierDetails(response.data);
       setView("status");
-    }, 1000);
+      setError(null);
+      setSuccess(true);
+      console.log("Courier delivery created successfully", response.data);
+    } else {
+      setError(response.message);
+      setSuccess(null);
+      console.error("Error creating courier delivery:", response.message);
+    }
+
+    // Logic for API call here
+    // setTimeout(() => {
+    //   setCourierDetails({
+    //     courierId: selectedCourier.id,
+    //     courierName: selectedCourier.name,
+    //     cnNumber: "PATH-992031",
+    //     status: "PENDING",
+    //     date: new Date().toLocaleDateString(),
+    //     storeName: "Main Warehouse",
+    //   });
+    //   setLoading(false);
+    //   setView("status");
+    // }, 1000);
   };
 
   const handleCancle = () => {
