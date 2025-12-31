@@ -234,6 +234,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useState } from "react";
 import { generateInvoicePDF } from "./components/GenerateInvoice";
+import OrderFooter from "./components/OrderFooter";
 export default function OrdeManager({ order }) {
   const [status, setStatus] = useState(order.status || "PENDING");
   const [courier, setCourier] = useState(order?.courier || "");
@@ -490,6 +491,13 @@ export default function OrdeManager({ order }) {
           </button>
         </div>
       </div>
+      <OrderFooter
+        status={status}
+        setStatus={setStatus}
+        courier={courier}
+        setCourier={setCourier}
+        onCreateCourier={createCourierOrder}
+      />
     </div>
   );
 }

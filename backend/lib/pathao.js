@@ -38,7 +38,9 @@ export async function getAccessToken() {
 
   const data = await response.json();
   cachedToken = data.access_token;
+  console.log("token", cachedToken);
   cachedExpiresAt = now + data.expires_in * 1000 - 60000; // expire 1 min early for safety
+  console.log("tokem", cachedToken);
   return cachedToken;
 }
 
@@ -158,7 +160,7 @@ export async function getStores() {
  */
 export async function createPathaoOrder(orderData) {
   const token = await getAccessToken();
-
+  console.log("Creating Pathao order with data:", orderData);
   const response = await fetch(`${BASE_URL}/aladdin/api/v1/orders`, {
     method: "POST",
     headers: {

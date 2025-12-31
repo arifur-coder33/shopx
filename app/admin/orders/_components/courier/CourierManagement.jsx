@@ -6,13 +6,11 @@ import CourierSelector from "./CourierSelector";
 import CourierStatus from "./CourierStatus";
 
 export default function CourierManagement({ order }) {
-  const [view, setView] = useState("list"); // list, form, status
+  const [view, setView] = useState(order?.shipping ? "status" : "list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [courierDetails, setCourierDetails] = useState(
-    order?.courierDetails || null
-  );
+  const [courierDetails, setCourierDetails] = useState(order?.shipping || null);
 
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +30,7 @@ export default function CourierManagement({ order }) {
     const form = e.target;
     const formData = new FormData(form);
     formData.append("courierName", selectedCourier.name);
+    formData.append("invoice", order?.orderNo);
     let newData = Object.fromEntries(formData.entries());
     console.log("Submitting courier data:", newData);
     const response = await createCourierDelivery({ formData });
@@ -68,7 +67,10 @@ export default function CourierManagement({ order }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+    <div
+      id="courier"
+      className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6"
+    >
       <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
         <h3 className="font-bold text-slate-800 text-sm tracking-tight">
           Delivery Integration

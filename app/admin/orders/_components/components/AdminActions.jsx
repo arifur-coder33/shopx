@@ -11,14 +11,7 @@ export default function AdminActions({
   onCreateCourier,
   onSaveNote,
 }) {
-  const steps = [
-    "PENDING",
-    "PROCESSING",
-    "PACKED",
-    "SHIPPED",
-    "DELIVERED",
-    "CANCELLED",
-  ];
+  const steps = ["PENDING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"];
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">

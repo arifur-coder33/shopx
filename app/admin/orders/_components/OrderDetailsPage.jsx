@@ -5,6 +5,7 @@ import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
 import DocumentActions from "./components/DocumentActions";
 import { generateInvoicePDF } from "./components/GenerateInvoice"; // আপনার ইম্পোর্ট
+import OrderFooter from "./components/OrderFooter";
 import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
 import OrderNote from "./components/OrderNote";
@@ -98,6 +99,14 @@ export default function OrderDetailsPage({ order }) {
           </div>
         </div>
       </div>
+
+      <OrderFooter
+        status={status}
+        setStatus={setStatus}
+        courier={courier}
+        setCourier={setCourier}
+        onCreateCourier={handleCourierUpdate}
+      />
     </div>
   );
 }

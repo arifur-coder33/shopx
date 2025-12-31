@@ -71,6 +71,34 @@
   height: 100%;
 }
 
+@keyframes blinkBorder {
+  0% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  25% {
+    border-color: red; /* green */
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+  }
+  50% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  75% {
+    border-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+  }
+  100% {
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.blink-border {
+  border: 2px solid transparent;
+  animation: blinkBorder 1s ease-in-out;
+}
+
 @layer base {
   :root {
     --radius: 0.5rem;

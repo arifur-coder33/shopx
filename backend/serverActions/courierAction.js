@@ -1,5 +1,6 @@
 "use server";
 
+import prisma from "@/lib/prisma";
 import { createPathaoOrder } from "../lib/pathao";
 
 export async function createCourierDelivery({ formData }) {
@@ -7,6 +8,18 @@ export async function createCourierDelivery({ formData }) {
   try {
     let data = Object.fromEntries(formData.entries());
     console.log("Creating courier delivery with data:", data);
+
+    const order = await prisma.order.findUnique({
+      where: { orderNo: data.invoice },
+      select: { id: true },
+    });
+
+    if (!order) {
+      return {
+        success: false,
+        message: "No order found with the provided invoice number.",
+      };
+    }
     const courierName = data.courierName;
 
     let courierData = {};
@@ -32,11 +45,14 @@ export async function createCourierDelivery({ formData }) {
 
         if (response.code === 200) {
           orderResponseData = {
-            CN: response.data?.consignment_id,
-            status: response.data.status,
+            cn: response.data?.consignment_id,
+            status: response.data.order_status,
+            date: new Date().toLocaleDateString(),
+            courierName: "Pathao",
+            storeName: data?.storeName || "",
             deliveryFee: response.data.delivery_fee,
             merchantOrderId: response.data.merchant_order_id,
-            tracking_url: `https://pathaoship.com/track/${response.data?.consignment_id}`,
+            tracking_url: `https://pcom.page.link/${response.data?.consignment_id}`,
           };
         } else {
           throw new Error("❌ Failed to create Pathao order");
@@ -50,6 +66,23 @@ export async function createCourierDelivery({ formData }) {
         };
         break;
     }
+
+    await prisma.shipping.create({
+      data: {
+        orderId: order.id,
+        orderNo: data.invoice,
+        cn: orderResponseData.cn,
+        courierName: orderResponseData.courierName,
+        deliveryFee: orderResponseData.deliveryFee,
+        cod: Number(data.price) || 0,
+      },
+    });
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: "PACKED",
+      },
+    });
     console.log("Courier order created:", orderResponseData);
     return { success: true, data: orderResponseData || courierData };
   } catch (error) {

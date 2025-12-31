@@ -107,7 +107,7 @@ export default function InvoiceButton({ orderData, actionType }) {
   };
   return (
     <button
-      onClick={handleDownload}
+      onClick={handleDownloadAPI}
       disabled={isLoading}
       className={`
         flex items-center gap-2 px-4 py-2 rounded text-white font-medium transition-all

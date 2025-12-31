@@ -3,21 +3,21 @@ const STORES = [
     id: "WH-01",
     name: "ArifSoft",
     address: "Olipur, shayestaganj",
-    storeId: "224192",
+    storeId: "149511",
     courierName: "pathao",
   },
   {
     id: "WH-02",
     name: "ArifSoft",
     address: "Olipur, shayestaganj",
-    storeId: "224192",
+    storeId: "149511",
     courierName: "stedyFast",
   },
   {
     id: "WH-03",
     name: "ArifSoft1",
     address: "Olipur, shayestaganj",
-    storeId: "224192",
+    storeId: "149511",
     courierName: "pathao",
   },
 ];
@@ -47,6 +47,7 @@ export default function CourierForm({
         >
           {STORES.filter((s) => s.courierName === courierName).map((s) => (
             <option key={s.id} value={s.storeId}>
+              <input type="hidden" name="storeName" value={s.name} />
               {s.name} ({s.address})
             </option>
           ))}

@@ -271,6 +271,7 @@ export async function getOrderById(orderId) {
             combination: true,
           },
         },
+        shipping: true,
       },
     });
     console.log("data", data);

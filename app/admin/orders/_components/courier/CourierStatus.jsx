@@ -14,7 +14,8 @@ export default function CourierStatus({ details, onCancel }) {
         </div>
         <div className="text-right text-xs text-slate-400">
           <div className="flex items-center gap-1 justify-end">
-            <Calendar size={12} /> {details.date}
+            <Calendar size={12} />{" "}
+            {new Date(details.createdAt).toLocaleDateString("en-BD")}
           </div>
         </div>
       </div>
@@ -25,7 +26,7 @@ export default function CourierStatus({ details, onCancel }) {
             Consignment ID
           </p>
           <p className="text-sm font-mono font-bold text-indigo-600">
-            #{details.cnNumber}
+            #{details.cn}
           </p>
         </div>
         <div className="text-right">

@@ -194,6 +194,7 @@ model Order {
   paymentMethod   String?                    // Address for product delivery
   note            String?
   status         OrderStatus @default(PENDING) // Order status enumeration
+  shipping           Shipping?    
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
@@ -226,7 +227,20 @@ model OrderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   lastOrderNumber Int
 }
+model Shipping {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  orderId         String  @unique  @db.ObjectId 
+  order           Order       @relation(fields: [orderId], references: [id])
+  orderNo        String?
+  cn              String?
+  courierName        String?
+  deliveryFee   Float?
+  cod      Float?
+  estimatedDelivery DateTime?
+  createdAt      DateTime    @default(now()) // Timestamp for order placement
+  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
 
+}
 
 
 model SiteSetting {
@@ -272,7 +286,6 @@ model banner{
 enum OrderStatus {
   PENDING
   PACKED
-  PROCESSING
   SHIPPED
   DELIVERED
   CANCELED
