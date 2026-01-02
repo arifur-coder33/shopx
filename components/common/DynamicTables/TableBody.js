@@ -117,6 +117,7 @@ export default function TableBody({
     actionType,
     viewPageURL,
     quickViewComponentKey,
+    isEditabel,
   } = actions;
   const expandColumn = tableProperties.find((p) => p.type === "expand");
 
@@ -157,7 +158,10 @@ export default function TableBody({
                     )}
                   </th>
                 ))}
-                <th scope="col" className="sticky bg-slate-400 right-0 px-4 py-2 text-center">
+                <th
+                  scope="col"
+                  className="sticky bg-slate-400 right-0 px-4 py-2 text-center"
+                >
                   {/* Adjusted padding for actions */}
                   Actions
                 </th>
@@ -210,16 +214,20 @@ export default function TableBody({
                           componentKey={quickViewComponentKey}
                           itemId={item.id}
                         />
-                        <LazyModalButton
-                          button={
-                            <Edit className="w-4 h-4 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
-                          }
-                          data={item}
-                          itemId={item.id}
-                          updateAction={updateAction}
-                          actionType={"edit"}
-                          componentKey={itemUpdateFormKey}
-                        />
+
+                        {isEditabel && (
+                          <LazyModalButton
+                            button={
+                              <Edit className="w-4 h-4 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
+                            }
+                            data={item}
+                            itemId={item.id}
+                            updateAction={updateAction}
+                            actionType={"edit"}
+                            componentKey={itemUpdateFormKey}
+                          />
+                        )}
+
                         <DeleteItem deleteItem={deleteAction} id={item.id}>
                           <Trash className="w-4 h-4 text-red-500 hover:text-red-600 hover:scale-110 transition-transform" />
                         </DeleteItem>

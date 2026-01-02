@@ -1,7 +1,13 @@
 import { Check } from "lucide-react";
 
 export default function OrderTimeline({ status }) {
-  const steps = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED"];
+  const steps = [
+    "PENDING",
+    "PROCESSING",
+    "READY_TO_SHIP",
+    "SHIPPED",
+    "DELIVERED",
+  ];
   const currentIdx = steps.indexOf(status) === -1 ? 0 : steps.indexOf(status);
 
   return (

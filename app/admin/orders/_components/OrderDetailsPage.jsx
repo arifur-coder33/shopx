@@ -16,13 +16,13 @@ export default function OrderDetailsPage({ order }) {
   // Global State for the order
   const [status, setStatus] = useState(order.status || "DELIVERED");
   const [courier, setCourier] = useState(order.courier || "");
-  const [discount, setDiscount] = useState(order.discount || 0);
+  const [adminDiscount, setAdminDiscount] = useState(order.adminDiscount || 0);
   const [note, setNote] = useState(order.note || "");
-
+  const [adminNote, setAdminNote] = useState(order.adminNote || "");
+  const [isLoading, setIsLoading] = useState(false);
   // Handlers
   const handleUpdateStatus = () => alert(`Status updated to ${status}!`);
   const handleCourierUpdate = () => alert(`Courier Order Created: ${courier}`);
-  const handleSaveNote = () => alert("Discount & Note Saved!");
 
   // Wrapper for PDF Download to keep logic clean
   const handleDownloadInvoice = (type) => {
@@ -48,7 +48,7 @@ export default function OrderDetailsPage({ order }) {
         />
 
         {/* Timeline Section */}
-        <OrderTimeline currentStatus={status} />
+        <OrderTimeline status={status} />
 
         {/* Main Grid Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -58,12 +58,18 @@ export default function OrderDetailsPage({ order }) {
             <OrderSummary
               subtotal={order.orderPrice}
               delivery={order.deliveryCharge}
-              discount={discount}
-              total={order.orderPrice + order.deliveryCharge - discount}
+              adminDiscount={adminDiscount}
+              total={order.orderPrice + order.deliveryCharge - adminDiscount}
             />
             <OrderNote note={order?.note} />
 
-            <CourierManagement order={order} />
+            {status !== "PENDING" && (
+              <CourierManagement
+                setStatus={setStatus}
+                status={status}
+                order={order}
+              />
+            )}
             {/* Mobile-first: Customer info stays with details usually, or move to sidebar */}
             <div className="block lg:hidden">
               <CustomerInfo customer={order} />
@@ -81,13 +87,13 @@ export default function OrderDetailsPage({ order }) {
               setStatus={setStatus}
               courier={courier}
               setCourier={setCourier}
-              discount={discount}
-              setDiscount={setDiscount}
-              note={note}
-              setNote={setNote}
+              adminDiscount={adminDiscount}
+              setAdminDiscount={setAdminDiscount}
+              adminNote={adminNote}
+              setAdminNote={setAdminNote}
               onUpdateStatus={handleUpdateStatus}
               onCreateCourier={handleCourierUpdate}
-              onSaveNote={handleSaveNote}
+              orderId={order.id}
             />
 
             <DocumentActions
@@ -106,6 +112,7 @@ export default function OrderDetailsPage({ order }) {
         courier={courier}
         setCourier={setCourier}
         onCreateCourier={handleCourierUpdate}
+        orderId={order.id}
       />
     </div>
   );

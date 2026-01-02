@@ -3,7 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 const COURIERS = [
   { id: "pathao", name: "pathao", color: "bg-red-600" },
   { id: "steadfast", name: "steadfast", color: "bg-blue-600" },
-  { id: "ecourier", name: "ecourier", color: "bg-orange-500" },
+  { id: "manual", name: "Manual", color: "bg-orange-500" },
 ];
 
 export default function CourierSelector({ onSelect, activeCourierId }) {

@@ -1,4 +1,9 @@
-export default function OrderSummary({ subtotal, delivery, discount, total }) {
+export default function OrderSummary({
+  subtotal,
+  delivery,
+  adminDiscount,
+  total,
+}) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
       <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
@@ -12,8 +17,8 @@ export default function OrderSummary({ subtotal, delivery, discount, total }) {
           <span>+ {delivery} BDT</span>
         </div>
         <div className="flex justify-between text-red-500">
-          <span>Discount</span>
-          <span>- {discount} BDT</span>
+          <span>Extra Discount</span>
+          <span>- {adminDiscount} BDT</span>
         </div>
         <div className="border-t pt-3 mt-3 flex justify-between items-center">
           <span className="font-bold text-lg text-gray-900">Total Amount</span>

@@ -1,11 +1,12 @@
 "use client";
-import { createCourierDelivery } from "@/backend/serverActions/courierAction";
+import { createCourierDeliveryAction } from "@/backend/serverActions/courierAction";
+import { Undo2 } from "lucide-react";
 import { useState } from "react";
 import CourierForm from "./CourierForm";
 import CourierSelector from "./CourierSelector";
 import CourierStatus from "./CourierStatus";
 
-export default function CourierManagement({ order }) {
+export default function CourierManagement({ order, status, setStatus }) {
   const [view, setView] = useState(order?.shipping ? "status" : "list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
   const [error, setError] = useState(null);
@@ -14,7 +15,7 @@ export default function CourierManagement({ order }) {
 
   const [loading, setLoading] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [data, setData] = useState({
     name: order?.customerName || "",
     phone: order?.phoneNumber || "",
     address: order?.deliveryAddress || "",
@@ -33,12 +34,13 @@ export default function CourierManagement({ order }) {
     formData.append("invoice", order?.orderNo);
     let newData = Object.fromEntries(formData.entries());
     console.log("Submitting courier data:", newData);
-    const response = await createCourierDelivery({ formData });
+    const response = await createCourierDeliveryAction({ formData });
     if (response.success) {
       setCourierDetails(response.data);
       setView("status");
       setError(null);
       setSuccess(true);
+      setStatus("READY_TO_SHIP");
       console.log("Courier delivery created successfully", response.data);
     } else {
       setError(response.message);
@@ -78,9 +80,9 @@ export default function CourierManagement({ order }) {
         {view === "form" && (
           <button
             onClick={() => setView("list")}
-            className="text-xs font-bold text-indigo-600 uppercase"
+            className="text-xs font-bold text-red-600 uppercase"
           >
-            Back
+            <Undo2 /> Back
           </button>
         )}
       </div>
@@ -99,10 +101,7 @@ export default function CourierManagement({ order }) {
         ) : (
           <CourierForm
             courierName={selectedCourier.name}
-            formData={formData}
-            onChange={(e) =>
-              setFormData({ ...formData, [e.target.name]: e.target.value })
-            }
+            data={data}
             onSubmit={handleCreate}
             loading={loading}
           />

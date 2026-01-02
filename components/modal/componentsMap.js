@@ -5,4 +5,6 @@ export const componentsMap = {
   ProductQuickView: () =>
     import("@/app/(user)/product/_components/ProductQuickView"),
   OrderQuickView: () => import("@/app/admin/orders/_components/OrderView"),
+  PickupStoreForm: () =>
+    import("@/app/admin/settings/pickup-point/_components/PickupStoreForm"),
 };

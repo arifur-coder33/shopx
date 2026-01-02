@@ -188,6 +188,10 @@ model Order {
   phoneNumber    String
   email          String
   orderPrice     Float                       // Price of the product at the time of order
+  adminDiscount   Float?
+  adminNote     String?
+  taxAmount     Float?
+  cancelReason  String?
   deliveryCharge Float 
   city           String?    
   deliveryAddress String 
@@ -242,6 +246,17 @@ model Shipping {
 
 }
 
+model CourierPickupPoint {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  name   String
+  address String
+  storeId String?
+  courierName String?
+  phoneNumber String?
+  email String?
+  createdAt      DateTime    @default(now()) // Timestamp for order placement
+  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
+}
 
 model SiteSetting {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
@@ -285,7 +300,8 @@ model banner{
 // Enumeration for order status
 enum OrderStatus {
   PENDING
-  PACKED
+  PROCESSING
+  READY_TO_SHIP
   SHIPPED
   DELIVERED
   CANCELED

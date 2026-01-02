@@ -63,7 +63,7 @@ export default async function CategoriesPage() {
           quickViewComponentKey: "",
           updateAction: updateCategoryAction,
           deleteAction: deleteCategoryAction,
-          actionType: "edit",
+          isEditabel: true,
           viewPageURL: "",
         }}
       />

@@ -1,18 +1,42 @@
+import { useState } from "react";
+import { toast } from "react-toastify";
+
 export default function AdminActions({
   status,
   setStatus,
   courier,
   setCourier,
-  discount,
-  setDiscount,
-  note,
-  setNote,
+  adminDiscount,
+  setAdminDiscount,
+  adminNote,
+  setAdminNote,
   onUpdateStatus,
   onCreateCourier,
   onSaveNote,
+  orderId,
 }) {
+  const [isLoading, setIsLoading] = useState(false);
   const steps = ["PENDING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  const handleSaveNote = async () => {
+    if (orderId && (adminDiscount || adminNote)) {
+      setIsLoading(true);
+      const { updateOrderExtraDiscountAction } = await import(
+        "../../../../../backend/serverActions/orderActions"
+      );
+      const response = await updateOrderExtraDiscountAction({
+        orderId: orderId,
+        adminNote: adminNote,
+        adminDiscount: adminDiscount,
+      });
+      if (response.success) {
+        setIsLoading(false);
+        toast.success("Order note and discount saved successfully!");
 
+        setIsLoading(false);
+        toast.error("Failed to save order note and discount.");
+      }
+    }
+  };
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
       <h3 className="text-lg font-semibold">Admin Actions</h3>
@@ -76,9 +100,10 @@ export default function AdminActions({
             Discount Adjustment
           </label>
           <input
+            disabled={isLoading}
             type="number"
-            value={discount}
-            onChange={(e) => setDiscount(e.target.value)}
+            defaultValue={adminDiscount}
+            onChange={(e) => setAdminDiscount(e.target.value)}
             className="w-full mt-1 p-2 border border-gray-300 rounded-lg text-sm"
           />
         </div>
@@ -87,17 +112,19 @@ export default function AdminActions({
             Admin Note
           </label>
           <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
+            disabled={isLoading}
+            defaultValue={adminNote}
+            onChange={(e) => setAdminNote(e.target.value)}
             className="w-full mt-1 p-2 border border-gray-300 rounded-lg text-sm h-20 resize-none"
             placeholder="Internal notes..."
           ></textarea>
         </div>
         <button
-          onClick={onSaveNote}
+          disabled={isLoading}
+          onClick={handleSaveNote}
           className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition"
         >
-          Save Changes
+          {isLoading ? "Saving..." : "Save Note & Discount"}
         </button>
       </div>
     </div>

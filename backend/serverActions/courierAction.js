@@ -2,8 +2,9 @@
 
 import prisma from "@/lib/prisma";
 import { createPathaoOrder } from "../lib/pathao";
+import { updateOrderStatusAction } from "./orderActions";
 
-export async function createCourierDelivery({ formData }) {
+export async function createCourierDeliveryAction({ formData }) {
   // Simulate API call to create a courier delivery
   try {
     let data = Object.fromEntries(formData.entries());
@@ -65,6 +66,19 @@ export async function createCourierDelivery({ formData }) {
           tracking_url: "https://shohoship.com/track/",
         };
         break;
+      default:
+        orderResponseData = {
+          cn: data?.cn || "N/A",
+          status: "READY_TO_SHIP",
+          date: new Date().toLocaleDateString(),
+          courierName: courierName,
+          storeName: data?.storeName || "",
+          deliveryFee: data?.deliveryFee || 0,
+          merchantOrderId: data.invoice || "N/A",
+          tracking_url: "#",
+        };
+
+        break;
     }
 
     await prisma.shipping.create({
@@ -77,12 +91,7 @@ export async function createCourierDelivery({ formData }) {
         cod: Number(data.price) || 0,
       },
     });
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: "PACKED",
-      },
-    });
+    await updateOrderStatusAction(order.id, "READY_TO_SHIP");
     console.log("Courier order created:", orderResponseData);
     return { success: true, data: orderResponseData || courierData };
   } catch (error) {

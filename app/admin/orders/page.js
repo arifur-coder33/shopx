@@ -2,6 +2,7 @@
 
 export const dynamic = "force-static";
 import {
+  deleteOrderById,
   getAllOrder,
   getOrderCount,
 } from "@/backend/serverActions/orderActions";
@@ -67,7 +68,8 @@ export default async function OrderListPage() {
             options: [
               "ALL",
               "PENDING",
-              "PACKED",
+              "PROCESSING",
+              "READY_TO_SHIP",
               "SHIPPED",
               "DELIVERED",
               "CANCELED",
@@ -93,13 +95,12 @@ export default async function OrderListPage() {
         viewPageURL={"/admin/order/view/"}
         getDataCount={getOrderCount}
         actions={{
-          getItemDataAction: "",
           itemAddFormKey: "",
           itemUpdateFormKey: "",
           quickViewComponentKey: "OrderQuickView",
           updateAction: "",
-          deleteAction: "deleteProductById",
-          actionType: "edit",
+          deleteAction: deleteOrderById,
+          isEditabel: false,
           viewPageURL: "/admin/product/view/",
         }}
       />

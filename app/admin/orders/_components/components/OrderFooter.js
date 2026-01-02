@@ -1,7 +1,8 @@
 "use client";
+import { updateOrderStatusAction } from "@/backend/serverActions/orderActions";
 import { useState } from "react";
 
-export default function OrderFooter({ status, setStatus }) {
+export default function OrderFooter({ orderId, status, setStatus }) {
   const [reason, setReason] = useState("");
   const [reasonType, setReasonType] = useState(null); // "cancel" | "return"
 
@@ -44,6 +45,10 @@ export default function OrderFooter({ status, setStatus }) {
     resetReasonMode();
   };
 
+  const handleStatusChange = async (newStatus) => {
+    setStatus(newStatus);
+    const response = await updateOrderStatusAction(orderId, newStatus);
+  };
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white border-t shadow-lg z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -90,7 +95,7 @@ export default function OrderFooter({ status, setStatus }) {
             {status === "PENDING" && (
               <>
                 <button
-                  onClick={() => setStatus("PROCESSING")}
+                  onClick={() => handleStatusChange("PROCESSING")}
                   className="px-4 py-2 bg-green-600 text-white rounded"
                 >
                   Confirm
@@ -127,7 +132,7 @@ export default function OrderFooter({ status, setStatus }) {
             {/* READY TO SHIP */}
             {status === "READY_TO_SHIP" && (
               <button
-                onClick={() => setStatus("SHIPPED")}
+                onClick={() => handleStatusChange("SHIPPED")}
                 className="px-4 py-2 bg-blue-600 text-white rounded"
               >
                 Shipped
@@ -138,7 +143,7 @@ export default function OrderFooter({ status, setStatus }) {
             {status === "SHIPPED" && (
               <>
                 <button
-                  onClick={() => setStatus("DELIVERED")}
+                  onClick={() => handleStatusChange("DELIVERED")}
                   className="px-4 py-2 bg-green-600 text-white rounded"
                 >
                   Delivered

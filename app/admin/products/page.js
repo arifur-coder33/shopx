@@ -100,7 +100,7 @@ export default async function ProductListPage() {
           quickViewComponentKey: "ProductQuickView",
           updateAction: updateProductAction,
           deleteAction: deleteProductById,
-          actionType: "edit",
+          isEditabel: true,
           viewPageURL: "/admin/product/view/",
         }}
       />

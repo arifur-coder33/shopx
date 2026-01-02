@@ -306,7 +306,7 @@ export async function deleteOrderById(orderId) {
   }
 }
 
-export async function updateOrderStatusAction(orderId, status) {
+export async function updateOrderStatusAction(orderId, status, note) {
   console.log(`order id : ${orderId}`);
   console.log(`order status : ${status}`);
   try {
@@ -324,6 +324,47 @@ export async function updateOrderStatusAction(orderId, status) {
       message: "Order Status Updated",
     };
   } catch (error) {
+    return {
+      success: false,
+      message: error.message || "Failed to Update order",
+    };
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+export async function updateOrderExtraDiscountAction({
+  orderId,
+  adminNote,
+  adminDiscount,
+}) {
+  console.log(`order id : ${orderId}`);
+  console.log(`adminNote : ${adminNote}`);
+  console.log(`adminDiscount : ${adminDiscount}`);
+  try {
+    if (!orderId) {
+      throw new Error("Order ID is required");
+    }
+    const checkOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!checkOrder) {
+      throw new Error("Order not found");
+    }
+    const result = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        adminNote: adminNote,
+        adminDiscount: Number(adminDiscount),
+      },
+    });
+    console.log(result);
+    return {
+      success: true,
+      message: "Order Status Updated",
+    };
+  } catch (error) {
+    console.error("Error updating order:", error);
     return {
       success: false,
       message: error.message || "Failed to Update order",
