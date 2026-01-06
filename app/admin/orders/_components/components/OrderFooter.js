@@ -1,6 +1,10 @@
 "use client";
-import { updateOrderStatusAction } from "@/backend/serverActions/orderActions";
+import {
+  cancelOrderById,
+  updateOrderStatusAction,
+} from "@/backend/serverActions/orderActions";
 import { useState } from "react";
+import { toast } from "react-toastify";
 
 export default function OrderFooter({ orderId, status, setStatus }) {
   const [reason, setReason] = useState("");
@@ -35,13 +39,24 @@ export default function OrderFooter({ orderId, status, setStatus }) {
     setReasonType(null);
   };
 
-  const confirmReasonAction = () => {
+  const confirmReasonAction = async () => {
     if (!reason.trim()) return alert("Please write a reason");
     if (!window.confirm("Are you sure?")) return;
 
-    if (reasonType === "cancel") setStatus("CANCELLED");
+    if (reasonType === "cancel") {
+      setStatus("CANCELLED");
+    }
     if (reasonType === "return") setStatus("RETURNED");
-
+    const response = await cancelOrderById({
+      orderId: orderId,
+      cancelReasonType: reasonType,
+      cancelReason: reason,
+    });
+    if (response.success) {
+      toast.success(`${reasonType} sucess`);
+    } else {
+      toast.error("Something went wrong.");
+    }
     resetReasonMode();
   };
 
@@ -135,7 +150,7 @@ export default function OrderFooter({ orderId, status, setStatus }) {
                 onClick={() => handleStatusChange("SHIPPED")}
                 className="px-4 py-2 bg-blue-600 text-white rounded"
               >
-                Shipped
+                Make as Shipped
               </button>
             )}
 
@@ -146,14 +161,14 @@ export default function OrderFooter({ orderId, status, setStatus }) {
                   onClick={() => handleStatusChange("DELIVERED")}
                   className="px-4 py-2 bg-green-600 text-white rounded"
                 >
-                  Delivered
+                  Make as Delivered
                 </button>
 
                 <button
                   onClick={() => setReasonType("return")}
                   className="px-4 py-2 bg-orange-600 text-white rounded"
                 >
-                  Return
+                  Mark as Return
                 </button>
               </>
             )}

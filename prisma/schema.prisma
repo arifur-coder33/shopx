@@ -192,6 +192,7 @@ model Order {
   adminNote     String?
   taxAmount     Float?
   cancelReason  String?
+  cancelReasonType  String?
   deliveryCharge Float 
   city           String?    
   deliveryAddress String 

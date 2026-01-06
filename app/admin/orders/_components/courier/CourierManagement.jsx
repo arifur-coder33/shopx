@@ -1,7 +1,11 @@
 "use client";
-import { createCourierDeliveryAction } from "@/backend/serverActions/courierAction";
+import {
+  cancelCourierDeliveryAction,
+  createCourierDeliveryAction,
+} from "@/backend/serverActions/courierAction";
 import { Undo2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "react-toastify";
 import CourierForm from "./CourierForm";
 import CourierSelector from "./CourierSelector";
 import CourierStatus from "./CourierStatus";
@@ -17,7 +21,7 @@ export default function CourierManagement({ order, status, setStatus }) {
 
   const [data, setData] = useState({
     name: order?.customerName || "",
-    phone: order?.phoneNumber || "",
+    phone: order?.phoneNumber.slice(-11) || "",
     address: order?.deliveryAddress || "",
     price: order?.orderPrice + order?.deliveryCharge - (order?.discount || 0),
     weight: 0.5,
@@ -30,7 +34,11 @@ export default function CourierManagement({ order, status, setStatus }) {
     setLoading(true);
     const form = e.target;
     const formData = new FormData(form);
-    formData.append("courierName", selectedCourier.name);
+    const getCourierName = formData.get("courierName");
+    if (!getCourierName) {
+      formData.append("courierName", selectedCourier.name);
+    }
+
     formData.append("invoice", order?.orderNo);
     let newData = Object.fromEntries(formData.entries());
     console.log("Submitting courier data:", newData);
@@ -63,9 +71,19 @@ export default function CourierManagement({ order, status, setStatus }) {
     // }, 1000);
   };
 
-  const handleCancle = () => {
+  const handleCancle = async () => {
     setCourierDetails(null);
     setView("form");
+    const response = await cancelCourierDeliveryAction(
+      order?.shipping?.id,
+      order?.id
+    );
+    if (response.success) {
+      toast.success("Courier delivery canceled successfully");
+      setStatus(response.data.status);
+    } else {
+      toast.error("Failed to cancel courier delivery");
+    }
   };
 
   return (
@@ -100,7 +118,7 @@ export default function CourierManagement({ order, status, setStatus }) {
           />
         ) : (
           <CourierForm
-            courierName={selectedCourier.name}
+            courierName={selectedCourier?.name}
             data={data}
             onSubmit={handleCreate}
             loading={loading}

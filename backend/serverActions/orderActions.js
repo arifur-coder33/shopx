@@ -373,3 +373,28 @@ export async function updateOrderExtraDiscountAction({
     await prisma.$disconnect();
   }
 }
+
+export async function cancelOrderById({
+  orderId,
+  cancelReason,
+  cancelReasonType,
+}) {
+  try {
+    const result = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        cancelReason: cancelReason || "",
+        cancelReasonType: cancelReasonType || "",
+        status: cancelReasonType === "cancel" ? "CANCELED" : "RETURNED",
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to cancel order",
+    };
+  }
+}

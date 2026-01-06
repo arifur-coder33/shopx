@@ -131,7 +131,7 @@ export default function CourierForm({
               <input
                 className="w-full p-3 border border-slate-200 rounded-xl text-sm"
                 name="phone"
-                defaultValue={data.phone}
+                defaultValue={data.phone.slice(-11)}
               />
             </div>
           </div>

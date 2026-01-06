@@ -99,3 +99,31 @@ export async function createCourierDeliveryAction({ formData }) {
     return { success: false, message: error.message };
   }
 }
+
+export async function cancelCourierDeliveryAction(courierId, orderId) {
+  // Simulate API call to cancel a courier delivery
+  try {
+    if (!courierId || !orderId) {
+      throw new Error(
+        "Courier ID and Order ID are required to cancel delivery."
+      );
+    }
+    const checkShipping = await prisma.shipping.findUnique({
+      where: { id: courierId },
+    });
+    if (!checkShipping) {
+      throw new Error("No shipping found with the provided courier ID.");
+    }
+    await prisma.shipping.delete({
+      where: { id: courierId },
+    });
+    await updateOrderStatusAction(orderId, "PROCESSING");
+    return { success: true, data: { status: "PROCESSING" } };
+    console.log(
+      `Cancelling courier delivery with ID: ${courierId} for order ID: ${orderId}`
+    );
+  } catch (error) {
+    console.error("Error cancelling courier delivery:", error);
+    return { success: false, message: error.message };
+  }
+}
