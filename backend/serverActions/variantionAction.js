@@ -27,7 +27,7 @@ export async function createVariationAction(formData) {
     const details = await prisma.variationName.create({
       data: preparedData,
     });
-    console.log(details);
+
     revalidatePath("/admin/variation");
 
     return { success: true, data: details }; // Return success with user data
@@ -49,7 +49,7 @@ export async function getVariations() {
 
 export async function updateVariationAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
-  console.log(id);
+
   try {
     const preparedData = {
       ...data,
@@ -92,7 +92,6 @@ export async function deleteVariationAction(id) {
 }
 
 export async function getVariationByCategoryId(id) {
-  console.log(`SERVER ACTION: getVariationByCategoryId called with ID: ${id}`);
   try {
     const data = await prisma.variationValue.findMany({
       where: { categoryId: id },
@@ -123,8 +122,6 @@ export async function getVariationByCategoryId(id) {
       }, {})
     );
 
-    console.log(grouped);
-
     return { success: true, data: grouped }; // Return success with user data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -147,8 +144,8 @@ export async function getAllVariationList(params) {
       limit = 10,
       cursor,
       tableProperties,
-      sortField="name",
-      sortDirection="asc",
+      sortField = "name",
+      sortDirection = "asc",
       // ...other filters
       defaultSort = { field: "createdAt", direction: "desc" },
       name,
@@ -184,7 +181,7 @@ export async function getAllVariationList(params) {
       // 2. The new cursor is the ID of the LAST item in the *remaining* array.
       nextCursor = items[items.length - 1].id;
     }
-    console.log(items);
+
     return {
       success: true,
       data: items,

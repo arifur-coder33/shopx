@@ -8,7 +8,6 @@ export async function createCourierDeliveryAction({ formData }) {
   // Simulate API call to create a courier delivery
   try {
     let data = Object.fromEntries(formData.entries());
-    console.log("Creating courier delivery with data:", data);
 
     const order = await prisma.order.findUnique({
       where: { orderNo: data.invoice },
@@ -92,7 +91,7 @@ export async function createCourierDeliveryAction({ formData }) {
       },
     });
     await updateOrderStatusAction(order.id, "READY_TO_SHIP");
-    console.log("Courier order created:", orderResponseData);
+
     return { success: true, data: orderResponseData || courierData };
   } catch (error) {
     console.error("Error creating courier delivery:", error);
@@ -119,9 +118,6 @@ export async function cancelCourierDeliveryAction(courierId, orderId) {
     });
     await updateOrderStatusAction(orderId, "PROCESSING");
     return { success: true, data: { status: "PROCESSING" } };
-    console.log(
-      `Cancelling courier delivery with ID: ${courierId} for order ID: ${orderId}`
-    );
   } catch (error) {
     console.error("Error cancelling courier delivery:", error);
     return { success: false, message: error.message };

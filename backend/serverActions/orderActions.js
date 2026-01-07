@@ -7,113 +7,115 @@ export async function createOrder(formData) {
   try {
     const formDataObj = Object.fromEntries(formData.entries());
     const data = { ...formDataObj };
-    const orderItemss = JSON.parse(data?.products);
+    const orderItems = JSON.parse(data?.products);
 
+    return null;
     if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
       throw new Error(
         "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।"
       );
     }
 
-    // Fetch the last order number and increment it atomically
     const result = await prisma.$transaction(async (tx) => {
-      // Fetch the current last order number
+      // 1️⃣ Get or create counter
       let counter = await tx.orderCounter.findFirst();
 
-      // If the counter doesn't exist, initialize it
       if (!counter) {
         counter = await tx.orderCounter.create({
           data: { lastOrderNumber: 240000020 },
         });
       }
 
-      // Increment the order number
       const newOrderNumber = counter.lastOrderNumber + 1;
 
-      // Update the counter with the new number
       await tx.orderCounter.update({
-        where: { id: counter?.id },
+        where: { id: counter.id },
         data: { lastOrderNumber: newOrderNumber },
       });
 
-      // Create the order with the new order number
-      const orderData = {
-        orderNo: newOrderNumber.toString(),
-        customerName: data?.customerName,
-        phoneNumber: data?.phoneNumber,
-        email: data?.email,
-        city: data?.district,
-
-        deliveryCharge: Number(data?.deliveryCharge),
-        orderPrice: Number(data?.orderPrice),
-        deliveryAddress: data?.deliveryAddress,
-        paymentMethod: data?.paymentMethod,
-        note: data?.note,
-      };
-      const orderItems = JSON.parse(data?.products);
-      // const order = await tx.order.create({
-      //   data: {
-      //     ...data,
-      //     orderItemNo: 1,
-      //     quantity: Number(data?.quantity),
-      //     deliveryCharge: Number(data?.deliveryCharge),
-      //     orderPrice: Number(data?.orderPrice),
-      //     orderNo: newOrderNumber.toString(),
-      //   },
-      // });
-      console.log("Order Items:", orderItems);
-      console.log("Order Items data:", orderItems[0].variation);
+      // 2️⃣ Create Order
       const order = await tx.order.create({
         data: {
-          ...orderData,
-          orderItems: {
-            create: orderItems.map((item, i) => {
-              console.log("Order Item------------:", item);
-              if (!item?.variation?.id) {
-                throw new Error(
-                  `Product "${item.title}" is missing required variation data.`
-                );
-              }
-
-              return {
-                orderNo: newOrderNumber.toString(),
-                orderItemNo: i + 1,
-                productName: item?.title,
-                price: Number(item?.discountPrice || item?.regularPrice),
-                quantity: Number(item?.quantity),
-
-                productCode: item?.productCode,
-                sku: item?.sku,
-                thumbnail: item?.thumbnail,
-                product: {
-                  connect: { id: item?.id },
-                },
-                variation: {
-                  connect: { id: item.variation.id },
-                },
-                combination: item?.variation?.combinationId
-                  ? { connect: { id: item.variation.combinationId } }
-                  : undefined,
-
-                combinations:
-                  (item?.variation?.combinations.length > 0 &&
-                    JSON.stringify(
-                      item?.variation?.combinations.map((combination) => ({
-                        name: combination.variationName.name,
-                        value: combination.variationValue.value,
-                      }))
-                    )) ||
-                  JSON.stringify([]),
-              };
-            }),
-          },
+          orderNo: newOrderNumber.toString(),
+          customerName: data.customerName,
+          phoneNumber: data.phoneNumber,
+          email: data.email,
+          city: data.district,
+          deliveryCharge: Number(data.deliveryCharge),
+          orderPrice: Number(data.orderPrice),
+          deliveryAddress: data.deliveryAddress,
+          paymentMethod: data.paymentMethod,
+          note: data.note,
         },
       });
 
+      // 3️⃣ Create Order Items
+      for (let i = 0; i < orderItems.length; i++) {
+        const item = orderItems[i];
+
+        if (!item?.variation?.id) {
+          throw new Error(`Product "${item.title}" variation missing`);
+        }
+
+        // 🔻 Stock check
+        const variation = await tx.productVariation.findUnique({
+          where: { id: item.variation.id },
+          select: { stock: true },
+        });
+
+        if (variation.stock < item.quantity) {
+          throw new Error(
+            `${item.title} product stock not available. We have only ${variation.stock}.`
+          );
+        }
+
+        // 🔻 Stock minus
+        await tx.productVariation.update({
+          where: { id: item.variation.id },
+          data: {
+            stock: {
+              decrement: Number(item.quantity),
+            },
+          },
+        });
+
+        // 4️⃣ Create OrderItem
+        await tx.orderItem.create({
+          data: {
+            orderNo: newOrderNumber.toString(),
+            orderItemNo: i + 1,
+            productName: item.title,
+            price: Number(item.discountPrice || item.regularPrice),
+            quantity: Number(item.quantity),
+            productCode: item.productCode,
+            sku: item.sku,
+            thumbnail: item.thumbnail,
+
+            product: {
+              connect: { id: item.id },
+            },
+            variation: {
+              connect: { id: item.variation.id },
+            },
+            order: {
+              connect: { id: order.id },
+            },
+            combination: item.variation.combinationId
+              ? { connect: { id: item.variation.combinationId } }
+              : undefined,
+
+            combinations: JSON.stringify(
+              item.variation.combinations?.map((c) => ({
+                name: c.variationName.name,
+                value: c.variationValue.value,
+              })) || []
+            ),
+          },
+        });
+      }
+
       return order;
     });
-
-    console.log("Order Created:", result);
 
     Promise.all([
       // notifyNewOrder(result).catch((err) => console.error("SMS error:", err)),
@@ -205,8 +207,7 @@ export async function getAllOrder(params) {
 export async function getOrderCount(params) {
   try {
     const { orderNo, sku, phoneNumber, status, startDate, endDate } = params;
-    console.log("params order", params);
-    console.log("stardate:", startDate);
+
     const whereClause = {};
     if (orderNo)
       whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
@@ -252,7 +253,7 @@ export async function getOrderByOrderNo(orderNo, phoneNumber) {
         },
       },
     });
-    console.log(data);
+
     return { success: true, data }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -260,7 +261,6 @@ export async function getOrderByOrderNo(orderNo, phoneNumber) {
 }
 
 export async function getOrderById(orderId) {
-  console.log("order id in server action:", orderId);
   try {
     const data = await prisma.order.findUnique({
       where: { id: orderId },
@@ -274,7 +274,6 @@ export async function getOrderById(orderId) {
         shipping: true,
       },
     });
-    console.log("data", data);
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
@@ -307,8 +306,6 @@ export async function deleteOrderById(orderId) {
 }
 
 export async function updateOrderStatusAction(orderId, status, note) {
-  console.log(`order id : ${orderId}`);
-  console.log(`order status : ${status}`);
   try {
     const result = await prisma.order.update({
       where: { id: orderId },
@@ -316,7 +313,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
         status: status,
       },
     });
-    console.log(result);
+
     revalidatePath("/admin/order");
     revalidateTag("order");
     return {
@@ -338,9 +335,6 @@ export async function updateOrderExtraDiscountAction({
   adminNote,
   adminDiscount,
 }) {
-  console.log(`order id : ${orderId}`);
-  console.log(`adminNote : ${adminNote}`);
-  console.log(`adminDiscount : ${adminDiscount}`);
   try {
     if (!orderId) {
       throw new Error("Order ID is required");
@@ -358,7 +352,7 @@ export async function updateOrderExtraDiscountAction({
         adminDiscount: Number(adminDiscount),
       },
     });
-    console.log(result);
+
     return {
       success: true,
       message: "Order Status Updated",
@@ -380,13 +374,50 @@ export async function cancelOrderById({
   cancelReasonType,
 }) {
   try {
-    const result = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        cancelReason: cancelReason || "",
-        cancelReasonType: cancelReasonType || "",
-        status: cancelReasonType === "cancel" ? "CANCELED" : "RETURNED",
-      },
+    await prisma.$transaction(async (tx) => {
+      // 1️⃣ Order + items load
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          orderItems: {
+            select: {
+              quantity: true,
+              variationId: true,
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      // ❗ Already canceled হলে আবার stock add করবে না
+      if (order.status === "CANCELED" || order.status === "RETURNED") {
+        throw new Error("Order already canceled/returned");
+      }
+
+      // 2️⃣ Stock restore
+      for (const item of order.orderItems) {
+        await tx.productVariation.update({
+          where: { id: item.variationId },
+          data: {
+            stock: {
+              increment: item.quantity, // ✅ stock back
+            },
+          },
+        });
+      }
+
+      // 3️⃣ Update order status
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          cancelReason: cancelReason || "",
+          cancelReasonType: cancelReasonType || "",
+          status: cancelReasonType === "cancel" ? "CANCELED" : "RETURNED",
+        },
+      });
     });
 
     return { success: true };

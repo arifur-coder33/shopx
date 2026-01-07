@@ -63,7 +63,7 @@ export default function OrderDetailsPage({ order }) {
             />
             <OrderNote note={order?.note} />
 
-            {status !== "PENDING" && (
+            {status !== "PENDING" && status !== "CANCELLED" && (
               <CourierManagement
                 setStatus={setStatus}
                 status={status}

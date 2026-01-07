@@ -160,6 +160,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         sku: row.sku,
         regularPrice: row.regularPrice, // MODIFIED
         discountPrice: row.discountPrice, // MODIFIED
+        weight: row.weight,
+        dimensions: row.dimensions,
         qty: row.qty,
         image: row.image ? row.image.id : null,
       }))
@@ -240,6 +242,14 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         qty:
           initRow.qty !== undefined && initRow.qty !== null
             ? String(initRow.qty)
+            : "",
+        weight:
+          initRow.weight !== undefined && initRow.weight !== null
+            ? String(initRow.weight)
+            : "",
+        dimensions:
+          initRow.dimensions !== undefined && initRow.dimensions !== null
+            ? String(initRow.dimensions)
             : "",
         image: initRow.image || null,
         imageUrl: initRow.imageUrl || initRow.image?.url || null,
@@ -335,6 +345,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
           regularPrice: "", // MODIFIED
           discountPrice: "", // MODIFIED
           qty: "",
+          weight: "",
+          dimensions: "",
           image: null,
           imageUrl: null,
         };
@@ -353,6 +365,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
             regularPrice: existingRowFromPrevState.regularPrice, // MODIFIED
             discountPrice: existingRowFromPrevState.discountPrice, // MODIFIED
             qty: existingRowFromPrevState.qty,
+            weight: existingRowFromPrevState.weight,
+            dimensions: existingRowFromPrevState.dimensions,
             image: existingRowFromPrevState.image,
             imageUrl: existingRowFromPrevState.imageUrl,
           };
@@ -937,8 +951,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                     type="number"
                                     placeholder="0"
                                     aria-label={`Weight for ${row.uiKey}`}
-                                    step="1"
                                     min="0"
+                                    step="0.01"
                                     value={row.weight ?? ""}
                                     onChange={(e) =>
                                       handleInputChange(e, row.uiKey, "weight")

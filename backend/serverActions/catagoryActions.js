@@ -100,7 +100,7 @@ export async function getCategoryById(id) {
         },
       },
     });
-    console.log("getCategoryById data:", data);
+
     return { success: true, data };
   } catch (error) {
     console.log(error);
@@ -195,7 +195,6 @@ export async function updateCategoryAction({ formData, id }) {
         }
 
         for (const variationItem of incomingVariationNewItems) {
-          console.log(variationItem);
           const variationId = variationItem?.variation?.id;
           const value = variationItem?.value.trim();
           await prisma?.variationValue?.create({
@@ -219,7 +218,6 @@ export async function updateCategoryAction({ formData, id }) {
     revalidatePath("/admin/product/add");
     return { success: true, data: updateData }; // Return success with user data
   } catch (error) {
-    console.log(error);
     return { success: false, error: error.message }; // Return structured error
   }
 }
@@ -256,7 +254,6 @@ export async function deleteCategoryAction(id) {
 }
 
 export async function getCategory() {
-  console.log(" category backend call");
   try {
     const data = await prisma.category.findMany({
       select: {
@@ -282,7 +279,7 @@ export async function getCategory() {
         // },
       },
     });
-    console.log(data);
+
     return { success: true, data }; // Return success with user data
   } catch (error) {
     console.log(error);

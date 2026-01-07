@@ -37,6 +37,7 @@ export default function AdminActions({
       }
     }
   };
+
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
       <h3 className="text-lg font-semibold">Admin Actions</h3>
@@ -100,7 +101,7 @@ export default function AdminActions({
             Discount Adjustment
           </label>
           <input
-            disabled={isLoading}
+            disabled={isLoading || status !== "PENDING"}
             type="number"
             defaultValue={adminDiscount}
             onChange={(e) => setAdminDiscount(e.target.value)}

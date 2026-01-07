@@ -58,6 +58,8 @@ function transformVariations(productVariations) {
       combination: combination,
       combinations: combinations,
       variationValues: variationValues,
+      weight: pv.weight,
+      dimensions: pv.dimensions,
     };
   });
 }
@@ -1062,7 +1064,9 @@ export async function updateProductActions({ id: productId, formData }) {
 
   try {
     const data = Object.fromEntries(formData.entries());
-    console.log(data);
+    console.log("udate data", data);
+
+    return null;
     // --- Parse Product Variations ---
     let submittedVariationsData = [];
     // ✅ FIX: Using 'variations' to match your form data log.
@@ -1548,6 +1552,7 @@ export async function updateProductAction({ id: productId, formData }) {
             );
             continue;
           }
+          const dimensions = variantData.dimensions;
 
           const variantSku =
             variantData.sku ||
@@ -1599,7 +1604,7 @@ export async function updateProductAction({ id: productId, formData }) {
           const existingVariant = existingVariationMap.get(
             variantData.matcherId
           );
-
+          console.log("variant dtaa", variantData);
           if (existingVariant) {
             await tx.productVariation.update({
               where: { id: existingVariant.id },
@@ -1609,6 +1614,7 @@ export async function updateProductAction({ id: productId, formData }) {
                 regularPrice: variantRegularPrice,
                 discountPrice: variantDiscountPrice,
                 weight: variantWeight,
+                dimensions: dimensions,
                 thumbnailId: variantThumbnailId,
                 combinations: {
                   deleteMany: { productVariationId: existingVariant.id }, // Target specific combinations for deletion
@@ -1627,6 +1633,7 @@ export async function updateProductAction({ id: productId, formData }) {
                 regularPrice: variantRegularPrice,
                 discountPrice: variantDiscountPrice,
                 weight: variantWeight,
+                dimensions: dimensions,
                 thumbnailId: variantThumbnailId,
                 combinations: { create: combinationsToProcess },
               },

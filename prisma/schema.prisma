@@ -148,7 +148,7 @@ model ProductVariation{
   product       Product?    @relation(fields: [productId], references: [id] ,onDelete: Cascade) // Relation to Category
   sku          String
   stock       Float?
-    weight Float?
+  weight Float?
   dimensions String?
   regularPrice   Float?                         // Regular price of the product
   discountPrice  Float?                         // Optional discount price
@@ -188,6 +188,7 @@ model Order {
   phoneNumber    String
   email          String
   orderPrice     Float                       // Price of the product at the time of order
+  orderWeight    Float?
   adminDiscount   Float?
   adminNote     String?
   taxAmount     Float?
@@ -305,7 +306,7 @@ enum OrderStatus {
   READY_TO_SHIP
   SHIPPED
   DELIVERED
-  CANCELED
+  CANCELLED
   RETURNED
 }
 
