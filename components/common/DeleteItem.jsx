@@ -1,12 +1,16 @@
 "use client";
 
 import { toast } from "react-toastify";
+import { confirmFromUser } from "../modal/confrim/confirm";
 
 export default function DeleteItem({ deleteItem, id, children, className }) {
   const deleteHandler = async () => {
     try {
-      const confirmFromUser = confirm("Do you want to delete?");
-      if (confirmFromUser) {
+      const ok = await confirmFromUser({
+        title: "Delete Confirmation",
+        message: "Are you sure you want to delete this item?",
+      });
+      if (ok) {
         const data = await deleteItem(id);
         console.log(data);
         if (data.success) {
@@ -20,5 +24,9 @@ export default function DeleteItem({ deleteItem, id, children, className }) {
       toast.warning("Something went Wrong.");
     }
   };
-  return <span onClick={deleteHandler}>{children}</span>;
+  return (
+    <span className="cursor-pointer" onClick={deleteHandler}>
+      {children}
+    </span>
+  );
 }

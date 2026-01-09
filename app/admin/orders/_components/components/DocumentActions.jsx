@@ -1,4 +1,4 @@
-import { Eye, FileText, Truck } from "lucide-react";
+import { Eye, FileText } from "lucide-react";
 
 export default function DocumentActions({
   onDownload,
@@ -27,13 +27,6 @@ export default function DocumentActions({
           className="flex items-center justify-center gap-2 w-full py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition text-sm font-medium"
         >
           <Eye size={16} /> View Invoice
-        </button>
-
-        <button
-          onClick={onAWB}
-          className="flex items-center justify-center gap-2 w-full py-2.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition text-sm font-medium"
-        >
-          <Truck size={16} /> Download AWB
         </button>
       </div>
     </div>

@@ -205,15 +205,19 @@ export async function createBulkOrder(ordersArray) {
 /**
  * ✅ Get Order Info by Consignment ID
  */
-export async function getOrderInfo(consignment_id) {
+export async function getPathaoOrderInfo(consignment_id) {
   const token = await getAccessToken();
 
-  const response = await fetch(`${BASE_URL}/orders/${consignment_id}/info`, {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await fetch(
+    `${BASE_URL}/aladdin/api/v1/orders/${consignment_id}/info`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
 
   const result = await response.json();
+  console.log("Pathao Order Info Response:", result);
   if (!response.ok || result.code !== 200) {
     throw new Error("❌ Failed to fetch order info");
   }

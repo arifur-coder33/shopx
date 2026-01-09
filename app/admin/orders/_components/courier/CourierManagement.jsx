@@ -3,13 +3,13 @@ import {
   cancelCourierDeliveryAction,
   createCourierDeliveryAction,
 } from "@/backend/serverActions/courierAction";
+import { confirmFromUser } from "@/components/modal/confrim/confirm";
 import { Undo2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import CourierForm from "./CourierForm";
 import CourierSelector from "./CourierSelector";
 import CourierStatus from "./CourierStatus";
-
 export default function CourierManagement({ order, status, setStatus }) {
   const [view, setView] = useState(order?.shipping ? "status" : "list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
@@ -36,24 +36,26 @@ export default function CourierManagement({ order, status, setStatus }) {
     const formData = new FormData(form);
     const getCourierName = formData.get("courierName");
     if (!getCourierName) {
-      formData.append("courierName", selectedCourier.name);
+      if (selectedCourier.name)
+        formData.append("courierName", selectedCourier.name);
     }
 
     formData.append("invoice", order?.orderNo);
     let newData = Object.fromEntries(formData.entries());
-    console.log("Submitting courier data:", newData);
+
     const response = await createCourierDeliveryAction({ formData });
+
     if (response.success) {
+      toast.success("Courier order created successfully");
+      setLoading(false);
       setCourierDetails(response.data);
       setView("status");
       setError(null);
       setSuccess(true);
       setStatus("READY_TO_SHIP");
-      console.log("Courier delivery created successfully", response.data);
     } else {
       setError(response.message);
       setSuccess(null);
-      console.error("Error creating courier delivery:", response.message);
     }
 
     // Logic for API call here
@@ -72,17 +74,25 @@ export default function CourierManagement({ order, status, setStatus }) {
   };
 
   const handleCancle = async () => {
-    setCourierDetails(null);
+    const ok = await confirmFromUser({
+      title: "Confirm Delete",
+      message: "আপনি কি নিশ্চিত?",
+    });
+    if (!ok) return;
+
     setView("form");
     const response = await cancelCourierDeliveryAction(
-      order?.shipping?.id,
-      order?.id
+      order?.shipping?.id || courierDetails?.id,
+      order?.id || courierDetails?.orderId
     );
     if (response.success) {
       toast.success("Courier delivery canceled successfully");
+      // setCourierDetails(null);
       setStatus(response.data.status);
+      setLoading(false);
     } else {
       toast.error("Failed to cancel courier delivery");
+      return;
     }
   };
 
@@ -107,7 +117,12 @@ export default function CourierManagement({ order, status, setStatus }) {
 
       <div className="p-4 md:p-6">
         {courierDetails && view === "status" ? (
-          <CourierStatus details={courierDetails} onCancel={handleCancle} />
+          <CourierStatus
+            status={status}
+            order={order}
+            details={courierDetails}
+            onCancel={handleCancle}
+          />
         ) : view === "list" ? (
           <CourierSelector
             onSelect={(c) => {

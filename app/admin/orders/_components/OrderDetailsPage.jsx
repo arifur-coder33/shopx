@@ -36,7 +36,7 @@ export default function OrderDetailsPage({ order }) {
   const handleServerDownload = () => {
     downloadInvoice(order);
   };
-  console.log("order in details page:", order);
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans text-slate-800">
       <div className="max-w-7xl mx-auto space-y-6">

@@ -1,6 +1,5 @@
 // src/components/Providers.js
 "use client";
-
 import { CartProvider } from "@/context/CartContext";
 import { ModalProvider } from "@/context/ModalContext";
 import { SessionProvider } from "next-auth/react";

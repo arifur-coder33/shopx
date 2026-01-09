@@ -1,6 +1,21 @@
-import { Calendar, XCircle } from "lucide-react";
+import { Calendar, Truck, XCircle } from "lucide-react";
+import { downloadAWBPDF } from "../components/GenerateAWB";
+import GetCourierStatus from "./GetCourierStatus";
 
-export default function CourierStatus({ details, onCancel }) {
+export default function CourierStatus({ details, onCancel, order, status }) {
+  const invoiceData = {
+    shopId: "1181689",
+    invoice: details.cn,
+    sfId: details.cn,
+    deliveryType: "Home",
+    weight: order.weight || 0.5,
+    name: order.customerName || "",
+    phone: order.phoneNumber || "",
+    address: order.deliveryAddress || "",
+    cod: details.cod || order.amount || 0,
+    courierName: details.courierName,
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
       <div className="flex justify-between items-start">
@@ -36,12 +51,23 @@ export default function CourierStatus({ details, onCancel }) {
           <p className="text-sm font-semibold">{details.storeName}</p>
         </div>
       </div>
-
+      <div>
+        <div className="text-base font-bold  tracking-tighter mb-2">
+          Current Courier Status :{" "}
+          <GetCourierStatus
+            courierId={details.cn}
+            courierName={details.courierName}
+          />
+        </div>
+      </div>
       <div className="flex gap-3">
-        <button className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">
-          Print Label
+        <button
+          onClick={() => downloadAWBPDF(invoiceData)}
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition text-sm font-medium"
+        >
+          <Truck size={16} /> Download AWB
         </button>
-        {details.status !== "SHIPPED" && (
+        {status !== "SHIPPED" && status !== "DELIVERED" && (
           <button
             onClick={onCancel}
             className="flex items-center justify-center gap-2 px-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-all"

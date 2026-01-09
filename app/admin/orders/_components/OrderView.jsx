@@ -58,7 +58,7 @@ export default function OrderView({ id }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  console.log("order id:", id);
+
   useEffect(() => {
     const getData = async () => {
       try {
@@ -73,7 +73,7 @@ export default function OrderView({ id }) {
     };
     getData();
   }, [id]);
-  console.log("order data:", data);
+
   if (loading)
     return (
       <div>

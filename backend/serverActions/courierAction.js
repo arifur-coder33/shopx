@@ -1,7 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { createPathaoOrder } from "../lib/pathao";
+import {
+  createSteadfastOrder,
+  getSteadfastDeliveryStatus,
+} from "../lib/courier/steadfast";
+import { createPathaoOrder, getPathaoOrderInfo } from "../lib/pathao";
 import { updateOrderStatusAction } from "./orderActions";
 
 export async function createCourierDeliveryAction({ formData }) {
@@ -59,11 +63,33 @@ export async function createCourierDeliveryAction({ formData }) {
         }
 
         break;
-      case "Shohoz":
+      case "steadfast":
         courierData = {
-          service: "Shohoz",
-          tracking_url: "https://shohoship.com/track/",
+          invoice: data.invoice,
+          recipient_name: data.name,
+          recipient_phone: data.phone,
+          recipient_address: data.address,
+          cod_amount: Number(data.price) || 0,
+          note: "Call before delivery",
         };
+        const steadfastResponse = await createSteadfastOrder(courierData);
+        console.log("Steadfast Response:", steadfastResponse);
+        if (steadfastResponse.success) {
+          console.log(
+            "Steadfast order created successfully",
+            steadfastResponse?.data?.consignment_id.toString()
+          );
+          orderResponseData = {
+            cn: steadfastResponse?.data?.consignment_id.toString(),
+            status: steadfastResponse?.data?.status,
+            date: steadfastResponse?.data?.created_at,
+            courierName: "Steadfast",
+            storeName: data?.storeName || "",
+
+            merchantOrderId: "N/A",
+          };
+        }
+
         break;
       default:
         orderResponseData = {
@@ -74,25 +100,24 @@ export async function createCourierDeliveryAction({ formData }) {
           storeName: data?.storeName || "",
           deliveryFee: data?.deliveryFee || 0,
           merchantOrderId: data.invoice || "N/A",
-          tracking_url: "#",
         };
 
         break;
     }
-
-    await prisma.shipping.create({
+    console.log("Order Response Data:", orderResponseData);
+    const shippingdata = await prisma.shipping.create({
       data: {
         orderId: order.id,
         orderNo: data.invoice,
         cn: orderResponseData.cn,
         courierName: orderResponseData.courierName,
-        deliveryFee: orderResponseData.deliveryFee,
+        deliveryFee: orderResponseData?.deliveryFee,
         cod: Number(data.price) || 0,
       },
     });
     await updateOrderStatusAction(order.id, "READY_TO_SHIP");
-
-    return { success: true, data: orderResponseData || courierData };
+    console.log("Shipping Data Created:", shippingdata);
+    return { success: true, data: shippingdata || courierData };
   } catch (error) {
     console.error("Error creating courier delivery:", error);
     return { success: false, message: error.message };
@@ -120,6 +145,62 @@ export async function cancelCourierDeliveryAction(courierId, orderId) {
     return { success: true, data: { status: "PROCESSING" } };
   } catch (error) {
     console.error("Error cancelling courier delivery:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+export async function getCourierDeliveryStatusAction({
+  courierId,
+  courierName,
+}) {
+  console.log("Getting status for:", courierId, courierName);
+  // Simulate API call to get courier delivery status
+  try {
+    if (!courierId || !courierName) {
+      throw new Error("Courier ID and Courier Name are required.");
+    }
+    switch (courierName.toLowerCase()) {
+      case "pathao":
+        const response = await getPathaoOrderInfo(courierId);
+        console.log("Pathao Status Response:", response);
+        if (!response) {
+          throw new Error("Failed to get Pathao order info");
+        }
+        return {
+          success: true,
+          data: {
+            status: response.order_status,
+            updatedAt: response.updated_at,
+          },
+        };
+        break;
+      case "steadfast":
+        const statusResponse = await getSteadfastDeliveryStatus(
+          "consignment_id",
+          courierId
+        );
+        if (statusResponse.success) {
+          console.log("Steadfast Status Response:", statusResponse);
+          return {
+            success: true,
+            data: {
+              status: statusResponse?.status,
+              updatedAt: statusResponse?.updatedAt,
+            },
+          };
+        } else {
+          throw new Error(statusResponse.error || "Failed to get status");
+        }
+
+        break;
+      default:
+        throw new Error("Unsupported courier name.");
+    }
+    // Simulate API call
+    const status = "PENDING"; // This would be replaced with actual API call
+    return { success: true, data: { status } };
+  } catch (error) {
+    console.error("Error getting courier delivery status:", error);
     return { success: false, message: error.message };
   }
 }
