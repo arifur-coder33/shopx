@@ -4,7 +4,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { pickupStoreFormFields } from "./pickupStoreFormFields";
+import { pickupStoreFormFields } from "./pickupstoreFormFields";
 
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
