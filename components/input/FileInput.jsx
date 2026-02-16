@@ -22,11 +22,10 @@ export default function FileInput({
     if (!defaultValue) return [];
     return Array.isArray(defaultValue) ? defaultValue : [defaultValue];
   });
-  console.log("default value in file input", defaultValue);
-  console.log("images in file input", images);
+
   // Input value derived from current images state
   const [inputValue, setInputValue] = useState(
-    images.map((img) => img.id).join(",")
+    images.map((img) => img.id).join(","),
   );
 
   // Update hidden input value whenever images change
@@ -45,7 +44,7 @@ export default function FileInput({
       const newImages = [...images, ...selectedImages];
       // Example: Simple deduplication based on id
       const uniqueImages = Array.from(
-        new Map(newImages.map((img) => [img.id, img])).values()
+        new Map(newImages.map((img) => [img.id, img])).values(),
       );
       setImages(uniqueImages);
     } else {

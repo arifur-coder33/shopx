@@ -6,7 +6,6 @@ import Logo from "@/components/common/Logo";
 import Link from "next/link";
 import NavActions from "./common/NavActions";
 import Notice from "./common/Notice";
-
 export default async function NavBar() {
   // Fetch all data in parallel!
   const [noticeResult, siteSettingResult] = await Promise.all([

@@ -1,12 +1,16 @@
 "use server";
 
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { headers } from "next/headers";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
+import { hasPermission } from "../utils/hasPermission";
+
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
     return [];
@@ -71,7 +75,7 @@ export async function createProductActions(formData) {
     // --- Basic Validation ---
     if (!data?.title || !data?.regularPrice || !data?.thumbnail) {
       throw new Error(
-        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)",
       );
     }
     if (
@@ -92,7 +96,7 @@ export async function createProductActions(formData) {
       } catch (e) {
         console.error("Error parsing product variations JSON:", e);
         throw new Error(
-          "ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format.)"
+          "ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format.)",
         );
       }
     } else if (Array.isArray(data.variations)) {
@@ -152,7 +156,7 @@ export async function createProductActions(formData) {
         productCode: newProductCode,
         isActive: Boolean(data?.isActive === "on" || data?.isActive === true),
         isFeatured: Boolean(
-          data?.isFeatured === "on" || data?.isFeatured === true
+          data?.isFeatured === "on" || data?.isFeatured === true,
         ),
         slug: slug,
         category: data?.category
@@ -200,7 +204,7 @@ export async function createProductActions(formData) {
           ) {
             console.warn(
               "Skipping incomplete variant data (missing matcherId or combination array):",
-              variantData
+              variantData,
             );
             continue; // Skip this variant and move to the next
           }
@@ -212,16 +216,16 @@ export async function createProductActions(formData) {
           const variantStock = parseOptionalNumber(variantData.qty, 0);
           const variantRegularPrice = parseOptionalNumber(
             variantData.regularPrice,
-            product.regularPrice
+            product.regularPrice,
           );
 
           const variantDiscountPrice = parseOptionalNumber(
             variantData.discountPrice,
-            product.discountPrice || product.regularPrice
+            product.discountPrice || product.regularPrice,
           );
           const variantWeight = parseOptionalNumber(
             variantData.weight,
-            product.weight
+            product.weight,
           );
           // The `transformVariations` function puts image info in `image: {id, name}`
           const variantThumbnailId = variantData.image || product.thumbnailId;
@@ -232,7 +236,7 @@ export async function createProductActions(formData) {
               if (!combo.variation?.id || !combo.value?.id) {
                 console.warn(
                   "Skipping combination with missing variation or value ID:",
-                  combo
+                  combo,
                 );
                 return null; // This will be filtered out
               }
@@ -247,7 +251,7 @@ export async function createProductActions(formData) {
           if (combinationsToCreate.length === 0) {
             console.warn(
               "Skipping variant as it has no valid combinations after filtering:",
-              variantData
+              variantData,
             );
             continue;
           }
@@ -302,7 +306,7 @@ export async function createProductAction(formData) {
     // --- Basic Validation ---
     if (!data?.title || !data?.thumbnail) {
       throw new Error(
-        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)",
       );
     }
 
@@ -316,7 +320,7 @@ export async function createProductAction(formData) {
         }
       } catch (e) {
         throw new Error(
-          "ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format.)"
+          "ভুল ভ্যারিয়েশন তথ্য ফরম্যাট। (Invalid variation data format.)",
         );
       }
     } else if (Array.isArray(data.variations)) {
@@ -382,7 +386,7 @@ export async function createProductAction(formData) {
         productCode: newProductCode,
         isActive: Boolean(data?.isActive === "on" || data?.isActive === true),
         isFeatured: Boolean(
-          data?.isFeatured === "on" || data?.isFeatured === true
+          data?.isFeatured === "on" || data?.isFeatured === true,
         ),
         slug: slug,
         category: data?.category
@@ -452,11 +456,11 @@ export async function createProductAction(formData) {
               stock: parseOptionalNumber(variantData.qty, 0),
               regularPrice: parseOptionalNumber(
                 variantData.regularPrice,
-                mainProductRegularPrice
+                mainProductRegularPrice,
               ),
               discountPrice: parseOptionalNumber(
                 variantData.discountPrice,
-                parseOptionalNumber(data.discountPrice)
+                parseOptionalNumber(data.discountPrice),
               ),
 
               thumbnail: variantData.image
@@ -550,7 +554,7 @@ export async function getProductById(id) {
     // Use the new, simpler transformVariations function
     const transformedVariations = transformVariations(product.variations);
     const getDiscountPrice = getMinMax(
-      product.variations.map((v) => v.discountPrice || v.regularPrice || 0)
+      product.variations.map((v) => v.discountPrice || v.regularPrice || 0),
     );
     const getDiscountPriceList =
       getDiscountPrice.min === getDiscountPrice.max
@@ -753,12 +757,12 @@ export async function getAllProduct(params) {
       const { priceToDisplay, originalPriceToDisplay } =
         calculateInitialDisplayPrice(product.variations);
       const stock = arraySum(
-        product.variations.map((v) => Number(v.stock) || 0)
+        product.variations.map((v) => Number(v.stock) || 0),
       );
       const orderQty = arraySum(
         product.orders
           .filter((v) => v.status !== "CANCELED" && v.status !== "RETURNED")
-          .map((v) => Number(v.quantity) || 0)
+          .map((v) => Number(v.quantity) || 0),
       );
 
       const { variations, ...rest } = product;
@@ -949,7 +953,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
       // Use the new, simpler transformVariations function
       const transformedVariations = transformVariations(product.variations);
       const getDiscountPrice = getMinMax(
-        product.variations.map((v) => v.discountPrice || v.regularPrice || 0)
+        product.variations.map((v) => v.discountPrice || v.regularPrice || 0),
       );
       const getDiscountPriceList =
         getDiscountPrice.min === getDiscountPrice.max
@@ -986,6 +990,10 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
 };
 
 export const getProductBySlug = async (slug) => {
+  const cookieHeader = headers().get("cookie") || "no cookie header";
+  const session = await auth();
+  console.log("Raw cookies from headers:", cookieHeader);
+  console.log("auth() result:", session);
   try {
     const data = await prisma.product.findUnique({
       where: { slug },
@@ -1174,16 +1182,16 @@ export async function updateProductActions({ id: productId, formData }) {
 
           const variantRegularPrice = parseOptionalNumber(
             variantData.regularPrice,
-            parseOptionalNumber(data.regularPrice)
+            parseOptionalNumber(data.regularPrice),
           );
           const variantDiscountPrice = parseOptionalNumber(
             variantData.discountPrice,
             parseOptionalNumber(data.discountPrice) ||
-              parseOptionalNumber(data.regularPrice)
+              parseOptionalNumber(data.regularPrice),
           );
           const variantWeight = parseOptionalNumber(
             variantData.weight,
-            updatedProduct.weight
+            updatedProduct.weight,
           );
 
           let variantThumbnailId = null;
@@ -1208,7 +1216,7 @@ export async function updateProductActions({ id: productId, formData }) {
                     variationNameId: combo.variation.id,
                     variationValueId: combo.value.id,
                   }
-                : null
+                : null,
             )
             .filter(Boolean);
 
@@ -1246,7 +1254,7 @@ export async function updateProductActions({ id: productId, formData }) {
       console.error("Caught error in updateProductAction:", error);
     } else {
       console.error(
-        "Caught a null error in updateProductAction. This usually indicates an invalid data shape was passed to Prisma."
+        "Caught a null error in updateProductAction. This usually indicates an invalid data shape was passed to Prisma.",
       );
     }
 
@@ -1273,7 +1281,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
     // --- Basic Validation ---
     if (!data?.title || !data?.thumbnail) {
       throw new Error(
-        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)"
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Regular Price, Thumbnail are required)",
       );
     }
 
@@ -1377,7 +1385,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
                     variationNameId: combo.variation.id,
                     variationValueId: combo.value.id,
                   }
-                : null
+                : null,
             )
             .filter(Boolean);
 
@@ -1393,11 +1401,11 @@ export async function updateProductActionOld({ id: productId, formData }) {
               stock: parseOptionalNumber(variantData.qty, 0),
               regularPrice: parseOptionalNumber(
                 variantData.regularPrice,
-                mainProductRegularPrice
+                mainProductRegularPrice,
               ),
               discountPrice: parseOptionalNumber(
                 variantData.discountPrice,
-                parseOptionalNumber(data.discountPrice)
+                parseOptionalNumber(data.discountPrice),
               ),
               thumbnail: variantData.image
                 ? { connect: { id: variantData.image } }
@@ -1446,6 +1454,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
   }
 }
 export async function updateProductAction({ id: productId, formData }) {
+  await hasPermission("user", "product");
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
   }
@@ -1457,7 +1466,7 @@ export async function updateProductAction({ id: productId, formData }) {
 
     if (!data?.title || !data?.thumbnail) {
       throw new Error(
-        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Thumbnail are required)"
+        "সব ফিল্ড গুলতে তথ্য দিন। (Title, Thumbnail are required)",
       );
     }
 
@@ -1536,7 +1545,7 @@ export async function updateProductAction({ id: productId, formData }) {
       });
 
       const existingVariationMap = new Map(
-        existingVariations.map((v) => [v.matcherId, v])
+        existingVariations.map((v) => [v.matcherId, v]),
       );
 
       if (hasSubmittedVariations) {
@@ -1548,7 +1557,7 @@ export async function updateProductAction({ id: productId, formData }) {
           ) {
             console.warn(
               "Skipping invalid submitted variation data due to missing matcherId or combinations:",
-              variantData
+              variantData,
             );
             continue;
           }
@@ -1559,14 +1568,14 @@ export async function updateProductAction({ id: productId, formData }) {
             `${updatedProduct.productCode}-${variantData.matcherId}`;
           const variantStock = parseOptionalNumber(variantData.qty, 0);
           const variantRegularPrice = parseOptionalNumber(
-            variantData.regularPrice
+            variantData.regularPrice,
           );
           const variantDiscountPrice = parseOptionalNumber(
-            variantData.discountPrice
+            variantData.discountPrice,
           );
           const variantWeight = parseOptionalNumber(
             variantData.weight,
-            updatedProduct.weight
+            updatedProduct.weight,
           );
 
           let variantThumbnailId = updatedProduct.thumbnailId;
@@ -1589,20 +1598,20 @@ export async function updateProductAction({ id: productId, formData }) {
                     variationNameId: combo.variation.id,
                     variationValueId: combo.value.id,
                   }
-                : null
+                : null,
             )
             .filter(Boolean);
 
           if (combinationsToProcess.length === 0) {
             console.warn(
               "Skipping variation due to no valid combinations to create/update:",
-              variantData
+              variantData,
             );
             continue;
           }
 
           const existingVariant = existingVariationMap.get(
-            variantData.matcherId
+            variantData.matcherId,
           );
           console.log("variant dtaa", variantData);
           if (existingVariant) {
@@ -1649,10 +1658,10 @@ export async function updateProductAction({ id: productId, formData }) {
           if (ordersCount > 0) {
             // Add to the errors array, but do not throw, as product update is otherwise successful
             variationDeletionErrors.push(
-              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`,
             );
             console.log(
-              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s)`
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s)`,
             );
           } else {
             // Delete associated combinations first
@@ -1667,7 +1676,7 @@ export async function updateProductAction({ id: productId, formData }) {
       } else {
         // LOGIC FOR SIMPLE PRODUCTS
         const defaultVariation = existingVariations.find(
-          (v) => v.combinations.length === 0
+          (v) => v.combinations.length === 0,
         );
 
         const defaultSku = updatedProduct.productCode;
@@ -1720,7 +1729,7 @@ export async function updateProductAction({ id: productId, formData }) {
 
           if (ordersCount > 0) {
             variationDeletionErrors.push(
-              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`,
             );
           } else {
             await tx.productVariationCombination.deleteMany({
@@ -1754,7 +1763,7 @@ export async function updateProductAction({ id: productId, formData }) {
       console.log(
         (successMessage +=
           " However, some variations could not be deleted due to existing orders: " +
-          variationDeletionErrors.join("; "))
+          variationDeletionErrors.join("; ")),
       );
     }
 

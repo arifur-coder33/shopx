@@ -1,204 +1,432 @@
+// "use client";
+// import { useEffect, useRef, useState } from "react";
+// import LazyModalButton from "../modal/LazyModalButton";
+
+// import { useModalContext } from "@/context/ModalContext";
+
+// export default function SearchableDropdown({
+//   name,
+//   defaultId,
+//   label,
+//   addForm, /// Add form to open when no results found
+//   dropDownLists = [],
+//   loadLists, // Function to load dropdown lists
+//   onSelect = () => {}, //
+//   index, //the index from dropdown component if it map as array
+//   colSpan, // Width of the dropdown
+//   searchOff = false, // Disable search functionality
+// }) {
+//   const { modalClosed, setModalClosed } = useModalContext();
+//   const [query, setQuery] = useState("");
+//   const [selected, setSelected] = useState(null);
+//   const [isOpen, setIsOpen] = useState(false);
+//   const [dropdownPosition, setDropdownPosition] = useState("bottom");
+//   const [fetchedDropDownList, setFetchedDropDownList] = useState([]);
+//   const dropdownRef = useRef(null);
+//   const [loading, setLoading] = useState(false);
+
+//   // Set default selection based on ID
+
+//   useEffect(() => {
+//     if (defaultId?.id) {
+//       setSelected(defaultId);
+//     } else {
+//       setSelected(null);
+//     }
+//   }, [defaultId]);
+
+//   useEffect(() => {
+//     if (dropDownLists?.length > 0) {
+//       setFetchedDropDownList(dropDownLists);
+//     }
+//   }, [dropDownLists]);
+
+//   useEffect(() => {
+//     if (typeof loadLists === "function" && modalClosed) {
+//       loadLists(); // re-fetch on modal close
+//     }
+//     setQuery(""); // Clear query when modal closes
+//     setModalClosed(false); // Reset modalClosed state after fetching
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [modalClosed]);
+
+//   const handleFocus = async () => {
+//     if (fetchedDropDownList.length === 0 && dropDownLists.length === 0) {
+//       // const loaded = await dropDownLists();
+//       // setFetchedDropDownList(loaded);
+//       console.log("Loading dropdown lists on focus");
+//       if (loadLists) {
+//         setLoading(true);
+//         const data = await loadLists();
+//         console.log("Fetched Data:", data);
+//         setFetchedDropDownList(data?.data || []);
+//         setLoading(false);
+//       }
+//     }
+//     setIsOpen(true);
+//   };
+
+//   const filteredOptions =
+//     query === ""
+//       ? fetchedDropDownList
+//       : fetchedDropDownList.filter((item) =>
+//           item.name.toLowerCase().includes(query.toLowerCase()),
+//         );
+
+//   // Handle outside click to close dropdown
+//   useEffect(() => {
+//     function handleClickOutside(event) {
+//       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+//         setIsOpen(false);
+//       }
+//     }
+//     document.addEventListener("mousedown", handleClickOutside);
+//     return () => document.removeEventListener("mousedown", handleClickOutside);
+//   }, []);
+
+//   // Dynamically set dropdown position
+//   useEffect(() => {
+//     if (!isOpen) return;
+
+//     const rect = dropdownRef.current.getBoundingClientRect();
+//     const screenHeight = window.innerHeight;
+//     const screenWidth = window.innerWidth;
+
+//     if (rect.bottom + 150 > screenHeight) {
+//       setDropdownPosition("top");
+//     } else {
+//       setDropdownPosition("bottom");
+//     }
+
+//     if (rect.left < 150) {
+//       setDropdownPosition("right");
+//     } else if (rect.right > screenWidth - 150) {
+//       setDropdownPosition("left");
+//     }
+//   }, [isOpen]);
+
+//   return (
+//     <div className={`relative col-span-${colSpan} `} ref={dropdownRef}>
+//       <label
+//         // htmlFor={uniqueId}
+//         className="cursor-pointer block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+//       >
+//         {label}
+//       </label>
+//       {/* Input Field */}
+//       <input
+//         hidden
+//         name={name}
+//         type="text"
+//         defaultValue={selected?.id || ""}
+//         readOnly
+//       />
+//       <div className="relative ">
+//         {" "}
+//         <input
+//           type="text"
+//           className="z-10 w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 "
+//           autoComplete="new-password"
+//           placeholder={
+//             loading
+//               ? "Loading..."
+//               : selected
+//                 ? selected.name
+//                 : "Select an option"
+//           }
+//           value={
+//             loading ? "Loading..." : query || (selected ? selected.name : "")
+//           }
+//           onChange={(e) => {
+//             setQuery(e.target.value);
+//             setSelected(null); // Optional: clear selected when typing
+//           }}
+//           onFocus={handleFocus}
+//           readOnly={searchOff || fetchedDropDownList?.length === 0} // Make readonly if no options
+//         />
+//         {/* Anchor Button (Click to Show Full List) */}
+//         <button
+//           type="button"
+//           className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+//           onClick={() => fetchedDropDownList?.length > 0 && setIsOpen(!isOpen)} // Toggle dropdown only if options exist
+//           disabled={fetchedDropDownList?.length === 0}
+//         >
+//           ▼
+//         </button>
+//       </div>
+
+//       {/* Dropdown List */}
+//       {isOpen && fetchedDropDownList?.length > 0 && (
+//         <ul
+//           className={`z-50 absolute w-full border p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40  ${
+//             dropdownPosition === "bottom" ? "top-full mt-1" : ""
+//           } ${dropdownPosition === "top" ? "bottom-full mb-1" : ""} ${
+//             dropdownPosition === "left" ? "right-0" : ""
+//           } ${dropdownPosition === "right" ? "left-0" : ""}`}
+//         >
+//           {filteredOptions.length > 0 ? (
+//             filteredOptions.map((item, idex) => (
+//               <li
+//                 key={item.id}
+//                 className={`cursor-pointer px-3 py-2 ${
+//                   selected?.id === item.id
+//                     ? "bg-blue-500 text-white"
+//                     : "hover:bg-blue-500 hover:text-white"
+//                 }`}
+//                 onClick={() => {
+//                   setSelected(item);
+//                   setQuery(""); // Clear query but keep selection
+//                   setIsOpen(false); // Close dropdown
+//                   if (typeof onSelect === "function") {
+//                     onSelect(item, index);
+//                   } else {
+//                     console.warn("onSelect is not a function", onSelect);
+//                   }
+//                 }}
+//               >
+//                 {item.name}
+//               </li>
+//             ))
+//           ) : (
+//             <>
+//               <li className="px-3 py-2 text-gray-500">
+//                 No results found {addForm}
+//               </li>
+//               {addForm && (
+//                 <li className="px-3 py-2 text-gray-200 bg-blue-500">
+//                   <LazyModalButton componentKey={addForm} />
+//                 </li>
+//               )}
+//             </>
+//           )}
+//         </ul>
+//       )}
+//     </div>
+//   );
+// }
 "use client";
-import { useEffect, useRef, useState } from "react";
-import LazyModalButton from "../modal/LazyModalButton";
 
 import { useModalContext } from "@/context/ModalContext";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { toast } from "react-toastify";
+import LazyModalButton from "../modal/LazyModalButton";
+import { confirmFromUser } from "../modal/confrim/confirm";
 
 export default function SearchableDropdown({
   name,
-  defaultId,
   label,
-  addForm, /// Add form to open when no results found
-  dropDownLists,
-  loadLists, // Function to load dropdown lists
-  onSelect = () => {}, //
-  index, //the index from dropdown component if it map as array
-  colSpan, // Width of the dropdown
-  searchOff = false, // Disable search functionality
+  defaultId,
+  addForm,
+  dropDownLists = [],
+  loadLists,
+  onSelect = () => {},
+  index,
+  colSpan = 1,
+  searchOff = false,
+  itemId,
+  isConfirm = false,
 }) {
   const { modalClosed, setModalClosed } = useModalContext();
+
+  const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState("bottom");
-  const [fetchedDropDownList, setFetchedDropDownList] = useState([]);
-  const dropdownRef = useRef(null);
-  const [loading, setLoading] = useState(false);
+  const [list, setList] = useState([]);
+  const [dropdownStyle, setDropdownStyle] = useState(null);
 
-  // Set default selection based on ID
-
+  /* ---------------- Default value ---------------- */
   useEffect(() => {
     if (defaultId?.id) {
       setSelected(defaultId);
-    } else {
-      setSelected(null);
     }
   }, [defaultId]);
 
+  /* ---------------- Sync list ---------------- */
   useEffect(() => {
-    setFetchedDropDownList(dropDownLists);
+    if (dropDownLists?.length) {
+      setList(dropDownLists);
+    }
   }, [dropDownLists]);
 
+  /* ---------------- Reload after modal close ---------------- */
   useEffect(() => {
-    if (typeof loadLists === "function" && modalClosed) {
-      loadLists(); // re-fetch on modal close
+    if (modalClosed && typeof loadLists === "function") {
+      loadLists().then((res) => setList(res?.data || []));
+      setModalClosed(false);
     }
-    setQuery(""); // Clear query when modal closes
-    setModalClosed(false); // Reset modalClosed state after fetching
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalClosed]);
+  }, [modalClosed, loadLists, setModalClosed]);
 
-  const handleFocus = async () => {
-    if (fetchedDropDownList.length === 0 && dropDownLists.length === 0) {
-      // const loaded = await dropDownLists();
-      // setFetchedDropDownList(loaded);
+  /* ---------------- Filter (fast) ---------------- */
+  const filteredOptions = useMemo(() => {
+    if (!query) return list;
+    return list.filter((item) =>
+      item.name.toLowerCase().includes(query.toLowerCase()),
+    );
+  }, [query, list]);
 
-      if (loadLists) {
-        setLoading(true);
-        const data = await loadLists();
-        console.log("Fetched Data:", data);
-        setFetchedDropDownList(data);
-        setLoading(false);
-      }
+  /* ---------------- Open dropdown ---------------- */
+  const openDropdown = async () => {
+    if (!list.length && loadLists) {
+      setLoading(true);
+      const res = await loadLists();
+      setList(res?.data || []);
+      setLoading(false);
     }
     setIsOpen(true);
   };
 
-  const filteredOptions =
-    query === ""
-      ? fetchedDropDownList
-      : fetchedDropDownList.filter((item) =>
-          item.name.toLowerCase().includes(query.toLowerCase())
-        );
-
-  // Handle outside click to close dropdown
+  /* ---------------- Calculate position ---------------- */
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    if (!isOpen || !inputRef.current) return;
 
-  // Dynamically set dropdown position
-  useEffect(() => {
-    if (!isOpen) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    const height = 180;
 
-    const rect = dropdownRef.current.getBoundingClientRect();
-    const screenHeight = window.innerHeight;
-    const screenWidth = window.innerWidth;
-
-    if (rect.bottom + 150 > screenHeight) {
-      setDropdownPosition("top");
-    } else {
-      setDropdownPosition("bottom");
+    let top = rect.bottom;
+    if (rect.bottom + height > window.innerHeight) {
+      top = rect.top - height;
     }
 
-    if (rect.left < 150) {
-      setDropdownPosition("right");
-    } else if (rect.right > screenWidth - 150) {
-      setDropdownPosition("left");
-    }
+    setDropdownStyle({
+      position: "fixed",
+      top,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+    });
   }, [isOpen]);
 
+  /* ---------------- Outside click (PORTAL SAFE) ---------------- */
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (
+        wrapperRef.current?.contains(e.target) ||
+        dropdownRef.current?.contains(e.target)
+      ) {
+        return;
+      }
+      setIsOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  /* ---------------- Select ---------------- */
+  const handleSelect = async (item) => {
+    if (!isConfirm) {
+      setSelected(item);
+      setQuery("");
+      setIsOpen(false);
+      await onSelect(item, itemId, index);
+      return;
+    }
+    const ok = await confirmFromUser({
+      title: "Change Confirmation",
+      message: "Are you sure you want to change?",
+    });
+    if (!ok) return;
+    setSelected(item);
+    setQuery("");
+    setIsOpen(false);
+    const res = await onSelect(item, itemId, index);
+
+    if (res?.success) {
+      toast.success(" updated successfully");
+    }
+    if (!res.success) {
+      toast.error(res?.message || "Failed to update ");
+    }
+  };
+
   return (
-    <div className={`relative col-span-${colSpan} `} ref={dropdownRef}>
-      <label
-        // htmlFor={uniqueId}
-        className="cursor-pointer block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-      >
-        {label}
-      </label>
-      {/* Input Field */}
-      <input
-        hidden
-        name={name}
-        type="text"
-        defaultValue={selected?.id || ""}
-        readOnly
-      />
-      <div className="relative ">
-        {" "}
+    <div ref={wrapperRef} className={`relative col-span-${colSpan}`}>
+      {label && (
+        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          {label}
+        </label>
+      )}
+
+      {/* Hidden input (form support) */}
+      <input hidden name={name} value={selected?.id || ""} readOnly />
+
+      {/* Input */}
+      <div className="relative">
         <input
+          ref={inputRef}
           type="text"
-          className="z-10 w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 "
-          autoComplete="new-password"
-          placeholder={
-            loading
-              ? "Loading..."
-              : selected
-              ? selected.name
-              : "Select an option"
-          }
-          value={
-            loading ? "Loading..." : query || (selected ? selected.name : "")
-          }
+          value={loading ? "Loading..." : query || selected?.name || ""}
+          placeholder="Select an option"
+          readOnly={searchOff}
+          onFocus={openDropdown}
           onChange={(e) => {
             setQuery(e.target.value);
-            setSelected(null); // Optional: clear selected when typing
+            setSelected(null);
           }}
-          onFocus={handleFocus}
-          readOnly={searchOff || fetchedDropDownList?.length === 0} // Make readonly if no options
+          className="w-full border rounded-md py-2 px-3 text-sm
+          bg-slate-200 dark:bg-slate-600
+          text-slate-700 dark:text-slate-300
+          focus:ring-2 focus:ring-blue-500"
         />
-        {/* Anchor Button (Click to Show Full List) */}
+
         <button
           type="button"
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-          onClick={() => fetchedDropDownList?.length > 0 && setIsOpen(!isOpen)} // Toggle dropdown only if options exist
-          disabled={fetchedDropDownList?.length === 0}
+          onClick={() => setIsOpen((p) => !p)}
+          className="absolute inset-y-0 right-2 text-gray-500"
         >
           ▼
         </button>
       </div>
 
-      {/* Dropdown List */}
-      {isOpen && fetchedDropDownList?.length > 0 && (
-        <ul
-          className={`z-50 absolute w-full borde p-2 border-gray-300 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-md shadow-md shadow-slate-900 dark:shadow-slate-100  max-h-40 overflow-auto ${
-            dropdownPosition === "bottom" ? "top-full mt-1" : ""
-          } ${dropdownPosition === "top" ? "bottom-full mb-1" : ""} ${
-            dropdownPosition === "left" ? "right-0" : ""
-          } ${dropdownPosition === "right" ? "left-0" : ""}`}
-        >
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((item, idex) => (
-              <li
-                key={item.id}
-                className={`cursor-pointer px-3 py-2 ${
-                  selected?.id === item.id
-                    ? "bg-blue-500 text-white"
-                    : "hover:bg-blue-500 hover:text-white"
-                }`}
-                onClick={() => {
-                  setSelected(item);
-                  setQuery(""); // Clear query but keep selection
-                  setIsOpen(false); // Close dropdown
-                  if (typeof onSelect === "function") {
-                    onSelect(item, index);
-                  } else {
-                    console.warn("onSelect is not a function", onSelect);
-                  }
-                }}
-              >
-                {item.name}
-              </li>
-            ))
-          ) : (
-            <>
-              <li className="px-3 py-2 text-gray-500">
-                No results found {addForm}
-              </li>
-              {addForm && (
-                <li className="px-3 py-2 text-gray-200 bg-blue-500">
-                  <LazyModalButton componentKey={addForm} />
+      {/* ---------------- Dropdown (PORTAL) ---------------- */}
+      {isOpen &&
+        dropdownStyle &&
+        createPortal(
+          <ul
+            ref={dropdownRef}
+            style={dropdownStyle}
+            className="max-h-44 overflow-y-auto rounded-md border
+            bg-slate-100 dark:bg-slate-900
+            text-slate-700 dark:text-slate-300
+            shadow-lg"
+          >
+            {filteredOptions.length ? (
+              filteredOptions.map((item) => (
+                <li
+                  key={item.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // 🔥 important
+                    handleSelect(item);
+                  }}
+                  className={`px-3 py-2 cursor-pointer
+                  ${
+                    selected?.id === item.id
+                      ? "bg-blue-500 text-white"
+                      : "hover:bg-blue-500 hover:text-white"
+                  }`}
+                >
+                  {item.name}
                 </li>
-              )}
-            </>
-          )}
-        </ul>
-      )}
+              ))
+            ) : (
+              <>
+                <li className="px-3 py-2 text-gray-500">No results found</li>
+                {addForm && (
+                  <li className="px-3 py-2 bg-blue-500 text-white">
+                    <LazyModalButton componentKey={addForm} />
+                  </li>
+                )}
+              </>
+            )}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 }

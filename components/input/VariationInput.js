@@ -30,7 +30,7 @@ export default function VariationInput({
   //   }
   //   getVariationsList();
   // }, []);
-  console.log("defaultvalue", defaultValue);
+
   useEffect(() => {
     if (defaultValue) {
       setRows(defaultValue);
@@ -110,7 +110,6 @@ export default function VariationInput({
     setVariationsList(getData?.data || []);
     // return getData?.data || [];
   };
-  console.log("varitionList", variationsList);
 
   return (
     <div
@@ -177,7 +176,7 @@ export default function VariationInput({
         type="hidden"
         name={name}
         value={JSON.stringify(
-          rows.filter((v) => v.variation !== "" && v.value.trim() !== "")
+          rows.filter((v) => v.variation !== "" && v.value.trim() !== ""),
         )} // Filter out empty variations
       />
     </div>

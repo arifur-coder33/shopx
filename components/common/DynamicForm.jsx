@@ -16,15 +16,15 @@ const CustomEditor = dynamic(
   () => import("../input/quillEditor/CustomEditor"),
   {
     ssr: false,
-  }
+  },
 );
-const ProductVariationInput = dynamic(() =>
-  import("@/components/input/ProductVariation")
+const ProductVariationInput = dynamic(
+  () => import("@/components/input/ProductVariation"),
 );
 const FileInput = dynamic(() => import("../input/FileInput"), { ssr: false });
 const SearchableDropdown = dynamic(
   () => import("@/components/input/SearchableDropdown"),
-  { ssr: false }
+  { ssr: false },
 );
 const TagInput = dynamic(() => import("../input/TagInput"));
 
@@ -167,6 +167,7 @@ export default function DynamicForm({
                     colSpan={field.colSpan}
                     onSelect={field.onSelect}
                     required={field.required}
+                    itemId={data?.id}
                   />
                   {/* <SelectInput
                     index={index}
@@ -257,8 +258,8 @@ export default function DynamicForm({
               ? "Updating"
               : "Update"
             : isPending
-            ? "Saving..."
-            : "Save"}
+              ? "Saving..."
+              : "Save"}
         </Button>
       </div>
     </form>

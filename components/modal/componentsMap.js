@@ -7,4 +7,8 @@ export const componentsMap = {
   OrderQuickView: () => import("@/app/admin/orders/_components/OrderView"),
   PickupStoreForm: () =>
     import("@/app/admin/settings/pickup-point/_components/PickupStoreForm"),
+  ResourseRoleView: () =>
+    import("@/app/admin/settings/role/_components/ResourseRole"),
+  ResourseForm: () =>
+    import("@/app/admin/settings/resources/_component/RecourceForm"),
 };

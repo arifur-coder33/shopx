@@ -19,16 +19,16 @@ export default function ProductForm({ actionType, updateAction, id }) {
   const [loadingProductData, setLoadingProductData] = useState(true);
   const [data, setData] = useState({});
 
-  const loadCategoryDropDownLists = async () => {
-    console.log("Loading categories for dropdown");
-    try {
-      const getData = await getCategory();
-      console.log("Categories loaded:", getData);
-      setCategoryDropdownList(getData?.data || []);
-    } catch (error) {
-      console.error("Failed to load categories", error);
-    }
-  };
+  // const loadCategoryDropDownLists = async () => {
+  //   console.log("Loading categories for dropdown");
+  //   try {
+  //     const getData = await getCategory();
+  //     console.log("Categories loaded:", getData);
+  //     setCategoryDropdownList(getData?.data || []);
+  //   } catch (error) {
+  //     console.error("Failed to load categories", error);
+  //   }
+  // };
 
   const debounce = (func, delay) => {
     let timeout;
@@ -42,7 +42,6 @@ export default function ProductForm({ actionType, updateAction, id }) {
       try {
         const categoryIdToFetch = category?.id || category; // Handle if category is object or just ID
         if (!categoryIdToFetch) {
-          console.log("ProductForm: No category ID to fetch variations for.");
           setProductVariationList([]); // Clear if no category
           return;
         }
@@ -53,7 +52,7 @@ export default function ProductForm({ actionType, updateAction, id }) {
         setProductVariationList([]); // Set to empty on error
       }
     }, 300),
-    [] // Empty dependency array for useCallback, debounce handles stability
+    [], // Empty dependency array for useCallback, debounce handles stability
   );
 
   useEffect(() => {
@@ -61,9 +60,8 @@ export default function ProductForm({ actionType, updateAction, id }) {
       if (actionType === "edit" && id) {
         setLoadingProductData(true); // Start loading
         try {
-          const { getProductById } = await import(
-            "@/backend/serverActions/productActions"
-          );
+          const { getProductById } =
+            await import("@/backend/serverActions/productActions");
           const productData = await getProductById(id);
 
           if (productData.success) {
@@ -71,13 +69,7 @@ export default function ProductForm({ actionType, updateAction, id }) {
           } else {
             toast.error("Failed to load product data");
           }
-          console.log(
-            "ProductForm: Loaded product data for ID:",
-            id,
-            productData
-          );
         } catch (error) {
-          console.error("ProductForm: Failed to load product data", error);
           toast.error("Failed to load product data due to an error");
         } finally {
           setLoadingProductData(false); // End loading
@@ -90,16 +82,12 @@ export default function ProductForm({ actionType, updateAction, id }) {
     loadInitialProductData();
   }, [id, actionType]);
 
-  
   useEffect(() => {
     // For initial load if data.category is present (e.g., on edit)
     if (data?.category) {
       // data.category could be an object {id, name} or just an ID string
       const categoryId = data.category.id || data.category;
-      console.log(
-        "ProductForm: Initial data.category found, fetching variations for ID:",
-        categoryId
-      ); // Vercel Log
+
       if (categoryId) {
         onSelectCategoryHandler({ id: categoryId }); // Call with an object to match what select might pass
       }
@@ -109,7 +97,7 @@ export default function ProductForm({ actionType, updateAction, id }) {
   const fromFields = useMemo(() => {
     return productFormFields({
       categoryDropdownList,
-      loadCategoryDropDownLists,
+      loadCategoryDropDownLists: getCategory,
       onSelectCategoryHandler,
       productVariationList,
     });

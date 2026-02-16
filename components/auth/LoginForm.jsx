@@ -1,11 +1,12 @@
 "use client";
-import { loginWithCreds } from "@/backend/serverActions/authActions";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Button from "../button";
 import DefaultInput from "../input/DefaultInput";
-
 export default function LoginForm() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,23 +15,32 @@ export default function LoginForm() {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    console.log(`form submit ${formData}`);
+
     setError("");
     setLoading(true);
 
     try {
-      const result = await loginWithCreds(formData);
+      const email = formData.get("email");
+      const password = formData.get("password");
 
-      if (result?.message) {
-        setError(result.message);
-      } else {
-        router.push("/");
+      const result = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      });
+      console.log(result);
+
+      if (result?.error === null) {
+        router.push(callbackUrl);
+      } else if (result?.error === "CredentialsSignin") {
+        console.log(result.error);
+        setError("Invalid email or password. Please try again.");
       }
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (err) {
+      console.error(err);
       setError("Something went wrong. Please try again.");
     } finally {
-      setLoading(false); // Ensure loading is reset
+      setLoading(false);
     }
   }
 

@@ -85,7 +85,7 @@ const Item = ({ data, index }) => {
           {dateConvertToLocalString(data?.createdAt)}
         </td>
 
-        <td className="px-6 py-4">{data?.role}</td>
+        <td className="px-6 py-4">{data?.role?.name}</td>
         <td className="px-6 py-4">{data?.status}</td>
 
         <td className="px-6 py-4 flex flex-row gap-2">

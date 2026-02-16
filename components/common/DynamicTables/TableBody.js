@@ -3,22 +3,10 @@
 import Imagecustom from "@/components/images/ImageCustom";
 import CheckBox from "@/components/input/CheckBox";
 import SearchableDropdown from "@/components/input/SearchableDropdown";
-import LazyModalButton from "@/components/modal/LazyModalButton";
 import getNestedValue from "@/utils/getNestedValue";
-import {
-  ArrowDown,
-  ArrowUp,
-  Edit,
-  Eye,
-  Minus,
-  Plus,
-  Search,
-  Trash,
-  View,
-} from "lucide-react";
-import Link from "next/link";
+import { ArrowDown, ArrowUp, Minus, Plus, Search } from "lucide-react";
 import React from "react";
-import DeleteItem from "../DeleteItem";
+import TableActionButton from "./TableActionButton";
 // --- COMPONENT IMPORTS (Ensure paths are correct) ---
 const SortIcon = ({ direction }) => {
   if (direction === "asc")
@@ -34,8 +22,17 @@ const SortIcon = ({ direction }) => {
 
 // Helper function can live here as it's only used by the TableBody
 const renderDynamicField = (item, column) => {
-  const { field, type, alt, dropDownLists, action, objectPropertyName } =
-    column;
+  const {
+    field,
+    type,
+    alt,
+    dropDownLists,
+    action,
+    objectPropertyName,
+    loadLists,
+    onSelect,
+    searchOff,
+  } = column;
   // const value = item?.[field];
   const value = getNestedValue(item, field);
   switch (type) {
@@ -53,11 +50,16 @@ const renderDynamicField = (item, column) => {
         <span className="text-xs text-gray-400">No Image</span>
       );
     case "dropdown":
+      console.log("dropDownLists in renderDynamicField:", dropDownLists);
       return (
         <SearchableDropdown
+          isConfirm={column.isConfrim}
           dropDownLists={dropDownLists}
           defaultId={value}
           itemId={item?.id}
+          loadLists={loadLists}
+          onSelect={onSelect}
+          searchOff={searchOff}
         />
       );
     case "checkbox":
@@ -120,7 +122,6 @@ export default function TableBody({
     isEditabel,
   } = actions;
   const expandColumn = tableProperties.find((p) => p.type === "expand");
-
   const toggleRow = (id) => {
     const newExpandedRows = new Set(expandedRows);
     if (newExpandedRows.has(id)) newExpandedRows.delete(id);
@@ -195,43 +196,14 @@ export default function TableBody({
                           )}
                         </td>
                       ))}
-                      <td className="px-4 sticky bg-slate-200 right-0 py-2 flex items-center justify-center space-x-2 align-middle">
-                        {/* Adjusted padding and space-x */}
-                        {/* --- PARENT ROW ACTIONS --- */}
-                        {item?.slug && (
-                          <Link
-                            href={`/product/${encodeURIComponent(item.slug)}`}
-                            title="View on site"
-                          >
-                            <Eye className="w-4 h-4 text-green-500 hover:text-green-600 hover:scale-110 transition-transform" />
-                            {/* Reduced icon size */}
-                          </Link>
-                        )}
-                        <LazyModalButton
-                          button={
-                            <View className="w-4 h-4 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
-                          }
-                          componentKey={quickViewComponentKey}
-                          itemId={item.id}
-                        />
-
-                        {isEditabel && (
-                          <LazyModalButton
-                            button={
-                              <Edit className="w-4 h-4 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
-                            }
-                            data={item}
-                            itemId={item.id}
-                            updateAction={updateAction}
-                            actionType={"edit"}
-                            componentKey={itemUpdateFormKey}
-                          />
-                        )}
-
-                        <DeleteItem deleteItem={deleteAction} id={item.id}>
-                          <Trash className="w-4 h-4 text-red-500 hover:text-red-600 hover:scale-110 transition-transform" />
-                        </DeleteItem>
-                      </td>
+                      <TableActionButton
+                        item={item}
+                        isEditabel={isEditabel}
+                        quickViewComponentKey={quickViewComponentKey}
+                        itemUpdateFormKey={itemUpdateFormKey}
+                        updateAction={updateAction}
+                        deleteAction={deleteAction}
+                      />
                     </tr>
                     {/* --- EXPANDED ROW WITH NESTED TABLE --- */}
                     {expandColumn && (
@@ -259,7 +231,7 @@ export default function TableBody({
                                         >
                                           {prop.label}
                                         </th>
-                                      )
+                                      ),
                                     )}
                                   </tr>
                                 </thead>
@@ -278,13 +250,13 @@ export default function TableBody({
                                             >
                                               {renderDynamicField(
                                                 nestedItem,
-                                                prop
+                                                prop,
                                               )}
                                             </td>
-                                          )
+                                          ),
                                         )}
                                       </tr>
-                                    )
+                                    ),
                                   )}
                                 </tbody>
                               </table>

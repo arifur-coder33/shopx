@@ -4,82 +4,111 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "./auth.config";
 import prisma from "./lib/prisma";
+
 export const {
   handlers: { GET, POST },
+  auth,
   signIn,
   signOut,
-  auth,
 } = NextAuth({
-  ...authConfig,
   adapter: PrismaAdapter(prisma),
+
+  ...authConfig,
+
   providers: [
     Credentials({
       name: "Credentials",
-      credentials: {},
-      authorize: async (credentials) => {
-        if (!credentials || !credentials.email || !credentials.password) {
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
           return null;
         }
-        let user = null;
-        user = await prisma.user.findUnique({
+
+        // 🔐 Authentication (Doc: Verify identity)
+        const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: {
+            role: true,
+          },
         });
 
-        if (!user) {
-          // throw new Error("Incorrect email.");
-          return null;
-        }
+        if (!user || !user.password) return null;
 
-        const isMatch = await bcrypt.compare(
+        const isValid = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.password,
         );
 
-        if (!isMatch) {
-          // throw new Error("Incorrect password.");
-          return null;
-        }
+        if (!isValid) return null;
 
-        return user;
+        // ✅ Return MINIMUM safe user data (Doc recommendation)
+        return {
+          id: user.id,
+          email: user.email,
+          role: user.role?.name ?? null,
+          roleId: user.roleId ?? null,
+        };
       },
     }),
   ],
+
   callbacks: {
-    jwt({ token, user, trigger, session }) {
+    /**
+     * 🔑 JWT = Stateless Session (Doc aligned)
+     * Runs on sign-in & every request
+     */
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.roleId = user.roleId;
+
+        // 🛡 Authorization: attach permissions
+        if (user.role === "SUPER_ADMIN") {
+          token.permissions = ["*"];
+        } else if (user.roleId) {
+          const permissions = await prisma.rolePermission.findMany({
+            where: { roleId: user.roleId, allowed: true },
+            include: {
+              resource: true,
+              action: true,
+            },
+          });
+
+          token.permissions = permissions.map(
+            (p) => `${p.resource.key}:${p.action.key}`,
+          );
+        } else {
+          token.permissions = [];
+        }
       }
-      // if (trigger === "update" && session) {
-      //   token = { ...token, ...session };
-      // }
 
       return token;
     },
-    session({ session, token }) {
-      if (session?.user) {
+
+    /**
+     * 📦 Session → Client-safe DTO
+     */
+    async session({ session, token }) {
+      if (session.user && token?.id) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.roleId = token.roleId;
+        session.user.permissions = token.permissions ?? [];
       }
+
       return session;
     },
-    // async redirect({ url, baseUrl }) {
-    //   // If a callbackUrl exists and is relative, use it
-    //   console.log(url);
-    //   if (url.startsWith(baseUrl)) {
-    //     return url;
-    //   }
-    //   if (url.startsWith("/")) {
-    //     return `${baseUrl}${url}`;
-    //   }
-    //   // Default redirect to the base URL
-    //   return baseUrl;
-    // },
   },
 
-  // Define the trusted URLs for local development and production
-  // This tells NextAuth.js to trust the localhost during local dev.
-  trustHost: true, // Important for trusting localhost in dev mode
   secret: process.env.AUTH_SECRET,
-  pages: "/login",
+  trustHost: true,
+
+  pages: {
+    signIn: "/login",
+  },
 });

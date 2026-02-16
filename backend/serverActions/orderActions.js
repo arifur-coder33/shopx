@@ -1,7 +1,9 @@
 "use server";
 import prisma from "@/lib/prisma";
+
 import { revalidatePath, revalidateTag } from "next/cache";
-import { getDataSelectFields } from "../utils/getDataSelectFields";
+import { getListCount } from "../utils/getListCount";
+import { getListData } from "../utils/getListData";
 
 export async function createOrder(formData) {
   try {
@@ -9,10 +11,9 @@ export async function createOrder(formData) {
     const data = { ...formDataObj };
     const orderItems = JSON.parse(data?.products);
 
-    return null;
     if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
       throw new Error(
-        "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।"
+        "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
       );
     }
 
@@ -65,7 +66,7 @@ export async function createOrder(formData) {
 
         if (variation.stock < item.quantity) {
           throw new Error(
-            `${item.title} product stock not available. We have only ${variation.stock}.`
+            `${item.title} product stock not available. We have only ${variation.stock}.`,
           );
         }
 
@@ -108,7 +109,7 @@ export async function createOrder(formData) {
               item.variation.combinations?.map((c) => ({
                 name: c.variationName.name,
                 value: c.variationValue.value,
-              })) || []
+              })) || [],
             ),
           },
         });
@@ -132,111 +133,154 @@ export async function createOrder(formData) {
 // A helper to dynamically create the 'select' object for Prisma
 // This ensures we only fetch data that the table actually needs.
 
+// export async function getAllOrder(params) {
+//   try {
+//     const {
+//       limit = 10,
+//       cursor,
+//       tableProperties,
+//       sortField = "createdAt",
+//       sortDirection = "desc",
+//       // ...other filters
+//       orderNo,
+//       sku,
+//       phoneNumber,
+//       status,
+//       startDate,
+//       endDate,
+//     } = params;
+
+//     const whereClause = {};
+//     if (orderNo)
+//       whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
+//     if (status) whereClause.status = status;
+//     if (startDate && endDate) {
+//       whereClause.createdAt = {
+//         gte: new Date(startDate),
+//         lte: new Date(endDate),
+//       };
+//     }
+//     if (sku) {
+//       whereClause.orderItems = {
+//         some: { sku: { contains: sku, mode: "insensitive" } },
+//       };
+//     }
+//     if (phoneNumber) {
+//       whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
+//     }
+
+//     const selectFields = getDataSelectFields(tableProperties);
+
+//     const requestedLimit = Number(limit);
+//     const items = await prisma.order.findMany({
+//       take: requestedLimit + 1,
+//       where: whereClause,
+//       select: selectFields,
+//       cursor: cursor ? { id: cursor } : undefined,
+//       // The `skip: 1` is NECESSARY and CORRECT for Prisma's cursor implementation
+//       // to exclude the cursor itself and start on the next record.
+//       skip: cursor ? 1 : 0,
+//       orderBy: { [sortField]: sortDirection },
+//     });
+
+//     let nextCursor = null;
+//     // Check if we received more items than the requested page size.
+//     if (items.length > requestedLimit) {
+//       // --- THE CRITICAL FIX IS HERE ---
+//       // 1. Remove the extra item that we fetched only to check for a next page.
+//       items.pop();
+
+//       // 2. The new cursor is the ID of the LAST item in the *remaining* array.
+//       nextCursor = items[items.length - 1].id;
+//     }
+
+//     return {
+//       success: true,
+//       data: items,
+//       nextCursor: nextCursor,
+//     };
+//   } catch (error) {
+//     console.error("Failed to get orders:", error);
+//     return { success: false, error: error.message };
+//   }
+// }
 export async function getAllOrder(params) {
-  try {
-    const {
-      limit = 10,
-      cursor,
-      tableProperties,
-      sortField = "createdAt",
-      sortDirection = "desc",
-      // ...other filters
-      orderNo,
-      sku,
-      phoneNumber,
-      status,
-      startDate,
-      endDate,
-    } = params;
-
-    const whereClause = {};
-    if (orderNo)
-      whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
-    if (status) whereClause.status = status;
-    if (startDate && endDate) {
-      whereClause.createdAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
-    }
-    if (sku) {
-      whereClause.orderItems = {
-        some: { sku: { contains: sku, mode: "insensitive" } },
-      };
-    }
-    if (phoneNumber) {
-      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
-    }
-
-    const selectFields = getDataSelectFields(tableProperties);
-
-    const requestedLimit = Number(limit);
-    const items = await prisma.order.findMany({
-      take: requestedLimit + 1,
-      where: whereClause,
-      select: selectFields,
-      cursor: cursor ? { id: cursor } : undefined,
-      // The `skip: 1` is NECESSARY and CORRECT for Prisma's cursor implementation
-      // to exclude the cursor itself and start on the next record.
-      skip: cursor ? 1 : 0,
-      orderBy: { [sortField]: sortDirection },
-    });
-
-    let nextCursor = null;
-    // Check if we received more items than the requested page size.
-    if (items.length > requestedLimit) {
-      // --- THE CRITICAL FIX IS HERE ---
-      // 1. Remove the extra item that we fetched only to check for a next page.
-      items.pop();
-
-      // 2. The new cursor is the ID of the LAST item in the *remaining* array.
-      nextCursor = items[items.length - 1].id;
-    }
-
-    return {
-      success: true,
-      data: items,
-      nextCursor: nextCursor,
-    };
-  } catch (error) {
-    console.error("Failed to get orders:", error);
-    return { success: false, error: error.message };
-  }
+  return getListData({
+    prisma,
+    model: "order",
+    params,
+    searchableFields: [
+      { field: "orderNo", type: "string", mode: "sensitive" },
+      { field: "phoneNumber", type: "string", mode: "sensitive" },
+      { field: "status", type: "enum" }, // ✅ ENUM safe
+    ],
+    relationSearch: {
+      sku: {
+        relation: "orderItems",
+        field: "sku",
+        type: "string",
+        mode: "sensitive",
+      },
+    },
+    dateField: "createdAt",
+  });
 }
 
 export async function getOrderCount(params) {
-  try {
-    const { orderNo, sku, phoneNumber, status, startDate, endDate } = params;
-
-    const whereClause = {};
-    if (orderNo)
-      whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
-    if (status) whereClause.status = status;
-    if (startDate && endDate) {
-      whereClause.createdAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
-    }
-    if (sku) {
-      whereClause.orderItems = {
-        some: { sku: { contains: sku, mode: "insensitive" } },
-      };
-    }
-    if (phoneNumber) {
-      whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
-    }
-
-    const count = await prisma.order.count({
-      where: whereClause,
-    });
-
-    return { success: true, count };
-  } catch (error) {
-    console.error("Failed to get order count:", error);
-    return { success: false, error: error.message };
-  }
+  return getListCount({
+    prisma,
+    model: "order",
+    params,
+    searchableFields: [
+      { field: "orderNo", type: "string", mode: "sensitive" },
+      { field: "phoneNumber", type: "string", mode: "sensitive" },
+      { field: "status", type: "enum" },
+    ],
+    relationSearch: {
+      sku: {
+        relation: "orderItems",
+        field: "sku",
+        type: "string",
+        mode: "sensitive",
+      },
+    },
+    dateField: "createdAt",
+  });
 }
+
+// export async function getOrderCount(params) {
+//   try {
+//     const { orderNo, sku, phoneNumber, status, startDate, endDate } = params;
+
+//     const whereClause = {};
+//     if (orderNo)
+//       whereClause.orderNo = { contains: orderNo, mode: "insensitive" };
+//     if (status) whereClause.status = status;
+//     if (startDate && endDate) {
+//       whereClause.createdAt = {
+//         gte: new Date(startDate),
+//         lte: new Date(endDate),
+//       };
+//     }
+//     if (sku) {
+//       whereClause.orderItems = {
+//         some: { sku: { contains: sku, mode: "insensitive" } },
+//       };
+//     }
+//     if (phoneNumber) {
+//       whereClause.phoneNumber = { contains: phoneNumber, mode: "insensitive" };
+//     }
+
+//     const count = await prisma.order.count({
+//       where: whereClause,
+//     });
+
+//     return { success: true, count };
+//   } catch (error) {
+//     console.error("Failed to get order count:", error);
+//     return { success: false, error: error.message };
+//   }
+// }
 export async function getOrderByOrderNo(orderNo, phoneNumber) {
   try {
     const data = await prisma.order.findUnique({

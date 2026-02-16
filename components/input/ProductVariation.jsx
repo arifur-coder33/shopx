@@ -21,27 +21,27 @@ const loadingIconFallback = (className = "h-5 w-5") => (
 );
 const DynamicChevronDownIcon = dynamic(
   () => import("@heroicons/react/24/solid").then((mod) => mod.ChevronDownIcon),
-  { loading: () => loadingIconFallback("h-5 w-5") }
+  { loading: () => loadingIconFallback("h-5 w-5") },
 );
 const DynamicChevronUpIcon = dynamic(
   () => import("@heroicons/react/24/solid").then((mod) => mod.ChevronUpIcon),
-  { loading: () => loadingIconFallback("h-5 w-5") }
+  { loading: () => loadingIconFallback("h-5 w-5") },
 );
 const DynamicCheckCircleIcon = dynamic(
   () => import("@heroicons/react/24/solid").then((mod) => mod.CheckCircleIcon),
-  { loading: () => loadingIconFallback("h-5 w-5") }
+  { loading: () => loadingIconFallback("h-5 w-5") },
 );
 const DynamicTrashIcon = dynamic(
   () => import("@heroicons/react/24/solid").then((mod) => mod.TrashIcon),
-  { loading: () => loadingIconFallback("h-4 w-4") }
+  { loading: () => loadingIconFallback("h-4 w-4") },
 );
 const DynamicPhotoIcon = dynamic(
   () => import("@heroicons/react/24/solid").then((mod) => mod.PhotoIcon),
-  { loading: () => loadingIconFallback("h-6 w-6") }
+  { loading: () => loadingIconFallback("h-6 w-6") },
 ); // Adjusted size
 const DynamicXCircleIcon = dynamic(
   () => import("@heroicons/react/24/solid").then((mod) => mod.XCircleIcon),
-  { loading: () => loadingIconFallback("h-4 w-4") }
+  { loading: () => loadingIconFallback("h-4 w-4") },
 );
 // --- ---
 
@@ -49,14 +49,14 @@ const DynamicXCircleIcon = dynamic(
 const generateCombinations = (processedSelections) => {
   if (!processedSelections || processedSelections.length === 0) return [];
   const sortedProcessedSelections = [...processedSelections].sort(
-    ([varAObj], [varBObj]) => varAObj.name.localeCompare(varBObj.name)
+    ([varAObj], [varBObj]) => varAObj.name.localeCompare(varBObj.name),
   );
 
   return sortedProcessedSelections.reduce(
     (acc, [variationObj, valueObjects]) => {
       const sortedValueObjects = Array.isArray(valueObjects)
         ? [...valueObjects].sort((a, b) =>
-            String(a.value).localeCompare(String(b.value))
+            String(a.value).localeCompare(String(b.value)),
           )
         : [];
       if (acc.length === 0) {
@@ -72,7 +72,7 @@ const generateCombinations = (processedSelections) => {
       });
       return newAcc;
     },
-    []
+    [],
   );
 };
 // --- ---
@@ -84,24 +84,21 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
   initialCombinations = [],
   name = "productVariation",
 }) {
-  console.log("initialVariations", variationList);
-  console.log("initialHasVariations", initialCombinations);
   // --- ALL HOOKS AT THE TOP ---
   const derivedInitialEnabled = useMemo(
     () =>
       initialCombinations &&
       initialCombinations[0]?.combinations &&
       initialCombinations[0].combinations?.length > 0,
-    [initialCombinations]
+    [initialCombinations],
   );
-  console.log("derivedInitialEnabled", derivedInitialEnabled);
-  console.log("combinations", initialCombinations[0]?.combinations);
+
   const [hasVariationsEnabled, setHasVariationsEnabled] = useState(
-    derivedInitialEnabled
+    derivedInitialEnabled,
   );
-  console.log("hasVariationsEnabled", hasVariationsEnabled);
+
   const [isSectionExpanded, setIsSectionExpanded] = useState(
-    derivedInitialEnabled || false
+    derivedInitialEnabled || false,
   );
   const [expandedCategories, setExpandedCategories] = useState({});
   const [selectedValues, setSelectedValues] = useState({});
@@ -129,13 +126,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         c.variation &&
         c.variation.name &&
         c.value &&
-        c.value.value !== undefined
+        c.value.value !== undefined,
     );
     if (validComboItems.length !== combination.length) {
       return "";
     }
     const sortedCombo = [...validComboItems].sort((a, b) =>
-      a.variation.name.localeCompare(b.variation.name)
+      a.variation.name.localeCompare(b.variation.name),
     );
     return sortedCombo
       .map((c) => `${c.variation.name}:${c.value.value}`)
@@ -164,7 +161,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         dimensions: row.dimensions,
         qty: row.qty,
         image: row.image ? row.image.id : null,
-      }))
+      })),
     );
   }, [hasVariationsEnabled, rows]);
 
@@ -200,7 +197,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         ? initRow.combination
         : [];
       const validCombination = combinationArray.filter(
-        (c) => c?.variation?.name && c?.value?.value !== undefined
+        (c) => c?.variation?.name && c?.value?.value !== undefined,
       );
 
       const uiKey = generateUiKey(validCombination);
@@ -268,7 +265,15 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     if (!isSectionExpanded && tempInitialRows.length > 0)
       setIsSectionExpanded(true);
     setIsInitialized(true);
-  }, [initialCombinations, variationListMap, derivedInitialEnabled, generateUiKey, isInitialized, hasVariationsEnabled, isSectionExpanded]);
+  }, [
+    initialCombinations,
+    variationListMap,
+    derivedInitialEnabled,
+    generateUiKey,
+    isInitialized,
+    hasVariationsEnabled,
+    isSectionExpanded,
+  ]);
 
   // EFFECT: Clear state when variations are disabled
   useEffect(() => {
@@ -291,7 +296,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     }
 
     const hasAnyActualSelection = Object.values(selectedValues).some(
-      (arr) => arr && arr.length > 0
+      (arr) => arr && arr.length > 0,
     );
     if (!hasAnyActualSelection) {
       if (rows.length > 0) setRows([]);
@@ -305,7 +310,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         if (!variationItem?.variation || !Array.isArray(variationItem.values))
           return null;
         const valueMap = new Map(
-          variationItem.values.map((v) => [String(v.value), v])
+          variationItem.values.map((v) => [String(v.value), v]),
         );
         const selectedValueObjects = selectedValueStrings
           .map((s) => valueMap.get(s))
@@ -374,7 +379,14 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         return newRowFromUI;
       });
     });
-  }, [selectedValues, hasVariationsEnabled, isInitialized, variationListMap, generateUiKey, rows.length]);
+  }, [
+    selectedValues,
+    hasVariationsEnabled,
+    isInitialized,
+    variationListMap,
+    generateUiKey,
+    rows.length,
+  ]);
 
   // --- UI Handlers (useCallback) ---
   const handleToggleVariations = useCallback(
@@ -388,7 +400,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         setIsSectionExpanded(false);
       }
     },
-    [isInitialized]
+    [isInitialized],
   );
 
   const toggleSectionExpand = useCallback(() => {
@@ -446,7 +458,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
         return prevSelected;
       });
     },
-    [rows]
+    [rows],
   );
 
   const handleImageChange = useCallback((selectedImages, rowUiKey) => {
@@ -462,8 +474,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                 : null,
               imageUrl: imageFile?.url || null,
             }
-          : row
-      )
+          : row,
+      ),
     );
   }, []);
 
@@ -471,8 +483,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     const { value } = e.target;
     setRows((prevRows) =>
       prevRows.map((row) =>
-        row.uiKey === rowUiKey ? { ...row, [field]: value } : row
-      )
+        row.uiKey === rowUiKey ? { ...row, [field]: value } : row,
+      ),
     );
   }, []);
 
@@ -723,13 +735,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                             selectedValues[
                                               variationName
                                             ]?.includes(
-                                              String(valueItem.value)
+                                              String(valueItem.value),
                                             ) ?? false
                                           }
                                           onChange={() =>
                                             handleSelectValue(
                                               variationName,
-                                              String(valueItem.value)
+                                              String(valueItem.value),
                                             )
                                           }
                                           className="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
@@ -874,7 +886,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                     onImageSelect={(selectedImages) =>
                                       handleImageChange(
                                         selectedImages,
-                                        row.uiKey
+                                        row.uiKey,
                                       )
                                     }
                                     showLabel={false}
@@ -908,7 +920,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                       handleInputChange(
                                         e,
                                         row.uiKey,
-                                        "regularPrice"
+                                        "regularPrice",
                                       )
                                     }
                                     className=" px-2 py-1.5 w-16 border border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -926,7 +938,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                       handleInputChange(
                                         e,
                                         row.uiKey,
-                                        "discountPrice"
+                                        "discountPrice",
                                       )
                                     }
                                     className="px-2 py-1.5 border w-16 border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -970,7 +982,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                       handleInputChange(
                                         e,
                                         row.uiKey,
-                                        "dimensions"
+                                        "dimensions",
                                       )
                                     }
                                     className=" px-2 py-1.5 w-32 border border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -999,7 +1011,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                   isSectionExpanded &&
                   (Object.keys(selectedValues).length > 0 &&
                   Object.values(selectedValues).some(
-                    (arr) => arr && arr.length > 0
+                    (arr) => arr && arr.length > 0,
                   ) ? (
                     <motion.div
                       key="no-combos-placeholder"
