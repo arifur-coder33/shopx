@@ -29,9 +29,8 @@ export default async function middleware(req) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // if (token.role !== "SUPER_ADMIN" && token.role !== "ADMIN") {
-    if (token.role === "USER") {
-      url.pathname = "/user";
+    if (token.role !== "SUPER_ADMIN" && token.role !== "ADMIN") {
+      url.pathname = "/unauthorized";
       url.search = "";
       return NextResponse.redirect(url);
     }

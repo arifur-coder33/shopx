@@ -30,8 +30,14 @@ export default function LoginForm() {
       });
       console.log(result);
 
-      if (result?.error === null) {
-        router.push(callbackUrl);
+      if (result?.error === undefined) {
+        if (callbackUrl) {
+          console.log("Redirecting to:", callbackUrl);
+          router.push(callbackUrl);
+        } else {
+          router.push("callback /", callbackUrl);
+          router.push("/");
+        }
       } else if (result?.error === "CredentialsSignin") {
         console.log(result.error);
         setError("Invalid email or password. Please try again.");

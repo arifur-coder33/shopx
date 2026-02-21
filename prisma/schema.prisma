@@ -19,9 +19,10 @@ model User {
   sessions      Session[]                   
   roleId String @db.ObjectId
   role   Role   @relation(fields: [roleId], references: [id])
+   tokenVersion  Int      @default(0)
   orders       Order[]                     // Relationship to track user orders
-  createdAt    DateTime    @default(now()) // Timestamp for account creation
-  updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
+  createdAt    DateTime?    @default(now()) // Timestamp for account creation
+  updatedAt    DateTime   @updatedAt      // Auto-updated timestamp
 }
 model Role {
   id   String @id @default(auto()) @map("_id") @db.ObjectId

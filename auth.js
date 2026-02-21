@@ -24,6 +24,7 @@ export const {
       },
 
       async authorize(credentials) {
+        console.log("Attempting login with credentials:", credentials);
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -35,6 +36,7 @@ export const {
             role: true,
           },
         });
+        console.log("User found for authentication:", user);
 
         if (!user || !user.password) return null;
 
@@ -51,6 +53,7 @@ export const {
           email: user.email,
           role: user.role?.name ?? null,
           roleId: user.roleId ?? null,
+          tokenVersion: user.tokenVersion,
         };
       },
     }),
@@ -58,16 +61,19 @@ export const {
 
   callbacks: {
     /**
-     * 🔑 JWT = Stateless Session (Doc aligned)
-     * Runs on sign-in & every request
+     * 🔑 JWT Callback
      */
     async jwt({ token, user }) {
+      /**
+       * 1️⃣ Login time
+       */
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.roleId = user.roleId;
+        token.tokenVersion = user.tokenVersion;
 
-        // 🛡 Authorization: attach permissions
+        // 🔐 Attach permissions ONLY at login
         if (user.role === "SUPER_ADMIN") {
           token.permissions = ["*"];
         } else if (user.roleId) {
@@ -87,11 +93,38 @@ export const {
         }
       }
 
+      /**
+       * 2️⃣ Every request → Security validation only
+       */
+      if (token?.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: {
+            tokenVersion: true,
+            roleId: true,
+          },
+        });
+
+        if (!dbUser) return {};
+
+        // 🔥 Security change detected
+        if (dbUser.tokenVersion !== token.tokenVersion) {
+          token.tokenVersion = dbUser.tokenVersion;
+          const permissions = await prisma.rolePermission.findMany({
+            where: { roleId: dbUser.roleId, allowed: true },
+            include: { resource: true, action: true },
+          });
+          token.permissions = permissions.map(
+            (p) => `${p.resource.key}:${p.action.key}`,
+          );
+        }
+      }
+
       return token;
     },
 
     /**
-     * 📦 Session → Client-safe DTO
+     * 📦 Session Callback (Client-safe data)
      */
     async session({ session, token }) {
       if (session.user && token?.id) {

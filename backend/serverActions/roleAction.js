@@ -145,6 +145,10 @@ export async function saveRolePermissions(roleId, matrix) {
   }
 
   await prisma.$transaction(operations);
+  await prisma.user.updateMany({
+    where: { roleId },
+    data: { tokenVersion: { increment: 1 } },
+  });
 
   return { success: true };
 }
@@ -160,7 +164,10 @@ export async function updateUserRole(selectedItem, itemId) {
 
     const data = await prisma.user.update({
       where: { id: userId },
-      data: { role: { connect: { id: roleId } } },
+      data: {
+        role: { connect: { id: roleId } },
+        tokenVersion: { increment: 1 },
+      },
     });
 
     revalidatePath("/admin/users");
