@@ -14,14 +14,14 @@ export default async function middleware(req) {
 
   const isAuth = !!token;
 
-  // 🚫 block login page for logged-in user
+  // 🚫 Block login page for logged-in user
   if (isAuth && url.pathname === "/login") {
     url.pathname = "/";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  // 🔒 admin routes
+  // 🔒 Admin Route → USER cannot access
   if (url.pathname.startsWith("/admin")) {
     if (!isAuth) {
       const loginUrl = new URL("/login", req.url);
@@ -29,18 +29,23 @@ export default async function middleware(req) {
       return NextResponse.redirect(loginUrl);
     }
 
-    if (token.role !== "SUPER_ADMIN" && token.role !== "ADMIN") {
-      url.pathname = "/unauthorized";
-      url.search = "";
-      return NextResponse.redirect(url);
+    // ❌ Only USER blocked
+    if (!token?.role || token.role === "USER") {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
   }
+  // 🔒 My Account Route → Only USER allowed
+  if (url.pathname.startsWith("/my-account")) {
+    if (!isAuth) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", url.pathname);
+      return NextResponse.redirect(loginUrl);
+    }
 
-  // 🔒 dashboard
-  if (url.pathname.startsWith("/dashboard") && !isAuth) {
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("callbackUrl", url.pathname);
-    return NextResponse.redirect(loginUrl);
+    // ❌ Non-USER blocked
+    if (!token?.role || token.role !== "USER") {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    }
   }
 
   return NextResponse.next();

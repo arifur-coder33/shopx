@@ -4,7 +4,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "./auth.config";
 import prisma from "./lib/prisma";
-
+const permissionCache = new Map();
 export const {
   handlers: { GET, POST },
   auth,
@@ -60,72 +60,75 @@ export const {
   ],
 
   callbacks: {
-    /**
-     * 🔑 JWT Callback
-     */
     async jwt({ token, user }) {
-      /**
-       * 1️⃣ Login time
-       */
+      // 🔹 Login: attach user + permissions
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.roleId = user.roleId;
         token.tokenVersion = user.tokenVersion;
 
-        // 🔐 Attach permissions ONLY at login
+        // Fetch permissions, use cache if available
         if (user.role === "SUPER_ADMIN") {
           token.permissions = ["*"];
         } else if (user.roleId) {
-          const permissions = await prisma.rolePermission.findMany({
-            where: { roleId: user.roleId, allowed: true },
-            include: {
-              resource: true,
-              action: true,
-            },
-          });
-
-          token.permissions = permissions.map(
-            (p) => `${p.resource.key}:${p.action.key}`,
-          );
+          let permissions = permissionCache.get(user.roleId);
+          if (!permissions) {
+            const perms = await prisma.rolePermission.findMany({
+              where: { roleId: user.roleId, allowed: true },
+              include: { resource: true, action: true },
+            });
+            permissions = perms.map((p) => `${p.resource.key}:${p.action.key}`);
+            permissionCache.set(user.roleId, permissions);
+          }
+          token.permissions = permissions;
         } else {
           token.permissions = [];
         }
       }
 
-      /**
-       * 2️⃣ Every request → Security validation only
-       */
+      // 🔹 Every request: check tokenVersion
       if (token?.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id },
-          select: {
-            tokenVersion: true,
-            roleId: true,
-          },
+          select: { tokenVersion: true, roleId: true },
         });
 
-        if (!dbUser) return {};
+        if (!dbUser) return {}; // user deleted → force logout
 
-        // 🔥 Security change detected
         if (dbUser.tokenVersion !== token.tokenVersion) {
-          token.tokenVersion = dbUser.tokenVersion;
-          const permissions = await prisma.rolePermission.findMany({
-            where: { roleId: dbUser.roleId, allowed: true },
-            include: { resource: true, action: true },
+          // 🔥 Fetch full fresh user
+          const freshUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            include: { role: true },
           });
-          token.permissions = permissions.map(
-            (p) => `${p.resource.key}:${p.action.key}`,
-          );
+
+          if (!freshUser) return {};
+
+          token.tokenVersion = freshUser.tokenVersion;
+          token.role = freshUser.role?.name ?? null;
+          token.roleId = freshUser.roleId;
+
+          if (freshUser.role?.name === "SUPER_ADMIN") {
+            token.permissions = ["*"];
+          } else if (freshUser.roleId) {
+            const perms = await prisma.rolePermission.findMany({
+              where: { roleId: freshUser.roleId, allowed: true },
+              include: { resource: true, action: true },
+            });
+
+            token.permissions = perms.map(
+              (p) => `${p.resource.key}:${p.action.key}`,
+            );
+          } else {
+            token.permissions = [];
+          }
         }
       }
 
       return token;
     },
 
-    /**
-     * 📦 Session Callback (Client-safe data)
-     */
     async session({ session, token }) {
       if (session.user && token?.id) {
         session.user.id = token.id;
@@ -133,7 +136,6 @@ export const {
         session.user.roleId = token.roleId;
         session.user.permissions = token.permissions ?? [];
       }
-
       return session;
     },
   },
