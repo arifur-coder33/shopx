@@ -1,5 +1,8 @@
-export const revalidate = 60;
-export const dynamic = "force-static";
+// export const revalidate = 60;
+// export const dynamic = "force-static";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
+
+import { auth } from "@/auth";
 import {
   deleteProductById,
   getAllProduct,
@@ -58,10 +61,16 @@ export default async function ProductListPage() {
 
   if (!success) return `Something went wrong: ${error}`;
 
+  const session = await auth();
+
+  if (!hasUIPermission(session.user.permissions, "product", "view")) {
+    return <div>Unauthorized</div>;
+  }
   return (
     <div className="p-4">
       <DynamicTable
         // Data and Actions
+        resource={"product"}
         initialData={data}
         initialNextCursor={nextCursor}
         fetchAction={getAllProduct}

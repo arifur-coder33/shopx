@@ -107,11 +107,18 @@
 //     </div>
 //   );
 // }
-export const dynamic = "force-static";
+// export const dynamic = "force-static";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 
+import { auth } from "@/auth";
 import AdminListPage from "../_components/AdminListPage";
 import { orderConfig } from "./config";
 
-export default function OrderListPage() {
+export default async function OrderListPage() {
+  const session = await auth();
+
+  if (!hasUIPermission(session.user.permissions, "order", "view")) {
+    return <div>Unauthorized</div>;
+  }
   return <AdminListPage {...orderConfig} />;
 }

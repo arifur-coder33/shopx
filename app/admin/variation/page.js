@@ -5,9 +5,17 @@ import {
   getVariationsCount,
   updateVariationAction,
 } from "@/backend/serverActions/variantionAction";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
+
+import { auth } from "@/auth";
 import DynamicTable from "@/components/common/DynamicTables/Index";
 
 export default async function VariationsPage() {
+  const session = await auth();
+
+  if (!hasUIPermission(session.user.permissions, "variation", "view")) {
+    return <div>Unauthorized</div>;
+  }
   const tableProperties = [
     { label: "Name", field: "name", type: "text", sort: true },
   ];
@@ -26,6 +34,7 @@ export default async function VariationsPage() {
     <div className="p-4">
       <DynamicTable
         // Data and Actions
+        resource={"variation"}
         tableName={"Variation List"}
         initialData={data}
         initialNextCursor={nextCursor}

@@ -1,3 +1,4 @@
+import { auth } from "@/auth";
 import { getAllMedia } from "@/backend/serverActions/fileUploadAction";
 import DeleteItem from "@/components/common/DeleteItem";
 import DynamicForm from "@/components/common/DynamicForm";
@@ -5,9 +6,16 @@ import Imagecustom from "@/components/images/ImageCustom";
 import FileInput from "@/components/input/FileInput";
 import FileUploader from "@/components/input/FileUploader";
 import ModalButton from "@/components/modal/ModalButton";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { UploadCloudIcon, X } from "lucide-react";
 import { Suspense } from "react";
 export default async function MediaPage() {
+  const session = await auth();
+
+  if (!hasUIPermission(session.user.permissions, "media", "view")) {
+    return <div>Unauthorized</div>;
+  }
+
   const { data } = await getAllMedia();
   return (
     <div>

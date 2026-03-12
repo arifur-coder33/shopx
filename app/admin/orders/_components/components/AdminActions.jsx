@@ -1,6 +1,7 @@
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { toast } from "react-toastify";
-
 export default function AdminActions({
   status,
   setStatus,
@@ -16,13 +17,14 @@ export default function AdminActions({
   orderId,
 }) {
   const [isLoading, setIsLoading] = useState(false);
+  const { data: session } = useSession();
+  const permissions = session?.user?.permissions;
   const steps = ["PENDING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"];
   const handleSaveNote = async () => {
     if (orderId && (adminDiscount || adminNote)) {
       setIsLoading(true);
-      const { updateOrderExtraDiscountAction } = await import(
-        "../../../../../backend/serverActions/orderActions"
-      );
+      const { updateOrderExtraDiscountAction } =
+        await import("../../../../../backend/serverActions/orderActions");
       const response = await updateOrderExtraDiscountAction({
         orderId: orderId,
         adminNote: adminNote,
@@ -113,20 +115,24 @@ export default function AdminActions({
             Admin Note
           </label>
           <textarea
-            disabled={isLoading}
+            disabled={
+              isLoading || !hasUIPermission(permissions, "order", "update")
+            }
             defaultValue={adminNote}
             onChange={(e) => setAdminNote(e.target.value)}
             className="w-full mt-1 p-2 border border-gray-300 rounded-lg text-sm h-20 resize-none"
             placeholder="Internal notes..."
           ></textarea>
         </div>
-        <button
-          disabled={isLoading}
-          onClick={handleSaveNote}
-          className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition"
-        >
-          {isLoading ? "Saving..." : "Save Note & Discount"}
-        </button>
+        {hasUIPermission(permissions, "order", "update") && (
+          <button
+            disabled={isLoading}
+            onClick={handleSaveNote}
+            className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition"
+          >
+            {isLoading ? "Saving..." : "Save Note & Discount"}
+          </button>
+        )}
       </div>
     </div>
   );

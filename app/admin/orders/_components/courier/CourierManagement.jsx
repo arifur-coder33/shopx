@@ -4,12 +4,15 @@ import {
   createCourierDeliveryAction,
 } from "@/backend/serverActions/courierAction";
 import { confirmFromUser } from "@/components/modal/confrim/confirm";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { Undo2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import CourierForm from "./CourierForm";
 import CourierSelector from "./CourierSelector";
 import CourierStatus from "./CourierStatus";
+
+import { useSession } from "next-auth/react";
 export default function CourierManagement({ order, status, setStatus }) {
   const [view, setView] = useState(order?.shipping ? "status" : "list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
@@ -18,7 +21,8 @@ export default function CourierManagement({ order, status, setStatus }) {
   const [courierDetails, setCourierDetails] = useState(order?.shipping || null);
 
   const [loading, setLoading] = useState(false);
-
+  const { data: session } = useSession();
+  const permissions = session?.user?.permissions;
   const [data, setData] = useState({
     name: order?.customerName || "",
     phone: order?.phoneNumber.slice(-11) || "",
@@ -83,7 +87,7 @@ export default function CourierManagement({ order, status, setStatus }) {
     setView("form");
     const response = await cancelCourierDeliveryAction(
       order?.shipping?.id || courierDetails?.id,
-      order?.id || courierDetails?.orderId
+      order?.id || courierDetails?.orderId,
     );
     if (response.success) {
       toast.success("Courier delivery canceled successfully");
@@ -105,7 +109,7 @@ export default function CourierManagement({ order, status, setStatus }) {
         <h3 className="font-bold text-slate-800 text-sm tracking-tight">
           Delivery Integration
         </h3>
-        {view === "form" && (
+        {view === "form" && hasUIPermission(permissions, "order", "update") && (
           <button
             onClick={() => setView("list")}
             className="text-xs font-bold text-red-600 uppercase"
@@ -123,21 +127,24 @@ export default function CourierManagement({ order, status, setStatus }) {
             details={courierDetails}
             onCancel={handleCancle}
           />
-        ) : view === "list" ? (
-          <CourierSelector
-            onSelect={(c) => {
-              setSelectedCourier(c);
-              setView("form");
-            }}
-            activeCourierId={courierDetails?.courierId}
-          />
         ) : (
-          <CourierForm
-            courierName={selectedCourier?.name}
-            data={data}
-            onSubmit={handleCreate}
-            loading={loading}
-          />
+          hasUIPermission(permissions, "order", "update") &&
+          (view === "list" ? (
+            <CourierSelector
+              onSelect={(c) => {
+                setSelectedCourier(c);
+                setView("form");
+              }}
+              activeCourierId={courierDetails?.courierId}
+            />
+          ) : (
+            <CourierForm
+              courierName={selectedCourier?.name}
+              data={data}
+              onSubmit={handleCreate}
+              loading={loading}
+            />
+          ))
         )}
       </div>
     </div>

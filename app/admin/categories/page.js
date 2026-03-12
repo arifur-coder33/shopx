@@ -1,6 +1,7 @@
 // app/admin/order/page.js
-export const revalidate = 60;
-export const dynamic = "force-static";
+// export const revalidate = 60;
+// export const dynamic = "force-static";
+import { auth } from "@/auth";
 import {
   deleteCategoryAction,
   getAllCategoriesList,
@@ -8,8 +9,14 @@ import {
   updateCategoryAction,
 } from "@/backend/serverActions/catagoryActions";
 import DynamicTable from "@/components/common/DynamicTables/Index";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 
 export default async function CategoriesPage() {
+  const session = await auth();
+
+  if (!hasUIPermission(session.user.permissions, "category", "view")) {
+    return <div>Unauthorized</div>;
+  }
   const tableProperties = [
     { label: "Thumbnail", field: "thumbnail", type: "image", alt: "name" },
     {
@@ -44,6 +51,7 @@ export default async function CategoriesPage() {
       <DynamicTable
         // Data and Actions
         tableName={"Categories List"}
+        resource={"category"}
         initialData={data}
         initialNextCursor={nextCursor}
         fetchAction={getAllCategoriesList}

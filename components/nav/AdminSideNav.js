@@ -2,12 +2,12 @@
 
 "use client";
 
+import Logout from "@/components/auth/Logout";
 import { adminMenuItems } from "@/lib/adminMenuItems";
+import { filterMenuByPermission } from "@/lib/filterMenuByPermission";
 import { User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-
-import Logout from "@/components/auth/Logout";
 import ModernNavItem from "./ModernNavItem";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
@@ -19,7 +19,9 @@ export default function AdminSideNav({
   isCollapsed,
 }) {
   const { data: session } = useSession();
+  const permissions = session?.user?.permissions || [];
 
+  const filteredMenu = filterMenuByPermission(adminMenuItems, permissions);
   const handleLinkClick = () => {
     if (isMobile) {
       setIsOpen(false);
@@ -32,7 +34,7 @@ export default function AdminSideNav({
       {/* Scrollable main navigation area */}
       <div className="flex-1 overflow-y-auto">
         <nav className="flex flex-col gap-1 px-2 pt-4">
-          {adminMenuItems.map((item, index) => (
+          {filteredMenu.map((item, index) => (
             <ModernNavItem
               key={index}
               item={item}
@@ -52,7 +54,7 @@ export default function AdminSideNav({
             title={isCollapsed ? session?.user?.name || "Profile" : ""}
             className={cn(
               "flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200", // 1. Removed gap-3
-              "text-slate-400 hover:bg-slate-700 hover:text-white"
+              "text-slate-400 hover:bg-slate-700 hover:text-white",
             )}
             style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
             onClick={onLinkClick}
@@ -61,7 +63,7 @@ export default function AdminSideNav({
             <span
               className={cn(
                 "transition-opacity",
-                isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3" // 2. Added conditional margin
+                isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3", // 2. Added conditional margin
               )}
             >
               {!isCollapsed && (session?.user?.name || "Profile")}
@@ -73,7 +75,7 @@ export default function AdminSideNav({
             className={cn(
               // 1. Removed gap-3 from the wrapper
               "flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200 w-full",
-              "text-slate-400 hover:bg-red-500/80 hover:text-white"
+              "text-slate-400 hover:bg-red-500/80 hover:text-white",
             )}
             style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
           >
@@ -83,7 +85,7 @@ export default function AdminSideNav({
               className={cn(
                 "transition-opacity pointer-events-none",
                 // 2. Added conditional margin for spacing only when expanded
-                isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3"
+                isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3",
               )}
             >
               {!isCollapsed && "Logout"}
@@ -107,7 +109,7 @@ export default function AdminSideNav({
         <aside
           className={cn(
             "fixed top-0 left-0 h-full w-64 bg-slate-900 dark:bg-slate-950 text-slate-200 z-50 transition-transform duration-300 ease-in-out",
-            isOpen ? "translate-x-0" : "-translate-x-full"
+            isOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
           <NavContent isCollapsed={false} onLinkClick={handleLinkClick} />
@@ -121,7 +123,7 @@ export default function AdminSideNav({
     <aside
       className={cn(
         "hidden sm:flex flex-col h-[calc(100vh-70px)] bg-slate-900 dark:bg-slate-950 text-slate-200 fixed transition-all duration-300 ease-in-out z-10",
-        isCollapsed ? "w-20" : "w-64"
+        isCollapsed ? "w-20" : "w-64",
       )}
     >
       <NavContent isCollapsed={isCollapsed} onLinkClick={() => {}} />

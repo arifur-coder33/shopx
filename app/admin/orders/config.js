@@ -7,6 +7,8 @@ import {
 export const orderConfig = {
   title: "Order List",
 
+  resource: "order",
+
   tableProperties: [
     {
       label: "",

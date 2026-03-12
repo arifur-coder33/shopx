@@ -11,9 +11,15 @@
 //   return <UserListTable data={data} />;
 // }
 
+import { auth } from "@/auth";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import AdminListPage from "../_components/AdminListPage";
 import { UserConfig } from "./config";
+export default async function UserListPage() {
+  const session = await auth();
 
-export default function UserListPage() {
+  if (!hasUIPermission(session.user.permissions, "user", "view")) {
+    return <div>Unauthorized</div>;
+  }
   return <AdminListPage {...UserConfig} />;
 }

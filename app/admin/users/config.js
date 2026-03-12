@@ -10,7 +10,7 @@ import {
 
 export const UserConfig = {
   title: "User List",
-
+  resource: "user",
   tableProperties: [
     // {
     //   label: "",

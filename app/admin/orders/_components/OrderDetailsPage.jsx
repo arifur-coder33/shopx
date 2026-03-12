@@ -1,5 +1,6 @@
 "use client";
 import InvoiceButton from "@/components/PDF/getInvoice";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { useState } from "react";
 import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
@@ -12,8 +13,12 @@ import OrderNote from "./components/OrderNote";
 import OrderSummary from "./components/OrderSummary";
 import OrderTimeline from "./components/OrderTimeline";
 import CourierManagement from "./courier/CourierManagement";
+
+import { useSession } from "next-auth/react";
 export default function OrderDetailsPage({ order }) {
   // Global State for the order
+  const { data: session } = useSession();
+  const permissions = session?.user?.permissions;
   const [status, setStatus] = useState(order.status || "DELIVERED");
   const [courier, setCourier] = useState(order.courier || "");
   const [adminDiscount, setAdminDiscount] = useState(order.adminDiscount || 0);
@@ -105,15 +110,16 @@ export default function OrderDetailsPage({ order }) {
           </div>
         </div>
       </div>
-
-      <OrderFooter
-        status={status}
-        setStatus={setStatus}
-        courier={courier}
-        setCourier={setCourier}
-        onCreateCourier={handleCourierUpdate}
-        orderId={order.id}
-      />
+      {hasUIPermission(permissions, "order", "update") && (
+        <OrderFooter
+          status={status}
+          setStatus={setStatus}
+          courier={courier}
+          setCourier={setCourier}
+          onCreateCourier={handleCourierUpdate}
+          orderId={order.id}
+        />
+      )}
     </div>
   );
 }

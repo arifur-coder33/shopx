@@ -4,7 +4,9 @@
 
 import LazyModalButton from "@/components/modal/LazyModalButton";
 import { useDebounce } from "@/hooks/useDebounce";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { Inbox } from "lucide-react";
+import { useSession } from "next-auth/react";
 import {
   useCallback,
   useEffect,
@@ -17,7 +19,6 @@ import CursorPagination from "./CursorPagination";
 import TableBody from "./TableBody";
 import TableSkeleton from "./TableSkeleton";
 import TableToolbar from "./TableToolbar";
-
 // OPTIMIZATION: Extracted parameter building logic to a pure helper function.
 const buildRequestParams = (params) => {
   const newParams = { ...params };
@@ -89,12 +90,14 @@ export default function DynamicTableClient({
   fetchAction,
   initialItemsPerPage = 10,
   itemsPerPageOptions = [10, 25, 50],
-
+  resource,
   tableName,
 
   getDataCount = () => Promise.resolve(null),
   actions = {},
 }) {
+  const { data: session } = useSession();
+  const permissions = session?.user?.permissions;
   const [data, setData] = useState(initialData);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [currentCursor, setCurrentCursor] = useState(null);
@@ -107,12 +110,12 @@ export default function DynamicTableClient({
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [searchField, setSearchField] = useState(
-    filterSearchProperties[0]?.field || ""
+    filterSearchProperties[0]?.field || "",
   );
 
   // --- MODIFIED STATE INITIALIZATION ---
   const [activeFilters, setActiveFilters] = useState(() =>
-    initializeFilters(filterTagProperties)
+    initializeFilters(filterTagProperties),
   );
 
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -130,7 +133,7 @@ export default function DynamicTableClient({
       searchTerm: debouncedSearchTerm,
       searchField,
     }),
-    [activeFilters, debouncedSearchTerm, searchField]
+    [activeFilters, debouncedSearchTerm, searchField],
   );
 
   const fetchData = useCallback(
@@ -158,7 +161,7 @@ export default function DynamicTableClient({
         }
       });
     },
-    [itemsPerPage, sortConfig, tableProperties, fetchAction]
+    [itemsPerPage, sortConfig, tableProperties, fetchAction],
   );
 
   useEffect(() => {
@@ -166,7 +169,7 @@ export default function DynamicTableClient({
       isInitialMount.current = false;
       // Fetch initial total count based on default filters
       const initialCountParams = buildRequestParams(
-        initializeFilters(filterTagProperties)
+        initializeFilters(filterTagProperties),
       );
 
       getDataCount(initialCountParams).then((res) => {
@@ -240,12 +243,13 @@ export default function DynamicTableClient({
         <h1 className="text-xl sm:text-xl font-semibold   dark:text-gray-200 ">
           {tableName}
         </h1>
-        {actions?.itemAddFormKey && (
-          <LazyModalButton
-            componentKey={actions?.itemAddFormKey}
-            actionType={"add"}
-          />
-        )}
+        {actions?.itemAddFormKey &&
+          hasUIPermission(permissions, resource, "create") && (
+            <LazyModalButton
+              componentKey={actions?.itemAddFormKey}
+              actionType={"add"}
+            />
+          )}
       </div>
       <div className="px-2 sm:px-4">
         <TableToolbar
@@ -276,6 +280,7 @@ export default function DynamicTableClient({
                 expandedRows={expandedRows}
                 setExpandedRows={setExpandedRows}
                 actions={actions}
+                resource={resource}
               />
             </div>
             <CursorPagination

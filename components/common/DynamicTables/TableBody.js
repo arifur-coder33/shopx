@@ -110,6 +110,7 @@ export default function TableBody({
   sortConfig,
   onSort,
   actions,
+  resource,
 }) {
   const {
     getItemDataAction,
@@ -203,6 +204,7 @@ export default function TableBody({
                         itemUpdateFormKey={itemUpdateFormKey}
                         updateAction={updateAction}
                         deleteAction={deleteAction}
+                        resource={resource}
                       />
                     </tr>
                     {/* --- EXPANDED ROW WITH NESTED TABLE --- */}

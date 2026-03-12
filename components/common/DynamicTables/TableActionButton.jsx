@@ -1,5 +1,5 @@
 import LazyModalButton from "@/components/modal/LazyModalButton";
-import { can } from "@/lib/hasUIPermission.js";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { Edit, Eye, Trash, View } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -11,6 +11,7 @@ export default function TableActionButton({
   itemUpdateFormKey,
   updateAction,
   deleteAction,
+  resource,
 }) {
   const { data: session } = useSession();
   const permissions = session?.user?.permissions;
@@ -28,15 +29,17 @@ export default function TableActionButton({
           {/* Reduced icon size */}
         </Link>
       )}
-      <LazyModalButton
-        button={
-          <View className="w-4 h-4 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
-        }
-        componentKey={quickViewComponentKey}
-        itemId={item.id}
-      />
+      {quickViewComponentKey && (
+        <LazyModalButton
+          button={
+            <View className="w-4 h-4 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
+          }
+          componentKey={quickViewComponentKey}
+          itemId={item.id}
+        />
+      )}
 
-      {isEditabel && (
+      {isEditabel && hasUIPermission(permissions, resource, "update") && (
         <LazyModalButton
           button={
             <Edit className="w-4 h-4 text-blue-500 hover:text-blue-600 hover:scale-110 transition-transform" />
@@ -48,7 +51,7 @@ export default function TableActionButton({
           componentKey={itemUpdateFormKey}
         />
       )}
-      {can(permissions, "order", "delete") && (
+      {hasUIPermission(permissions, resource, "delete") && (
         <DeleteItem deleteItem={deleteAction} id={item.id}>
           <Trash className="w-4 h-4 text-red-500 hover:text-red-600 hover:scale-110 transition-transform" />
         </DeleteItem>
