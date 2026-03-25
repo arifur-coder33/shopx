@@ -58,6 +58,8 @@ export default function CourierManagement({ order, status, setStatus }) {
       setSuccess(true);
       setStatus("READY_TO_SHIP");
     } else {
+      toast.error(response.message || "Failed to create courier order");
+      setLoading(false);
       setError(response.message);
       setSuccess(null);
     }

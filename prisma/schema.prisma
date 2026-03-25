@@ -242,6 +242,9 @@ model Order {
   note            String?
   status         OrderStatus @default(PENDING) // Order status enumeration
   shipping           Shipping?    
+  timeline       OrderTimeline[]
+  refunds   Refund[]
+  ledgers   Ledger[]
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }
@@ -288,7 +291,55 @@ model Shipping {
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
 
 }
+model OrderTimeline {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
 
+orderId         String    @db.ObjectId 
+  order           Order       @relation(fields: [orderId], references: [id])
+
+  orderNo   String
+
+  status    OrderStatus
+
+  title     String
+  message   String?
+
+  location  String?     // warehouse / city / courier hub
+  createdBy String?     // admin / system / courier
+
+  createdAt DateTime @default(now())
+}
+model Refund {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId     String   @db.ObjectId
+  order       Order    @relation(fields: [orderId], references: [id])
+
+  amount      Float
+  method      String   // bkash | nagad | bank | cash
+  trxId       String?  // transaction id
+  note        String?
+
+  status      String   @default("PENDING") // PENDING | COMPLETED | FAILED
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Ledger {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId     String   @db.ObjectId
+  order       Order    @relation(fields: [orderId], references: [id])
+
+  type        String   // CREDIT | DEBIT
+  category    String   // ORDER_PAYMENT | REFUND | DELIVERY | COST
+
+  amount      Float
+  method      String?  // bkash | cash | bank
+
+  note        String?
+
+  createdAt   DateTime @default(now())
+}
 model CourierPickupPoint {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   name   String
@@ -346,9 +397,15 @@ enum OrderStatus {
   PROCESSING
   READY_TO_SHIP
   SHIPPED
+  DELIVERY_FAILED
+  FAILED_RETURNING
+  RETURN_RECEIVED
   DELIVERED
   CANCELLED
+  RETURNING
   RETURNED
+  REFUNDING
+  REFUNDED
 }
 
 enum ProductStatus {

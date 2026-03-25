@@ -15,6 +15,7 @@ import OrderTimeline from "./components/OrderTimeline";
 import CourierManagement from "./courier/CourierManagement";
 
 import { useSession } from "next-auth/react";
+import OrderTimelineNew from "./components/OrderTimeLineNew";
 export default function OrderDetailsPage({ order }) {
   // Global State for the order
   const { data: session } = useSession();
@@ -42,6 +43,32 @@ export default function OrderDetailsPage({ order }) {
     downloadInvoice(order);
   };
 
+  const timeline = [
+    {
+      status: "PENDING",
+      title: "Order Placed",
+      message: "Your order has been received",
+      date: "13 Mar 2026 • 10:32 AM",
+    },
+    {
+      status: "PROCESSING",
+      title: "Processing Order",
+      message: "Seller is preparing your item",
+      date: "13 Mar 2026 • 11:00 AM",
+    },
+    {
+      status: "SHIPPED",
+      title: "Shipped",
+      message: "Your package left the warehouse",
+      date: "14 Mar 2026 • 09:20 AM",
+    },
+    {
+      status: "DELIVERED",
+      title: "Delivered",
+      message: "Package delivered successfully",
+      date: "15 Mar 2026 • 03:10 PM",
+    },
+  ];
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans text-slate-800">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -54,6 +81,7 @@ export default function OrderDetailsPage({ order }) {
 
         {/* Timeline Section */}
         <OrderTimeline status={status} />
+        <OrderTimelineNew orderId={order.id} />
 
         {/* Main Grid Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

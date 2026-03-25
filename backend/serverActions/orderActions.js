@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
+import { addOrderTimeline } from "./orderTimelineActin";
 
 export async function createOrder(formData) {
   try {
@@ -114,7 +115,14 @@ export async function createOrder(formData) {
           },
         });
       }
-
+      await addOrderTimeline({
+        orderId: order.id,
+        orderNo: newOrderNumber.toString(),
+        status: "PENDING",
+        title: "Order Created",
+        message: "Your order has been created and is pending confirmation.",
+        createdBy: "user",
+      });
       return order;
     });
 
@@ -351,29 +359,72 @@ export async function deleteOrderById(orderId) {
 
 export async function updateOrderStatusAction(orderId, status, note) {
   try {
-    const result = await prisma.order.update({
+    // 🔎 get order first (for orderNo + old status)
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    // ❌ duplicate same status prevent
+    if (order.status === status) {
+      return {
+        success: true,
+        message: "Status already updated",
+      };
+    }
+
+    // ✅ update order status
+    await prisma.order.update({
       where: { id: orderId },
       data: {
-        status: status,
+        status,
       },
     });
 
-    revalidatePath("/admin/order");
+    // 🧠 dynamic title বানানো
+    const titleMap = {
+      PENDING: "Order Placed",
+      PROCESSING: "Processing Order",
+      READY_TO_SHIP: "Ready to Ship",
+      SHIPPED: "Order Shipped",
+      DELIVERED: "Order Delivered",
+      CANCELLED: "Order Cancelled",
+      RETURNING: "Returning",
+      RETURNED: "Returned",
+      REFUNDING: "Refund Processing",
+      REFUNDED: "Refund Completed",
+    };
+
+    // ✅ timeline add
+    await addOrderTimeline({
+      orderId: order.id,
+      orderNo: order.orderNo,
+      status,
+      title: titleMap[status] || "Status Updated",
+      message: note || `Order status changed to ${status}`,
+      createdBy: "admin",
+    });
+
+    // 🔄 revalidate
+    revalidatePath("/admin/orders");
     revalidateTag("order");
+
     return {
       success: true,
       message: "Order Status Updated",
     };
   } catch (error) {
+    console.error(error);
+
     return {
       success: false,
       message: error.message || "Failed to Update order",
     };
-  } finally {
-    await prisma.$disconnect();
   }
 }
-
 export async function updateOrderExtraDiscountAction({
   orderId,
   adminNote,
@@ -407,8 +458,6 @@ export async function updateOrderExtraDiscountAction({
       success: false,
       message: error.message || "Failed to Update order",
     };
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -436,9 +485,9 @@ export async function cancelOrderById({
         throw new Error("Order not found");
       }
 
-      // ❗ Already canceled হলে আবার stock add করবে না
-      if (order.status === "CANCELED" || order.status === "RETURNED") {
-        throw new Error("Order already canceled/returned");
+      // ❗ Already CANCELLED হলে আবার stock add করবে না
+      if (order.status === "CANCELLED" || order.status === "RETURNED") {
+        throw new Error("Order already CANCELLED/returned");
       }
 
       // 2️⃣ Stock restore
@@ -459,8 +508,18 @@ export async function cancelOrderById({
         data: {
           cancelReason: cancelReason || "",
           cancelReasonType: cancelReasonType || "",
-          status: cancelReasonType === "cancel" ? "CANCELED" : "RETURNED",
+          status: "CANCELLED",
         },
+      });
+
+      await addOrderTimeline({
+        orderId,
+        orderNo: order.orderNo,
+        status: "CANCELLED",
+        title: cancelReasonType,
+        message: cancelReason,
+
+        createdBy: "system",
       });
     });
 
@@ -471,5 +530,67 @@ export async function cancelOrderById({
       success: false,
       message: error.message || "Failed to cancel order",
     };
+  }
+}
+
+export async function processRefundAction({ orderId, method, trxId, note }) {
+  try {
+    if (!orderId) throw new Error("Order ID required");
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order) throw new Error("Order not found");
+    if (order.status === "REFUNDED") throw new Error("Already refunded");
+    if (!["RETURNED", "REFUNDING"].includes(order.status))
+      throw new Error("Refund not allowed in this status");
+
+    const refundAmount = order.orderPrice - (order.adminDiscount || 0);
+
+    const refun = await prisma.$transaction([
+      // 1️⃣ Update order status
+      prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "REFUNDED", // ✅ শুধু status update
+        },
+      }),
+
+      // 2️⃣ Create refund record
+      prisma.refund.create({
+        data: {
+          orderId,
+          amount: refundAmount,
+          method,
+          trxId,
+          note,
+          status: "COMPLETED",
+        },
+      }),
+
+      // 3️⃣ Timeline add
+      prisma.orderTimeline.create({
+        data: {
+          orderId,
+          orderNo: order.orderNo,
+          status: "REFUNDED",
+          title: "Refund processed",
+          message: `Refund via ${method} (${trxId || "no trx"})`,
+          createdBy: "admin",
+        },
+      }),
+    ]);
+
+    console.log("Refund transaction result:", refun);
+
+    // 🔄 Revalidate paths
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${orderId}`);
+
+    return { success: true, message: "Refund completed successfully" };
+  } catch (error) {
+    console.error("Error processing refund:", error);
+    return { success: false, message: error.message || "Refund failed" };
   }
 }

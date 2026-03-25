@@ -77,7 +77,7 @@ export async function createCourierDeliveryAction({ formData }) {
         if (steadfastResponse.success) {
           console.log(
             "Steadfast order created successfully",
-            steadfastResponse?.data?.consignment_id.toString()
+            steadfastResponse?.data?.consignment_id.toString(),
           );
           orderResponseData = {
             cn: steadfastResponse?.data?.consignment_id.toString(),
@@ -88,6 +88,10 @@ export async function createCourierDeliveryAction({ formData }) {
 
             merchantOrderId: "N/A",
           };
+        } else {
+          throw new Error(
+            steadfastResponse.error || "Failed to create Steadfast order",
+          );
         }
 
         break;
@@ -129,7 +133,7 @@ export async function cancelCourierDeliveryAction(courierId, orderId) {
   try {
     if (!courierId || !orderId) {
       throw new Error(
-        "Courier ID and Order ID are required to cancel delivery."
+        "Courier ID and Order ID are required to cancel delivery.",
       );
     }
     const checkShipping = await prisma.shipping.findUnique({
@@ -177,7 +181,7 @@ export async function getCourierDeliveryStatusAction({
       case "steadfast":
         const statusResponse = await getSteadfastDeliveryStatus(
           "consignment_id",
-          courierId
+          courierId,
         );
         if (statusResponse.success) {
           console.log("Steadfast Status Response:", statusResponse);

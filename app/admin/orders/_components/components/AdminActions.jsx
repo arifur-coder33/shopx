@@ -33,7 +33,7 @@ export default function AdminActions({
       if (response.success) {
         setIsLoading(false);
         toast.success("Order note and discount saved successfully!");
-
+      } else {
         setIsLoading(false);
         toast.error("Failed to save order note and discount.");
       }
