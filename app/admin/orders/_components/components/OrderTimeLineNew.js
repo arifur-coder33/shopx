@@ -39,6 +39,7 @@ export default function OrderTimelineNew({ orderId }) {
   useEffect(() => {
     async function fetchTimeline() {
       try {
+        if (!orderId) return;
         const response = await getOrderTimeline(orderId);
         // response.data should be array of {status, title, message, createdAt}
         setTimeline(response.data || []);
@@ -62,7 +63,7 @@ export default function OrderTimelineNew({ orderId }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 ">
       <h3 className="font-semibold text-slate-800 mb-6">Order Tracking</h3>
 
       <div className="relative">

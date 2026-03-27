@@ -52,3 +52,21 @@ export async function getOrderTimeline(orderId) {
     throw error;
   }
 }
+
+export async function getOrderTimelineStatus({ orderId, status }) {
+  try {
+    if (!orderId) {
+      throw new Error("OrderId required");
+    }
+
+    const timeline = await prisma.orderTimeline.findMany({
+      where: { orderId, status },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return { supersede: true, data: timeline };
+  } catch (error) {
+    console.error("Timeline Error:", error);
+    throw error;
+  }
+}

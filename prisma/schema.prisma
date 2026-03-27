@@ -280,7 +280,7 @@ model OrderCounter {
 model Shipping {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   orderId         String  @unique  @db.ObjectId 
-  order           Order       @relation(fields: [orderId], references: [id])
+  order           Order       @relation(fields: [orderId], references: [id] ,onDelete: Cascade)
   orderNo        String?
   cn              String?
   courierName        String?
@@ -294,8 +294,8 @@ model Shipping {
 model OrderTimeline {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
 
-orderId         String    @db.ObjectId 
-  order           Order       @relation(fields: [orderId], references: [id])
+  orderId         String    @db.ObjectId 
+  order           Order       @relation(fields: [orderId], references: [id],onDelete: Cascade)
 
   orderNo   String
 
@@ -312,7 +312,7 @@ orderId         String    @db.ObjectId
 model Refund {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   orderId     String   @db.ObjectId
-  order       Order    @relation(fields: [orderId], references: [id])
+  order       Order    @relation(fields: [orderId], references: [id],onDelete: Cascade)
 
   amount      Float
   method      String   // bkash | nagad | bank | cash
@@ -399,7 +399,7 @@ enum OrderStatus {
   SHIPPED
   DELIVERY_FAILED
   FAILED_RETURNING
-  RETURN_RECEIVED
+  FAILED_RETURN_RECEIVED
   DELIVERED
   CANCELLED
   RETURNING

@@ -727,13 +727,21 @@ export async function getAllProduct(params) {
         // Include variations to calculate minPrice if it's not already in selectFields
         variations: {
           select: {
+            id: true,
+            thumbnail: { select: { id: true, name: true } },
             discountPrice: true,
             regularPrice: true,
             stock: true,
+            sku: true,
             combinations: {
               select: {
                 variationName: { select: { id: true, name: true } },
                 variationValue: { select: { id: true, value: true } },
+              },
+            },
+            orders: {
+              select: {
+                quantity: true,
               },
             },
           },
@@ -766,9 +774,20 @@ export async function getAllProduct(params) {
       );
 
       const { variations, ...rest } = product;
+      const updatedVariations = variations.map((item) => {
+        const totalOrders = item.orders.reduce(
+          (sum, item) => sum + item.quantity,
+          0,
+        );
+        return {
+          ...item,
+          orders: totalOrders,
+          price: item.discountPrice || item.regularPrice,
+        };
+      });
       return {
+        variations: updatedVariations,
         ...rest,
-
         price: priceToDisplay || "N/A", // Format price
         stock: stock, // Total stock from variations
         orders: orderQty || 0, // Total orders from variations

@@ -1,7 +1,7 @@
 "use client";
 import InvoiceButton from "@/components/PDF/getInvoice";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
 import DocumentActions from "./components/DocumentActions";
@@ -11,7 +11,6 @@ import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
 import OrderNote from "./components/OrderNote";
 import OrderSummary from "./components/OrderSummary";
-import OrderTimeline from "./components/OrderTimeline";
 import CourierManagement from "./courier/CourierManagement";
 
 import { useSession } from "next-auth/react";
@@ -79,14 +78,13 @@ export default function OrderDetailsPage({ order }) {
           date={order.createdAt || "N/A"}
         />
 
-        {/* Timeline Section */}
-        <OrderTimeline status={status} />
-        <OrderTimelineNew orderId={order.id} />
+        {/* Timeline Section
+        <OrderTimeline status={status} /> */}
 
         {/* Main Grid Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-11">
           {/* Left Column: Items & Customer Info (Takes 2 parts on Desktop) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6  ">
             <OrderItemsTable items={order?.orderItems} />
             <OrderSummary
               subtotal={order.orderPrice}
@@ -107,6 +105,9 @@ export default function OrderDetailsPage({ order }) {
             <div className="block lg:hidden">
               <CustomerInfo customer={order} />
             </div>
+            <Suspense fallback={<div>Loading Timeline...</div>}>
+              <OrderTimelineNew orderId={order.id} />
+            </Suspense>
           </div>
 
           {/* Right Column: Admin Actions & Info (Takes 1 part on Desktop) */}
@@ -138,6 +139,7 @@ export default function OrderDetailsPage({ order }) {
           </div>
         </div>
       </div>
+
       {hasUIPermission(permissions, "order", "update") && (
         <OrderFooter
           status={status}

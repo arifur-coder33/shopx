@@ -13,6 +13,25 @@ import DynamicTable from "@/components/common/DynamicTables/Index";
 export default async function ProductListPage() {
   const tableProperties = [
     {
+      label: "",
+      field: "expand",
+      type: "expand",
+      expandSource: "variations",
+      expandProperties: [
+        {
+          label: "Thumbnail",
+          field: "thumbnail",
+          type: "image",
+          alt: "productName",
+        },
+
+        { label: "SKU", field: "sku", type: "text" },
+        { label: " Price", field: "price", type: "currency" },
+        { label: " Orders", field: "orders", type: "currency" },
+        { label: "Stock", field: "stock", type: "text" },
+      ],
+    },
+    {
       label: "Thumbnail",
       field: "thumbnail", // Access the URL of the thumbnail Media
       type: "image",
@@ -33,19 +52,19 @@ export default async function ProductListPage() {
       label: "price",
       field: "price",
       type: "text",
-      sort: false, // Assuming category name is not directly sortable on product table
+      sort: true,
     },
     {
       label: "stock",
       field: "stock",
       type: "number",
-      // sort: true,
+      sort: true,
     },
     {
       label: "Orders",
       field: "orders",
       type: "number",
-      // sort: true,
+      sort: true,
     },
 
     { label: "Status", field: "status", type: "badge", sort: true }, // Use 'status' enum directly

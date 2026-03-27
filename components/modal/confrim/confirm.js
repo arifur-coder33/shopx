@@ -38,7 +38,13 @@ export function confirmFromUser({ title, message }) {
         message={message}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
-      />
+      />,
     );
   });
 }
+
+//  const ok = await confirmFromUser({
+//       title: "Confirm Delete",
+//       message: "আপনি কি নিশ্চিত?",
+//     });
+//     if (!ok) return;

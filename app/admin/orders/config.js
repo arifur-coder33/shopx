@@ -62,6 +62,7 @@ export const orderConfig = {
         "SHIPPED",
         "DELIVERED",
         "CANCELLED",
+        "REFUNDED",
       ],
       defaultValue: "PENDING",
     },
@@ -79,7 +80,7 @@ export const orderConfig = {
     },
   ],
 
-  initialLimit: 2,
+  initialLimit: 5,
   quickViewComponentKey: "OrderQuickView",
   itemAddFormKey: "",
   itemUpdateFormKey: "",

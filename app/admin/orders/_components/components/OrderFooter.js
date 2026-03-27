@@ -199,6 +199,8 @@ import {
   processRefundAction,
   updateOrderStatusAction,
 } from "@/backend/serverActions/orderActions";
+import { getOrderTimeline } from "@/backend/serverActions/orderTimelineActin";
+import { confirmFromUser } from "@/components/modal/confrim/confirm";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
@@ -214,10 +216,15 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
   });
 
   // ✅ 30 days return check
-  const isReturnAvailable = () => {
-    const orderDate = new Date(createdAt);
+  const isReturnAvailable = async () => {
+    const getStatus = await getOrderTimeline(orderId);
+    const lastStatus = getStatus?.data?.[0];
+    console.log("Last Status:", lastStatus);
+    if (lastStatus?.status !== "DELIVERED") return false;
+
+    const deliveryData = new Date(lastStatus.createdAt);
     const now = new Date();
-    const diffDays = (now - orderDate) / (1000 * 60 * 60 * 24);
+    const diffDays = (now - deliveryData) / (1000 * 60 * 60 * 24);
     return diffDays <= 30;
   };
 
@@ -228,6 +235,11 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
 
   // ✅ Safe Status Update
   const handleStatusChange = async (newStatus) => {
+    const ok = await confirmFromUser({
+      title: "Confirm Update",
+      message: "Do you want to update the order status to " + newStatus + "?",
+    });
+    if (!ok) return;
     try {
       setLoading(true);
 
@@ -408,14 +420,14 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
                   onClick={() => handleStatusChange("PROCESSING")}
                   className="px-4 py-2 bg-green-600 text-white rounded"
                 >
-                  Confirm
+                  Confirm Order
                 </button>
 
                 <button
                   onClick={() => setReasonType("cancel")}
                   className="px-4 py-2 bg-red-600 text-white rounded"
                 >
-                  Cancel
+                  Cancel Order
                 </button>
               </>
             )}
@@ -434,35 +446,28 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
                   onClick={() => setReasonType("cancel")}
                   className="px-4 py-2 bg-red-600 text-white rounded"
                 >
-                  Cancel
+                  Cancel Order
                 </button>
               </>
             )}
-            {/* {status === "PROCESSING" && (
+
+            {/* Ready to Ship */}
+            {status === "READY_TO_SHIP" && (
               <>
                 <button
-                  onClick={() => handleStatusChange("READY_TO_SHIP")}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded"
+                  onClick={() => handleStatusChange("SHIPPED")}
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
                 >
-                  Ready to Ship
+                  Mark as Shipped
                 </button>
 
                 <button
                   onClick={() => setReasonType("cancel")}
                   className="px-4 py-2 bg-red-600 text-white rounded"
                 >
-                  Cancel
+                  Cancel order
                 </button>
               </>
-            )} */}
-            {/* READY */}
-            {status === "READY_TO_SHIP" && (
-              <button
-                onClick={() => handleStatusChange("SHIPPED")}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-              >
-                Shipped
-              </button>
             )}
             {/* SHIPPED */}
             {status === "SHIPPED" && (
@@ -471,7 +476,7 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
                   onClick={() => handleStatusChange("DELIVERED")}
                   className="px-4 py-2 bg-green-600 text-white rounded"
                 >
-                  Delivered
+                  Mark as Delivered
                 </button>
 
                 <button
@@ -503,14 +508,14 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
             {/* FAILED RETURNING */}
             {status === "FAILED_RETURNING" && (
               <button
-                onClick={() => handleStatusChange("RETURN_RECEIVED")}
+                onClick={() => handleStatusChange("FAILED_RETURN_RECEIVED")}
                 className="px-4 py-2 bg-yellow-600 text-white rounded"
               >
                 Return Received
               </button>
             )}
-            {/* RETURN RECEIVED */}
-            {status === "RETURN_RECEIVED" && (
+            {/* FAILED RETURN RECEIVED */}
+            {status === "FAILED_RETURN_RECEIVED" && (
               <>
                 <button
                   onClick={() => handleStatusChange("READY_TO_SHIP")}
@@ -542,6 +547,17 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
                   className="px-4 py-2 bg-yellow-600 text-white rounded"
                 >
                   Returned
+                </button>
+              </>
+            )}
+            {/* RETURNING */}
+            {status === "RETURNING" && (
+              <>
+                <button
+                  onClick={() => handleStatusChange("RETURNED")}
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                >
+                  Mark as Returned
                 </button>
               </>
             )}
