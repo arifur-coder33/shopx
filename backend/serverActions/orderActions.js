@@ -391,6 +391,10 @@ export async function updateOrderStatusAction(orderId, status, note) {
       READY_TO_SHIP: "Ready to Ship",
       SHIPPED: "Order Shipped",
       DELIVERED: "Order Delivered",
+
+      DELIVERY_FAILED: "Delivery Failed",
+      FAILED_RETURNING: "Delivery Failed item Returning",
+      FAILED_RETURN_RECEIVED: "Delivery Failed item Received",
       CANCELLED: "Order Cancelled",
       RETURNING: "Returning",
       RETURNED: "Returned",

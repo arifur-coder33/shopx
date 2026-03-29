@@ -52,7 +52,7 @@ export default function TableToolbar({
       </div>
 
       {/* --- MODIFIED FILTERS SECTION --- */}
-      <div className="space-y-3 ">
+      {/* <div className="space-y-3 ">
         {filterTagProperties?.map((filterGroup, i) => (
           <div key={filterGroup?.field || i}>
             {filterGroup.field === "time" ? (
@@ -87,12 +87,65 @@ export default function TableToolbar({
                           // If the clicked button is already active, set filter to "ALL" to clear it
                           activeFilters[filterGroup.field] === option
                             ? "ALL"
-                            : option
+                            : option,
                         )
                       }
                     />
                   ))}
                 </span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div> */}
+      <div className="space-y-3">
+        {filterTagProperties?.map((filterGroup, i) => (
+          <div key={filterGroup?.field || i}>
+            {filterGroup.field === "time" ? (
+              // TIME FILTER (always scrollable)
+              <span className="flex overflow-x-auto scrollbar-hide">
+                <TimeFilter
+                  activeTimeFilter={activeFilters[filterGroup.field]}
+                  onTimeChange={(value) =>
+                    onFilterChange(filterGroup.field, value)
+                  }
+                  options={filterGroup.options}
+                />
+              </span>
+            ) : (
+              <div className="flex flex-row gap-2">
+                {/* Label */}
+                <span className="font-semibold text-gray-700 dark:text-gray-300 mr-2 whitespace-nowrap">
+                  {`${filterGroup.label}:`}
+                </span>
+
+                {/* Filter Buttons */}
+                <div
+                  className="
+              flex gap-2
+              overflow-x-auto scrollbar-hide
+              sm:flex-wrap sm:overflow-visible
+            "
+                >
+                  {filterGroup?.options?.map((option) => (
+                    <FilterTagButton
+                      key={option}
+                      label={option}
+                      isActive={
+                        activeFilters[filterGroup.field] === option ||
+                        (option === "ALL" && !activeFilters[filterGroup.field])
+                      }
+                      onClick={() =>
+                        onFilterChange(
+                          filterGroup.field,
+                          activeFilters[filterGroup.field] === option
+                            ? "ALL"
+                            : option,
+                        )
+                      }
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>

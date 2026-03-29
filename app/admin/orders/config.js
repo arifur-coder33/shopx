@@ -62,6 +62,7 @@ export const orderConfig = {
         "SHIPPED",
         "DELIVERED",
         "CANCELLED",
+        "DELIVERY_FAILED",
         "REFUNDED",
       ],
       defaultValue: "PENDING",
