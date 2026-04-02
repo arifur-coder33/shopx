@@ -4,10 +4,12 @@ import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
+import { getUserId } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
 
 export async function createOrder(formData) {
   try {
+    const userId = await getUserId(); // Ensure user is authenticated, will throw if not
     const formDataObj = Object.fromEntries(formData.entries());
     const data = { ...formDataObj };
     const orderItems = JSON.parse(data?.products);
@@ -39,6 +41,7 @@ export async function createOrder(formData) {
       const order = await tx.order.create({
         data: {
           orderNo: newOrderNumber.toString(),
+          userId: userId || null,
           customerName: data.customerName,
           phoneNumber: data.phoneNumber,
           email: data.email,
@@ -597,4 +600,40 @@ export async function processRefundAction({ orderId, method, trxId, note }) {
     console.error("Error processing refund:", error);
     return { success: false, message: error.message || "Refund failed" };
   }
+}
+
+export async function getOrderCountsbyUserId(userId) {
+  const allOrders = await prisma.order.groupBy({
+    by: ["status"],
+    where: { userId },
+    _count: { status: true },
+  });
+
+  const counts = {
+    all: 0,
+    running: 0,
+    delivered: 0,
+    cancelled: 0,
+    refunded: 0,
+  };
+
+  console.log("Grouped order counts:", allOrders);
+  allOrders.forEach((o) => {
+    counts.all += o._count.status;
+
+    // Map Prisma enum to dashboard category
+    if (
+      ["PENDING", "PROCESSING", "READY_TO_SHIP", "SHIPPED"].includes(o.status)
+    ) {
+      counts.running += o._count.status;
+    } else if (o.status === "DELIVERED") {
+      counts.delivered += o._count.status;
+    } else if (o.status === "CANCELLED") {
+      counts.cancelled += o._count.status;
+    } else if (["REFUNDING", "REFUNDED"].includes(o.status)) {
+      counts.refunded += o._count.status;
+    }
+  });
+
+  return counts;
 }

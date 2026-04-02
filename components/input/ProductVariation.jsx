@@ -617,8 +617,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                 defaultValue={
                   derivedInitialEnabled ? "" : initialCombinations[0]?.weight
                 }
-                name="weight (kg)"
-                label="weight"
+                name="weight"
+                label="weight (kg)"
                 required
               />
               <FloatingInput

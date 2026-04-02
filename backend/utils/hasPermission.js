@@ -67,3 +67,13 @@ export async function hasPermission(resource, action) {
   // ✅ allowed → continue
   return true;
 }
+
+export async function getUserId() {
+  const session = await auth();
+
+  // 🔐 not logged in
+  if (!session?.user) {
+    return null;
+  }
+  return session.user.id;
+}

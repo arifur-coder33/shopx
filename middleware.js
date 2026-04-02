@@ -30,9 +30,9 @@ export default async function middleware(req) {
     }
 
     // ❌ Only USER blocked
-    if (!token?.role || token.role === "USER") {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
-    }
+    // if (!token?.role || token.role === "USER") {
+    //   return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // }
   }
   // 🔒 My Account Route → Only USER allowed
   if (url.pathname.startsWith("/my-account")) {
@@ -43,14 +43,14 @@ export default async function middleware(req) {
     }
 
     // ❌ Non-USER blocked
-    if (!token?.role || token.role !== "USER") {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
-    }
+    // if (!token?.role || token.role !== "USER") {
+    //   return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/login", "/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/login", "/my-account/:path*", "/admin/:path*"],
 };
