@@ -1,7 +1,10 @@
 // export const revalidate = 60;
 export const dynamic = "force-static"; // Ensures the page is statically generated
 
-import { getProductBySlug } from "@/backend/serverActions/productActions";
+import {
+  getProductBySlug,
+  getProducts,
+} from "@/backend/serverActions/productActions";
 
 import { cloudinaryMainImage, getBase64ImageUrl } from "@/utils/cloudinaryUrl";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
@@ -175,12 +178,12 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// export async function generateStaticParams() {
-//   const { data: products } = await getProducts();
-//   return products.map((product) => ({
-//     slug: product.slug,
-//   }));
-// }
+export async function generateStaticParams() {
+  const { data: products } = await getProducts();
+  return products.map((product) => ({
+    slug: product.slug,
+  }));
+}
 
 export default async function ProductPage({ params }) {
   const getParams = await params;
