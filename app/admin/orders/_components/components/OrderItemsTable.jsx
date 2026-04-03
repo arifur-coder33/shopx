@@ -1,20 +1,47 @@
 import Imagecustom from "@/components/images/ImageCustom";
 
-export default function OrderItemsTable({ items }) {
+export default function OrderItemsTable({ items, style, status }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100">
-        <h3 className="text-lg font-semibold">Order Items ({items?.length})</h3>
+        <h3 className="text-lg font-semibold">
+          {style !== "user" ? (
+            `Order Items (${items?.length})`
+          ) : (
+            <div className="flex flex-row justify-between">
+              <div className="">
+                <p>Order No# {items[0]?.orderNo}</p>
+                <p className="text-sm text-gray-500">
+                  Order Date:{" "}
+                  {new Date(items[0]?.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className=" text-gray-500">
+                  Status:{" "}
+                  <span className="font-lg rounded-md px-2 py-1 bg-gray-100 text-gray-700">
+                    {status}
+                  </span>
+                </p>
+              </div>
+            </div>
+          )}
+        </h3>
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-        <div className="col-span-6">Product</div>
-        <div className="col-span-2 text-center">Price</div>
-        <div className="col-span-2 text-center">Qty</div>
-        <div className="col-span-2 text-right">Total</div>
-      </div>
-
+      {style !== "user" && (
+        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+          <div className="col-span-6">Product</div>
+          <div className="col-span-2 text-center">Price</div>
+          <div className="col-span-2 text-center">Qty</div>
+          <div className="col-span-2 text-right">Total</div>
+        </div>
+      )}
       <div className="divide-y divide-gray-100">
         {items?.map((item) => (
           <div

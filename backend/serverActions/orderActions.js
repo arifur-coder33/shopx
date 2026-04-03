@@ -6,7 +6,19 @@ import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
 import { getUserId } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
-
+const statusMap = {
+  all: null, // no filter
+  running: [
+    "PENDING",
+    "PROCESSING",
+    "READY_TO_SHIP",
+    "SHIPPED",
+    "DELIVERY_FAILED",
+  ],
+  cancelled: ["CANCELLED", "FAILED_RETURNING", "FAILED_RETURN_RECEIVED"],
+  delivered: ["DELIVERED", "RETURNING", "RETURNED"],
+  refunded: ["REFUNDING", "REFUNDED"],
+};
 export async function createOrder(formData) {
   try {
     const userId = await getUserId(); // Ensure user is authenticated, will throw if not
@@ -335,6 +347,49 @@ export async function getOrderById(orderId) {
   }
 }
 
+export async function getOrders({ userId, status, page = 1, limit = 10 }) {
+  try {
+    const skip = (page - 1) * limit;
+
+    let where = { userId };
+
+    if (status && status !== "all") {
+      const dbStatuses = statusMap[status.toLowerCase()];
+      if (dbStatuses && dbStatuses.length) {
+        where.status = { in: dbStatuses };
+      }
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          orderItems: {
+            include: { variation: true, combination: true },
+          },
+          shipping: true,
+        },
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export async function deleteOrderById(orderId) {
   try {
     // Delete the order by its ID
