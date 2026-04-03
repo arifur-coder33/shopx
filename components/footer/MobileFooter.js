@@ -1,3 +1,4 @@
+import CategorySidebar from "@/app/(user)/category/_compoents/CategorySidebar";
 import Cart from "@/components/Cart";
 import { Heart, Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
@@ -17,9 +18,12 @@ export default function MobileFooter() {
 
           {/* Menu */}
           <div className="flex justify-between items-center px-6 py-4">
-            <Link href="/category">
+            <CategorySidebar>
               <LayoutGrid className="text-gray-600 dark:text-gray-300" />
-            </Link>
+            </CategorySidebar>
+            {/* <Link href="/category">
+              <LayoutGrid className="text-gray-600 dark:text-gray-300" />
+            </Link> */}
 
             <Link href="/wishlist">
               <Heart className="text-gray-600 dark:text-gray-300" />
