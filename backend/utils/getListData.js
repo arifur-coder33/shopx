@@ -80,7 +80,7 @@ export async function getListData({
   ];
 
   const cursorObj = cursor ? { id: cursor } : undefined;
-
+  console.log("Final where clause in getListData:", where);
   const items = await prisma[model].findMany({
     take: take + 1,
     where,

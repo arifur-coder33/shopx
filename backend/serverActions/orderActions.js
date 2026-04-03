@@ -331,6 +331,7 @@ export async function getOrderById(orderId) {
   try {
     const data = await prisma.order.findUnique({
       where: { id: orderId },
+
       include: {
         orderItems: {
           include: {
@@ -341,6 +342,7 @@ export async function getOrderById(orderId) {
         shipping: true,
       },
     });
+    console.log("Fetched order by ID:", data);
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };

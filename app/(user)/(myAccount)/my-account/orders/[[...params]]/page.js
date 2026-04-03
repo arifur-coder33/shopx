@@ -1,39 +1,82 @@
 import OrderItemsTable from "@/app/admin/orders/_components/components/OrderItemsTable";
 import { auth } from "@/auth";
-import { getOrders } from "@/backend/serverActions/orderActions";
-import Pagination from "@/components/common/Pagination";
-
+import { fetchCursorData } from "@/backend/serverActions/fetchDataActon";
 import Link from "next/link";
 
+const statusMap = {
+  all: null,
+  running: [
+    "PENDING",
+    "PROCESSING",
+    "READY_TO_SHIP",
+    "SHIPPED",
+    "DELIVERY_FAILED",
+  ],
+  cancelled: ["CANCELLED", "FAILED_RETURNING", "FAILED_RETURN_RECEIVED"],
+  delivered: ["DELIVERED", "RETURNING", "RETURNED"],
+  refunded: ["REFUNDING", "REFUNDED"],
+};
+
 export default async function UserOrderPage({ params }) {
-  const status = params.params?.[0] || "all";
-  const page = Number(params.params?.[1]) || 1;
+  const statusKey = params.params?.[0] || "all";
+  const cursor = params.params?.[1] || null;
+
   const session = await auth();
   const userId = session?.user?.id;
-  console.log(" Status in page component:", status);
-  const fatchData = await getOrders({
-    userId,
-    page,
-    limit: 5,
-    ...(status !== "all" && { status }),
+
+  const statusFilter = statusMap[statusKey];
+
+  const fatchData = await fetchCursorData({
+    model: "order",
+    where: { userId, ...(statusFilter && { status: { in: statusFilter } }) },
+    take: 1,
+    cursor,
+    select: {
+      id: true,
+      status: true,
+      orderNo: true,
+      orderItems: {
+        select: {
+          id: true,
+          productName: true,
+          quantity: true,
+          price: true,
+          thumbnail: true,
+        },
+      },
+      createdAt: true,
+    },
   });
+
   const orders = fatchData?.data || [];
-  const pagination = fatchData?.pagination;
-  console.log(fatchData, "pagination in page component");
+  const nextCursor = fatchData?.pagination?.nextCursor || null;
+
   return (
-    <div className="space-y-4 gap-2 flex flex-col">
+    <div className="space-y-4 flex flex-col">
       {orders.map((order) => (
-        <Link href={`/my-account/orders/view/${order.id}`} key={order.id}>
+        <Link key={order.id} href={`/my-account/orders/view/${order.id}`}>
           <div>
             <OrderItemsTable
+              orderNo={order.orderNo}
+              date={order.createdAt}
               status={order.status}
               items={order.orderItems}
-              style={"user"}
+              style="user"
             />
           </div>
         </Link>
       ))}
-      <Pagination pagination={pagination} basePath="/my-account/orders/" />
+
+      <div className="flex justify-end mt-4">
+        {nextCursor && (
+          <Link
+            href={`/my-account/orders/${statusKey}/${nextCursor}`}
+            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Next
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

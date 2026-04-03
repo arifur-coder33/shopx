@@ -12,27 +12,27 @@ export default async function AccountLayout({ children }) {
     {
       title: "All Orders",
       value: counts.all,
-      href: "/my-account/orders/all/1",
+      href: "/my-account/orders/all",
     },
     {
       title: "Running",
       value: counts.running,
-      href: "/my-account/orders/running/1",
+      href: "/my-account/orders/running",
     },
     {
       title: "Delivered",
       value: counts.delivered,
-      href: "/my-account/orders/delivered/1",
+      href: "/my-account/orders/delivered",
     },
     {
       title: "Cancelled",
       value: counts.cancelled,
-      href: "/my-account/orders/cancelled/1",
+      href: "/my-account/orders/cancelled",
     },
     {
       title: "Refunded",
       value: counts.refunded,
-      href: "/my-account/orders/refunded/1  ",
+      href: "/my-account/orders/refunded ",
     },
   ];
 

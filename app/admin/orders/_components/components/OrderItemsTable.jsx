@@ -1,6 +1,12 @@
 import Imagecustom from "@/components/images/ImageCustom";
 
-export default function OrderItemsTable({ items, style, status }) {
+export default function OrderItemsTable({
+  items,
+  style,
+  status,
+  orderNo,
+  date,
+}) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100">
@@ -10,10 +16,10 @@ export default function OrderItemsTable({ items, style, status }) {
           ) : (
             <div className="flex flex-row justify-between">
               <div className="">
-                <p>Order No# {items[0]?.orderNo}</p>
+                <p>Order No# {orderNo}</p>
                 <p className="text-sm text-gray-500">
                   Order Date:{" "}
-                  {new Date(items[0]?.createdAt).toLocaleDateString("en-US", {
+                  {new Date(date).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",

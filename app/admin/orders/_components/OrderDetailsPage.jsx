@@ -1,6 +1,8 @@
 "use client";
 import InvoiceButton from "@/components/PDF/getInvoice";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
+import { useSession } from "next-auth/react";
+import dynamic from "next/dynamic";
 import { Suspense, useState } from "react";
 import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
@@ -11,11 +13,18 @@ import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
 import OrderNote from "./components/OrderNote";
 import OrderSummary from "./components/OrderSummary";
+import OrderTimelineNew from "./components/OrderTimeline";
 import CourierManagement from "./courier/CourierManagement";
 
-import { useSession } from "next-auth/react";
-import OrderTimelineNew from "./components/OrderTimeLineNew";
-export default function OrderDetailsPage({ order }) {
+// Server component ke lazy load kora hocche
+const OrderTimelineServer = dynamic(
+  () => import("./components/OrderTimelineServer"),
+  {
+    suspense: true,
+  },
+);
+
+export default function OrderDetailsPage({ order, children }) {
   // Global State for the order
   const { data: session } = useSession();
   const permissions = session?.user?.permissions;
@@ -105,7 +114,9 @@ export default function OrderDetailsPage({ order }) {
             <div className="block lg:hidden">
               <CustomerInfo customer={order} />
             </div>
-            <Suspense fallback={<div>Loading Timeline...</div>}>
+
+            {children}
+            <Suspense fallback={<div>Loading order timeline...</div>}>
               <OrderTimelineNew orderId={order.id} />
             </Suspense>
           </div>
