@@ -19,7 +19,7 @@
   .theam {
     @apply bg-slate-100  dark:bg-slate-900
            text-slate-700 dark:text-slate-300 
-             text-[10px] sm:text-lg md:text-xl;
+             text-base sm:text-lg md:text-xl;
   }
 
   .button {
@@ -52,7 +52,9 @@
   filter: blur(7px); /* Adjust blur amount as needed */
   opacity: 0.8; /* Optional: slight opacity for blurred state */
   transform: scale(1); /* Optional: slight zoom for blur effect */
-  transition: filter 0.1s ease-out, opacity 0.1s ease-out,
+  transition:
+    filter 0.1s ease-out,
+    opacity 0.1s ease-out,
     transform 0.1s ease-out;
 }
 
@@ -60,7 +62,10 @@
   filter: blur(0);
   opacity: 1;
   transform: scale(1);
-  transition: filter 0.1s ease-in, opacity 0.1s ease-in, transform 0.1s ease-in;
+  transition:
+    filter 0.1s ease-in,
+    opacity 0.1s ease-in,
+    transform 0.1s ease-in;
 }
 
 .image-placeholder,

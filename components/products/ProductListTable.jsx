@@ -19,7 +19,7 @@ const getData = unstable_cache(
     return data;
   },
   ["products"],
-  { revalidate: 3600, tags: ["products"] }
+  { revalidate: 3600, tags: ["products"] },
 );
 
 export default async function ProductListTable() {

@@ -79,13 +79,13 @@ export default function NavActions() {
           <LogOutIcon />{" "}
         </Logout>
       </div>
-      <div className="h-6 w-6 ">
+      <div className="h-6 w-6  hidden md:block ">
         <Link className="nav-hover" href={"/login"}>
           <User2Icon />
         </Link>
       </div>
 
-      <div className="h-6 w-6 ">
+      <div className="h-6 w-6 hidden md:block">
         <Cart>
           <ShoppingCart className="nav-hover" />{" "}
         </Cart>

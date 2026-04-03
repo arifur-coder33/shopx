@@ -1,19 +1,9 @@
-export default function FooterLayout({ children }) {
-  return (
-    <div className="">
-      {children}
-
-      <MobileFooter />
-    </div>
-  );
-}
-
+import Cart from "@/components/Cart";
 import { Heart, Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
-
-export function MobileFooter() {
+export default function MobileFooter() {
   return (
-    <div className="fixed bottom-0 md:hidden left-0 right-0 flex justify-center">
+    <div className="z-50 fixed bottom-0 md:hidden left-0 right-0 flex justify-center">
       <div className="w-full max-w-md px-4 pb-4">
         <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-700">
           {/* Center Button */}
@@ -35,13 +25,15 @@ export function MobileFooter() {
               <Heart className="text-gray-600 dark:text-gray-300" />
             </Link>
 
-            <div className="w-10" />
-
-            <Link href="/cart">
+            <div className="w-28" />
+            <Cart>
               <ShoppingCart className="text-gray-600 dark:text-gray-300" />
-            </Link>
+            </Cart>
+            {/* <Link href="/cart">
+              <ShoppingCart className="text-gray-600 dark:text-gray-300" />
+            </Link> */}
 
-            <Link href="/my-account">
+            <Link href="/my-account/orders">
               <User className="text-gray-600 dark:text-gray-300" />
             </Link>
           </div>

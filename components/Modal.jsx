@@ -43,7 +43,7 @@ export default function Modal({
     <div>
       {/* Overlay */}
       <div
-        className={`fixed  inset-0 bg-purple dark:bg-slate-950 bg-opacity-10 dark:bg-opacity-50 z-40 transition-opacity duration-300 ${
+        className={`fixed  inset-0 bg-purple dark:bg-slate-950 bg-opacity-10 dark:bg-opacity-50 z-50 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={toggleDrawer}
@@ -51,7 +51,7 @@ export default function Modal({
 
       {/* Drawer Content */}
       <div className={selectedStyle.container}>
-        <div className="h-full  bg-slate-100 dark:bg-slate-900 shadow-lg rounded-md dark:shadow-white">
+        <div className="h-full z-50  bg-slate-100 dark:bg-slate-900 shadow-lg rounded-md dark:shadow-white">
           <button
             onClick={toggleDrawer}
             className={`absolute ${selectedStyle.buttopPosition} bg-red-500 hover:bg-red-600 text-2xl w-8 h-8 rounded-full focus:outline-none text-white`}

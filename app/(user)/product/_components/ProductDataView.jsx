@@ -4,15 +4,15 @@ import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
 
 const ProductImageGallery = dynamic(
-  () => import("../_components/ProductImageGallery") // <-- Corrected
+  () => import("./ProductImageGallery"), // <-- Corrected
 );
 
 import dynamic from "next/dynamic"; // <-- Import dynamic
 import ProductHeader from "./ProductHeader";
 // --- LAZY-LOADED COMPONENTS ---
 
-const ProductDescription = dynamic(() =>
-  import("@/components/products/productDescription")
+const ProductDescription = dynamic(
+  () => import("@/components/products/productDescription"),
 );
 const FacebookEventTrac = dynamic(() => import("./FacebookEventTrack"));
 

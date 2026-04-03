@@ -3,6 +3,7 @@
 
 import ThirdPartyScripts from "@/components/common/ThirdPartyScripts";
 import Footer from "@/components/footer/Footer";
+import MobileFooter from "@/components/footer/MobileFooter";
 import NavBar from "@/components/NavBar"; // The optimized NavBar from our previous discussion
 
 // The metadata from this layout will be merged with the RootLayout's metadata
@@ -19,7 +20,7 @@ export default function UserLayout({ children }) {
       <NavBar />
       <main className="max-w-7xl mx-auto p-2 min-h-screen ">{children}</main>
       <Footer />
-
+      <MobileFooter />
       {/* All your scripts are now cleanly handled by this component */}
       <ThirdPartyScripts />
 
