@@ -17,13 +17,21 @@ export default function AccountLayout({ children }) {
         <h2 className="text-2xl font-bold text-purple">My Account</h2>
 
         <nav className="flex flex-col gap-3">
-          <Link href="/my-account/orders" className="nav-hover">
+          <Link prefetch={true} href="/my-account/orders" className="nav-hover">
             Orders
           </Link>
-          <Link href="/my-account/address" className="nav-hover">
+          <Link
+            prefetch={true}
+            href="/my-account/address"
+            className="nav-hover"
+          >
             Address
           </Link>
-          <Link href="/my-account/settings" className="nav-hover">
+          <Link
+            prefetch={true}
+            href="/my-account/settings"
+            className="nav-hover"
+          >
             Settings
           </Link>
         </nav>

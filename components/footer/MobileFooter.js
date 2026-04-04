@@ -37,7 +37,7 @@ export default function MobileFooter() {
               <ShoppingCart className="text-gray-600 dark:text-gray-300" />
             </Link> */}
 
-            <Link href="/my-account/orders">
+            <Link prefetch={true} href="/my-account/orders">
               <User className="text-gray-600 dark:text-gray-300" />
             </Link>
           </div>
