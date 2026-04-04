@@ -48,6 +48,9 @@ const NavActionsSkeleton = () => (
     <Link className="nav-hover" href={"/login"} aria-label="Login">
       <User2Icon />
     </Link>
+    <Link className="nav-hover" href={"/my-account"} aria-label="My Account">
+      <User2Icon />
+    </Link>
     <div className="nav-hover" aria-label="Logout placeholder">
       {/* Empty space for Logout Icon */}
       <div style={{ width: "24px", height: "24px" }} />
@@ -81,6 +84,11 @@ export default function NavActions() {
       </div>
       <div className="h-6 w-6  hidden md:block ">
         <Link className="nav-hover" href={"/login"}>
+          <User2Icon />
+        </Link>
+      </div>
+      <div className="h-6 w-6  hidden md:block ">
+        <Link className="nav-hover" href={"/my-account/orders"}>
           <User2Icon />
         </Link>
       </div>

@@ -55,7 +55,7 @@ export default async function UserOrderPage({ params }) {
     <div className="space-y-4 flex flex-col">
       {orders.map((order) => (
         <Link key={order.id} href={`/my-account/orders/view/${order.id}`}>
-          <div>
+          <div className="transition-transform duration-200 hover:scale-[1.01]">
             <OrderItemsTable
               orderNo={order.orderNo}
               date={order.createdAt}
