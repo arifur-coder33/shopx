@@ -22,17 +22,17 @@ export default function AccountLayout({ children }) {
           </Link>
           <Link
             prefetch={true}
-            href="/my-account/address"
+            href="/my-account/profile"
             className="nav-hover"
           >
-            Address
+            Profile
           </Link>
           <Link
             prefetch={true}
             href="/my-account/settings"
             className="nav-hover"
           >
-            Settings
+            Address Book
           </Link>
         </nav>
       </aside>

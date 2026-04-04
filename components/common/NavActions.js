@@ -88,7 +88,7 @@ export default function NavActions() {
         </Link>
       </div>
       <div className="h-6 w-6  hidden md:block ">
-        <Link className="nav-hover" href={"/my-account/orders"}>
+        <Link prefetch={true} className="nav-hover" href={"/my-account/orders"}>
           <User2Icon />
         </Link>
       </div>

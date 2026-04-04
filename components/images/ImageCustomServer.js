@@ -20,18 +20,20 @@ export default async function ImageCustomServer({
   ]);
 
   return (
-    <Image
-      src={finalSrc}
-      width={w}
-      height={h}
-      alt={alt || "product image"}
-      className={className}
-      sizes={sizes}
-      quality={quality}
-      // Let next/image handle everything automatically!
-      priority={priority} // If true, sets loading="eager". If false, sets loading="lazy".
-      placeholder="blur" // Use the blur-up effect.
-      blurDataURL={blurDataURL} // Provide the data for the blur.
-    />
+    <>
+      <Image
+        src={src ? finalSrc : "/images/default.png"}
+        width={w}
+        height={h}
+        alt={alt || "product image"}
+        className={className}
+        sizes={sizes}
+        quality={quality}
+        // Let next/image handle everything automatically!
+        priority={priority} // If true, sets loading="eager". If false, sets loading="lazy".
+        placeholder="blur" // Use the blur-up effect.
+        blurDataURL={blurDataURL} // Provide the data for the blur.
+      />
+    </>
   );
 }
