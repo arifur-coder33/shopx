@@ -44,11 +44,11 @@ export default function TimeFilter({
 
   const presetOptions = useMemo(
     () => options.filter((opt) => opt !== "Custom"),
-    [options]
+    [options],
   );
   const showCustomRangePicker = useMemo(
     () => options.includes("Custom"),
-    [options]
+    [options],
   );
 
   const { selectedPreset, selectedCustomRange } = useMemo(() => {
@@ -121,7 +121,7 @@ export default function TimeFilter({
             <button
               className={`px-3 py-1  rounded-full flex items-center gap-2 transition-all duration-200 ${
                 selectedCustomRange
-                  ? "bg-purple-600 text-white shadow-md hover:bg-purple-700"
+                  ? "bg-brand-600 text-white shadow-md hover:bg-brand-700"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
               }`}
             >
@@ -129,7 +129,7 @@ export default function TimeFilter({
               {selectedCustomRange ? (
                 `${format(selectedCustomRange.from, "LLL dd, y")} - ${format(
                   selectedCustomRange.to,
-                  "LLL dd, y"
+                  "LLL dd, y",
                 )}`
               ) : (
                 <span>Custom Range</span>

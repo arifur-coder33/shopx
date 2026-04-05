@@ -97,13 +97,13 @@ const Item = ({ data, orderData }) => {
         <td className="px-6 py-4 grid grid-cols-3">
           <Link
             href={`/admin/order/view/${data?.orderNo}?p=${encodeURIComponent(
-              orderData?.phoneNumber
+              orderData?.phoneNumber,
             )}`}
           >
-            <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            <Eye className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
           </Link>
           <Link href={`/admin/order/edit/${data?.orderNo}`}>
-            <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            <Edit className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
           </Link>
           <DeleteItem deleteItem={deleteOrderById} id={orderData?.id}>
             <Trash className="text-red-500 hover:scale-105 transition cursor-pointer" />

@@ -7,20 +7,25 @@ export default function ProductCard({ product, index }) {
   if (!product) {
     return <div className="text-red-500">Product not found</div>;
   }
-  const { hasVariations, variations } =
-    product || {};
+  const { hasVariations, variations } = product || {};
 
   let regularPriceValue = 0;
-  let discountPriceValue = 0 
+  let discountPriceValue = 0;
 
-  if (hasVariations && Array.isArray(variations[0].combinations) && variations[0]?.combinations?.length > 0) {
+  if (
+    hasVariations &&
+    Array.isArray(variations[0].combinations) &&
+    variations[0]?.combinations?.length > 0
+  ) {
     regularPriceValue = Math.min(...variations.map((v) => v.regularPrice));
     discountPriceValue = Math.min(
-      ...variations.map((v) => v.discountPrice ?? v.regularPrice)
+      ...variations.map((v) => v.discountPrice ?? v.regularPrice),
     );
-  }else {
-    regularPriceValue = variations?.length===1 ? variations[0]?.regularPrice : 0
-    discountPriceValue = variations?.length===1 ? variations[0]?.discountPrice : 0
+  } else {
+    regularPriceValue =
+      variations?.length === 1 ? variations[0]?.regularPrice : 0;
+    discountPriceValue =
+      variations?.length === 1 ? variations[0]?.discountPrice : 0;
   }
 
   // If discount is not actually lower, don't show it
@@ -47,12 +52,12 @@ export default function ProductCard({ product, index }) {
           <div className="p-2">
             <div className="line-clamp-2 ">{product?.title}</div>
             <div className="px-2 cursor-auto">
-              <span className="text-purple font-bold text-xl md:text-2xl">
+              <span className="text-brand font-bold text-xl md:text-2xl">
                 {replaceNumbers(
                   (discountPriceValue > 0
                     ? discountPriceValue
                     : regularPriceValue
-                  ).toString()
+                  ).toString(),
                 )}
                 -/{" "}
               </span>

@@ -27,7 +27,7 @@ export default function Cart({ className, children }) {
         {children}
 
         {hasMounted && totalCartQuantity > 0 && (
-          <span className="absolute -top-2 text-center left-2 text-white rounded-full bg-purple text-base font-bold w-5 h-5 opacity-100">
+          <span className="absolute -top-2 text-center left-2 text-white rounded-full bg-brand text-base font-bold w-5 h-5 opacity-100">
             {replaceNumbers(totalCartQuantity.toString())}
           </span>
         )}

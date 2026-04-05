@@ -43,7 +43,7 @@ export default function Modal({
     <div>
       {/* Overlay */}
       <div
-        className={`fixed  inset-0 bg-purple dark:bg-slate-950 bg-opacity-10 dark:bg-opacity-50 z-50 transition-opacity duration-300 ${
+        className={`fixed  inset-0 bg-brand dark:bg-slate-950 bg-opacity-10 dark:bg-opacity-50 z-50 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={toggleDrawer}

@@ -90,21 +90,21 @@ const Item = async ({ data }) => {
         <td className=" flex flex-row ">
           <ModalButton
             buttonName={
-              <View className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+              <View className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
             }
           >
             <ProductPageData data={data} />
           </ModalButton>
           <Link href={`/product/${encodeURIComponent(data?.slug)}`}>
-            <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            <Eye className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
           </Link>
 
           {/* <Link href={`/admin/product/edit/${data?.id}`}>
-            <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            <Edit className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
           </Link> */}
           <ModalButton
             buttonName={
-              <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+              <Edit className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
             }
           >
             <ProductForm

@@ -96,7 +96,7 @@ export default function DynamicTable({
   // --- STATE MANAGEMENT ---
   const [searchTerm, setSearchTerm] = useState("");
   const [searchField, setSearchField] = useState(
-    filterSearchProperties[0]?.field || ""
+    filterSearchProperties[0]?.field || "",
   );
   const [activeFilters, setActiveFilters] = useState({});
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -129,7 +129,7 @@ export default function DynamicTable({
           pastDate = new Date(now.setDate(now.getDate() - 30));
         if (pastDate)
           filtered = filtered.filter(
-            (item) => new Date(item.createdAt) >= pastDate
+            (item) => new Date(item.createdAt) >= pastDate,
           );
       } else {
         filtered = filtered.filter((item) => item[key] === value);
@@ -233,14 +233,14 @@ export default function DynamicTable({
                   onClick={() => handleFilterChange(key, option)}
                   className={`px-3 py-1 text-sm rounded-full transition-all duration-200 ${
                     activeFilters[key] === option
-                      ? "bg-purple-600 text-white shadow"
+                      ? "bg-brand-600 text-white shadow"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                   }`}
                 >
                   {option}
                 </button>
-              ))
-            )
+              )),
+            ),
           )}
           {isFilterActive && (
             <button
@@ -282,9 +282,9 @@ export default function DynamicTable({
                             className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                           >
                             {expandedRows.has(item.id) ? (
-                              <Minus className="w-4 h-4 text-purple-600" />
+                              <Minus className="w-4 h-4 text-brand-600" />
                             ) : (
-                              <Plus className="w-4 h-4 text-purple-500" />
+                              <Plus className="w-4 h-4 text-brand-500" />
                             )}
                           </button>
                         ) : (
@@ -357,7 +357,7 @@ export default function DynamicTable({
                                         >
                                           {renderDynamicField(nestedItem, prop)}
                                         </td>
-                                      )
+                                      ),
                                     )}
                                     <td className="px-4 py-2 flex items-center justify-center space-x-3 align-middle">
                                       <LazyModalButton
@@ -421,7 +421,7 @@ export default function DynamicTable({
             <span className="font-semibold">
               {Math.min(
                 (currentPage - 1) * itemsPerPage + 1,
-                filteredData.length
+                filteredData.length,
               )}
             </span>{" "}
             to{" "}

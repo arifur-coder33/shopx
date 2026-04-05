@@ -187,9 +187,9 @@ export default function TableBody({
                               className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                             >
                               {expandedRows.has(item.id) ? (
-                                <Minus className="w-4 h-4 text-purple-600 rounded-full ring-2 ring-purple-600" />
+                                <Minus className="w-4 h-4 text-brand-600 rounded-full ring-2 ring-purple-600" />
                               ) : (
-                                <Plus className="w-4 h-4 text-purple-500 rounded-full ring-2 ring-purple-600" />
+                                <Plus className="w-4 h-4 text-brand-500 rounded-full ring-2 ring-purple-600" />
                               )}
                             </button>
                           ) : (

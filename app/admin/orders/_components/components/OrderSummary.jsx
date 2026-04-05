@@ -5,7 +5,7 @@ export default function OrderSummary({
   total,
 }) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+    <div className="card">
       <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
       <div className="space-y-3 text-sm">
         <div className="flex justify-between text-gray-600">

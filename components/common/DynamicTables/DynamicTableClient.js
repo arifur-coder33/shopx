@@ -239,7 +239,7 @@ export default function DynamicTableClient({
 
   return (
     <div className="bg-white dark:bg-gray-900 shadow-lg sm:rounded-lg  ">
-      <div className="flex items-center  gap-2 bg-purple dark:bg-gray-700  border-b-2  border-slate-500 p-2">
+      <div className="flex items-center  gap-2 bg-brand dark:bg-gray-700  border-b-2  border-slate-500 p-2">
         <h1 className="text-xl sm:text-xl font-semibold   dark:text-gray-200 ">
           {tableName}
         </h1>

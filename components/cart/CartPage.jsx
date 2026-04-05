@@ -12,7 +12,7 @@
 
 //   return (
 //     <div className="relative  h-screen ">
-//       <div className="flex flex-row text-purple dark:text-slate-200 font-bold border-b-2 justify-center">
+//       <div className="flex flex-row text-brand dark:text-slate-200 font-bold border-b-2 justify-center">
 //         <ShoppingBag />{" "}
 //         <KalapanaFont>
 //           <span className=" text-2xl">ব্যাগ</span>
@@ -63,7 +63,7 @@ export default function CartPage({ setIsOpen }) {
     <div className="h-[calc(100vh-300px)]flex flex-col">
       {/* 🔝 Header */}
       <div className="sticky top-0 z-10 bg-white/80 mt-4 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-slate-800">
-        <div className="flex items-center justify-center gap-2  py-4 font-bold text-purple-600 dark:text-purple-400">
+        <div className="flex items-center justify-center gap-2  py-4 font-bold text-brand-600 dark:text-brand-400">
           <ShoppingBag size={20} />
 
           <span className="text-xl">Cart</span>
@@ -90,7 +90,7 @@ export default function CartPage({ setIsOpen }) {
               {/* Price */}
               <p className="text-[13px] text-center text-slate-700 dark:text-slate-300">
                 আপনার ব্যাগে মোট{" "}
-                <span className="font-bold text-purple-600 dark:text-purple-400">
+                <span className="font-bold text-brand-600 dark:text-brand-400">
                   {replaceNumbers(totalCartPrice.toString())}
                 </span>{" "}
                 টাকার পন্য আছে

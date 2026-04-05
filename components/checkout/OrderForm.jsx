@@ -64,15 +64,15 @@ export default function OrderForm({
         content_ids: products.map((product) => product.productId),
         value: products.reduce(
           (total, product) => total + product.quantity * product.price,
-          0
+          0,
         ),
         currency: "BDT", // Bangladeshi Taka
       });
 
       router.push(
         `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
-          response?.data?.phoneNumber
-        )}&orderSuccess=true`
+          response?.data?.phoneNumber,
+        )}&orderSuccess=true`,
       );
 
       // form.reset(); // Clear the form on success
@@ -85,7 +85,7 @@ export default function OrderForm({
         content_ids: products.map((product) => product.productId),
         value: products.reduce(
           (total, product) => total + product.quantity * product.price,
-          0
+          0,
         ),
         currency: "BDT",
         reason: response.error || "Unknown error",
@@ -131,7 +131,7 @@ export default function OrderForm({
       </div>
       <Button
         type={"submit"}
-        className="w-full z-30 bg-purple p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 "
+        className="w-full z-30 bg-brand p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 "
       >
         অর্ডার নিশ্চিত করুন
       </Button>

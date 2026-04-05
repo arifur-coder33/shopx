@@ -16,7 +16,7 @@ export default function OrderHeader({ orderId, status, date }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center card ">
       <div className="flex items-center gap-4">
         <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
           <Package size={28} />
@@ -30,7 +30,7 @@ export default function OrderHeader({ orderId, status, date }) {
       </div>
       <div
         className={`mt-4 md:mt-0 px-4 py-1.5 rounded-full text-sm font-bold border ${getStatusColor(
-          status
+          status,
         )}`}
       >
         {status}

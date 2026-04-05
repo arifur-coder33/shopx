@@ -12,7 +12,7 @@ const getData = unstable_cache(
     return data;
   },
   ["category"],
-  { revalidate: 3600, tags: ["category"] }
+  { revalidate: 3600, tags: ["category"] },
 );
 export default async function CategoryListTable() {
   const { data } = await getData();
@@ -67,10 +67,10 @@ const Item = ({ data }) => {
         <td className="px-6 py-4">{data?._count.products}</td>
         <td className="px-6 py-4 grid grid-cols-3">
           <Link href={`/category/${encodeURIComponent(data?.slug)}`}>
-            <Eye className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            <Eye className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
           </Link>
           <Link href={`/admin/category/edit/${data?.id}`}>
-            <Edit className="hover:text-purple-500 hover:scale-105 transition cursor-pointer" />
+            <Edit className="hover:text-brand-500 hover:scale-105 transition cursor-pointer" />
           </Link>
 
           <DeleteItem deleteItem={""} id={data?.id}>

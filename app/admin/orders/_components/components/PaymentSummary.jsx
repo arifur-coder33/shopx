@@ -1,6 +1,6 @@
 export default function PaymentSummary({ order, discount }) {
   return (
-    <div className="bg-slate-50 p-6 border-t border-slate-100 space-y-2">
+    <div className="card">
       <div className="flex justify-between text-sm text-slate-600">
         <span>Subtotal</span>
         <span>{order.subtotal} ৳</span>

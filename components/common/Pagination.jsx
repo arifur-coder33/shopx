@@ -17,7 +17,7 @@ export default function Pagination({ pagination, basePath }) {
         <Link key={i} href={`${basePath}/${i + 1}`}>
           <button
             className={`px-3 py-1 border rounded ${
-              page === i + 1 ? "bg-purple text-white" : ""
+              page === i + 1 ? "bg-brand text-white" : ""
             }`}
           >
             {i + 1}

@@ -2,7 +2,7 @@ import { CreditCard, MapPin, Phone, User } from "lucide-react";
 
 export default function CustomerInfo({ customer }) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+    <div className="card">
       <h3 className="text-lg font-semibold mb-4">Customer Details</h3>
       <div className="space-y-4">
         <div className="flex items-start gap-3">
