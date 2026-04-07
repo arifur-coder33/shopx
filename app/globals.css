@@ -60,22 +60,18 @@
 /* ----------------------------- */
 @layer components {
   /* Theme Wrapper */
+
   .theam {
-    @apply text-base sm:text-lg md:text-xl;
-    background-color: var(--color-bg);
-    color: var(--color-text);
+    @apply text-base sm:text-lg md:text-xl bg-background text-text;
   }
 
   /* Buttons */
   .button {
-    @apply rounded-md text-center text-xl md:text-2xl transition;
-    background-color: var(--color-primary);
-    color: white;
-    padding: 0.5rem 1.25rem;
+    @apply rounded-md text-center text-xl md:text-2xl transition bg-primary text-white p-2 px-4;
   }
 
   .button:hover {
-    background-color: var(--color-secondary);
+    @apply border-b-2;
   }
 
   /* Product Cards */
@@ -90,18 +86,16 @@
   }
 
   .product-card:hover {
-    @apply shadow-2xl;
-    border-color: var(--color-secondary);
+    @apply shadow-2xl bg-secondary;
   }
 
   /* Brand Background / Text */
   .bg-brand {
-    background-color: var(--color-primary);
-    color: white;
+    @apply bg-primary text-white;
   }
 
   .text-brand {
-    color: var(--color-primary);
+    @apply text-text;
   }
   .card {
     @apply rounded-2xl shadow-md border  border-gray-300 overflow-hidden p-6;

@@ -9,6 +9,12 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        primary: "var(--color-primary)",
+        secondary: "var(--color-secondary)",
+        background: "var(--color-bg)",
+        text: "var(--color-text)",
+      },
       fontFamily: {
         sans: ["var(--font-roboto)", ...fontFamily.sans],
         bengali: ["var(--font-tiro-bangla)", ...fontFamily.sans],
