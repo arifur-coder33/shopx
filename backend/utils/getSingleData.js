@@ -1,8 +1,7 @@
 "use server";
+import prisma from "@/lib/prisma";
 import { getDataSelectFields } from "./getDataSelectFields";
-
 export async function getSingleData({
-  prisma,
   model,
   id,
   tableProperties,

@@ -14,7 +14,7 @@ export async function fetchCursorData({
   const queryOptions = {
     where,
     select,
-    take,
+    take: take + 1,
     orderBy: { createdAt: "desc" },
   };
 
@@ -28,7 +28,7 @@ export async function fetchCursorData({
     prisma[model].count({ where }),
   ]);
 
-  const nextCursor = data.length === take ? data[data.length - 1].id : null;
+  const nextCursor = data.length === take + 1 ? data[data.length - 1].id : null;
 
   return {
     success: true,

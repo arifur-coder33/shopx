@@ -3,6 +3,8 @@ import { auth } from "@/auth"; // your auth function
 import { fetchSingleData } from "@/backend/serverActions/fetchDataActon";
 import Button from "@/components/button";
 import ImageCustomServer from "@/components/images/ImageCustomServer";
+import LazyModalButton from "@/components/modal/LazyModalButton";
+import { Suspense } from "react";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -46,10 +48,31 @@ export default async function ProfilePage() {
         {/* Profile Fields */}
         <div className="space-y-4">
           {[
-            { label: "Email", value: user?.email },
-            { label: "Phone", value: user?.phone },
-            { label: "Gender", value: user?.gender },
-            { label: "Date of Birth", value: user?.dob },
+            {
+              label: "Email",
+              field: "email",
+              value: user?.email,
+              editable: false,
+            },
+            { label: "Name", field: "name", value: user?.name, editable: true },
+            {
+              label: "Phone",
+              field: "phone",
+              value: user?.phone,
+              editable: true,
+            },
+            {
+              label: "Gender",
+              field: "gender",
+              value: user?.gender,
+              editable: true,
+            },
+            {
+              label: "Date of Birth",
+              field: "dob",
+              value: user?.dob,
+              editable: true,
+            },
           ].map((field) => (
             <div
               key={field.label}
@@ -61,13 +84,26 @@ export default async function ProfilePage() {
                   {field.value || "-"}
                 </p>
               </div>
-              <button className="text-indigo-600 hover:underline text-sm font-medium">
-                Change
-              </button>
+              {field.editable && (
+                <button className="text-indigo-600 hover:underline text-sm font-medium">
+                  Change
+                </button>
+              )}
             </div>
           ))}
         </div>
-
+        <div className="mt-4 flex justify-center">
+          <Suspense>
+            <Button>
+              <LazyModalButton
+                button={"Update Details"}
+                componentKey={"UserUpdateForm"}
+                itemId={userId}
+                data={user}
+              />
+            </Button>
+          </Suspense>
+        </div>
         {/* Change Password */}
         <div className="mt-4 flex justify-center">
           <Button>Change Password</Button>

@@ -11,4 +11,6 @@ export const componentsMap = {
     import("@/app/admin/settings/role/_components/ResourseRole"),
   ResourseForm: () =>
     import("@/app/admin/settings/resources/_component/RecourceForm"),
+  UserUpdateForm: () =>
+    import("@/app/(user)/(myAccount)/my-account/_components/UserUpdateForm"),
 };

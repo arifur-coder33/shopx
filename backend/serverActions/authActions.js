@@ -207,3 +207,7 @@ export async function deleteUserById(id) {
     await prisma.$disconnect();
   }
 }
+
+export async function updateUserAction(id, formData) {
+  return;
+}

@@ -42,6 +42,7 @@ export default async function UserOrderPage({ params }) {
           quantity: true,
           price: true,
           thumbnail: true,
+          combinations: true,
         },
       },
       createdAt: true,
@@ -49,6 +50,7 @@ export default async function UserOrderPage({ params }) {
   });
 
   const orders = fatchData?.data || [];
+
   const nextCursor = fatchData?.pagination?.nextCursor || null;
 
   return (

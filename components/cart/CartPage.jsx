@@ -62,11 +62,11 @@ export default function CartPage({ setIsOpen }) {
   return (
     <div className="h-[calc(100vh-300px)]flex flex-col">
       {/* 🔝 Header */}
-      <div className="sticky top-0 z-10 bg-white/80 mt-4 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-slate-800">
-        <div className="flex items-center justify-center gap-2  py-4 font-bold text-brand-600 dark:text-brand-400">
+      <div className="sticky top-0 z-10 mt-4 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-slate-800">
+        <div className="flex items-center justify-center text-primary gap-2  py-4 font-bold ">
           <ShoppingBag size={20} />
 
-          <span className="text-xl">Cart</span>
+          <span className="text-xl ">Cart</span>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ export default function CartPage({ setIsOpen }) {
 
       {/* 💰 Bottom Summary (Cave Style Floating) */}
       {cartItems?.length > 0 && (
-        <div className="fixed bottom-32 left-0 right-0 flex justify-center">
+        <div className="sticky bottom-4 left-0 right-0 flex justify-center">
           <div className="w-full max-w-md px-4">
             <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl p-3">
               {/* Price */}

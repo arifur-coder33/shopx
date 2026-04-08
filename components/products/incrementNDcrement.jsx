@@ -51,7 +51,7 @@ export default function IncrementNDcrement({
         onClick={decrement}
         className={`${
           style === "simple"
-            ? ""
+            ? "p-0"
             : "border border-b-4 dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65"
         }`}
       >
@@ -71,7 +71,7 @@ export default function IncrementNDcrement({
         onClick={increment}
         className={`${
           style === "simple"
-            ? ""
+            ? "p-0"
             : "border border-b-4 dark:border-slate-300 border-slate-700  rounded-full px-3  opacity-65"
         }`}
       >

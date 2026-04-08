@@ -67,26 +67,12 @@
 
   /* Buttons */
   .button {
-    @apply rounded-md text-center text-xl md:text-2xl transition bg-primary text-white p-2 px-4;
-  }
-
-  .button:hover {
-    @apply border-b-2;
+    @apply rounded-md text-center text-xl md:text-2xl transition bg-primary text-white p-2 px-4 hover:scale-105;
   }
 
   /* Product Cards */
   .product-card {
-    @apply md:leading-6 flex-1 rounded-md max-w-64 cursor-pointer border-2 transition p-4;
-    border-color: transparent;
-    background: linear-gradient(
-      to top left,
-      var(--color-bg),
-      rgba(0, 0, 0, 0.05)
-    );
-  }
-
-  .product-card:hover {
-    @apply shadow-2xl bg-secondary;
+    @apply md:leading-6 flex-1 rounded-md max-w-64 cursor-pointer border-2 transition p-4 hover:border-primary hover:shadow-xl;
   }
 
   /* Brand Background / Text */
@@ -99,42 +85,6 @@
   }
   .card {
     @apply rounded-2xl shadow-md border  border-gray-300 overflow-hidden p-6;
-  }
-
-  /* Navigation Hover & Active */
-  .nav-hover {
-    @apply transition;
-  }
-
-  .nav-hover:hover {
-    color: var(--color-primary);
-    transform: scale(1.1);
-  }
-
-  .nav-item2 {
-    @apply flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-300 transition-all duration-200 ease-in-out;
-  }
-
-  .nav-item2:hover {
-    @apply bg-slate-100 dark:bg-slate-800 scale-[1.02];
-  }
-
-  .nav-item2-active {
-    background: linear-gradient(
-      to right,
-      var(--color-primary),
-      var(--color-secondary)
-    );
-    color: white;
-  }
-
-  .nav-item2 svg {
-    @apply transition-transform duration-200;
-  }
-
-  .nav-item2:hover svg,
-  .nav-item2-active svg {
-    @apply scale-110;
   }
 
   /* Image Placeholder */

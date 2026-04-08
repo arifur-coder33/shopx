@@ -21,7 +21,7 @@ export default function CartItem({
     variation,
   };
   return (
-    <div className="grid grid-cols-12 gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
+    <div className="grid grid-cols-12  gap-1 w-full text-[12px] text-slate-900 dark:text-slate-200 p-2  pr-3 mt-2 border-2 items-center dark:border-slate-800 border-gray-500 rounded-md ">
       <div className="col-span-3">
         <Imagecustom
           src={thumbnail}
@@ -46,7 +46,7 @@ export default function CartItem({
               variation.combinations.map((item, index) => (
                 <span
                   key={index}
-                  className=" border-2 bg-slate-300 rounded-full px-2 py-1 text-[9px]"
+                  className=" border-2  rounded-full px-2 py-1 text-[9px]"
                 >
                   {item?.variationName?.name} : {item.variationValue.value}
                 </span>
@@ -77,7 +77,7 @@ export default function CartItem({
         মোট: {replaceNumbers((discountPrice || regularPrice)?.toString())} x{" "}
         {replaceNumbers(productQty.toString())} ={" "}
         {replaceNumbers(
-          ((discountPrice || regularPrice) * productQty).toString()
+          ((discountPrice || regularPrice) * productQty).toString(),
         )}
         টাকা
       </div>

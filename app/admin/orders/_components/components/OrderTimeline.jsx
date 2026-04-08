@@ -14,7 +14,7 @@ import {
 import { useEffect, useState } from "react";
 
 // Status config with icons & colors
-const statusConfig = {
+export const statusConfig = {
   PENDING: { icon: Clock, color: "text-yellow-500 bg-yellow-100" },
   PROCESSING: { icon: Package, color: "text-blue-500 bg-blue-100" },
   READY_TO_SHIP: { icon: Package, color: "text-indigo-500 bg-indigo-100" },

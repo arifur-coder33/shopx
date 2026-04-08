@@ -137,6 +137,7 @@ export default function DynamicForm({
                   type={field.type}
                   colSpan={field.colSpan}
                   multiple={field.multiple}
+                  isEditable={field.editable}
                   onChange={
                     field.name === "mainImage" ? handleMainImageChange : null
                   }

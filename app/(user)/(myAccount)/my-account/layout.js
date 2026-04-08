@@ -1,17 +1,7 @@
 // app/account/layout.js
 import { auth } from "@/auth";
-import ImageCustomServer from "@/components/images/ImageCustomServer";
 import NavItem2 from "@/components/nav/NavItem2";
 import { MapPin, Package, Star, User } from "lucide-react";
-import Link from "next/link";
-
-// 🔥 Active check helper (client না, তাই workaround)
-function isActive(pathname, href) {
-  if (href === "/my-account") {
-    return pathname === "/my-account";
-  }
-  return pathname.startsWith(href);
-}
 
 export default async function AccountLayout({ children }) {
   const session = await auth();
@@ -70,13 +60,13 @@ export default async function AccountLayout({ children }) {
           {/* 🔥 User Card */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-4 rounded-2xl shadow">
-              <ImageCustomServer
+              {/* <ImageCustomServer
                 w={50}
                 h={50}
                 src={user.image}
                 alt="Avatar"
                 className="w-16 h-16 rounded-full object-cover border-2 border-white"
-              />
+              /> */}
               <div>
                 <h2 className="text-lg md:text-xl font-semibold">
                   {user.name}
@@ -89,15 +79,10 @@ export default async function AccountLayout({ children }) {
           {/* 🔥 Mobile Card Nav */}
           <div className="grid grid-cols-2 gap-3 mb-4 md:hidden">
             {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                prefetch={true}
-                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow text-center font-medium nav-hover flex flex-col items-center gap-2"
-              >
+              <NavItem2 mobile key={link.href} href={link.href}>
                 {link.icon}
-                {link.name}
-              </Link>
+                <span>{link.name}</span>
+              </NavItem2>
             ))}
           </div>
 
