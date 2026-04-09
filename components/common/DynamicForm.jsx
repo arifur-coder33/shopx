@@ -101,7 +101,10 @@ export default function DynamicForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
+    <form
+      onSubmit={handleSubmit}
+      className="relative md:min-w-96  min-w-[calc(100vw-6rem)]"
+    >
       {success && <p style={{ color: "green" }}>{success}</p>}
       {error && (
         <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">

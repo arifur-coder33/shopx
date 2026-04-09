@@ -37,7 +37,7 @@ export default function OrderItemsTable({
               <div>
                 <p className=" ">
                   <span
-                    className={`font-lg rounded-2xl px-2 py-1 border-2  border-gray-300 ${styles[status] || ""}`}
+                    className={` rounded-2xl px-2 py-1 border-2  border-gray-300 ${styles[status] || ""}`}
                   >
                     {status}
                   </span>

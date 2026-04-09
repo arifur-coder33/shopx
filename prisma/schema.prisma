@@ -14,6 +14,8 @@ model User {
   email        String      @unique
   phone       String?      @unique
   name         String?
+  gender       String?
+
   password     String   
   accounts      Account[]
   sessions      Session[]                   

@@ -4,6 +4,7 @@ import { signIn, signOut } from "@/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
+import { revalidatePath } from "next/cache";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
 export async function GetUserList(params) {
@@ -208,6 +209,28 @@ export async function deleteUserById(id) {
   }
 }
 
-export async function updateUserAction(id, formData) {
-  return;
+export async function updateUserAction({ id, formData }) {
+  try {
+    const formDataObj = Object.fromEntries(formData.entries());
+    const { name, email, phone, gender, dob } = formDataObj;
+    console.log("Updating user with data:", formDataObj);
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+    });
+    if (!existingUser) {
+      throw new Error("User not found");
+    }
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        name,
+        phone,
+        gender,
+      },
+    });
+    revalidatePath("/my-account");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }

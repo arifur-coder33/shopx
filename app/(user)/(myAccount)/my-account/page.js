@@ -18,7 +18,7 @@ export default async function ProfilePage() {
       name: true,
       email: true,
       phone: true,
-      // gender: true,
+      gender: true,
       // dob: true, // date of birth
       // avatar: true, // optional avatar URL
     },
@@ -84,11 +84,6 @@ export default async function ProfilePage() {
                   {field.value || "-"}
                 </p>
               </div>
-              {field.editable && (
-                <button className="text-indigo-600 hover:underline text-sm font-medium">
-                  Change
-                </button>
-              )}
             </div>
           ))}
         </div>

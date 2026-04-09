@@ -67,7 +67,7 @@
 
   /* Buttons */
   .button {
-    @apply rounded-md text-center text-xl md:text-2xl transition bg-primary text-white p-2 px-4 hover:scale-105;
+    @apply rounded-md text-center text-xl md:text-2xl transition bg-primary text-white p-2 px-4;
   }
 
   /* Product Cards */
@@ -120,5 +120,10 @@
   .blink-border {
     border: 2px solid transparent;
     animation: blinkBorder 1s ease-in-out;
+  }
+}
+@layer utilities {
+  .skeleton {
+    @apply animate-pulse bg-gray-200;
   }
 }
