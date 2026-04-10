@@ -4,6 +4,7 @@ import { fetchSingleData } from "@/backend/serverActions/fetchDataActon";
 import Button from "@/components/button";
 import ImageCustomServer from "@/components/images/ImageCustomServer";
 import LazyModalButton from "@/components/modal/LazyModalButton";
+import Link from "next/link";
 import { Suspense } from "react";
 
 export default async function ProfilePage() {
@@ -101,7 +102,12 @@ export default async function ProfilePage() {
         </div>
         {/* Change Password */}
         <div className="mt-4 flex justify-center">
-          <Button>Change Password</Button>
+          <Link
+            href="/my-account/updatePassword"
+            className="text-indigo-600 hover:text-indigo-800"
+          >
+            Change Password
+          </Link>
         </div>
       </div>
     </div>

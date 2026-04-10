@@ -11,6 +11,7 @@ import VariationInput from "../input/VariationInput";
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
 const FloatingInput = dynamic(() => import("@/components/input/FloatingInput"));
+const PasswordInput = dynamic(() => import("@/components/input/PasswordInput"));
 const CheckBox = dynamic(() => import("../input/CheckBox"), { ssr: false });
 const CustomEditor = dynamic(
   () => import("../input/quillEditor/CustomEditor"),
@@ -140,6 +141,23 @@ export default function DynamicForm({
                   type={field.type}
                   colSpan={field.colSpan}
                   multiple={field.multiple}
+                  isEditable={field.editable}
+                  onChange={
+                    field.name === "mainImage" ? handleMainImageChange : null
+                  }
+                  required={field.required}
+                />
+              );
+            case "password":
+              return (
+                <PasswordInput
+                  index={index}
+                  key={field.name}
+                  defaultValue={data?.[field.name]}
+                  label={field.label}
+                  name={field.name}
+                  type={field.type}
+                  colSpan={field.colSpan}
                   isEditable={field.editable}
                   onChange={
                     field.name === "mainImage" ? handleMainImageChange : null
