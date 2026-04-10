@@ -2,7 +2,7 @@ import {
   SkeletonButton,
   SkeletonImage,
   SkeletonText,
-} from "@/components/skeletons/_components";
+} from "@/components/skeletons/_components/Index";
 
 export default function OrderCardListSkeleton() {
   return (
