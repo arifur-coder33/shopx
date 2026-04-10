@@ -1,4 +1,4 @@
-import { SkeletonText } from "@/components/skeletons/_components";
+import { SkeletonText } from "@/components/skeletons/_components/Index";
 
 export default function OrderCountsSkeleton() {
   return (
