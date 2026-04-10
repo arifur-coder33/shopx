@@ -1,7 +1,7 @@
 "use client";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "../button";
 import DefaultInput from "../input/DefaultInput";
 export default function LoginForm() {
@@ -10,6 +10,18 @@ export default function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    if (loggedIn) {
+      if (callbackUrl) {
+        console.log("Redirecting to:", callbackUrl);
+        router.push(callbackUrl);
+      } else {
+        router.push("/");
+      }
+    }
+  }, [loggedIn, callbackUrl, router]);
 
   async function HandleSubmit(e) {
     e.preventDefault();
@@ -31,15 +43,17 @@ export default function LoginForm() {
       console.log(result);
 
       if (result?.error === undefined) {
-        if (callbackUrl) {
-          console.log("Redirecting to:", callbackUrl);
-          router.push(callbackUrl);
-        } else {
-          router.push("callback /", callbackUrl);
-          router.push("/");
-        }
+        setLoggedIn(true);
+        // if (callbackUrl) {
+        //   console.log("Redirecting to:", callbackUrl);
+        //   router.push(callbackUrl);
+        // } else {
+        //   router.push("callback /", callbackUrl);
+        //   router.push("/");
+        // }
       } else if (result?.error === "CredentialsSignin") {
         console.log(result.error);
+        setLoggedIn(false);
         setError("Invalid email or password. Please try again.");
       }
     } catch (err) {

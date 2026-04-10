@@ -3,7 +3,7 @@ import {
   SkeletonCircle,
   SkeletonImage,
   SkeletonText,
-} from "@/components/skeletons/_components";
+} from "@/components/skeletons/_components/Index";
 
 export default function OrderViewSkeleton() {
   return (
