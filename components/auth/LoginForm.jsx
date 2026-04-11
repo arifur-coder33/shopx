@@ -66,6 +66,7 @@ export default function LoginForm() {
 
   return (
     <form className="mt-6" onSubmit={HandleSubmit}>
+      <h1 className="text-white font-bold text-center text-2xl">Login </h1>
       {error && (
         <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden">
           {error}

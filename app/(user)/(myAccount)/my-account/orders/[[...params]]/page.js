@@ -52,6 +52,13 @@ export default async function UserOrderPage({ params }) {
   const orders = fatchData?.data || [];
 
   const nextCursor = fatchData?.pagination?.nextCursor || null;
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-500">No orders found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 flex flex-col">

@@ -87,8 +87,6 @@ export async function deleteRoleById(id) {
       success: false,
       message: error.message || "Failed to delete ",
     };
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

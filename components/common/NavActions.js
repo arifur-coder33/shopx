@@ -1,9 +1,10 @@
-import { LogOutIcon, MoonStar, ShoppingCart, User2Icon } from "lucide-react";
+import { LogInIcon, MoonStar, ShoppingCart, User2Icon } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import ThemeToggle from "../TheamToggle"; // Corrected spelling
-const Logout = dynamic(() => import("@/components/auth/Logout"));
+import UserMenu from "./UserMenu";
+
 const Cart = dynamic(() => import("@/components/Cart"));
 
 const NavActionsSkeleton = () => (
@@ -27,24 +28,39 @@ const NavActionsSkeleton = () => (
   </div>
 );
 
-export default function NavActions() {
+export default async function NavActions() {
   return (
     <div className="flex flex-row justify-end gap-1 items-center">
-      <div className="h-6 w-6">
-        <Logout className="nav-hover" aria-label="Logout">
-          <LogOutIcon />{" "}
-        </Logout>
-      </div>
-      <div className="h-6 w-6  hidden md:block ">
+      {/* {session && (
+        <div className="h-6 w-6">
+          <Logout className="nav-hover" aria-label="Logout">
+            <LogOutIcon />{" "}
+          </Logout>
+        </div>
+      )}
+      {!session && (
+        <div className="h-6 w-6  hidden md:block ">
+          <Link className="nav-hover" href={"/login"}>
+            <LogInIcon />
+          </Link>
+        </div>
+      )} */}
+
+      <UserMenu>
+        <User2Icon className="nav-hover" />
+      </UserMenu>
+
+      <div className="h-6 w-6 hidden md:block">
         <Link className="nav-hover" href={"/login"}>
-          <User2Icon />
+          <LogInIcon />
         </Link>
       </div>
-      <div className="h-6 w-6  hidden md:block ">
+
+      {/* <div className="h-6 w-6  hidden md:block ">
         <Link prefetch={true} className="nav-hover" href={"/my-account"}>
           <User2Icon />
         </Link>
-      </div>
+      </div> */}
 
       <div className="h-6 w-6 hidden md:block">
         <Cart>

@@ -77,3 +77,12 @@ export async function getUserId() {
   }
   return session.user.id;
 }
+export async function getAuthData() {
+  const session = await auth();
+
+  // 🔐 not logged in
+  if (!session?.user) {
+    return null;
+  }
+  return session.user;
+}

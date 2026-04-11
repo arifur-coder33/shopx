@@ -65,7 +65,7 @@ export default function DynamicForm({
         const response =
           actionType === "edit"
             ? await updateAction({
-                id: data?.id,
+                id: data?.id || null,
                 formData,
                 slug: data?.slug,
               })
@@ -112,7 +112,7 @@ export default function DynamicForm({
           {error}
         </div>
       )}
-      <div className="md:grid md:grid-cols-6 gap-2 text-[10px] md:text-base ">
+      <div className="md:grid md:grid-cols-6 gap-2 text-base ">
         {fromFields?.map((field, index) => {
           switch (field.type) {
             case "checkbox":

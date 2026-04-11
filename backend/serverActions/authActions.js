@@ -3,10 +3,15 @@
 import { signIn, signOut } from "@/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
+import { sendMail } from "../lib/mail/email/sendMail";
+import { sendOTP } from "../lib/mail/phone/sendOtp";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
+import { getAuthData } from "../utils/hasPermission";
+import { createOTPToken, verifyOTPToken } from "../utils/otp";
 export async function GetUserList(params) {
   return getListData({
     prisma,
@@ -62,7 +67,6 @@ export async function loginWithCreds(formData) {
     await signIn("credentials", rawFormData);
   } catch (error) {
     if (error instanceof AuthError) {
-      console.log(`Error Type: ${error.type}`);
       switch (error.type) {
         case "CredentialsSignin":
           return {
@@ -121,7 +125,6 @@ export async function userregistration(request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error(error);
     return new Response(JSON.stringify({ message: "Something went wrong" }), {
       status: 500,
     });
@@ -199,7 +202,6 @@ export async function deleteUserById(id) {
       data: " deleted successfully",
     };
   } catch (error) {
-    console.error("Error deleting the product:", error);
     return {
       success: false,
       message: error.message || "Failed to delete ",
@@ -213,7 +215,7 @@ export async function updateUserAction({ id, formData }) {
   try {
     const formDataObj = Object.fromEntries(formData.entries());
     const { name, email, phone, gender, dob } = formDataObj;
-    console.log("Updating user with data:", formDataObj);
+
     const existingUser = await prisma.user.findUnique({
       where: { id },
     });
@@ -233,4 +235,158 @@ export async function updateUserAction({ id, formData }) {
   } catch (error) {
     return { success: false, error: error.message };
   }
+}
+
+export async function updatePassword({ formData }) {
+  try {
+    const authData = await getAuthData();
+
+    if (!authData) {
+      throw new Error("Unauthenticated");
+    }
+    const formDataObj = Object.fromEntries(formData.entries());
+
+    const { oldPassword, confirmPassword, newPassword } = formDataObj;
+
+    if (newPassword !== confirmPassword) {
+      throw new Error("New password and confirm password does not match");
+    }
+    // ✅ Validation
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      throw new Error("All fields are required");
+    }
+
+    if (newPassword.length < 4) {
+      throw new Error("New password must be at least 4 characters long");
+    }
+    if (newPassword === oldPassword) {
+      throw new Error("Old password and new password cannot be the same");
+    }
+    // ✅ Find user
+    const user = await prisma.user.findUnique({
+      where: { email: authData.email },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // ✅ Check old password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      throw new Error("Old password is incorrect");
+    }
+
+    // ✅ Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // ✅ Update password
+    await prisma.user.update({
+      where: { email: authData.email },
+      data: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 }, // Invalidate existing tokens
+      },
+    });
+
+    return { success: true, message: "Password updated successfully" };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
+export async function sendResetEmail({ formData }) {
+  const email = formData.get("email");
+
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user) {
+    return { error: "Email not found" };
+  }
+
+  // 🔐 Token (no DB needed)
+  const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+    expiresIn: "15m",
+  });
+
+  const link = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${token}`;
+
+  const html = `
+    <h2>Password Reset</h2>
+    <p>Click the link below:</p>
+    <a href="${link}">${link}</a>
+  `;
+
+  await sendMail({
+    to: email,
+    subject: "Reset Password",
+    html,
+  });
+
+  return { success: "Reset link sent to your email. Please check your inbox" };
+}
+
+export async function sendPhoneOTP({ formData }) {
+  const phone = formData.get("phone");
+
+  const user = await prisma.user.findUnique({ where: { phone } });
+
+  if (!user) {
+    return { error: "Phone not found" };
+  }
+
+  const { otp, token } = createOTPToken(phone);
+
+  await sendOTP({
+    phone,
+    message: `Your OTP is ${otp}`,
+  });
+
+  return { success: true, token };
+}
+
+export async function resetPassword({ password, token, phone, userOtp }) {
+  let user;
+
+  // ✅ Email flow
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      user = await prisma.user.findUnique({
+        where: { email: decoded.email },
+      });
+    } catch {
+      return { error: "Invalid or expired token" };
+    }
+  }
+
+  // ✅ Phone flow
+  if (phone) {
+    const verify = verifyOTPToken({ token, userOtp: otp });
+
+    if (verify.error) {
+      throw new Error(verify.error);
+    }
+    user = await prisma.user.findUnique({
+      where: { phone },
+    });
+  }
+
+  if (!user) {
+    return { error: "User not found" };
+  }
+
+  if (password.length < 4) {
+    return { error: "Minimum 4 characters required" };
+  }
+
+  const hashed = await bcrypt.hash(password, 10);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashed },
+  });
+
+  return { success: "Password updated" };
 }
