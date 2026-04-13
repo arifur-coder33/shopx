@@ -44,9 +44,51 @@ export async function getCategory() {
   }
 }
 
+// export async function getAllCategoryWithproduct() {
+//   try {
+//     const data = await prisma.category.findMany({
+//       include: {
+//         _count: {
+//           select: { products: true },
+//         },
+//         products: {
+//           where: {
+//             isActive: true,
+//           },
+//           orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+//           take: 10,
+//           select: {
+//             id: true,
+//             title: true,
+//             regularPrice: true,
+//             discountPrice: true,
+//             slug: true,
+//             mainImage: true,
+//           },
+//         },
+//       },
+//     });
+//     // Filter categories that have at least one product
+//     const filteredData = data.filter(
+//       (category) => category._count.products > 0
+//     );
+
+//     return { success: true, data: filteredData };
+//   } catch (error) {
+//     return { success: false, error: error.message };
+//   }
+// }
+
 export async function getAllCategoryWithproduct() {
   try {
     const data = await prisma.category.findMany({
+      where: {
+        products: {
+          some: {
+            isActive: true,
+          },
+        },
+      },
       include: {
         _count: {
           select: { products: true },
@@ -68,12 +110,8 @@ export async function getAllCategoryWithproduct() {
         },
       },
     });
-    // Filter categories that have at least one product
-    const filteredData = data.filter(
-      (category) => category._count.products > 0
-    );
 
-    return { success: true, data: filteredData };
+    return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
   }

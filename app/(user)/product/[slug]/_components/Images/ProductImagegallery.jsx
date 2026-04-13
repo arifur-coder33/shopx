@@ -18,6 +18,7 @@ export function ProductImageGallery({ imageGallery, title }) {
               blurDataURL={image}
               sizes="(max-width: 768px) 100vh, (max-width: 1200px) 800px, 800px"
               loading="lazy"
+              unoptimized
             />
           );
         })}

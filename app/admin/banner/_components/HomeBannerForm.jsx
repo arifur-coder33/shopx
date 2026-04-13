@@ -1,6 +1,5 @@
 "use client";
 
-
 import { homeBannerUpdate } from "@/backend/serverActions/bannerAction";
 
 import Button from "@/components/button";
@@ -29,8 +28,8 @@ export default function HomePageBannerForm({ data }) {
     const form = e.target;
     const formData = new FormData(form);
     const singleImage = formData.get("image");
-    if (singleImage?.size===0) {
-      formData.delete('image')
+    if (singleImage?.size === 0) {
+      formData.delete("image");
     }
     setError(null);
     setSuccess(null);
@@ -68,7 +67,6 @@ export default function HomePageBannerForm({ data }) {
           type={"text"}
           colSpan="full"
         />
-      
 
         <FloatingInput
           label={"Banner"}
@@ -87,6 +85,7 @@ export default function HomePageBannerForm({ data }) {
                 height={200}
                 src={uploadedMainimage}
                 alt={`Gallery Image `}
+                unoptimized
               />
               <p className="border-2 text-center bg-slate-900 absolute bottom-0 left-0 text-[14px] opacity-70 w-[100px]">
                 <span className="text-white">New image</span>
@@ -105,7 +104,6 @@ export default function HomePageBannerForm({ data }) {
             </>
           )}
         </div>
-       
 
         <Button
           type={"submit"}

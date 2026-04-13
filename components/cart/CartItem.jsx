@@ -21,8 +21,9 @@ export default function CartItem({
           width={75}
           height={75}
           alt={title}
-          src={cloudinaryMainImage(mainImage,100,100)}
+          src={cloudinaryMainImage(mainImage, 100, 100)}
           priority
+          unoptimized
         />
       </div>
       <div className="col-span-8 leading-none ">
