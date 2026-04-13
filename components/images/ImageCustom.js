@@ -24,6 +24,7 @@ export default function Imagecustom({
       alt={alt ? alt : "image"}
       priority={priority}
       quality={quality}
+      unoptimized
     />
   );
 }
