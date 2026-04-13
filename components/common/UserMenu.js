@@ -1,14 +1,14 @@
 "use client";
 import { LogOutIcon, Package, User2Icon } from "lucide-react";
-import { useSession } from "next-auth/react";
+
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
 const Logout = dynamic(() => import("@/components/auth/Logout"));
-export default function UserMenu({ children }) {
+export default function UserMenu({ children, session }) {
   const [open, setOpen] = useState(false);
-  const { data: session, status } = useSession();
-  if (!session) return null;
+
+  if (!session) return <User2Icon size={16} />;
 
   return (
     <div

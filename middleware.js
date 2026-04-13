@@ -54,3 +54,40 @@ export default async function middleware(req) {
 export const config = {
   matcher: ["/login", "/my-account/:path*", "/admin/:path*"],
 };
+// import { auth } from "@/auth";
+// import { NextResponse } from "next/server";
+
+// export default auth((req) => {
+//   console.log("MIDDLEWARE AUTH:", req.auth);
+//   const isAuth = !!req.auth;
+//   const url = req.nextUrl;
+
+//   // 🚫 Block login page for logged-in user
+//   if (isAuth && url.pathname === "/login") {
+//     return NextResponse.redirect(new URL("/", req.url));
+//   }
+
+//   // 🔒 Admin Route
+//   if (url.pathname.startsWith("/admin")) {
+//     if (!isAuth) {
+//       const loginUrl = new URL("/login", req.url);
+//       loginUrl.searchParams.set("callbackUrl", url.pathname);
+//       return NextResponse.redirect(loginUrl);
+//     }
+//   }
+
+//   // 🔒 My Account Route
+//   if (url.pathname.startsWith("/my-account")) {
+//     if (!isAuth) {
+//       const loginUrl = new URL("/login", req.url);
+//       loginUrl.searchParams.set("callbackUrl", url.pathname);
+//       return NextResponse.redirect(loginUrl);
+//     }
+//   }
+
+//   return NextResponse.next();
+// });
+
+// export const config = {
+//   matcher: ["/login", "/my-account/:path*", "/admin/:path*"],
+// };

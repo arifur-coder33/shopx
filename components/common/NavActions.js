@@ -1,10 +1,10 @@
+import { auth } from "@/auth";
 import { LogInIcon, MoonStar, ShoppingCart, User2Icon } from "lucide-react";
 import dynamic from "next/dynamic";
+import { headers } from "next/headers";
 import Link from "next/link";
-
 import ThemeToggle from "../TheamToggle"; // Corrected spelling
 import UserMenu from "./UserMenu";
-
 const Cart = dynamic(() => import("@/components/Cart"));
 
 const NavActionsSkeleton = () => (
@@ -29,6 +29,11 @@ const NavActionsSkeleton = () => (
 );
 
 export default async function NavActions() {
+  const session = await auth();
+  const h = headers();
+
+  console.log("SESSION:", session);
+  console.log("COOKIES:", h.get("cookie"));
   return (
     <div className="flex flex-row justify-end gap-1 items-center">
       {/* {session && (
@@ -46,7 +51,7 @@ export default async function NavActions() {
         </div>
       )} */}
 
-      <UserMenu>
+      <UserMenu session={session}>
         <User2Icon className="nav-hover" />
       </UserMenu>
 

@@ -13,8 +13,9 @@ export const metadata = {
   // No need to preconnect again, but it doesn't hurt
 };
 
-export default function UserLayout({ children }) {
+export default async function UserLayout({ children }) {
   const pixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
+
   return (
     <>
       <NavBar />
