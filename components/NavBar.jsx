@@ -15,6 +15,7 @@ export default async function NavBar() {
 
   const noticeData = noticeResult.data;
   const siteSettingData = siteSettingResult.data;
+  console.log("logo data in navbar", siteSettingData);
 
   return (
     <>

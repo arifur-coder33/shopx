@@ -131,7 +131,7 @@ export default function OrderForm({
       </div>
       <Button
         type={"submit"}
-        className="w-full z-30 bg-brand p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 "
+        className="w-full z-30 bg-brand p-2 sticky bottom-2  left-0 border-b-4  border-slate-600 rounded-lg text-center hover:text-white cursor-pointer  my-1.5 text-slate-200 "
       >
         Place Order
       </Button>

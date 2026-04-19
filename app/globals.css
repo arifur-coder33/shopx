@@ -62,7 +62,7 @@
   /* Theme Wrapper */
 
   .theam {
-    @apply text-base sm:text-lg md:text-xl bg-background text-text;
+    @apply text-lg  sm:text-lg md:text-xl bg-background text-text;
   }
 
   /* Buttons */
