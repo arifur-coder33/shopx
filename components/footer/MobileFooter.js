@@ -1,4 +1,4 @@
-import CategorySidebar from "@/app/(user)/category/_compoents/CategorySidebar";
+import CategorySidebar from "@/app/(user)/(withMobileFooter)/category/_compoents/CategorySidebar";
 import Cart from "@/components/Cart";
 import { Heart, Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";

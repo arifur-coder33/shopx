@@ -133,7 +133,7 @@ export default function OrderForm({
         type={"submit"}
         className="w-full z-30 bg-brand p-2 sticky bottom-0 left-0।। rounded-lg text-center cursor-pointer hover:border-b-0 my-1.5 text-slate-200 "
       >
-        অর্ডার নিশ্চিত করুন
+        Place Order
       </Button>
       {loading && !error && (
         <div className="fixed top-0 left-0 w-screen h-screen bg-black bg-opacity-30 z-30 flex items-center justify-center">

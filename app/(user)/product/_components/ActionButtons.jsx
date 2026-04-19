@@ -7,7 +7,7 @@ export default function ActionButtons({
   selectedVariation,
 }) {
   return (
-    <div className="grid grid-cols-2  gap-2 mt-4 fixed bottom-20 left-0 w-full sm:static">
+    <div className="grid grid-cols-2  gap-2 mt-4 fixed bottom-0.5 left-0 w-full sm:static">
       {/* Add to cart button  */}
 
       <AddToCartButton

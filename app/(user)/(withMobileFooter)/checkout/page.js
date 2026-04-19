@@ -2,7 +2,7 @@
 import OrderForm from "@/components/checkout/OrderForm";
 import { useCart } from "@/context/CartContext";
 import { useState } from "react";
-import BuyNowProductDetails from "../buynow/[slug]/_components/BuyNowProductDetails";
+import BuyNowProductDetails from "../../buynow/[slug]/_components/BuyNowProductDetails";
 
 export default function CheckoutPage() {
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");

@@ -1,7 +1,7 @@
 "use client";
 import OrderForm from "@/components/checkout/OrderForm";
 import { useState } from "react";
-import BuyNowProductDetails from "../../buynow/[slug]/_components/BuyNowProductDetails";
+import BuyNowProductDetails from "../../../buynow/[slug]/_components/BuyNowProductDetails";
 
 export default function BuyNowCheckout() {
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
