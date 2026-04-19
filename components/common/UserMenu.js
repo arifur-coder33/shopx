@@ -1,18 +1,33 @@
 "use client";
-import { LogOutIcon, Package, User2Icon } from "lucide-react";
+import { Package, User2Icon } from "lucide-react";
 
-import dynamic from "next/dynamic";
+import Logout from "@/components/auth/Logout";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
-const Logout = dynamic(() => import("@/components/auth/Logout"));
-export default function UserMenu({ children, session }) {
-  const [open, setOpen] = useState(false);
 
-  if (!session) return <User2Icon size={16} />;
+export default function UserMenu({ children }) {
+  const [open, setOpen] = useState(false);
+  const { data: session, status } = useSession();
+  console.log("UserMenu session:", session);
+  console.log("UserMenu session status:", status);
+  if (status === "loading") {
+    return (
+      <div className="h-6 w-6">
+        <User2Icon className="opacity-50" />
+      </div>
+    );
+  }
+  if (status === "unauthenticated")
+    return (
+      <Link href="/login" className="nav-hover rounded-sm ">
+        LogIn
+      </Link>
+    );
 
   return (
     <div
-      className="relative hidden md:block"
+      className="md:relative hidden md:block"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
@@ -23,9 +38,9 @@ export default function UserMenu({ children, session }) {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0  bg-slate-900 text-white w-48 rounded-xl shadow-lg  border border-gray-200 dark:border-slate-700 z-50">
+        <div className="md:absolute right-0 top-full pt-2  bg-slate-900 text-white w-48 rounded-xl shadow-lg  border border-gray-200 dark:border-slate-700 z-50">
           <div className="px-4 py-2 text-sm border-b dark:border-slate-700">
-            👋 {session?.user?.email || "User"}
+            👋 {session?.user?.name || session?.user?.email || "User"}
           </div>
 
           <Link
@@ -46,7 +61,7 @@ export default function UserMenu({ children, session }) {
 
           <div className="border-t dark:border-slate-700">
             <Logout className="flex items-center gap-2 px-4 py-2 text-sm w-full text-left hover:bg-red-900">
-              <LogOutIcon size={16} /> Logout
+              Logout
             </Logout>
           </div>
         </div>
