@@ -1,30 +1,28 @@
-import {
-  getCategory,
-  getCategoryPageData,
-} from "@/backend/serverActions/catagoryActions";
+export const revalidate = 3600;
+import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
-export async function generateStaticParams() {
-  const res = await getCategory();
+import prisma from "@/lib/prisma";
 
-  const categories = Array.isArray(res?.data) ? res.data : [];
+export async function generateStaticParams() {
+  const categories = await prisma.category.findMany({
+    select: {
+      id: true,
+      slug: true,
+      parentCategoryId: true,
+    },
+  });
 
   const buildPaths = (parentId = null, path = []) => {
-    const children = categories.filter((c) =>
-      parentId === null
-        ? c.parentCategoryId === null
-        : c.parentCategoryId === parentId,
-    );
+    const children = categories.filter((c) => c.parentCategoryId === parentId);
 
     let result = [];
 
     for (const child of children) {
-      if (!child?.slug) continue; // 🔥 safety
-
       const newPath = [...path, child.slug];
 
       result.push({
-        slug: newPath.filter(Boolean), // 🔥 important fix
+        slug: newPath,
       });
 
       result.push(...buildPaths(child.id, newPath));
