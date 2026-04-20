@@ -5,7 +5,7 @@ import Image from "next/image"; // Use the standard component!
 // This is now a simple, synchronous Server Component. No more `async`.
 export default function Logo({ data }) {
   return (
-    <div className="absolute top-0 flex flex-row items-center text-3xl text-orange-600 ring-2 ring-slate-200 rounded-full ">
+    <div className=" flex flex-row items-center text-3xl text-orange-600 ring-2 ring-slate-200 rounded-full ">
       <Image
         // DO NOT USE Imagecustom here. This is the fix.
         src={

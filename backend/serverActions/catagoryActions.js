@@ -170,7 +170,7 @@ export async function updateCategoryAction({ formData, id }) {
         const incomingVariationNewItems = parseVariations.filter((v) => !v.id);
         const existingIds = existingVariationValue.map((v) => v.id);
         const idsTodelete = existingIds.filter(
-          (existingId) => !incomingVariationIds.includes(existingId)
+          (existingId) => !incomingVariationIds.includes(existingId),
         );
 
         if (idsTodelete?.length > 0) {
@@ -232,7 +232,7 @@ export async function deleteCategoryAction(id) {
     });
     if (checkChildCategory?.subCategories?.length > 0) {
       throw new Error(
-        "This category has Sub categories. Please delete them first."
+        "This category has Sub categories. Please delete them first.",
       );
     }
     // 1. First delete all VariationValue where categoryId = id
@@ -351,34 +351,36 @@ export async function getAllCategoryWithproduct() {
   }
 }
 
-export async function getCategoryWithproduct(slug) {
-  const decodedSlug = decodeURIComponent(slug);
-  try {
-    const data = await prisma.category.findUnique({
-      where: {
-        slug: decodedSlug,
-      },
-      include: {
-        _count: {
-          select: { products: true },
-        },
-        products: {
-          select: {
-            id: true,
-            title: true,
-            regularPrice: true,
-            discountPrice: true,
-            slug: true,
-            mainImage: true,
-          },
-        },
-      },
-    });
-    return { success: true, data };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
+// export async function getCategoryWithproduct(slug) {
+//   const decodedSlug = decodeURIComponent(slug);
+//   console.log("Decoded slug:", decodedSlug);
+//   try {
+//     const data = await prisma.category.findUnique({
+//       where: {
+//         slug: decodedSlug,
+//       },
+//       include: {
+//         _count: {
+//           select: { products: true },
+//         },
+//         products: {
+//           select: {
+//             id: true,
+//             title: true,
+//             regularPrice: true,
+//             discountPrice: true,
+//             slug: true,
+//             mainImage: true,
+//           },
+//         },
+//       },
+//     });
+//     console.log("Category with products:", data);
+//     return { success: true, data };
+//   } catch (error) {
+//     return { success: false, error: error.message };
+//   }
+// }
 
 export async function getAllCategoriesList(params) {
   try {
@@ -455,20 +457,144 @@ export async function getcategoryCount(params) {
   }
 }
 
-async function getCategoryTree() {
+// export async function getCategoryTree() {
+//   const allCategories = await prisma.category.findMany({
+//     include: { parentCategory: true },
+//   });
+
+//   // Helper to build tree recursively
+//   function buildTree(parentCategoryId = null) {
+//     return allCategories
+//       .filter((cat) => cat.parentCategoryId === parentCategoryId)
+//       .map((cat) => ({
+//         ...cat,
+//         subCategories: buildTree(cat.id),
+//       }));
+//   }
+
+//   return buildTree(null); // start from root categories
+// }
+
+export async function getCategoryTree() {
   const allCategories = await prisma.category.findMany({
-    include: { parentCategory: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      parentCategoryId: true,
+    },
   });
 
-  // Helper to build tree recursively
-  function buildTree(parentId = null) {
-    return allCategories
-      .filter((cat) => cat.parentCategoryId === parentId)
-      .map((cat) => ({
-        ...cat,
-        subCategories: buildTree(cat.id),
-      }));
-  }
+  const map = new Map();
+  const roots = [];
 
-  return buildTree(null); // start from root categories
+  allCategories.forEach((cat) => {
+    map.set(cat.id, { ...cat, subCategories: [] });
+  });
+
+  allCategories.forEach((cat) => {
+    if (cat.parentCategoryId) {
+      map.get(cat.parentCategoryId)?.subCategories.push(map.get(cat.id));
+    } else {
+      roots.push(map.get(cat.id));
+    }
+  });
+
+  return roots;
+}
+export async function getCategoryPageData(slug) {
+  const decodedSlug = decodeURIComponent(slug);
+  const slugs = decodedSlug.split("/");
+
+  try {
+    // 1️⃣ all categories (for tree + recursion)
+    const categories = await prisma.category.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        parentCategoryId: true,
+      },
+    });
+
+    // 2️⃣ find last category (e.g. shirt)
+    const targetCategory = categories.find((c) => c.slug === slug);
+
+    if (!slugs) {
+      return { success: false, error: "Category not found" };
+    }
+
+    // 3️⃣ recursive function for subcategories
+    const getChildIds = (parentCategoryId) => {
+      const children = categories.filter(
+        (c) => c.parentCategoryId === parentCategoryId,
+      );
+
+      let ids = [parentCategoryId];
+
+      children.forEach((child) => {
+        ids = [...ids, ...getChildIds(child.id)];
+      });
+
+      return ids;
+    };
+
+    const categoryIds = getChildIds(targetCategory.id);
+
+    // 4️⃣ get products (ONLY LIGHT DATA)
+    const products = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        categoryId: {
+          in: categoryIds,
+        },
+      },
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        mainImage: true,
+        hasVariations: true,
+        variations: {
+          select: {
+            regularPrice: true,
+            discountPrice: true,
+            combinations: true,
+          },
+        },
+        thumbnail: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        gallery: {
+          select: {
+            media: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // const filteredData = products.map((category) => ({
+    //   ...category,
+    //   products: category.products.map((product) => ({
+    //     ...product,
+    //     gallery: product.gallery.map((g) => g.media), // Extract only media
+    //   })),
+    // }));
+
+    return { success: true, data: products };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
 }

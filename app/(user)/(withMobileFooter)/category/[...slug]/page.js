@@ -1,10 +1,11 @@
-import { getCategoryWithproduct } from "@/backend/serverActions/catagoryActions";
+import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
 
 export default async function CategoryWithProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;
+
   // const getData = unstable_cache(
   //   async () => {
   //     const data = await getCategoryWithproduct(slug);
@@ -15,13 +16,14 @@ export default async function CategoryWithProductPage({ params }) {
   //   { revalidate: 3600, tags: ["category"] }
   // );
 
-  const { data } = await getCategoryWithproduct(slug);
-  console.log(data);
+  const { data } = await getCategoryPageData(slug[slug.length - 1]);
+  console.log("data", data);
+  console.log("length", data.length);
   return (
     <>
       <ProductList headerName={data?.name}>
-        {data?.products?.length > 0
-          ? data?.products?.map((product) => (
+        {data?.length > 0
+          ? data?.map((product) => (
               <ProductCard key={product?.id} product={product} />
             ))
           : "No Product found."}

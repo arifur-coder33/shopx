@@ -1,8 +1,10 @@
-import CategorySidebar from "@/app/(user)/(withMobileFooter)/category/_compoents/CategorySidebar";
+import { getCategoryTree } from "@/backend/serverActions/catagoryActions";
 import Cart from "@/components/Cart";
 import { Heart, Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
-export default function MobileFooter() {
+import CategoryDrawer from "../common/Category/CategoryDrawer";
+export default async function MobileFooter() {
+  const ccategoryData = await getCategoryTree();
   return (
     <div className="z-50 fixed bottom-0 md:hidden left-0 right-0 flex justify-center">
       <div className="w-full max-w-md px-4 pb-4">
@@ -18,9 +20,9 @@ export default function MobileFooter() {
 
           {/* Menu */}
           <div className="flex justify-between items-center px-6 py-4">
-            <CategorySidebar>
+            <CategoryDrawer initialData={ccategoryData}>
               <LayoutGrid className="text-gray-600 dark:text-gray-300" />
-            </CategorySidebar>
+            </CategoryDrawer>
             {/* <Link href="/category">
               <LayoutGrid className="text-gray-600 dark:text-gray-300" />
             </Link> */}

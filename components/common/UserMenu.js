@@ -9,8 +9,7 @@ import { useState } from "react";
 export default function UserMenu({ children }) {
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
-  console.log("UserMenu session:", session);
-  console.log("UserMenu session status:", status);
+
   if (status === "loading") {
     return (
       <div className="h-6 w- hidden md:block">
