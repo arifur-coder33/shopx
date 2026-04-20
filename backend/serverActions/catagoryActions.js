@@ -257,6 +257,7 @@ export async function getCategory() {
   try {
     const data = await prisma.category.findMany({
       select: {
+        parentCategoryId: true,
         id: true,
         name: true,
         createdAt: true,
