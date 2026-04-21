@@ -67,7 +67,9 @@ function transformVariations(productVariations) {
     };
   });
 }
-
+function buildSearchText(product) {
+  return `${product.title} ${product.description}`.toLowerCase();
+}
 export async function createProductActions(formData) {
   try {
     let data = Object.fromEntries(formData.entries());
@@ -381,6 +383,7 @@ export async function createProductAction(formData) {
 
       // --- Prepare Main Product Data [MODIFIED] ---
       // Price, stock are now removed from the main product create call
+
       const preparedData = {
         ...filteredData,
         productCode: newProductCode,
@@ -400,6 +403,7 @@ export async function createProductAction(formData) {
         description: data?.description || null,
         seoKeyWord: data?.seoKeyWord || null,
         seoDescription: data?.seoDescription || null,
+        searchText: buildSearchText(data),
       };
 
       // 🔹 Create the product
@@ -1533,6 +1537,7 @@ export async function updateProductAction({ id: productId, formData }) {
         isFeatured: Boolean(data.isFeatured === "on"),
         isActive: Boolean(data.isActive === "on"),
         hasVariations: hasSubmittedVariations,
+        searchText: buildSearchText(data),
       };
 
       const updatedProduct = await tx.product.update({

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 // import Modal from "./Modal";
 import { useMounted } from "@/hooks/useMounted";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid,  AlignJustify } from "lucide-react";
 import CategoryTree from "./CategoryTree";
 // Dynamically import CartPage. Its code will only be fetched from the server
 // when the user clicks the cart icon and `isOpen` becomes true.
@@ -22,7 +22,7 @@ export default function CategoryDrawer({ className, children, initialData }) {
         onClick={() => setIsOpen(true)} // Changed to ensure it only opens
         className="relative cursor-pointer"
       >
-        {children || <LayoutGrid className="text-white dark:text-gray-300" />}
+        {children ||   <AlignJustify className="text-white dark:text-gray-300"/>}
       </div>
 
       {/* The Modal itself is lightweight. The expensive part is its content. */}

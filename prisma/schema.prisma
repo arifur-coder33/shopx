@@ -169,6 +169,9 @@ model Product {
                       // One-to-many relationship with Order
   weight Float?
   dimensions String? // Optional dimensions for the product (e.g., "10x10x10 cm")
+   searchText  String?
+
+  @@index([searchText])
   createdAt      DateTime    @default(now())     // Timestamp for product creation
   updatedAt      DateTime    @updatedAt          // Auto-updated timestamp
 }

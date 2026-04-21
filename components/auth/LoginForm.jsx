@@ -1,5 +1,5 @@
 "use client";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Button from "../button";
@@ -11,9 +11,9 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
-
+  const { data: session } = useSession();
   useEffect(() => {
-    if (loggedIn) {
+    if (loggedIn || session) {
       if (callbackUrl) {
         console.log("Redirecting to:", callbackUrl);
         router.push(callbackUrl);
@@ -21,7 +21,7 @@ export default function LoginForm() {
         router.push("/");
       }
     }
-  }, [loggedIn, callbackUrl, router]);
+  }, [loggedIn, callbackUrl, router, session]);
 
   async function HandleSubmit(e) {
     e.preventDefault();
