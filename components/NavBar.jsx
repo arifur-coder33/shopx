@@ -4,11 +4,11 @@ import { getCategoryTree } from "@/backend/serverActions/catagoryActions";
 import { getNotice } from "@/backend/serverActions/noticeaction";
 import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
 import Logo from "@/components/common/Logo";
+import SearchBoxWrapper from "@/components/Search/SearchBoxWrapper";
 import Link from "next/link";
 import CategoryDrawer from "./common/Category/CategoryDrawer";
 import NavActions from "./common/NavActions";
 import Notice from "./common/Notice";
-import SearchBoxWrapper from "@/components/search/SearchBoxWrapper"
 export default async function NavBar() {
   // Fetch all data in parallel!
   const [noticeResult, siteSettingResult, categoryData] = await Promise.all([
@@ -30,16 +30,16 @@ export default async function NavBar() {
           <div
             className={`md:text-5xl text-3xl font-bold text-brand flex flex-row gap-1 items-center `}
           >
-            <div className="hidden md:block" > 
-                <CategoryDrawer initialData={categoryData}></CategoryDrawer>
+            <div className="hidden md:block">
+              <CategoryDrawer initialData={categoryData}></CategoryDrawer>
             </div>
-          
+
             <Link href={"/"}>
               {/* Pass the fetched data down as props */}
               <Logo data={siteSettingData} />
             </Link>
           </div>
-          <SearchBoxWrapper/>
+          <SearchBoxWrapper />
           <NavActions />
         </div>
       </header>
