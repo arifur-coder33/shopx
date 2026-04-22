@@ -10,6 +10,8 @@ import { headers } from "next/headers";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { hasPermission } from "../utils/hasPermission";
+import { buildSearchText } from "../utils/buildSearchText";
+import { buildCategoryPath } from "../utils/buildCategoryPath";
 
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
@@ -67,9 +69,7 @@ function transformVariations(productVariations) {
     };
   });
 }
-function buildSearchText(product) {
-  return `${product.title} ${product.description}`.toLowerCase();
-}
+
 export async function createProductActions(formData) {
   try {
     let data = Object.fromEntries(formData.entries());
@@ -383,7 +383,13 @@ export async function createProductAction(formData) {
 
       // --- Prepare Main Product Data [MODIFIED] ---
       // Price, stock are now removed from the main product create call
-
+      const categoryPath= buildCategoryPath(data.category)
+ const searchText = buildSearchText({
+    title: data.title,
+    description: data.description,
+    categoryPath: categoryPath || "",
+    seoKeyWord: data.seoKeyWord,
+  });
       const preparedData = {
         ...filteredData,
         productCode: newProductCode,
@@ -403,7 +409,7 @@ export async function createProductAction(formData) {
         description: data?.description || null,
         seoKeyWord: data?.seoKeyWord || null,
         seoDescription: data?.seoDescription || null,
-        searchText: buildSearchText(data),
+        searchText: searchText,
       };
 
       // 🔹 Create the product
@@ -1523,7 +1529,13 @@ export async function updateProductAction({ id: productId, formData }) {
         const baseSlug = await generateSlug(data.slug || data.title);
         newSlug = await generateUniqueSlug(tx, baseSlug, productId);
       }
-
+     const categoryPath= buildCategoryPath(data.category)
+ const searchText = buildSearchText({
+    title: data.title,
+    description: data.description,
+    categoryPath: categoryPath || "",
+    seoKeyWord: data.seoKeyWord,
+  });
       const productUpdateData = {
         title: data.title,
         slug: newSlug,
@@ -1537,7 +1549,7 @@ export async function updateProductAction({ id: productId, formData }) {
         isFeatured: Boolean(data.isFeatured === "on"),
         isActive: Boolean(data.isActive === "on"),
         hasVariations: hasSubmittedVariations,
-        searchText: buildSearchText(data),
+        searchText: searchText,
       };
 
       const updatedProduct = await tx.product.update({
