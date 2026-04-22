@@ -7,11 +7,11 @@ import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
+import { buildCategoryPath } from "../utils/buildCategoryPath";
+import { buildSearchText } from "../utils/buildSearchText";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { hasPermission } from "../utils/hasPermission";
-import { buildSearchText } from "../utils/buildSearchText";
-import { buildCategoryPath } from "../utils/buildCategoryPath";
 
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
@@ -383,13 +383,13 @@ export async function createProductAction(formData) {
 
       // --- Prepare Main Product Data [MODIFIED] ---
       // Price, stock are now removed from the main product create call
-      const categoryPath= buildCategoryPath(data.category)
- const searchText = buildSearchText({
-    title: data.title,
-    description: data.description,
-    categoryPath: categoryPath || "",
-    seoKeyWord: data.seoKeyWord,
-  });
+      const categoryPath = buildCategoryPath(data.category);
+      const searchText = buildSearchText({
+        title: data.title,
+        description: data.description,
+        categoryPath: categoryPath || "",
+        seoKeyWord: data.seoKeyWord,
+      });
       const preparedData = {
         ...filteredData,
         productCode: newProductCode,
@@ -1529,13 +1529,16 @@ export async function updateProductAction({ id: productId, formData }) {
         const baseSlug = await generateSlug(data.slug || data.title);
         newSlug = await generateUniqueSlug(tx, baseSlug, productId);
       }
-     const categoryPath= buildCategoryPath(data.category)
- const searchText = buildSearchText({
-    title: data.title,
-    description: data.description,
-    categoryPath: categoryPath || "",
-    seoKeyWord: data.seoKeyWord,
-  });
+      const categoryPath = await buildCategoryPath(data.category);
+      console.log("Built category path for product update:", categoryPath);
+      const searchText = await buildSearchText({
+        title: data.title,
+        description: data.description,
+        categoryPath: categoryPath || "",
+        seoKeyWord: data.seoKeyWord,
+      });
+      console.log("Generated searchText for product:", searchText);
+
       const productUpdateData = {
         title: data.title,
         slug: newSlug,

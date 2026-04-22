@@ -89,7 +89,8 @@ model Category {
   variations      VariationValue[]                        // Array of variations
   variationNames VariationName[]
   products        Product[]                   // One-to-many relationship with Product
-fullPath          String? @index
+fullPath          String?
+@@index([fullPath])
   createdAt       DateTime   @default(now())  // Timestamp for category creation
   updatedAt       DateTime  @updatedAt      // Auto-updated timestamp
 }

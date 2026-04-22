@@ -1,5 +1,3 @@
-
-
 // "use client";
 
 // import { useEffect, useRef, useState } from "react";
@@ -95,16 +93,19 @@
 //   );
 // }
 
+"use client";
 
- "use client";
-
-import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Imagecustom from "../images/ImageCustom";
 
 export default function SearchBox() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (!query) {
@@ -115,7 +116,7 @@ export default function SearchBox() {
     const delayDebounce = setTimeout(async () => {
       setLoading(true);
 
-     const res = await fetch(`/api/searchProduct?q=${query}`);
+      const res = await fetch(`/api/searchProduct?q=${query}`);
       const data = await res.json();
 
       setResults(data.products);
@@ -125,40 +126,75 @@ export default function SearchBox() {
     return () => clearTimeout(delayDebounce);
   }, [query]);
 
+  const handleSearch = () => {
+    if (!query) return;
+    setQuery("");
+    router.push(`/search?q=${query}`);
+  };
+
   return (
     <div className="relative w-full max-w-md">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search products..."
-        className="w-full border rounded-lg px-4 py-2 text-black"
-      />
+      {/* 🔍 Input + Icon */}
+      <div className="flex items-center border rounded-full px-4 py-2 bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-500">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="Search products..."
+          className="flex-1 outline-none text-sm text-black bg-transparent"
+        />
 
+        <button onClick={handleSearch}>
+          <Search className="w-5 h-5 text-gray-500 hover:text-black" />
+        </button>
+      </div>
+
+      {/* 🔽 Dropdown */}
       {query && (
-        <div className="absolute top-full left-0 w-full bg-slate-500 text-black shadow-lg rounded-lg mt-2 z-50">
-          {loading && <p className="p-3 text-sm">Loading...</p>}
+        <div className="absolute top-full left-0 w-full bg-black opacity-90 shadow-xl rounded-xl mt-2 z-50 overflow-hidden border">
+          {loading && <p className="p-3">Loading...</p>}
 
           {!loading && results.length === 0 && (
-            <p className="p-3 text-sm">No results</p>
+            <p className="p-3 ">No results found</p>
           )}
 
-          {results.map((item) => (
-            <Link
-              key={item.id}
-              href={`/product/${item.slug}`}
-              className="flex items-center gap-3 p-3 hover:bg-gray-100"
-            >
-              {item.thumbnail?.url && (
-                <img
-                  src={item.thumbnail.url}
-                  alt={item.title}
-                  className="w-10 h-10 object-cover rounded"
-                />
-              )}
-              <span className="text-sm">{item.title}</span>
-            </Link>
-          ))}
+          {/* 🔹 Results */}
+          {!loading && results.length > 0 && (
+            <>
+              {results.map((item) => (
+                <Link
+                  onClick={() => setQuery("")}
+                  key={item.id}
+                  href={`/product/${item.slug}`}
+                  className="flex items-center gap-3 p-3 hover:bg-gray-800 transition"
+                >
+                  {item.thumbnail?.url ? (
+                    <Imagecustom
+                      w={40}
+                      h={40}
+                      src={item.thumbnail.name}
+                      alt={item.title}
+                      className="w-10 h-10 object-cover rounded-md border"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-200 rounded-md" />
+                  )}
+
+                  <span className="text-sm line-clamp-1">{item.title}</span>
+                </Link>
+              ))}
+
+              {/* 🔥 View All */}
+              <button
+                onClick={handleSearch}
+                className="w-full text-center text-sm font-medium py-2 border-t hover:bg-gray-800 transition"
+              >
+                View all results
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
