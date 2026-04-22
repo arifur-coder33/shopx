@@ -144,10 +144,13 @@ export default function SearchBox() {
           placeholder="Search products..."
           className="flex-1 outline-none text-sm text-black bg-transparent"
         />
-
-        <button onClick={handleSearch}>
+        <Link
+          href={`/search?q=${query}`}
+          className="p-1"
+          onClick={() => setQuery("")}
+        >
           <Search className="w-5 h-5 text-gray-500 hover:text-black" />
-        </button>
+        </Link>
       </div>
 
       {/* 🔽 Dropdown */}
@@ -187,12 +190,15 @@ export default function SearchBox() {
               ))}
 
               {/* 🔥 View All */}
-              <button
-                onClick={handleSearch}
-                className="w-full text-center text-sm font-medium py-2 border-t hover:bg-gray-800 transition"
-              >
-                View all results
-              </button>
+              <div className="w-full text-center text-sm font-medium py-2 border-t">
+                <Link
+                  onClick={() => setQuery("")}
+                  className="text-blue-500 hover:text-blue-400 transition-transform"
+                  href={`/search?q=${query}`}
+                >
+                  View all results
+                </Link>
+              </div>
             </>
           )}
         </div>
