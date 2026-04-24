@@ -1,5 +1,7 @@
 "use client";
-import { trackFacebookEvent } from "@/utils/fbEventTrack";
+import { trackEvent } from "@/lib/SocialEventTracking";
+import { EVENTS } from "@/lib/SocialEventTracking/events";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Button from "../button";
 import Tooltip from "../common/Tooltip";
@@ -11,7 +13,7 @@ export default function BuyNowButton({
   selectedVariation,
   ...restProps
 }) {
- 
+  const { data: session } = useSession();
   const hasVariations = product?.variations[0]?.combinations?.length > 0;
   const isVariationSelected = !!selectedVariation;
 
@@ -36,28 +38,39 @@ export default function BuyNowButton({
       selectedVariation?.discountPrice ||
       product.discountPrice ||
       product?.regularPrice;
-    trackFacebookEvent("InitiateCheckout", {
-      content_type: "product",
-      content_id: product.id,
+
+    trackEvent({
+      event: EVENTS.CHECKOUT,
       value: price,
-      currency: "BDT",
+      items: [
+        {
+          id: product?.id,
+          quantity: 1,
+          price: price,
+          name: product?.title,
+          category: product.category?.name || "Uncategorized",
+        },
+      ],
+      user: {
+        email: session?.user?.email,
+        phone: session?.user?.phone,
+      },
     });
   };
 
   const handleVariationWarning = () => {
-         import("react-toastify").then((module) => {
-        const { toast } = module;
-         toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
-      });
- import("@/utils/sounds").then((module) => {
-        const { errorSoundWithVibrate } = module;
-         errorSoundWithVibrate();
-      });
-         import("@/utils/uiUtils").then((module) => {
-        const { scrollToAndHighlight } = module;
-        scrollToAndHighlight("#product-variation-list");
-      });
-    
+    import("react-toastify").then((module) => {
+      const { toast } = module;
+      toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
+    });
+    import("@/utils/sounds").then((module) => {
+      const { errorSoundWithVibrate } = module;
+      errorSoundWithVibrate();
+    });
+    import("@/utils/uiUtils").then((module) => {
+      const { scrollToAndHighlight } = module;
+      scrollToAndHighlight("#product-variation-list");
+    });
   };
 
   if (!slug && !hasVariations) {

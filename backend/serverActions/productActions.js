@@ -12,6 +12,7 @@ import { buildSearchText } from "../utils/buildSearchText";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { hasPermission } from "../utils/hasPermission";
+import { normalizeText } from "../utils/search";
 
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
@@ -1021,8 +1022,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
 export const getProductBySlug = async (slug) => {
   const cookieHeader = headers().get("cookie") || "no cookie header";
   const session = await auth();
-  console.log("Raw cookies from headers:", cookieHeader);
-  console.log("auth() result:", session);
+
   try {
     const data = await prisma.product.findUnique({
       where: { slug },
@@ -1878,4 +1878,74 @@ export const updateProductStatus = async ({ id, value }) => {
   } catch (error) {
     return { success: false, message: error.message };
   }
+};
+
+export const searchProducts = async (rawQuery) => {
+  const q = normalizeText(rawQuery);
+
+  const variations = [
+    q,
+    q.slice(0, -1), // iphonee → iphone
+    q.slice(0, -2), // extra safety
+  ];
+  const query = normalizeText(q);
+
+  const products = await prisma.product.findMany({
+    where: {
+      isActive: true,
+      OR: variations.map((v) => ({
+        searchText: { contains: v },
+      })),
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      thumbnail: { select: { name: true } },
+      variations: true,
+      category: { select: { name: true, slug: true } },
+    },
+    take: 10,
+  });
+  const filteredProducts = products.map((product) => {
+    const variations = product.variations || [];
+
+    if (variations.length === 0) {
+      return {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+        regularPrice: 0,
+        discountPrice: 0,
+        hasVariations: false,
+        thumbnail: product.thumbnail?.name || null,
+      };
+    }
+
+    const regularPrices = variations.map((v) => v.regularPrice);
+    const discountPrices = variations.map(
+      (v) => v.discountPrice ?? v.regularPrice,
+    );
+
+    const minRegular = Math.min(...regularPrices);
+    let minDiscount = Math.min(...discountPrices);
+
+    // discount validate
+    if (minDiscount >= minRegular) {
+      minDiscount = 0;
+    }
+
+    return {
+      id: product.id,
+      title: product.title,
+      slug: product.slug,
+      regularPrice: minRegular,
+      discountPrice: minDiscount,
+      hasVariations: product.hasVariations,
+      thumbnail: { name: product.thumbnail?.name || null },
+      // gallery: product.gallery.map((g) => g.media),
+    };
+  });
+
+  return { success: true, data: filteredProducts };
 };

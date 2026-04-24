@@ -1,12 +1,15 @@
 "use client";
 import { useCart } from "@/context/CartContext";
-import { trackFacebookEvent } from "@/utils/fbEventTrack";
+import { trackEvent } from "@/lib/SocialEventTracking";
+import { EVENTS } from "@/lib/SocialEventTracking/events";
+import { useSession } from "next-auth/react";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 export default function AddToCartButton(props) {
+  const { data: session } = useSession();
   const { addToCart } = useCart();
   const { product, selectedVariation, productQty } = props;
-  const { hasVariations, variations, title, weight } = product;
+  const { hasVariations, variations, title, weight, category } = product;
 
   const getDiscountPrice = selectedVariation
     ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
@@ -44,7 +47,9 @@ export default function AddToCartButton(props) {
       id: product?.id,
       weight: weight,
       sku: getSku,
+      category: category || "Uncategorized",
     };
+
     if (
       hasVariations &&
       variations[0]?.combinations?.length > 0 &&
@@ -66,11 +71,23 @@ export default function AddToCartButton(props) {
       return;
     }
     addToCart(productData, productQty);
-    trackFacebookEvent("AddToCart", {
-      content_type: "product",
-      content_id: product.id,
-      value: product.discountPrice || product?.regularPrice,
-      currency: "BDT",
+
+    trackEvent({
+      event: EVENTS.ADD_TO_CART,
+      value: productData.discountPrice || productData?.regularPrice,
+      items: [
+        {
+          id: productData?.id,
+          quantity: productQty || 1,
+          price: productData.discountPrice || productData?.regularPrice,
+          name: productData?.title,
+          category: productData.category?.name || "Uncategorized",
+        },
+      ],
+      user: {
+        email: session?.user?.email,
+        phone: session?.user?.phone,
+      },
     });
   };
   return (

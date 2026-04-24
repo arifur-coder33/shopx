@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 export default function Imagecustom({
   src, // Image ID
-  w, // For non-fill images
+  w, // For non-fill images   category: product.category.name,conso
   h, // For non-fill images
   urlWidthHint, // NEW: For generating URL when using fill
   alt,
@@ -35,7 +35,7 @@ export default function Imagecustom({
           observer.unobserve(entry.target);
         }
       },
-      { rootMargin: "0px 0px 100px 0px" }
+      { rootMargin: "0px 0px 100px 0px" },
     );
     const currentRef = placeholderRef.current;
     observer.observe(currentRef);

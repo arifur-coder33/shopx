@@ -20,7 +20,7 @@ export default function SearchBox() {
       setResults([]);
       return;
     }
-    console.log("Searching for:", query);
+
     const delayDebounce = setTimeout(async () => {
       setLoading(true);
       const normalizedQuery = normalizeText(query);
@@ -39,7 +39,7 @@ export default function SearchBox() {
 
       setResults(data.products);
       setLoading(false);
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(delayDebounce);
   }, [query, session]);
@@ -90,7 +90,7 @@ export default function SearchBox() {
                   href={`/product/${item.slug}`}
                   className="flex items-center gap-3 p-3 hover:bg-gray-800 transition"
                 >
-                  {item.thumbnail?.url ? (
+                  {item.thumbnail ? (
                     <Imagecustom
                       w={40}
                       h={40}

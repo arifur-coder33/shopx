@@ -4,7 +4,7 @@ import ProductList from "@/components/products/productList";
 
 export default async function CategoryWiseProductList() {
   const { data } = await getAllCategoryWithproduct();
-  console.log("Fetched category data:", data);
+
   return (
     <>
       {data?.length > 0 &&

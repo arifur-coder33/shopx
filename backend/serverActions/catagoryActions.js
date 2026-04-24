@@ -411,6 +411,7 @@ export async function getAllCategoryWithproduct() {
             thumbnail: {
               select: { name: true },
             },
+            category: { select: { name: true, slug: true } },
           },
         },
       },
@@ -432,7 +433,7 @@ export async function getAllCategoryWithproduct() {
               discountPrice: 0,
               hasVariations: false,
               thumbnail: product.thumbnail?.name || null,
-              gallery: [],
+              category: product.category.name,
             };
           }
 
@@ -457,6 +458,7 @@ export async function getAllCategoryWithproduct() {
             discountPrice: minDiscount,
             hasVariations: product.hasVariations,
             thumbnail: { name: product.thumbnail?.name || null },
+            category: product.category.name,
             // gallery: product.gallery.map((g) => g.media),
           };
         }),
@@ -685,6 +687,7 @@ export async function getCategoryPageData(slug) {
             name: true,
           },
         },
+        category: { select: { name: true, slug: true } },
       },
     });
 

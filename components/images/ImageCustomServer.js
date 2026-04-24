@@ -19,7 +19,7 @@ export default async function ImageCustomServer({
     cloudinaryMainImage(src, w, h),
     getBase64ImageUrl(src), // Generate the blur placeholder
   ]);
-  console.log("final src", src);
+
   return (
     <>
       <Image

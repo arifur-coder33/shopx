@@ -8,6 +8,7 @@ const ProductImageGallery = dynamic(
 );
 
 import dynamic from "next/dynamic"; // <-- Import dynamic
+import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
 import ProductHeader from "./ProductHeader";
 // --- LAZY-LOADED COMPONENTS ---
 
@@ -45,9 +46,8 @@ export default function ProductDataView({
 
       {/* --- LAZY LOAD THE FACEBOOK TRACKER --- */}
       {/* This doesn't need to fire until the user scrolls a bit */}
-      <LazyLoadOnScroll minHeight="50px">
-        <FacebookEventTrac product={data} />
-      </LazyLoadOnScroll>
+
+      <ViewProductEvent product={data} />
     </>
   );
 }
