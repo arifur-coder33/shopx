@@ -685,28 +685,50 @@ export async function getCategoryPageData(slug) {
             name: true,
           },
         },
-        gallery: {
-          select: {
-            media: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
       },
     });
 
-    // const filteredData = products.map((category) => ({
-    //   ...category,
-    //   products: category.products.map((product) => ({
-    //     ...product,
-    //     gallery: product.gallery.map((g) => g.media), // Extract only media
-    //   })),
-    // }));
+    const filteredProducts = products.map((product) => {
+      const variations = product.variations || [];
 
-    return { success: true, data: products };
+      if (variations.length === 0) {
+        return {
+          id: product.id,
+          title: product.title,
+          slug: product.slug,
+          regularPrice: 0,
+          discountPrice: 0,
+          hasVariations: false,
+          thumbnail: product.thumbnail?.name || null,
+        };
+      }
+
+      const regularPrices = variations.map((v) => v.regularPrice);
+      const discountPrices = variations.map(
+        (v) => v.discountPrice ?? v.regularPrice,
+      );
+
+      const minRegular = Math.min(...regularPrices);
+      let minDiscount = Math.min(...discountPrices);
+
+      // discount validate
+      if (minDiscount >= minRegular) {
+        minDiscount = 0;
+      }
+
+      return {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+        regularPrice: minRegular,
+        discountPrice: minDiscount,
+        hasVariations: product.hasVariations,
+        thumbnail: { name: product.thumbnail?.name || null },
+        // gallery: product.gallery.map((g) => g.media),
+      };
+    });
+
+    return { success: true, data: filteredProducts };
   } catch (error) {
     return {
       success: false,
