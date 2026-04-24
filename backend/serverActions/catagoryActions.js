@@ -288,6 +288,104 @@ export async function getCategory() {
   }
 }
 
+// export async function getAllCategoryWithproduct() {
+//   try {
+//     const data = await prisma.category.findMany({
+//       include: {
+//         _count: {
+//           select: { products: true },
+//         },
+//         products: {
+//           where: {
+//             isActive: true,
+//           },
+//           orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+//           take: 10,
+//           select: {
+//             id: true,
+//             title: true,
+//             slug: true,
+//             mainImage: true,
+//             hasVariations: true,
+//             variations: {
+//               select: {
+//                 regularPrice: true,
+//                 discountPrice: true,
+//                 combinations: true,
+//               },
+//             },
+//             thumbnail: {
+//               select: {
+//                 id: true,
+//                 name: true,
+//               },
+//             },
+//             gallery: {
+//               select: {
+//                 media: {
+//                   select: {
+//                     id: true,
+//                     name: true,
+//                   },
+//                 },
+//               },
+//             },
+//           },
+//         },
+//       },
+//     });
+//     // Filter categories that have at least one product
+//     // let regularPrice = 0;
+//     // let discountPrice = 0;
+
+//     // if (
+//     //   hasVariations &&
+//     //   Array.isArray(variations[0].combinations) &&
+//     //   variations[0]?.combinations?.length > 0
+//     // ) {
+//     //   regularPriceValue = Math.min(
+//     //     ...data?.products.variations.map((v) => v.regularPrice),
+//     //   );
+//     //   discountPriceValue = Math.min(
+//     //     ...data?.products.variations.map(
+//     //       (v) => v.discountPrice ?? v.regularPrice,
+//     //     ),
+//     //   );
+//     // } else {
+//     //   regularPriceValue =
+//     //     variations?.length === 1 ? variations[0]?.regularPrice : 0;
+//     //   discountPriceValue =
+//     //     variations?.length === 1 ? variations[0]?.discountPrice : 0;
+//     // }
+
+//     // If discount is not actually lower, don't show it
+//     // if (discountPriceValue >= regularPriceValue) {
+//     //   discountPriceValue = 0;
+//     // }
+//     const filteredData = data
+//       .filter((category) => category._count.products > 0)
+//       .map((category) => ({
+//         ...category,
+//         products: category.products.map((product) => ({
+//           hasVariations: product.isVariations,
+//           title: product.title,
+//           slug: product.slug,
+//           id: product.id,
+//           regularPrice: Math.min(product.variations.map((v) => v.regularPrice)),
+//           discountPrice: Math.min(
+//             product.variations.map((v) => v.regularPrice),
+//           ),
+//           thumbnail: product.thumbnail.name,
+//           gallery: product.gallery.map((g) => g.media), // Extract only media
+//         })),
+//       }));
+//     console.log(filteredData);
+//     return { success: true, data: filteredData };
+//   } catch (error) {
+//     return { success: false, error: error.message };
+//   }
+// }
+
 export async function getAllCategoryWithproduct() {
   try {
     const data = await prisma.category.findMany({
@@ -296,54 +394,72 @@ export async function getAllCategoryWithproduct() {
           select: { products: true },
         },
         products: {
-          where: {
-            isActive: true,
-          },
+          where: { isActive: true },
           orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
           take: 10,
           select: {
             id: true,
             title: true,
             slug: true,
-            mainImage: true,
             hasVariations: true,
             variations: {
               select: {
                 regularPrice: true,
                 discountPrice: true,
-                combinations: true,
               },
             },
             thumbnail: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            gallery: {
-              select: {
-                media: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
+              select: { name: true },
             },
           },
         },
       },
     });
 
-    // Filter categories that have at least one product
     const filteredData = data
       .filter((category) => category._count.products > 0)
       .map((category) => ({
         ...category,
-        products: category.products.map((product) => ({
-          ...product,
-          gallery: product.gallery.map((g) => g.media), // Extract only media
-        })),
+        products: category.products.map((product) => {
+          const variations = product.variations || [];
+
+          if (variations.length === 0) {
+            return {
+              id: product.id,
+              title: product.title,
+              slug: product.slug,
+              regularPrice: 0,
+              discountPrice: 0,
+              hasVariations: false,
+              thumbnail: product.thumbnail?.name || null,
+              gallery: [],
+            };
+          }
+
+          const regularPrices = variations.map((v) => v.regularPrice);
+          const discountPrices = variations.map(
+            (v) => v.discountPrice ?? v.regularPrice,
+          );
+
+          const minRegular = Math.min(...regularPrices);
+          let minDiscount = Math.min(...discountPrices);
+
+          // discount validate
+          if (minDiscount >= minRegular) {
+            minDiscount = 0;
+          }
+
+          return {
+            id: product.id,
+            title: product.title,
+            slug: product.slug,
+            regularPrice: minRegular,
+            discountPrice: minDiscount,
+            hasVariations: product.hasVariations,
+            thumbnail: { name: product.thumbnail?.name || null },
+            // gallery: product.gallery.map((g) => g.media),
+          };
+        }),
       }));
 
     return { success: true, data: filteredData };
@@ -351,7 +467,6 @@ export async function getAllCategoryWithproduct() {
     return { success: false, error: error.message };
   }
 }
-
 // export async function getCategoryWithproduct(slug) {
 //   const decodedSlug = decodeURIComponent(slug);
 //   console.log("Decoded slug:", decodedSlug);

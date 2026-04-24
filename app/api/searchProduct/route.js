@@ -27,7 +27,11 @@ export async function GET(req) {
       id: true,
       title: true,
       slug: true,
-      thumbnail: true,
+      thumbnail: {
+        select: {
+          name: true,
+        },
+      },
     },
     take: 10,
   });

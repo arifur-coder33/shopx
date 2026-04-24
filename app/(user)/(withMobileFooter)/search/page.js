@@ -24,7 +24,7 @@ export default async function SearchPage({ searchParams }) {
       id: true,
       title: true,
       slug: true,
-      thumbnail: true,
+      thumbnail: { select: { name: true } },
       variations: true,
     },
     take: 10,
