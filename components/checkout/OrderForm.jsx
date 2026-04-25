@@ -1,9 +1,11 @@
+'use client";';
 import { Truck } from "lucide-react";
 import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
 import { useSession } from "next-auth/react";
 
+import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
 import { createOrder } from "@/backend/serverActions/orderActions";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
@@ -48,32 +50,47 @@ export default function OrderForm({
 
     formData.delete("quantity");
     formData.append("products", JSON.stringify(products));
-    console.log(products);
-    // formData.append("deliveryArea", deliveryArea);
 
-    console.log("Form Data:", Object.fromEntries(formData.entries()));
+    // formData.append("deliveryArea", deliveryArea);
+    const productPrice = products.reduce(
+      (total, product) =>
+        total +
+        product.quantity * (product.discountPrice || product.regularPrice),
+      0,
+    );
+
     // startTransition(async () => {
     const response = await createOrder(formData); // Call server action
 
     if (response.success) {
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
 
-      setLoading(false);
+      if (paymentMethod === "online") {
+        const url = await initiateSSLcommerzPayment({
+          amount: productPrice,
+          name: "Arifur",
+          email: "test@mail.com",
+        });
+
+        if (url) {
+          console.log("SSLCommerz URL:", url);
+          setLoading(false);
+          window.location.href = url;
+        }
+      } else {
+        router.push(
+          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
+            response?.data?.phoneNumber,
+          )}&orderSuccess=true`,
+        );
+      }
+
       trackFacebookEvent("Purchase", {
         content_type: "product",
         content_ids: products.map((product) => product.productId),
-        value: products.reduce(
-          (total, product) => total + product.quantity * product.price,
-          0,
-        ),
+        value: productPrice,
         currency: "BDT", // Bangladeshi Taka
       });
-
-      router.push(
-        `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
-          response?.data?.phoneNumber,
-        )}&orderSuccess=true`,
-      );
 
       // form.reset(); // Clear the form on success
     } else {

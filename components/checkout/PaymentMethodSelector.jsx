@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import RadioButton from "../RadioButton";
+import BkashPayButton from "../payments/BkashPayButton";
+import SSLCommerzPayButton from "../payments/SSLCommerzPayButton";
 
 export default function PaymentMethodSelector({ setPaymentMethod, className }) {
   const [selectedMethod, setSelectedMethod] = useState("cod");
@@ -31,6 +33,8 @@ export default function PaymentMethodSelector({ setPaymentMethod, className }) {
           onSelect={onChangeHandler}
         />
       </div>
+      <BkashPayButton />
+      <SSLCommerzPayButton />
     </div>
   );
 }
