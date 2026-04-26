@@ -32,7 +32,7 @@ export default function ProductClientShell({
     () =>
       variations?.map((variation) => variation?.thumbnail).filter(Boolean) ||
       [],
-    [variations]
+    [variations],
   );
   const [activeImageId, setActiveImageId] = useState();
   const staticContent = (

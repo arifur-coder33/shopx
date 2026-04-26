@@ -1,6 +1,6 @@
 "use server";
 
-export async function initiateSSLcommerzPayment({ amount, name, email }) {
+export async function initiateSSLcommerzPayment({ amount, name, email, emi }) {
   const tran_id = "TXN_" + Date.now();
 
   const data = {
@@ -23,6 +23,8 @@ export async function initiateSSLcommerzPayment({ amount, name, email }) {
     product_name: "Test",
     product_category: "General",
     product_profile: "general",
+    emi_option: emi ? 1 : 0,
+    emi_allow_only: emi ? 1 : 0,
   };
 
   const res = await fetch(

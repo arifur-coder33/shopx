@@ -7,6 +7,7 @@ import { getMinMax } from "@/utils/getMinMax";
 import { useEffect, useMemo, useState } from "react";
 
 import BuyNowSection from "./BuyNowSection";
+import EMISection from "./EMISection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
 
 export default function ProductInfoClient({
@@ -32,16 +33,16 @@ export default function ProductInfoClient({
   const regularPriceRange = useMemo(
     () =>
       getMinMax(
-        variations?.filter((v) => v.stock > 0).map((v) => v.regularPrice)
+        variations?.filter((v) => v.stock > 0).map((v) => v.regularPrice),
       ),
-    [variations]
+    [variations],
   );
   const discountPriceRange = useMemo(
     () =>
       getMinMax(
-        variations?.filter((v) => v.stock > 0).map((v) => v.discountPrice)
+        variations?.filter((v) => v.stock > 0).map((v) => v.discountPrice),
       ),
-    [variations]
+    [variations],
   );
 
   // This is the interactive price calculation logic, identical to your original component.
@@ -146,6 +147,7 @@ export default function ProductInfoClient({
       )}
 
       <BuyNowSection data={data} selectedVariation={selectedVariation} />
+      <EMISection price={5000} />
     </>
   );
 }

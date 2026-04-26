@@ -35,6 +35,11 @@ const nextConfig = {
         hostname: "facebook.com",
         port: "",
       },
+      {
+        protocol: "https",
+        hostname: "securepay.sslcommerz.com",
+        port: "",
+      },
     ],
 
     deviceSizes: [320, 480, 640, 768, 1024, 1280, 1536], // Common device widths

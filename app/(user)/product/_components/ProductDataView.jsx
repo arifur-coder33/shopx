@@ -9,6 +9,7 @@ const ProductImageGallery = dynamic(
 
 import dynamic from "next/dynamic"; // <-- Import dynamic
 import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
+import DeliveryInfo from "./DeliveryInfo";
 import ProductHeader from "./ProductHeader";
 // --- LAZY-LOADED COMPONENTS ---
 
@@ -40,6 +41,7 @@ export default function ProductDataView({
           />
         </ProductHeader>
       </div>
+      <DeliveryInfo />
       <LazyLoadOnScroll>
         <ProductDescription description={description} />
       </LazyLoadOnScroll>

@@ -6,7 +6,6 @@ import DeliveryAddress from "./DeliveryAddress";
 import { useSession } from "next-auth/react";
 
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
-import { createOrder } from "@/backend/serverActions/orderActions";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -60,8 +59,8 @@ export default function OrderForm({
     );
 
     // startTransition(async () => {
-    const response = await createOrder(formData); // Call server action
-
+    //     const response = await createOrder(formData); // Call server action
+    const response = { success: true };
     if (response.success) {
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
 
