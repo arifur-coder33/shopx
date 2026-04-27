@@ -6,11 +6,8 @@ export default function CheckOutSubTotal({
   regularPrice,
 }) {
   let deliveryCharge = 0;
-  deliveryCharge =
-    deliveryArea == "dhaka"
-      ? Number(totalWeight) * 80
-      : Number(totalWeight) * 100;
-  console.log(deliveryArea);
+  deliveryCharge = deliveryArea == "inside-dhaka" ? 80 : 100;
+  const extraCharge = totalWeight > 1 ? Math.ceil(Number(totalWeight)) * 20 : 0;
   return (
     <>
       <Item label={"পণ্যর রেগুলার মোট মুল্যঃ"} value={regularPrice} />
@@ -28,7 +25,7 @@ export default function CheckOutSubTotal({
       <input
         hidden
         name="deliveryCharge"
-        defaultValue={Number(deliveryCharge)}
+        defaultValue={Number(deliveryCharge + extraCharge)}
       />
     </>
   );

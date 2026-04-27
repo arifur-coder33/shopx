@@ -1,8 +1,6 @@
 // import bdLocation from "@/utils/data/bd-location.json";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import FloatingInput from "../input/FloatingInput";
-import SearchableDropdown from "../input/SearchableDropdown";
-import { getCities_Pathao } from "@/backend/lib/pathao";
 
 export default function DeliveryAddress({ setDeliveryArea }) {
   // Use null for initial state to be more explicit about "no selection"
@@ -13,16 +11,15 @@ export default function DeliveryAddress({ setDeliveryArea }) {
   // useEffect(() => {
   //   const fetchCities = async () => {
   //     try {
-  //       const data = await getCities_Pathao();  
-  //       console.log("Cities:", data);   
+  //       const data = await getCities_Pathao();
+  //       console.log("Cities:", data);
   //     } catch (error) {
   //       console.error("Failed to fetch cities:", error);
   //     }
   //   };
 
-  //   fetchCities(); 
+  //   fetchCities();
   // }, []);
-
 
   // 1. Handler for Division selection
   const handleDivisionChange = (selectedDivision) => {
@@ -57,10 +54,8 @@ export default function DeliveryAddress({ setDeliveryArea }) {
     }));
   };
 
-
-
   return (
-    <address className="grid grid-cols-2 gap-1">
+    <address className="grid grid-cols-2">
       <FloatingInput
         defaultValue=""
         type={"text"}
@@ -91,8 +86,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         colSpan={"full"}
       />
 
- 
-      <SearchableDropdown
+      {/* <SearchableDropdown
         defaultId={""}
         label={"আপনার বিভাগঃ *"}
         name="division"
@@ -106,10 +100,9 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         // }))}
         // autoComplete="address-level1"
         searchOff={true}
-       
-      />
+      /> */}
 
-      <SearchableDropdown
+      {/* <SearchableDropdown
         defaultId={division?.id || ""}
         label={"আপনার জেলাঃ *"}
         name="district"
@@ -125,7 +118,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         }
         searchOff={true}
         // autoComplete="address-level2"
-      />
+      /> */}
 
       {/* <SearchableDropdown
         defaultId={district?.id || ""}
@@ -150,12 +143,12 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label={"বাসা/রাস্তাঃ *"}
+        label={"ডেলিভারি ঠিকানা *"}
         name={"deliveryAddress"}
         inputType={"text"}
         autoComplete="address-line1"
         colSpan={"full"}
-        placeholder="                              যেমনঃ বাড়ির নাম, রোড নাম্বার, ব্লক ইত্যাদি"
+        placeholder="  "
       />
 
       <FloatingInput

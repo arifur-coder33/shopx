@@ -7,6 +7,7 @@ export default function ProductHeader({ data, children }) {
 
   // The Server Component passes both the data and the server-rendered
   // components (as props) to the Client Component.
+  const sslActive = process.env.SSLCZ_STORE_ID;
   return (
     <>
       <ProductClientShell
@@ -16,7 +17,7 @@ export default function ProductHeader({ data, children }) {
           // The static h1 is created here on the server
           <h1 className="text-4xl font-bold border-b-2">{title}</h1>
         }
-        bottomComponent={<EMISection />}
+        bottomComponent={sslActive && <EMISection />}
       />
     </>
   );

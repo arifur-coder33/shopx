@@ -4,7 +4,7 @@ import RadioButton from "../RadioButton";
 
 export default function PaymentMethodSelector({ setPaymentMethod, className }) {
   const [selectedMethod, setSelectedMethod] = useState("cod");
-
+  const sslActive = process.env.NEXT_PUBLIC_SSLCZ_STORE_ID;
   function onChangeHandler(id) {
     setPaymentMethod(id);
     setSelectedMethod(id);
@@ -23,13 +23,25 @@ export default function PaymentMethodSelector({ setPaymentMethod, className }) {
           isSelected={selectedMethod === "cod"}
           onSelect={onChangeHandler}
         />
-        <RadioButton
-          id="online"
-          name="paymentMethod"
-          label="অনলাইন পেমেন্ট"
-          isSelected={selectedMethod === "online"}
-          onSelect={onChangeHandler}
-        />
+        {sslActive && (
+          <>
+            <RadioButton
+              id="online"
+              name="paymentMethod"
+              label="Online/Bkash/Card"
+              isSelected={selectedMethod === "online"}
+              onSelect={onChangeHandler}
+            />
+
+            <RadioButton
+              id="emi"
+              name="paymentMethod"
+              label="EMI"
+              isSelected={selectedMethod === "emi"}
+              onSelect={onChangeHandler}
+            />
+          </>
+        )}
       </div>
       {/* <BkashPayButton />
       <SSLCommerzPayButton /> */}

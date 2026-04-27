@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import LoadingSpinner from "../common/LoadingSpinner";
+import DeliveryAreaSelector from "./DeliveryAreaSelector";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 export default function OrderForm({
   setDeliveryArea,
@@ -141,7 +142,10 @@ export default function OrderForm({
             <div className="w-full rounded-sm flex flex-row gap-1 font-bold border-b-slate-400  border-b-2 dark:border-b-2 dark:border-b-slate-600 bg-slate-300 dark:bg-slate-800 p-2">
               <Truck /> <span>ডেলিভারি ঠিকানাঃ</span>
             </div>
-            <DeliveryAddress setDeliveryArea={setDeliveryArea} />
+            <>
+              <DeliveryAddress setDeliveryArea={setDeliveryArea} />
+              <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} />
+            </>
           </div>
         </div>
       </div>
