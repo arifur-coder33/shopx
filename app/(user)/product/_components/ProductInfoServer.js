@@ -4,6 +4,7 @@
 import KalapanaFont from "@/components/KalapanaFont";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import EMISection from "./EMI/EMISection";
 
 /**
  * Renders a non-interactive, static list of variation options.
@@ -36,7 +37,7 @@ function StaticVariationSelector({ variations }) {
             className="flex flex-wrap items-center gap-x-4 gap-y-2"
           >
             <span className="text-sm font-medium text-gray-900 dark:text-gray-200 whitespace-nowrap">
-              {name}:
+              {name}
             </span>
             <div className="flex flex-wrap items-center gap-3">
               {values.map((value) => (
@@ -85,10 +86,10 @@ export default function ProductInfoServer({ product }) {
           )}
         </p>
       </KalapanaFont>
-
       {product.variations?.length > 0 && (
         <StaticVariationSelector variations={product.variations} />
-      )}
+      )}{" "}
+      <EMISection price={5000} />
     </>
   );
 }

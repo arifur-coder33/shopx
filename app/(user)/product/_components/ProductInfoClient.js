@@ -7,7 +7,6 @@ import { getMinMax } from "@/utils/getMinMax";
 import { useEffect, useMemo, useState } from "react";
 
 import BuyNowSection from "./BuyNowSection";
-import EMISection from "./EMISection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
 
 export default function ProductInfoClient({
@@ -147,7 +146,7 @@ export default function ProductInfoClient({
       )}
 
       <BuyNowSection data={data} selectedVariation={selectedVariation} />
-      <EMISection price={5000} />
+      {/* <EMISection price={5000} /> */}
     </>
   );
 }

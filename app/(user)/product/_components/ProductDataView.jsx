@@ -38,6 +38,7 @@ export default function ProductDataView({
             className="rounded-md object-contain"
             placeholder="blur"
             blurDataURL={blurDataURL}
+            unoptimized
           />
         </ProductHeader>
       </div>

@@ -5,7 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 // A reusable Tooltip component built with Floating UI and Tailwind
 
 // The main selector component
-const ProductVariationSelector = ({ variations,hasVariations, onVariationChange }) => {
+const ProductVariationSelector = ({
+  variations,
+  hasVariations,
+  onVariationChange,
+}) => {
   const [selectedOptions, setSelectedOptions] = useState({});
 
   // This state will hold the string representation of the selected variant for display
@@ -108,13 +112,13 @@ const ProductVariationSelector = ({ variations,hasVariations, onVariationChange 
         {Object.entries(options).map(([name, values]) => (
           <div
             key={name}
-            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+            className="flex card flex-col  w-fit my-3 p-2  border-2  gap-x-4 gap-y-2 rounded-xl mt-4 shadow-sm "
             role="radiogroup"
           >
-            <span className="text-sm font-medium text-gray-900 whitespace-nowrap">
-              {name}:
+            <span className="text-base font-bold whitespace-nowrap border-b-2">
+              {name} <span className="text-sm font-medium">সিলেক্ট করুনঃ</span>
             </span>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap flex-row items-center gap-3">
               {values.map((value) => {
                 const isSelected = selectedOptions[name] === value;
 
@@ -187,7 +191,7 @@ const ProductVariationSelector = ({ variations,hasVariations, onVariationChange 
       </div>
 
       {/* Selected Variant Display */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
+      {/* <div className="mt-6 pt-4 border-t border-gray-200">
         <p className="text-sm text-gray-600">
           <span className="font-semibold text-gray-800">
             Selected Variant:{" "}
@@ -202,7 +206,7 @@ const ProductVariationSelector = ({ variations,hasVariations, onVariationChange 
             </span>
           )}
         </p>
-      </div>
+      </div> */}
     </div>
   );
 };

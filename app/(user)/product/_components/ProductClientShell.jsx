@@ -11,6 +11,7 @@ export default function ProductClientShell({
   data,
   imageComponent, // This is the prioritized <Image> from page.js
   titleComponent,
+  bottomComponent,
 }) {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -70,6 +71,7 @@ export default function ProductClientShell({
         <ProductInfoClient setActiveImageId={setActiveImageId} data={data}>
           <ProductInfoServer product={data} />
         </ProductInfoClient>
+        {bottomComponent}
       </div>
     </>
   );
