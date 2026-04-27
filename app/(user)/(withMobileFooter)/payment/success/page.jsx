@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function PaymentSuccess({ searchParams }) {
   const tran_id = searchParams.tran_id;
-
+  const order_id = searchParams.order_id;
   return (
     <div className="min-h-screen flex items-center justify-center bg-green-50">
       <div className="bg-white p-6 rounded-2xl shadow-md text-center max-w-md w-full">
@@ -17,6 +17,7 @@ export default function PaymentSuccess({ searchParams }) {
         <div className="bg-gray-100 p-3 rounded mb-4">
           <p className="text-sm text-gray-500">Transaction ID</p>
           <p className="font-semibold">{tran_id}</p>
+          <p className="font-semibold">{order_id}</p>
         </div>
 
         <Link

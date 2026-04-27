@@ -1,30 +1,38 @@
-import Link from "next/link";
+"use client";
 
 export default function PaymentFailed({ searchParams }) {
-  const tran_id = searchParams.tran_id;
+  const orderId = searchParams.orderId;
+
+  const handleRetry = async () => {
+    const res = await fetch("/api/sslcommerz/initiate", {
+      method: "POST",
+      body: JSON.stringify({
+        orderId, // 🔥 existing order
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      alert("Payment restart failed");
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-green-50">
-      <div className="bg-white p-6 rounded-2xl shadow-md text-center max-w-md w-full">
-        <h1 className="text-2xl font-bold text-green-600 mb-2">
-          🎉 Payment Failed
-        </h1>
+    <div className="min-h-screen flex items-center justify-center bg-red-50">
+      <div className="bg-white p-6 rounded-xl shadow text-center">
+        <h1 className="text-2xl font-bold text-red-600">❌ Payment Failed</h1>
 
-        <p className="text-gray-600 mb-4">
-          আপনার পেমেন্ট সফলভাবে সম্পন্ন হয়েছে।
-        </p>
+        <p className="mt-2 text-gray-600">আপনার পেমেন্ট সম্পন্ন হয়নি।</p>
 
-        <div className="bg-gray-100 p-3 rounded mb-4">
-          <p className="text-sm text-gray-500">Transaction ID</p>
-          <p className="font-semibold">{tran_id}</p>
-        </div>
-
-        <Link
-          href="/"
-          className="inline-block bg-brand text-white px-5 py-2 rounded-lg"
+        <button
+          onClick={handleRetry}
+          className="mt-4 bg-brand text-white px-5 py-2 rounded-lg"
         >
-          Continue Shopping
-        </Link>
+          🔁 Try Again
+        </button>
       </div>
     </div>
   );

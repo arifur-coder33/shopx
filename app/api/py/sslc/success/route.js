@@ -13,6 +13,7 @@ async function handleSSL(req) {
 
   const tran_id = formData.get("tran_id");
   const val_id = formData.get("val_id");
+  const order_id = formData.get("value_a");
 
   console.log("SSL Data:", { tran_id, val_id });
 
@@ -30,12 +31,12 @@ async function handleSSL(req) {
   if (data.status === "VALID") {
     // ✅ DB update
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}`,
+      `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}&&order_id=${order_id}`,
     );
   }
 
   return NextResponse.redirect(
-    `${process.env.NEXT_PUBLIC_SITE_URL}payment/failed`,
+    `${process.env.NEXT_PUBLIC_SITE_URL}payment/failed${order_id}`,
   );
 }
 
