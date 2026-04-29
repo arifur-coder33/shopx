@@ -6,6 +6,7 @@ import DeliveryAddress from "./DeliveryAddress";
 import { useSession } from "next-auth/react";
 
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
+import { getCookie } from "@/utils/cookie/cooike";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -47,7 +48,12 @@ export default function OrderForm({
     }
 
     formData.append("paymentMethod", paymentMethod);
-
+    formData.append("fbp", getCookie("_fbp"));
+    formData.append("fbc", getCookie("_fbc"));
+    formData.append("gclid", getCookie("gclid"));
+    formData.append("ttclid", getCookie("ttclid"));
+    formData.append("userAgent", navigator.userAgent);
+    formData.append("id", paymentMethod);
     formData.delete("quantity");
     formData.append("products", JSON.stringify(products));
 

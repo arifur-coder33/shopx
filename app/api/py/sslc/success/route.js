@@ -30,6 +30,7 @@ async function handleSSL(req) {
 
   if (data.status === "VALID") {
     // ✅ DB update
+
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}&&order_id=${order_id}`,
     );

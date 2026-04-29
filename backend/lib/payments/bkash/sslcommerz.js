@@ -6,6 +6,7 @@ export async function initiateSSLcommerzPayment({
   email,
   emi,
   order_id,
+  phone,
 }) {
   const tran_id = "TXN_" + Date.now();
 
@@ -22,8 +23,7 @@ export async function initiateSSLcommerzPayment({
 
     cus_name: name,
     cus_email: email,
-    cus_add1: "Dhaka",
-    cus_phone: "01700000000",
+    cus_add1: phone,
 
     shipping_method: "NO",
     product_name: "Test",

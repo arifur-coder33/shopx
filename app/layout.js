@@ -29,6 +29,7 @@ export default function RootLayout({ children }) {
           href="https://res.cloudinary.com"
           crossOrigin="anonymous"
         />
+
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
         <ThemeScript />
       </head>
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
       */}
       <body className={`font-sans antialiased theam `}>
         <NextTopLoader showSpinner={false} color="#8A2BE2" />
+
         <Providers>{children}</Providers>
       </body>
     </html>

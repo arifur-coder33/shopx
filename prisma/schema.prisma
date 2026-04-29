@@ -251,6 +251,11 @@ model Order {
   timeline       OrderTimeline[]
   refunds   Refund[]
   ledgers   Ledger[]
+  fbc  String?
+  fbp String?
+  ttclid String
+  userAgent String?
+  ipAddress String?
   createdAt      DateTime    @default(now()) // Timestamp for order placement
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
 }

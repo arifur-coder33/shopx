@@ -5,6 +5,7 @@ import { ModalProvider } from "@/context/ModalContext";
 import { SessionProvider } from "next-auth/react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Import toast styles here
+import SocialTrackingInit from "./SocialTrackingInit";
 
 // You can also add other providers here if needed in the future
 // import { ThemeProvider } from 'next-themes'
@@ -15,6 +16,7 @@ export default function Providers({ children }) {
       <CartProvider>
         {/* <ThemeProvider attribute="class" defaultTheme="system" enableSystem> */}
         <ModalProvider>
+          <SocialTrackingInit />
           {children}
           <ToastContainer
             position="top-right"

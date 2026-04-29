@@ -1,11 +1,13 @@
 "use server";
 import prisma from "@/lib/prisma";
-
 import { revalidatePath, revalidateTag } from "next/cache";
+import { headers } from "next/headers";
+import { getIP } from "../utils/getIp";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
 import { getUserId } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
+import { firePurchaseServer } from "./SocialPurchaseEventAction";
 const statusMap = {
   all: null, // no filter
   running: [
@@ -20,6 +22,7 @@ const statusMap = {
   refunded: ["REFUNDING", "REFUNDED"],
 };
 export async function createOrder(formData) {
+  const ip = getIP(headers);
   try {
     const userId = await getUserId(); // Ensure user is authenticated, will throw if not
     const formDataObj = Object.fromEntries(formData.entries());
@@ -62,7 +65,14 @@ export async function createOrder(formData) {
           orderPrice: Number(data.orderPrice),
           deliveryAddress: data.deliveryAddress,
           paymentMethod: data.paymentMethod,
-          note: data.note,
+          note: data?.note,
+          fbc: data?.fbc,
+          fbp: data?.fbp,
+          gclid: data?.gclid,
+          ttclid: data?.ttclid,
+
+          userAgent: userAgent,
+          ipAddress: ip,
         },
       });
 
@@ -422,6 +432,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
     // 🔎 get order first (for orderNo + old status)
     const order = await prisma.order.findUnique({
       where: { id: orderId },
+      select: { status: true, orderNo: true, id: true, paymentMethod: true },
     });
 
     if (!order) {
@@ -471,6 +482,11 @@ export async function updateOrderStatusAction(orderId, status, note) {
       message: note || `Order status changed to ${status}`,
       createdBy: "admin",
     });
+    if (order.paymentMethod === "cod" && status === "DELIVERED") {
+      firePurchaseServer(order).catch((err) =>
+        console.error("Tracking failed:", err),
+      );
+    }
 
     // 🔄 revalidate
     revalidatePath("/admin/orders");
