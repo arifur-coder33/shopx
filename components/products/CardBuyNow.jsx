@@ -12,14 +12,15 @@ export default function CardBuyNow({ product, children }) {
     discountPrice && discountPrice > 0 ? discountPrice : regularPrice;
   const handleEventTrck = () => {
     trackEvent({
-      event: EVENTS.ADD_TO_CART,
+      event: EVENTS.CHECKOUT,
       value: price,
+      src: `/product/${slug}`,
       items: [
         {
           id: product?.id,
           quantity: 1,
           price: discountPrice > 0 ? discountPrice : regularPrice,
-          name: product?.title,
+          productName: product?.title,
           category: category?.name || "Uncategorized",
         },
       ],

@@ -6,6 +6,9 @@ import DeliveryAddress from "./DeliveryAddress";
 import { useSession } from "next-auth/react";
 
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
+import { createOrder } from "@/backend/serverActions/orderActions";
+import { trackEvent } from "@/lib/SocialEventTracking";
+import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { getCookie } from "@/utils/cookie/cooike";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useRouter } from "next/navigation";
@@ -23,6 +26,7 @@ export default function OrderForm({
   data,
   initialQty,
   variationId,
+  deliveryArea,
 }) {
   const { data: session } = useSession();
 
@@ -57,7 +61,7 @@ export default function OrderForm({
     formData.delete("quantity");
     formData.append("products", JSON.stringify(products));
 
-    // formData.append("deliveryArea", deliveryArea);
+    formData.append("deliveryArea", deliveryArea);
     const productPrice = products.reduce(
       (total, product) =>
         total +
@@ -66,8 +70,8 @@ export default function OrderForm({
     );
 
     // startTransition(async () => {
-    //     const response = await createOrder(formData); // Call server action
-    const response = { success: true, data: { id: "sds" } };
+    const response = await createOrder(formData); // Call server action
+    // const response = { success: true, data: { id: "sds" } };
     if (response.success) {
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
 
@@ -78,7 +82,22 @@ export default function OrderForm({
           email: "test@mail.com",
           order_id: response?.data?.id,
         });
-
+        trackEvent({
+          event: EVENTS.CHECKOUT,
+          value: productPrice,
+          src: `/checkout`,
+          items: products.map((item) => ({
+            id: item?.id,
+            quantity: item.quantity,
+            price: item.discountPrice || item?.regularPrice,
+            productName: item?.title,
+            category: item?.category?.name || "Uncategorized",
+          })),
+          user: {
+            email: session?.user?.email,
+            phone: session?.user?.phone,
+          },
+        });
         if (url) {
           console.log("SSLCommerz URL:", url);
           setLoading(false);
@@ -92,12 +111,12 @@ export default function OrderForm({
         );
       }
 
-      trackFacebookEvent("Purchase", {
-        content_type: "product",
-        content_ids: products.map((product) => product.productId),
-        value: productPrice,
-        currency: "BDT", // Bangladeshi Taka
-      });
+      // trackFacebookEvent("Purchase", {
+      //   content_type: "product",
+      //   content_ids: products.map((product) => product.productId),
+      //   value: productPrice,
+      //   currency: "BDT", // Bangladeshi Taka
+      // });
 
       // form.reset(); // Clear the form on success
     } else {

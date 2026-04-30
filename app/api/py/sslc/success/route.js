@@ -1,3 +1,4 @@
+import { firePurchaseServer } from "@/backend/serverActions/SocialPurchaseEventAction";
 import { NextResponse } from "next/server";
 
 async function handleSSL(req) {
@@ -30,7 +31,9 @@ async function handleSSL(req) {
 
   if (data.status === "VALID") {
     // ✅ DB update
-
+    firePurchaseServer(order_id).catch(() => {
+      console.log("error");
+    });
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}&&order_id=${order_id}`,
     );

@@ -9,7 +9,7 @@ export default function AddToCartButton(props) {
   const { data: session } = useSession();
   const { addToCart } = useCart();
   const { product, selectedVariation, productQty } = props;
-  const { hasVariations, variations, title, weight, category } = product;
+  const { hasVariations, variations, title, weight, category, slug } = product;
 
   const getDiscountPrice = selectedVariation
     ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
@@ -75,12 +75,14 @@ export default function AddToCartButton(props) {
     trackEvent({
       event: EVENTS.ADD_TO_CART,
       value: productData.discountPrice || productData?.regularPrice,
+      src: `/product/${slug}`,
       items: [
         {
           id: productData?.id,
           quantity: productQty || 1,
           price: productData.discountPrice || productData?.regularPrice,
-          name: productData?.title,
+          productName: productData?.title,
+
           category: productData.category?.name || "Uncategorized",
         },
       ],

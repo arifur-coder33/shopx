@@ -30,6 +30,7 @@ export default function SearchBox() {
           email: session?.user?.email,
           phone: session?.user?.phone,
         },
+        src: `/search?q=${query}`,
         extra: {
           search_string: query,
         },

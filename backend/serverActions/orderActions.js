@@ -22,7 +22,9 @@ const statusMap = {
   refunded: ["REFUNDING", "REFUNDED"],
 };
 export async function createOrder(formData) {
-  const ip = getIP(headers);
+  const h = await headers();
+  const ip = getIP(h);
+
   try {
     const userId = await getUserId(); // Ensure user is authenticated, will throw if not
     const formDataObj = Object.fromEntries(formData.entries());
@@ -71,7 +73,7 @@ export async function createOrder(formData) {
           gclid: data?.gclid,
           ttclid: data?.ttclid,
 
-          userAgent: userAgent,
+          userAgent: data?.userAgent,
           ipAddress: ip,
         },
       });
@@ -483,7 +485,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
       createdBy: "admin",
     });
     if (order.paymentMethod === "cod" && status === "DELIVERED") {
-      firePurchaseServer(order).catch((err) =>
+      firePurchaseServer(orderId).catch((err) =>
         console.error("Tracking failed:", err),
       );
     }

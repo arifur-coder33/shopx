@@ -244,6 +244,7 @@ model Order {
   deliveryCharge Float 
   city           String?    
   deliveryAddress String 
+  deliveryArea    String?
   paymentMethod   String?                    // Address for product delivery
   note            String?
   status         OrderStatus @default(PENDING) // Order status enumeration
@@ -253,6 +254,7 @@ model Order {
   ledgers   Ledger[]
   fbc  String?
   fbp String?
+  gclid String?
   ttclid String
   userAgent String?
   ipAddress String?

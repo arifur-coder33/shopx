@@ -1,43 +1,84 @@
-// /lib/tracking/firePurchaseServer.js
-
+"use server";
+import prisma from "@/lib/prisma";
+import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { fireFacebookCAPI } from "../utils/SocialServerEvent/fireFacebookCAPI";
 import { fireGoogleServer } from "../utils/SocialServerEvent/fireGoogleServer";
 import { fireTikTokServer } from "../utils/SocialServerEvent/fireTikTokServer";
 
-export async function firePurchaseServer(order) {
+export async function firePurchaseServer(orderId) {
   try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+
+      select: {
+        id: true,
+        orderPrice: true,
+        email: true,
+        phoneNumber: true,
+
+        fbp: true,
+        fbc: true,
+        gclid: true,
+        ttclid: true,
+
+        ipAddress: true,
+        userAgent: true,
+        userId: true,
+
+        orderItems: {
+          select: {
+            productId: true,
+            quantity: true,
+            price: true,
+            productName: true,
+            product: {
+              select: {
+                category: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) return false;
+
     const eventId = `purchase_${order.id}`;
 
     const payload = {
-      event: "purchase",
+      event: EVENTS.PURCHASE,
       eventId,
       value: order.orderPrice,
       currency: "BDT",
-
-      items: order.items.map((item) => ({
+      src: "/payment/success",
+      items: order.orderItems.map((item) => ({
         id: item.productId,
         quantity: item.quantity,
         price: item.price,
         name: item.productName,
+        category: item?.product?.category?.name,
       })),
 
       user: {
         email: order.email,
         phone: order.phoneNumber,
+        userId: order.userId,
+
         fbp: order.fbp,
         fbc: order.fbc,
         gclid: order.gclid,
         ttclid: order.ttclid,
+
         ip: order.ipAddress,
         agent: order.userAgent,
       },
     };
 
-Promise.all([
-  fireFacebookCAPI(payload),
-  fireGoogleServer(payload),
-  fireTikTokServer(payload),
-]).catch(console.error);
+    Promise.all([
+      fireFacebookCAPI(payload),
+      fireGoogleServer(payload),
+      fireTikTokServer(payload),
+    ]).catch(console.error);
 
     return true;
   } catch (err) {

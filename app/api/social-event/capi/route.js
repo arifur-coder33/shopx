@@ -1,64 +1,64 @@
 import { getIP } from "@/backend/utils/getIp";
-import { FB_MAP } from "@/lib/SocialEventTracking/facebook";
-import { hash } from "@/lib/SocialEventTracking/hash";
+import { fireFacebookCAPI } from "@/backend/utils/SocialServerEvent/fireFacebookCAPI";
+import { fireGoogleServer } from "@/backend/utils/SocialServerEvent/fireGoogleServer";
+import { fireTikTokServer } from "@/backend/utils/SocialServerEvent/fireTikTokServer";
 import { headers } from "next/headers";
 
 export async function POST(req) {
   try {
+    const h = await headers();
+    const ip = getIP(h);
     const body = await req.json();
 
     const user = body.user || {};
     const items = body.items || [];
     const extra = body.extra || {};
 
+    const userAgent = h.get("user-agent");
+
     const payload = {
-      data: [
-        {
-          event_name: FB_MAP[body.event] || body.event,
-          event_time: Math.floor(Date.now() / 1000),
-          event_id: body.eventId,
-          action_source: "website",
+      event: body.event,
+      eventId: body.eventId,
+      value: body.value,
+      currency: "BDT",
+      src: body.src,
+      extra,
+      items: items.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.productName,
+        category: item.category,
+      })),
 
-          // 🔥 USER DATA (server trusted layer)
-          user_data: {
-            em: user.email ? [hash(user.email)] : undefined,
-            ph: user.phone ? [hash(user.phone)] : undefined,
-            client_user_agent: user.agent || "",
-            fbp: user.fbp || undefined,
-            fbc: user.fbc || undefined,
-            client_ip_address: getIP(headers),
-          },
-
-          // 🔥 PRODUCT / EVENT DATA
-          custom_data: {
-            value: body.value,
-            currency: body.currency,
-
-            content_ids: items.map((i) => i.id),
-
-            contents: items.map((i) => ({
-              id: i.id,
-              quantity: i.quantity,
-              item_price: i.price,
-            })),
-
-            num_items: items.reduce((a, b) => a + (b.quantity || 1), 0),
-            ...(body.event === "search" && {
-              search_string: extra.search_string,
-            }),
-          },
-        },
-      ],
+      user: {
+        email: user.email,
+        phone: user.phoneNumber,
+        userId: user.userId,
+        fbp: user.fbp,
+        fbc: user.fbc,
+        gclid: user.gclid,
+        ttclid: user.ttclid,
+        ip: ip,
+        agent: userAgent,
+      },
     };
 
-    await fetch(
-      `https://graph.facebook.com/v18.0/${process.env.FB_PIXEL_ID}/events`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
-    );
+    console.log("route", payload);
+    await Promise.all([
+      fireFacebookCAPI(payload),
+      fireGoogleServer(payload),
+      fireTikTokServer(payload),
+    ]);
+
+    // await fetch(
+    //   `https://graph.facebook.com/v18.0/${process.env.FB_PIXEL_ID}/events`,
+    //   {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify(payload),
+    //   },
+    // );
 
     return Response.json({ success: true });
   } catch (error) {

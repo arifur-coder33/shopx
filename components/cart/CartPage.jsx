@@ -18,11 +18,12 @@ export default function CartPage({ setIsOpen }) {
     trackEvent({
       event: EVENTS.CHECKOUT,
       value: totalCartPrice,
+      src: "/checkout",
       items: cartItems.map((item) => ({
         id: item?.id,
         quantity: item.quantity,
         price: item.discountPrice || item?.regularPrice,
-        name: item?.title,
+        productName: item?.title,
         category: item?.category?.name || "Uncategorized",
       })),
 

@@ -1,6 +1,4 @@
-export function getIP(headers) {
-  const h = headers();
-
+export function getIP(h) {
   const xff = h.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
 

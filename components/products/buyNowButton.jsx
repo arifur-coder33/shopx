@@ -34,6 +34,7 @@ export default function BuyNowButton({
 
   // Event Handlers
   const handleProceedToCheckout = () => {
+    console.log("product buy", product);
     const price =
       selectedVariation?.discountPrice ||
       product.discountPrice ||
@@ -47,7 +48,7 @@ export default function BuyNowButton({
           id: product?.id,
           quantity: 1,
           price: price,
-          name: product?.title,
+          productName: product?.title,
           category: product.category?.name || "Uncategorized",
         },
       ],

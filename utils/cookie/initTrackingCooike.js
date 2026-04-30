@@ -1,5 +1,4 @@
-// /lib/tracking/initTracking.js
-import { getCookie, setCookie } from "./cookies";
+import { getCookie, setCookie } from "./cooike";
 
 export function initTrackingCooike() {
   if (typeof window === "undefined") return;
