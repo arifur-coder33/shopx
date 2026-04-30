@@ -1,5 +1,7 @@
+import { getIP } from "@/backend/utils/getIp";
 import { FB_MAP } from "@/lib/SocialEventTracking/facebook";
 import { hash } from "@/lib/SocialEventTracking/hash";
+import { headers } from "next/headers";
 
 export async function POST(req) {
   try {
@@ -24,6 +26,7 @@ export async function POST(req) {
             client_user_agent: user.agent || "",
             fbp: user.fbp || undefined,
             fbc: user.fbc || undefined,
+            client_ip_address: getIP(headers),
           },
 
           // 🔥 PRODUCT / EVENT DATA

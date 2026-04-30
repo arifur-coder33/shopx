@@ -1,6 +1,5 @@
 async function fireGoogleServer(data) {
-  if (!data.user.gclid) return; // optional
-
+ 
   await fetch(
     `https://www.google-analytics.com/mp/collect?measurement_id=${process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID}&api_secret=${process.env.GOOGLE_ANALYTICS_SECRET}`,
     {

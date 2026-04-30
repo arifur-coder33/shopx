@@ -1,5 +1,9 @@
 // /lib/tracking/firePurchaseServer.js
 
+import { fireFacebookCAPI } from "../utils/SocialServerEvent/fireFacebookCAPI";
+import { fireGoogleServer } from "../utils/SocialServerEvent/fireGoogleServer";
+import { fireTikTokServer } from "../utils/SocialServerEvent/fireTikTokServer";
+
 export async function firePurchaseServer(order) {
   try {
     const eventId = `purchase_${order.id}`;
@@ -29,12 +33,11 @@ export async function firePurchaseServer(order) {
       },
     };
 
-    // 🔥 FIRE ALL (parallel, non-blocking)
-    await Promise.all([
-      fireFacebookCAPI(payload),
-      fireGoogleServer(payload),
-      fireTikTokServer(payload),
-    ]);
+Promise.all([
+  fireFacebookCAPI(payload),
+  fireGoogleServer(payload),
+  fireTikTokServer(payload),
+]).catch(console.error);
 
     return true;
   } catch (err) {
