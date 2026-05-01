@@ -7,20 +7,21 @@ import { useEffect } from "react";
 
 export default function ViewProductEvent({ product }) {
   const { data: session } = useSession();
+  const price =
+    product?.variations[0].discountPrice ||
+    product?.variations[0].regularPrice ||
+    0;
   useEffect(() => {
     trackEvent({
       event: EVENTS.VIEW,
-      value: product?.price || 0,
+      value: price,
+      src: `/product/${product?.slug}`,
       items: [
         {
-          id: product?.id,
+          id: product?.variations[0].sku,
           quantity: 1,
-          price:
-            product?.variations[0].discountPrice ||
-            product?.price ||
-            product?.variations[0].regularPrice ||
-            0,
-          name: product?.title,
+          price: price,
+          productName: product?.title,
           category: product.category?.name || "Uncategorized",
         },
       ],
@@ -29,6 +30,6 @@ export default function ViewProductEvent({ product }) {
         phone: session?.user?.phone,
       },
     });
-  }, [product, session]);
+  }, [product, session, price]);
   return <div></div>;
 }

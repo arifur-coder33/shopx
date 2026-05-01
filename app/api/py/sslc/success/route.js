@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 async function handleSSL(req) {
   let formData;
-  console.log("SSLCommerz Callback Received:", process.env.NEXT_PUBLIC_SITE_UR);
+
   if (req.method === "POST") {
     formData = await req.formData();
   } else {

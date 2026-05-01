@@ -15,7 +15,7 @@ export async function firePurchaseServer(orderId) {
         orderPrice: true,
         email: true,
         phoneNumber: true,
-
+        createdAt: true,
         fbp: true,
         fbc: true,
         gclid: true,
@@ -30,6 +30,7 @@ export async function firePurchaseServer(orderId) {
             productId: true,
             quantity: true,
             price: true,
+            sku: true,
             productName: true,
             product: {
               select: {
@@ -48,11 +49,12 @@ export async function firePurchaseServer(orderId) {
     const payload = {
       event: EVENTS.PURCHASE,
       eventId,
+      eventTime: Math.floor(new Date(order.createdAt).getTime() / 1000),
       value: order.orderPrice,
       currency: "BDT",
       src: "/payment/success",
       items: order.orderItems.map((item) => ({
-        id: item.productId,
+        id: item.sku,
         quantity: item.quantity,
         price: item.price,
         name: item.productName,
@@ -74,7 +76,7 @@ export async function firePurchaseServer(orderId) {
       },
     };
 
-    Promise.all([
+    await Promise.all([
       fireFacebookCAPI(payload),
       fireGoogleServer(payload),
       fireTikTokServer(payload),

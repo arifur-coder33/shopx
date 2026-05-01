@@ -1530,7 +1530,7 @@ export async function updateProductAction({ id: productId, formData }) {
         newSlug = await generateUniqueSlug(tx, baseSlug, productId);
       }
       const categoryPath = await buildCategoryPath(data.category);
-      console.log("Built category path for product update:", categoryPath);
+
       const searchText = await buildSearchText({
         title: data.title,
         description: data.description,
@@ -1883,11 +1883,7 @@ export const updateProductStatus = async ({ id, value }) => {
 export const searchProducts = async (rawQuery) => {
   const q = normalizeText(rawQuery);
 
-  const variations = [
-    q,
-    q.slice(0, -1), // iphonee → iphone
-    q.slice(0, -2), // extra safety
-  ];
+  const variations = [q, q.slice(0, -1), q.slice(0, -2)];
   const query = normalizeText(q);
 
   const products = await prisma.product.findMany({

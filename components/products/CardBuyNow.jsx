@@ -5,8 +5,14 @@ import { useSession } from "next-auth/react";
 
 export default function CardBuyNow({ product, children }) {
   const { data: session, status } = useSession();
-  const { hasVariations, discountPrice, regularPrice, slug, category } =
-    product || {};
+  const {
+    hasVariations,
+    discountPrice,
+    regularPrice,
+    slug,
+    category,
+    productCode,
+  } = product || {};
 
   const price =
     discountPrice && discountPrice > 0 ? discountPrice : regularPrice;
@@ -17,7 +23,7 @@ export default function CardBuyNow({ product, children }) {
       src: `/product/${slug}`,
       items: [
         {
-          id: product?.id,
+          id: productCode,
           quantity: 1,
           price: discountPrice > 0 ? discountPrice : regularPrice,
           productName: product?.title,

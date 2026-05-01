@@ -9,8 +9,15 @@ export default function BuyNowCheckout({ data }) {
   const initialQty = searchParams.get("qty") || 1;
   const variationId = searchParams.get("v") || null;
   const [productQty, setProductQty] = useState(Number(initialQty) || 1);
-  const { hasVariations, variations, title, weight, id, slug } = data;
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [orderWeight, setOrderWeight] = useState(0);
+  const { hasVariations, variations, title, id, slug } = data;
   const selectedVariation = data?.variations?.find((v) => v.id === variationId);
+  // const initialDeliveryCharge =
+  //   deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
+  // const deliveryCharge =
+  //   initialDeliveryCharge + (productData.weight > 1 && productData.weight * 20);
 
   const getDiscountPrice = selectedVariation
     ? selectedVariation?.discountPrice || selectedVariation?.regularPrice
@@ -48,28 +55,34 @@ export default function BuyNowCheckout({ data }) {
     slug: slug,
     id: id,
     quantity: productQty,
-    weight: weight,
+    weight: selectedVariation
+      ? selectedVariation?.weight
+      : variations[0].weight,
     sku: getSku,
     productCode: data?.productCode,
   };
 
-  const deliveryCharge =
-    deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
   return (
     <OrderForm
       setDeliveryArea={setDeliveryArea}
+      deliveryArea={deliveryArea}
       products={[productData]}
       deliveryCharge={deliveryCharge}
       buyNow={true}
       data={productData}
       initialQty={initialQty}
       variationId={variationId}
+      totalPrice={totalPrice}
+      orderWeight={orderWeight}
     >
       <BuyNowProductDetails
         setProductQty={setProductQty}
         productQty={productQty}
         data={productData}
         deliveryArea={deliveryArea}
+        setDeliveryCharge={setDeliveryCharge}
+        setTotalPrice={setTotalPrice}
+        setOrderWeight={setOrderWeight}
       />
     </OrderForm>
   );

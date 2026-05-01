@@ -484,7 +484,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
       message: note || `Order status changed to ${status}`,
       createdBy: "admin",
     });
-    if (order.paymentMethod === "cod" && status === "DELIVERED") {
+    if (order.paymentMethod === "cod" && status === "PROCESSING") {
       firePurchaseServer(orderId).catch((err) =>
         console.error("Tracking failed:", err),
       );

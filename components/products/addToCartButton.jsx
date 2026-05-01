@@ -78,7 +78,7 @@ export default function AddToCartButton(props) {
       src: `/product/${slug}`,
       items: [
         {
-          id: productData?.id,
+          id: productData?.sku,
           quantity: productQty || 1,
           price: productData.discountPrice || productData?.regularPrice,
           productName: productData?.title,

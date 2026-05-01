@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { newSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 
@@ -42,6 +43,11 @@ export async function createCategoryAction(formData) {
       data: preparedData,
     });
 
+    const fullPath = await buildCategoryPath(category.id);
+    await prisma.category.update({
+      where: { id: category.id },
+      data: { fullPath },
+    });
     if (data?.variations) {
       const parseVariation = JSON.parse(data?.variations);
 
@@ -107,6 +113,23 @@ export async function getCategoryById(id) {
     return { success: false, error: error.message }; // Return structured error
   }
 }
+async function updateChildrenFullPath(parentId) {
+  const children = await prisma.category.findMany({
+    where: { parentCategoryId: parentId },
+    select: { id: true },
+  });
+
+  for (const child of children) {
+    const fullPath = await buildCategoryPath(child.id);
+    await prisma.category.update({
+      where: { id: child.id },
+      data: { fullPath },
+    });
+
+    // এই child-এরও children থাকতে পারে
+    await updateChildrenFullPath(child.id);
+  }
+}
 export async function updateCategoryAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
 
@@ -146,6 +169,14 @@ export async function updateCategoryAction({ formData, id }) {
       },
       data: preparedData,
     });
+
+    const fullPath = await buildCategoryPath(id);
+    await prisma.category.update({
+      where: { id },
+      data: { fullPath },
+    });
+
+    await updateChildrenFullPath(id);
 
     // existing variationValue
     const existingVariationValue = await prisma.variationValue.findMany({
@@ -224,35 +255,45 @@ export async function updateCategoryAction({ formData, id }) {
 
 export async function deleteCategoryAction(id) {
   try {
-    const checkChildCategory = await prisma.category.findUnique({
-      where: { id: id },
+    const checkCategory = await prisma.category.findUnique({
+      where: { id },
       include: {
         subCategories: true,
+        products: { select: { id: true } }, // ✅ product আছে কিনা check করো
       },
     });
-    if (checkChildCategory?.subCategories?.length > 0) {
+
+    if (!checkCategory) {
+      throw new Error("Category পাওয়া যায়নি।");
+    }
+
+    if (checkCategory?.subCategories?.length > 0) {
       throw new Error(
-        "This category has Sub categories. Please delete them first.",
+        "এই category-তে sub-category আছে। আগে সেগুলো delete করুন।",
       );
     }
-    // 1. First delete all VariationValue where categoryId = id
+
+    // ✅ product থাকলে delete করতে দেবো না
+    if (checkCategory?.products?.length > 0) {
+      throw new Error("এই category-তে product আছে। আগে product গুলো সরান।");
+    }
+
+    // 1. VariationValue delete করো
     await prisma.variationValue.deleteMany({
       where: { categoryId: id },
     });
 
-    // 2. Then delete the Category
-    const deletedCategory = await prisma.category.delete({
+    // 2. Category delete করো
+    await prisma.category.delete({
       where: { id },
     });
 
     revalidatePath("/admin/category");
-
-    return { success: true, data: "Sucessfully deleted" };
+    return { success: true, data: "সফলভাবে delete হয়েছে।" };
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
-
 export async function getCategory() {
   try {
     const data = await prisma.category.findMany({
@@ -401,9 +442,11 @@ export async function getAllCategoryWithproduct() {
             id: true,
             title: true,
             slug: true,
+            productCode: true,
             hasVariations: true,
             variations: {
               select: {
+                sku: true,
                 regularPrice: true,
                 discountPrice: true,
               },

@@ -7,7 +7,9 @@ export async function fireFacebookCAPI(data) {
 
   const fbdata = {
     event_name: FB_MAP[data.event] || data.event,
-    event_time: Math.floor(Date.now() / 1000),
+    event_time: data?.eventTime
+      ? data?.eventTime
+      : Math.floor(Date.now() / 1000),
     event_id: data.eventId,
     event_source_url: data.src,
     action_source: "website",

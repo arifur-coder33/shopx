@@ -151,9 +151,7 @@ model Product {
   categoryId     String?      @db.ObjectId      // Foreign key for Category
   category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
   canonicalUrl     String?
-  mainImage   String?
-  imageGallery    String[]
-  
+
   thumbnailId    String?    @db.ObjectId
   thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
   videoUrl String? // Optional video URL for the product
@@ -164,12 +162,11 @@ model Product {
   isActive       Boolean?    @default(true)      // Marks if the product is active
   status         ProductStatus? @default(ACTIVE) // Product status enumeration
   hasVariations    Boolean? @default(false)           
-      // Many-to-Many Relationship using Join Table 
+  google_Category_id String?
+  gender String?
+  ageGroup String?
   variations      ProductVariation[] 
   orders         OrderItem[] 
-                      // One-to-many relationship with Order
-  weight Float?
-  dimensions String? // Optional dimensions for the product (e.g., "10x10x10 cm")
    searchText  String?
 
   @@index([searchText])

@@ -19,5 +19,28 @@ export default function CheckoutPage() {
     >
       <BuyNowProductDetails data={cartItems} deliveryArea={deliveryArea} />
     </OrderForm>
+
+    // <OrderForm
+    //   setDeliveryArea={setDeliveryArea}
+    //   deliveryArea={deliveryArea}
+    //   products={[productData]}
+    //   deliveryCharge={deliveryCharge}
+    //   buyNow={true}
+    //   data={productData}
+    //   initialQty={initialQty}
+    //   variationId={variationId}
+    //   totalPrice={totalPrice}
+    //   orderWeight={orderWeight}
+    // >
+    //   <BuyNowProductDetails
+    //     setProductQty={setProductQty}
+    //     productQty={productQty}
+    //     data={productData}
+    //     deliveryArea={deliveryArea}
+    //     setDeliveryCharge={setDeliveryCharge}
+    //     setTotalPrice={setTotalPrice}
+    //     setOrderWeight={setOrderWeight}
+    //   />
+    // </OrderForm>
   );
 }

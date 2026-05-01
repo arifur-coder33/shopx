@@ -9,6 +9,9 @@ export default function BuyNowProductDetails({
   productQty = 1,
   setProductQty,
   variationId = null,
+  setDeliveryCharge,
+  setTotalPrice,
+  setOrderWeight,
 }) {
   let totalPrices;
   const isArray = Array.isArray(data);
@@ -20,9 +23,10 @@ export default function BuyNowProductDetails({
         acc.totalDiscountPrice += (item.discountPrice || 0) * qty;
         acc.totalRegularPrice += (item.regularPrice || 0) * qty;
         acc.totalWeight += (item.weight || 1) * qty;
+
         return acc;
       },
-      { totalDiscountPrice: 0, totalRegularPrice: 0, totalWeight: 0 }
+      { totalDiscountPrice: 0, totalRegularPrice: 0, totalWeight: 0 },
     );
   } else {
     totalPrices = {
@@ -31,6 +35,10 @@ export default function BuyNowProductDetails({
       totalWeight: data.weight * productQty || 1,
     };
   }
+
+  console.log("weigjht", totalPrices);
+  console.log("qty", productQty);
+
   return (
     <>
       <div className="w-full rounded-sm flex flex-row gap-1 font-bold border-b-slate-400  border-b-2 dark:border-b-2 dark:border-b-slate-600 bg-slate-300 dark:bg-slate-800 p-2">
@@ -66,6 +74,9 @@ export default function BuyNowProductDetails({
         discountPrice={totalPrices.totalDiscountPrice}
         regularPrice={totalPrices.totalRegularPrice}
         totalWeight={totalPrices.totalWeight}
+        setTotalPrice={setTotalPrice}
+        setDeliveryCharge={setDeliveryCharge}
+        setOrderWeight={setOrderWeight}
       />
     </>
   );

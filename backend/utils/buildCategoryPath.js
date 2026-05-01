@@ -10,9 +10,9 @@ export async function buildCategoryPath(categoryId) {
 
     if (!cat) break;
 
-    names.push(cat.name);
+    names.unshift(cat.name);
     currentId = cat.parentCategoryId;
   }
 
-  return names.reverse().join(" ");
+  return names.reverse().join(" > ");
 }

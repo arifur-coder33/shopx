@@ -16,7 +16,10 @@ export default function BuyNowButton({
   const { data: session } = useSession();
   const hasVariations = product?.variations[0]?.combinations?.length > 0;
   const isVariationSelected = !!selectedVariation;
-
+  const getSku = selectedVariation
+    ? selectedVariation?.sku
+    : !product?.variations?.combinations?.length > 0 &&
+      product?.variations[0]?.sku;
   // Determine the button's state based on priority
   let isDisabled = false;
   let tooltipContent = "";
@@ -45,7 +48,7 @@ export default function BuyNowButton({
       value: price,
       items: [
         {
-          id: product?.id,
+          id: getSku,
           quantity: 1,
           price: price,
           productName: product?.title,

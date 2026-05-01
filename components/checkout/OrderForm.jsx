@@ -27,6 +27,8 @@ export default function OrderForm({
   initialQty,
   variationId,
   deliveryArea,
+  totalPrice,
+  orderWeight,
 }) {
   const { data: session } = useSession();
 
@@ -46,12 +48,15 @@ export default function OrderForm({
     // if (buyNow) {
     //   products[0].quantity = Number(formData.get("quantity"));
     // }
-
+    console.log();
     if (session?.user?.id) {
       formData.append("userId", session?.user?.id);
     }
 
     formData.append("paymentMethod", paymentMethod);
+    formData.append("orderPrice", totalPrice);
+    formData.append("deliveryCharge", deliveryCharge);
+    formData.append("orderWeight", orderWeight);
     formData.append("fbp", getCookie("_fbp"));
     formData.append("fbc", getCookie("_fbc"));
     formData.append("gclid", getCookie("gclid"));
@@ -68,16 +73,19 @@ export default function OrderForm({
         product.quantity * (product.discountPrice || product.regularPrice),
       0,
     );
-
+    const formDataObj = Object.fromEntries(formData.entries());
+    console.log("formdata", formDataObj);
+    return;
     // startTransition(async () => {
     const response = await createOrder(formData); // Call server action
-    // const response = { success: true, data: { id: "sds" } };
+
+    console.log("respnse", response); // const response = { success: true, data: { id: "sds" } };
     if (response.success) {
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
 
       if (paymentMethod === "online") {
         const url = await initiateSSLcommerzPayment({
-          amount: productPrice,
+          amount: productPrice + deliveryCharge,
           name: "Arifur",
           email: "test@mail.com",
           order_id: response?.data?.id,
@@ -87,7 +95,7 @@ export default function OrderForm({
           value: productPrice,
           src: `/checkout`,
           items: products.map((item) => ({
-            id: item?.id,
+            id: item?.sku,
             quantity: item.quantity,
             price: item.discountPrice || item?.regularPrice,
             productName: item?.title,

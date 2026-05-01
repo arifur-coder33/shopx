@@ -1,3 +1,5 @@
+import { htmlToText } from "html-to-text";
+
 export function normalizeText(text = "") {
   return text
     .toLowerCase()
@@ -38,3 +40,16 @@ export const normalizePhone = (phone) => {
 
   return p;
 };
+
+export function htmlToTextCustome(text) {
+  if (!text) return;
+
+  return htmlToText(text)
+    .replace(/\\n/g, " ") // literal \n → space
+    .replace(/\n/g, " ") // actual newline → space
+    .replace(/\r/g, "") // carriage return বাদ
+    .replace(/<[^>]*>/g, "") // HTML tags বাদ
+    .replace(/\s+/g, " ") // multiple space → single space
+    .replace(/[^\S\r\n]+/g, " ") // extra whitespace clean
+    .trim();
+}
