@@ -1,27 +1,118 @@
+// "use client";
+// import { signIn, useSession } from "next-auth/react";
+// import { useRouter, useSearchParams } from "next/navigation";
+// import { useEffect, useState } from "react";
+// import Button from "../button";
+// import DefaultInput from "../input/DefaultInput";
+// export default function LoginForm() {
+//   const searchParams = useSearchParams();
+//   const callbackUrl = searchParams.get("callbackUrl") || "/";
+//   const router = useRouter();
+//   const [error, setError] = useState("");
+//   const [loading, setLoading] = useState(false);
+//   const [loggedIn, setLoggedIn] = useState(false);
+//   const { data: session } = useSession();
+//   useEffect(() => {
+//     if (loggedIn || session) {
+//       if (callbackUrl) {
+//         console.log("Redirecting to:", callbackUrl);
+//         router.push(callbackUrl);
+//       } else {
+//         router.push("/");
+//       }
+//     }
+//   }, [loggedIn, callbackUrl, router, session]);
+
+//   async function HandleSubmit(e) {
+//     e.preventDefault();
+//     const form = e.target;
+//     const formData = new FormData(form);
+
+//     setError("");
+//     setLoading(true);
+
+//     try {
+//       const email = formData.get("email");
+//       const password = formData.get("password");
+
+//       const result = await signIn("credentials", {
+//         redirect: false,
+//         email,
+//         password,
+//       });
+//       console.log(result);
+
+//       if (result?.error === undefined) {
+//         setLoggedIn(true);
+//         // if (callbackUrl) {
+//         //   console.log("Redirecting to:", callbackUrl);
+//         //   router.push(callbackUrl);
+//         // } else {
+//         //   router.push("callback /", callbackUrl);
+//         //   router.push("/");
+//         // }
+//       } else if (result?.error === "CredentialsSignin") {
+//         console.log(result.error);
+//         setLoggedIn(false);
+//         setError("Invalid email or password. Please try again.");
+//       }
+//     } catch (err) {
+//       console.error(err);
+//       setError("Something went wrong. Please try again.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   }
+
+//   return (
+//     <form className="mt-6" onSubmit={HandleSubmit}>
+//       <h1 className="text-white font-bold text-center text-2xl">Login </h1>
+//       {error && (
+//         <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden">
+//           {error}
+//         </div>
+//       )}
+
+//       <DefaultInput
+//         name="email"
+//         label="ইমেইলঃ"
+//         placeholder="আপনার ইমেইল দিন।"
+//         required
+//         type="email"
+//       />
+
+//       <DefaultInput
+//         name="password"
+//         label="পাসওয়ার্ডঃ"
+//         placeholder="আপনার পাসওয়ার্ড দিন।"
+//         required
+//         type="password"
+//       />
+
+//       <Button type={"submit"} disabled={loading} className="w-full mt-2 py-2">
+//         {loading ? "লগইন হচ্ছে..." : "লগইন করুন"}
+//       </Button>
+//     </form>
+//   );
+// }
 "use client";
-import { signIn, useSession } from "next-auth/react";
+
+import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Button from "../button";
 import DefaultInput from "../input/DefaultInput";
+
 export default function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const router = useRouter();
+
+  const callbackUrl = decodeURIComponent(
+    searchParams.get("callbackUrl") || "/",
+  );
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const { data: session } = useSession();
-  useEffect(() => {
-    if (loggedIn || session) {
-      if (callbackUrl) {
-        console.log("Redirecting to:", callbackUrl);
-        router.push(callbackUrl);
-      } else {
-        router.push("/");
-      }
-    }
-  }, [loggedIn, callbackUrl, router, session]);
 
   async function HandleSubmit(e) {
     e.preventDefault();
@@ -40,24 +131,14 @@ export default function LoginForm() {
         email,
         password,
       });
-      console.log(result);
 
-      if (result?.error === undefined) {
-        setLoggedIn(true);
-        // if (callbackUrl) {
-        //   console.log("Redirecting to:", callbackUrl);
-        //   router.push(callbackUrl);
-        // } else {
-        //   router.push("callback /", callbackUrl);
-        //   router.push("/");
-        // }
-      } else if (result?.error === "CredentialsSignin") {
-        console.log(result.error);
-        setLoggedIn(false);
+      if (!result?.error) {
+        // ✅ MOST reliable redirect (mobile safe)
+        window.location.href = callbackUrl || "/";
+      } else {
         setError("Invalid email or password. Please try again.");
       }
     } catch (err) {
-      console.error(err);
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -66,9 +147,10 @@ export default function LoginForm() {
 
   return (
     <form className="mt-6" onSubmit={HandleSubmit}>
-      <h1 className="text-white font-bold text-center text-2xl">Login </h1>
+      <h1 className="text-white font-bold text-center text-2xl">Login</h1>
+
       {error && (
-        <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600 overflow-hidden">
+        <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">
           {error}
         </div>
       )}
@@ -89,7 +171,7 @@ export default function LoginForm() {
         type="password"
       />
 
-      <Button type={"submit"} disabled={loading} className="w-full mt-2 py-2">
+      <Button type="submit" disabled={loading} className="w-full mt-2 py-2">
         {loading ? "লগইন হচ্ছে..." : "লগইন করুন"}
       </Button>
     </form>
