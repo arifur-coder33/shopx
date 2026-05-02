@@ -49,7 +49,7 @@ export default async function CategoryWithProductPage({ params }) {
 
   const { data } = await getCategoryPageData(slug[slug.length - 1]);
   console.log("data", data);
-  console.log("length", data.length);
+
   return (
     <>
       <ProductList headerName={data?.name}>

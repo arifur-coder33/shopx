@@ -715,7 +715,6 @@ export async function getCategoryPageData(slug) {
         id: true,
         title: true,
         slug: true,
-        mainImage: true,
         hasVariations: true,
         variations: {
           select: {
