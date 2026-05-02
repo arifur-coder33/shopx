@@ -62,7 +62,7 @@ export default function OrderItemTable({ data }) {
             </td>
             <td className="p-2">
               {replaceNumbers(
-                (data?.deliveryCharge + data?.orderPrice).toString()
+                (data?.deliveryCharge + data?.orderPrice).toString(),
               )}
             </td>
           </tr>
@@ -83,12 +83,7 @@ const Item = ({ data }) => {
           {data.orderItemNo}
         </th>
         <td className="p-2 w-2/12">
-          <Imagecustom
-            src={data.product.mainImage}
-            w={50}
-            h={50}
-            alt={data?.title}
-          />
+          <Imagecustom src={data.thumbnail} w={50} h={50} alt={data?.title} />
         </td>
         <td className="p-2 sm:w-4/12 w-8/12 text-gray-900 dark:text-white ">
           <p className="line-clamp-2"> {data.productName}</p>

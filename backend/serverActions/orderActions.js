@@ -317,22 +317,19 @@ export async function getOrderCount(params) {
 //   }
 // }
 export async function getOrderByOrderNo(orderNo, phoneNumber) {
+  console.log("start load", orderNo, phoneNumber);
   try {
     const data = await prisma.order.findUnique({
       where: { orderNo: orderNo, phoneNumber },
       include: {
         orderItems: {
           include: {
-            product: {
-              select: {
-                mainImage: true,
-              },
-            },
+            product: true,
           },
         },
       },
     });
-
+    console.log("data", data);
     return { success: true, data }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error

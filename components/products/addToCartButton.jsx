@@ -23,6 +23,9 @@ export default function AddToCartButton(props) {
   const getSku = selectedVariation
     ? selectedVariation?.sku
     : !variations?.combinations?.length > 0 && variations[0]?.sku;
+  const getWeight = selectedVariation
+    ? selectedVariation?.weight
+    : !variations?.combinations?.length > 0 && variations[0]?.weight;
 
   const handleAddToCart = () => {
     const productData = {
@@ -45,10 +48,11 @@ export default function AddToCartButton(props) {
         : product?.thumbnail?.name || product?.mainImage,
       slug: product?.slug,
       id: product?.id,
-      weight: weight,
+      weight: getWeight,
       sku: getSku,
       category: category || "Uncategorized",
     };
+    console.log("productcart Data", productData);
 
     if (
       hasVariations &&

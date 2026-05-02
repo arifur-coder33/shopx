@@ -623,7 +623,9 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
               />
               <FloatingInput
                 defaultValue={
-                  derivedInitialEnabled ? "" : initialCombinations[0]?.weight
+                  derivedInitialEnabled
+                    ? ""
+                    : initialCombinations[0]?.dimensions
                 }
                 label="Pakage dimensions (L×W×H cm)"
                 name="dimensions"

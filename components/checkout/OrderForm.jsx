@@ -3,14 +3,14 @@ import { Truck } from "lucide-react";
 import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
-import { useSession } from "next-auth/react";
-
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
 import { createOrder } from "@/backend/serverActions/orderActions";
+import { useCart } from "@/context/CartContext";
 import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { getCookie } from "@/utils/cookie/cooike";
 import { trackFacebookEvent } from "@/utils/fbEventTrack";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "react-toastify";
@@ -31,7 +31,7 @@ export default function OrderForm({
   orderWeight,
 }) {
   const { data: session } = useSession();
-
+  const { clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
@@ -75,19 +75,18 @@ export default function OrderForm({
     );
     const formDataObj = Object.fromEntries(formData.entries());
     console.log("formdata", formDataObj);
-    return;
+
     // startTransition(async () => {
     const response = await createOrder(formData); // Call server action
 
-    console.log("respnse", response); // const response = { success: true, data: { id: "sds" } };
     if (response.success) {
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
 
       if (paymentMethod === "online") {
         const url = await initiateSSLcommerzPayment({
           amount: productPrice + deliveryCharge,
-          name: "Arifur",
-          email: "test@mail.com",
+          name: response?.data?.customerName,
+          email: data?.email,
           order_id: response?.data?.id,
         });
         trackEvent({
@@ -118,7 +117,7 @@ export default function OrderForm({
           )}&orderSuccess=true`,
         );
       }
-
+      if (!buyNow) clearCart();
       // trackFacebookEvent("Purchase", {
       //   content_type: "product",
       //   content_ids: products.map((product) => product.productId),

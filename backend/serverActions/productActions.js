@@ -1155,8 +1155,7 @@ export async function updateProductActions({ id: productId, formData }) {
         discountPrice: hasSubmittedVariations
           ? null
           : parseOptionalNumber(data.discountPrice),
-        stock: hasSubmittedVariations ? 0 : parseOptionalNumber(data.stock, 0),
-        weight: parseOptionalNumber(data.weight),
+
         seoKeyWord: data.seoKeyWord || null,
         seoDescription: data.seoDescription || null,
         isFeatured: Boolean(data.isFeatured === "on"),
@@ -1543,10 +1542,13 @@ export async function updateProductAction({ id: productId, formData }) {
         title: data.title,
         slug: newSlug,
         description: data.description || null,
-        categoryId: data.category || null,
-        thumbnailId: data.thumbnail || existingProduct.thumbnailId,
-        weight: parseOptionalNumber(data.weight),
-        dimensions: data.dimensions || null,
+        category: data?.category
+          ? { connect: { id: data.category } }
+          : existingProduct.categoryId,
+        thumbnail: data.thumbnail
+          ? { connect: { id: data?.thumbnail } }
+          : existingProduct.thumbnailId,
+
         seoKeyWord: data.seoKeyWord || null,
         seoDescription: data.seoDescription || null,
         isFeatured: Boolean(data.isFeatured === "on"),
@@ -1720,6 +1722,8 @@ export async function updateProductAction({ id: productId, formData }) {
 
         const defaultSku = updatedProduct.productCode;
         const defaultStock = parseOptionalNumber(data.stock, 0);
+        const defaultWeight = parseOptionalNumber(data.weight, 0);
+        const defaultDimentions = data.dimensions;
         const defaultRegularPrice = parseOptionalNumber(data.regularPrice);
         const defaultDiscountPrice = parseOptionalNumber(data.discountPrice);
 
@@ -1736,6 +1740,8 @@ export async function updateProductAction({ id: productId, formData }) {
               regularPrice: defaultRegularPrice,
               discountPrice: defaultDiscountPrice,
               thumbnailId: updatedProduct.thumbnailId,
+              weight: defaultWeight,
+              dimensions: defaultDimentions,
               combinations: {
                 deleteMany: { productVariationId: defaultVariation.id },
               }, // Ensure no combinations
@@ -1749,6 +1755,8 @@ export async function updateProductAction({ id: productId, formData }) {
               matcherId: defaultSku,
               sku: defaultSku,
               stock: defaultStock,
+              weight: defaultWeight,
+              dimensions: defaultDimentions,
               regularPrice: defaultRegularPrice,
               discountPrice: defaultDiscountPrice,
               thumbnailId: updatedProduct.thumbnailId,
