@@ -21,149 +21,149 @@ const statusMap = {
   delivered: ["DELIVERED", "RETURNING", "RETURNED"],
   refunded: ["REFUNDING", "REFUNDED"],
 };
-export async function createOrder(formData) {
-  const h = await headers();
-  const ip = getIP(h);
+// export async function createOrder(formData) {
+//   const h = await headers();
+//   const ip = getIP(h);
 
-  try {
-    const userId = await getUserId(); // Ensure user is authenticated, will throw if not
-    const formDataObj = Object.fromEntries(formData.entries());
-    const data = { ...formDataObj };
-    const orderItems = JSON.parse(data?.products);
+//   try {
+//     const userId = await getUserId(); // Ensure user is authenticated, will throw if not
+//     const formDataObj = Object.fromEntries(formData.entries());
+//     const data = { ...formDataObj };
+//     const orderItems = JSON.parse(data?.products);
 
-    if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
-      throw new Error(
-        "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
-      );
-    }
+//     if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
+//       throw new Error(
+//         "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
+//       );
+//     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1️⃣ Get or create counter
-      let counter = await tx.orderCounter.findFirst();
+//     const result = await prisma.$transaction(async (tx) => {
+//       // 1️⃣ Get or create counter
+//       let counter = await tx.orderCounter.findFirst();
 
-      if (!counter) {
-        counter = await tx.orderCounter.create({
-          data: { lastOrderNumber: 240000020 },
-        });
-      }
+//       if (!counter) {
+//         counter = await tx.orderCounter.create({
+//           data: { lastOrderNumber: 240000020 },
+//         });
+//       }
 
-      const newOrderNumber = counter.lastOrderNumber + 1;
+//       const newOrderNumber = counter.lastOrderNumber + 1;
 
-      await tx.orderCounter.update({
-        where: { id: counter.id },
-        data: { lastOrderNumber: newOrderNumber },
-      });
+//       await tx.orderCounter.update({
+//         where: { id: counter.id },
+//         data: { lastOrderNumber: newOrderNumber },
+//       });
 
-      // 2️⃣ Create Order
-      const order = await tx.order.create({
-        data: {
-          orderNo: newOrderNumber.toString(),
-          userId: userId || null,
-          customerName: data.customerName,
-          phoneNumber: data.phoneNumber,
-          email: data.email,
-          city: data.district,
-          deliveryCharge: Number(data.deliveryCharge),
-          orderPrice: Number(data.orderPrice),
-          deliveryAddress: data.deliveryAddress,
-          paymentMethod: data.paymentMethod,
-          note: data?.note,
-          fbc: data?.fbc,
-          fbp: data?.fbp,
-          gclid: data?.gclid,
-          ttclid: data?.ttclid,
+//       // 2️⃣ Create Order
+//       const order = await tx.order.create({
+//         data: {
+//           orderNo: newOrderNumber.toString(),
+//           userId: userId || null,
+//           customerName: data.customerName,
+//           phoneNumber: data.phoneNumber,
+//           email: data.email,
+//           city: data.district,
+//           deliveryCharge: Number(data.deliveryCharge),
+//           orderPrice: Number(data.orderPrice),
+//           deliveryAddress: data.deliveryAddress,
+//           paymentMethod: data.paymentMethod,
+//           note: data?.note,
+//           fbc: data?.fbc,
+//           fbp: data?.fbp,
+//           gclid: data?.gclid,
+//           ttclid: data?.ttclid,
 
-          userAgent: data?.userAgent,
-          ipAddress: ip,
-        },
-      });
+//           userAgent: data?.userAgent,
+//           ipAddress: ip,
+//         },
+//       });
 
-      // 3️⃣ Create Order Items
-      for (let i = 0; i < orderItems.length; i++) {
-        const item = orderItems[i];
+//       // 3️⃣ Create Order Items
+//       for (let i = 0; i < orderItems.length; i++) {
+//         const item = orderItems[i];
 
-        if (!item?.variation?.id) {
-          throw new Error(`Product "${item.title}" variation missing`);
-        }
+//         if (!item?.variation?.id) {
+//           throw new Error(`Product "${item.title}" variation missing`);
+//         }
 
-        // 🔻 Stock check
-        const variation = await tx.productVariation.findUnique({
-          where: { id: item.variation.id },
-          select: { stock: true },
-        });
+//         // 🔻 Stock check
+//         const variation = await tx.productVariation.findUnique({
+//           where: { id: item.variation.id },
+//           select: { stock: true },
+//         });
 
-        if (variation.stock < item.quantity) {
-          throw new Error(
-            `${item.title} product stock not available. We have only ${variation.stock}.`,
-          );
-        }
+//         if (variation.stock < item.quantity) {
+//           throw new Error(
+//             `${item.title} product stock not available. We have only ${variation.stock}.`,
+//           );
+//         }
 
-        // 🔻 Stock minus
-        await tx.productVariation.update({
-          where: { id: item.variation.id },
-          data: {
-            stock: {
-              decrement: Number(item.quantity),
-            },
-          },
-        });
+//         // 🔻 Stock minus
+//         await tx.productVariation.update({
+//           where: { id: item.variation.id },
+//           data: {
+//             stock: {
+//               decrement: Number(item.quantity),
+//             },
+//           },
+//         });
 
-        // 4️⃣ Create OrderItem
-        await tx.orderItem.create({
-          data: {
-            orderNo: newOrderNumber.toString(),
-            orderItemNo: i + 1,
-            productName: item.title,
-            price: Number(item.discountPrice || item.regularPrice),
-            quantity: Number(item.quantity),
-            productCode: item.productCode,
-            sku: item.sku,
-            thumbnail: item.thumbnail,
+//         // 4️⃣ Create OrderItem
+//         await tx.orderItem.create({
+//           data: {
+//             orderNo: newOrderNumber.toString(),
+//             orderItemNo: i + 1,
+//             productName: item.title,
+//             price: Number(item.discountPrice || item.regularPrice),
+//             quantity: Number(item.quantity),
+//             productCode: item.productCode,
+//             sku: item.sku,
+//             thumbnail: item.thumbnail,
 
-            product: {
-              connect: { id: item.id },
-            },
-            variation: {
-              connect: { id: item.variation.id },
-            },
-            order: {
-              connect: { id: order.id },
-            },
-            combination: item.variation.combinationId
-              ? { connect: { id: item.variation.combinationId } }
-              : undefined,
+//             product: {
+//               connect: { id: item.id },
+//             },
+//             variation: {
+//               connect: { id: item.variation.id },
+//             },
+//             order: {
+//               connect: { id: order.id },
+//             },
+//             combination: item.variation.combinationId
+//               ? { connect: { id: item.variation.combinationId } }
+//               : undefined,
 
-            combinations: JSON.stringify(
-              item.variation.combinations?.map((c) => ({
-                name: c.variationName.name,
-                value: c.variationValue.value,
-              })) || [],
-            ),
-          },
-        });
-      }
-      await addOrderTimeline({
-        orderId: order.id,
-        orderNo: newOrderNumber.toString(),
-        status: "PENDING",
-        title: "Order Created",
-        message: "Your order has been created and is pending confirmation.",
-        createdBy: "user",
-      });
-      return order;
-    });
+//             combinations: JSON.stringify(
+//               item.variation.combinations?.map((c) => ({
+//                 name: c.variationName.name,
+//                 value: c.variationValue.value,
+//               })) || [],
+//             ),
+//           },
+//         });
+//       }
+//       await addOrderTimeline({
+//         orderId: order.id,
+//         orderNo: newOrderNumber.toString(),
+//         status: "PENDING",
+//         title: "Order Created",
+//         message: "Your order has been created and is pending confirmation.",
+//         createdBy: "user",
+//       });
+//       return order;
+//     });
 
-    Promise.all([
-      // notifyNewOrder(result).catch((err) => console.error("SMS error:", err)),
-      revalidatePath("/admin/orders"),
-      revalidateTag("orders"),
-    ]);
-    return { success: true, data: result }; // Return success with order data
-  } catch (error) {
-    console.log(error.message);
-    return { success: false, error: error.message }; // Return structured error
-  }
-}
+//     Promise.all([
+//       // notifyNewOrder(result).catch((err) => console.error("SMS error:", err)),
+//       revalidatePath("/admin/orders"),
+//       revalidateTag("orders"),
+//     ]);
+//     return { success: true, data: result }; // Return success with order data
+//   } catch (error) {
+//     console.log(error.message);
+//     return { success: false, error: error.message }; // Return structured error
+//   }
+// }
 
 // A helper to dynamically create the 'select' object for Prisma
 // This ensures we only fetch data that the table actually needs.
@@ -239,6 +239,132 @@ export async function createOrder(formData) {
 //     return { success: false, error: error.message };
 //   }
 // }
+export async function createOrder(formData) {
+  // ✅ Run in parallel instead of sequentially
+  const [h, userId] = await Promise.all([headers(), getUserId()]);
+  const ip = getIP(h);
+
+  try {
+    const formDataObj = Object.fromEntries(formData.entries());
+    const data = { ...formDataObj };
+    const orderItems = JSON.parse(data?.products);
+
+    if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
+      throw new Error("আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।");
+    }
+
+    // ✅ Prefetch all variations in ONE query before transaction
+    const variationIds = orderItems.map((item) => item.variation.id);
+    const variations = await prisma.productVariation.findMany({
+      where: { id: { in: variationIds } },
+      select: { id: true, stock: true },
+    });
+
+    const variationMap = Object.fromEntries(variations.map((v) => [v.id, v]));
+
+    // ✅ Fail fast — stock check BEFORE entering transaction
+    for (const item of orderItems) {
+      const variation = variationMap[item.variation.id];
+      if (!variation) throw new Error(`Variation not found for "${item.title}"`);
+      if (variation.stock < item.quantity) {
+        throw new Error(
+          `${item.title} স্টক শেষ। মাত্র ${variation.stock}টি বাকি আছে।`
+        );
+      }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // ✅ Upsert counter — 1 query instead of 3
+      const counter = await tx.orderCounter.upsert({
+        where: { idNo: 11 },
+        update: { lastOrderNumber: { increment: 1 } },
+        create: { idNo: 11, lastOrderNumber: 240000020 },
+        select: { lastOrderNumber: true },
+      });
+
+      const newOrderNumber = counter.lastOrderNumber;
+
+      // ✅ Create order first (needed for orderId in items)
+      const order = await tx.order.create({
+        data: {
+          orderNo: newOrderNumber.toString(),
+          userId: userId || null,
+          customerName: data.customerName,
+          phoneNumber: data.phoneNumber,
+          email: data.email,
+          city: data.district,
+          deliveryCharge: Number(data.deliveryCharge),
+          orderPrice: Number(data.orderPrice),
+          deliveryAddress: data.deliveryAddress,
+          paymentMethod: data.paymentMethod,
+          note: data?.note,
+          fbc: data?.fbc,
+          fbp: data?.fbp,
+          gclid: data?.gclid,
+          ttclid: data?.ttclid,
+          userAgent: data?.userAgent,
+          ipAddress: ip,
+        },
+      });
+
+      // ✅ Run all stock decrements + orderItem creates in parallel
+      await Promise.all([
+        // Batch stock decrements concurrently
+        ...orderItems.map((item) =>
+          tx.productVariation.update({
+            where: { id: item.variation.id },
+            data: { stock: { decrement: Number(item.quantity) } },
+          })
+        ),
+        // Batch order item creates concurrently
+        tx.orderItem.createMany({
+          data: orderItems.map((item, i) => ({
+            orderNo: newOrderNumber.toString(),
+            orderItemNo: i + 1,
+            productName: item.title,
+            price: Number(item.discountPrice || item.regularPrice),
+            quantity: Number(item.quantity),
+            productCode: item.productCode,
+            sku: item.sku,
+            thumbnail: item.thumbnail,
+            productId: item.id,
+            variationId: item.variation.id,
+            orderId: order.id,
+            combinationId: item.variation.combinationId || undefined,
+            combinations: JSON.stringify(
+              item.variation.combinations?.map((c) => ({
+                name: c.variationName.name,
+                value: c.variationValue.value,
+              })) || []
+            ),
+          })),
+        }),
+      ]);
+
+      return order;
+    });
+
+    // ✅ Everything non-critical fires AFTER response — doesn't block user
+    setImmediate(() => {
+      addOrderTimeline({
+        orderId: result.id,
+        orderNo: result.orderNo,
+        status: "PENDING",
+        title: "Order Created",
+        message: "Your order has been created and is pending confirmation.",
+        createdBy: "user",
+      }).catch(console.error);
+
+      revalidatePath("/admin/orders");
+      revalidateTag("orders");
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.log(error.message);
+    return { success: false, error: error.message };
+  }
+}
 export async function getAllOrder(params) {
   return getListData({
     prisma,

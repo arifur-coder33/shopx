@@ -111,6 +111,7 @@ export default function OrderForm({
           window.location.href = url;
         }
       } else {
+        setLoading(false)
         router.push(
           `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
             response?.data?.phoneNumber,

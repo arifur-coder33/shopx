@@ -285,6 +285,7 @@ model OrderItem{
 }
 model OrderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
+  idNo            Int @unique 
   lastOrderNumber Int
 }
 model Shipping {
