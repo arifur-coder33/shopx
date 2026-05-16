@@ -40,8 +40,9 @@ export default function BuyNowButton({
     console.log("product buy", product);
     const price =
       selectedVariation?.discountPrice ||
-      product.discountPrice ||
-      product?.regularPrice;
+      selectedVariation?.regularPrice ||
+      product?.variations[0]?.discountPrice ||
+      product?.variations[0]?.regularPrice;
 
     trackEvent({
       event: EVENTS.CHECKOUT,

@@ -240,7 +240,6 @@ const statusMap = {
 //   }
 // }
 export async function createOrder(formData) {
-  // ✅ Run in parallel instead of sequentially
   const [h, userId] = await Promise.all([headers(), getUserId()]);
   const ip = getIP(h);
 
@@ -250,10 +249,12 @@ export async function createOrder(formData) {
     const orderItems = JSON.parse(data?.products);
 
     if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
-      throw new Error("আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।");
+      throw new Error(
+        "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
+      );
     }
 
-    // ✅ Prefetch all variations in ONE query before transaction
+    // ✅ Stock check BEFORE generating order number (fast fail)
     const variationIds = orderItems.map((item) => item.variation.id);
     const variations = await prisma.productVariation.findMany({
       where: { id: { in: variationIds } },
@@ -262,32 +263,63 @@ export async function createOrder(formData) {
 
     const variationMap = Object.fromEntries(variations.map((v) => [v.id, v]));
 
-    // ✅ Fail fast — stock check BEFORE entering transaction
     for (const item of orderItems) {
       const variation = variationMap[item.variation.id];
-      if (!variation) throw new Error(`Variation not found for "${item.title}"`);
+      if (!variation)
+        throw new Error(`Variation not found for "${item.title}"`);
       if (variation.stock < item.quantity) {
         throw new Error(
-          `${item.title} স্টক শেষ। মাত্র ${variation.stock}টি বাকি আছে।`
+          `${item.title} স্টক শেষ। মাত্র ${variation.stock}টি বাকি আছে।`,
         );
       }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // ✅ Upsert counter — 1 query instead of 3
-      const counter = await tx.orderCounter.upsert({
-        where: { idNo: 11 },
-        update: { lastOrderNumber: { increment: 1 } },
-        create: { idNo: 11, lastOrderNumber: 240000020 },
-        select: { lastOrderNumber: true },
-      });
+    // ✅ Generate order number instantly — 1 lightweight query
+    const counter = await prisma.orderCounter.upsert({
+      where: { idNo: 11 },
+      update: { lastOrderNumber: { increment: 1 } },
+      create: { idNo: 11, lastOrderNumber: 240000020 },
+      select: { lastOrderNumber: true },
+    });
 
-      const newOrderNumber = counter.lastOrderNumber;
+    const newOrderNumber = counter.lastOrderNumber.toString();
 
-      // ✅ Create order first (needed for orderId in items)
+    // ✅ Return INSTANTLY — user sees success immediately
+    // Fire all DB writes in background without awaiting
+    persistOrderInBackground({
+      newOrderNumber,
+      userId,
+      ip,
+      data,
+      orderItems,
+    });
+
+    return {
+      success: true,
+      data: {
+        orderNo: newOrderNumber,
+        phoneNumber: data.phoneNumber,
+      },
+    };
+  } catch (error) {
+    console.log(error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+// 🔥 All heavy DB writes happen here — completely non-blocking
+async function persistOrderInBackground({
+  newOrderNumber,
+  userId,
+  ip,
+  data,
+  orderItems,
+}) {
+  try {
+    const order = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
-          orderNo: newOrderNumber.toString(),
+          orderNo: newOrderNumber,
           userId: userId || null,
           customerName: data.customerName,
           phoneNumber: data.phoneNumber,
@@ -307,19 +339,16 @@ export async function createOrder(formData) {
         },
       });
 
-      // ✅ Run all stock decrements + orderItem creates in parallel
       await Promise.all([
-        // Batch stock decrements concurrently
         ...orderItems.map((item) =>
           tx.productVariation.update({
             where: { id: item.variation.id },
             data: { stock: { decrement: Number(item.quantity) } },
-          })
+          }),
         ),
-        // Batch order item creates concurrently
         tx.orderItem.createMany({
           data: orderItems.map((item, i) => ({
-            orderNo: newOrderNumber.toString(),
+            orderNo: newOrderNumber,
             orderItemNo: i + 1,
             productName: item.title,
             price: Number(item.discountPrice || item.regularPrice),
@@ -335,7 +364,7 @@ export async function createOrder(formData) {
               item.variation.combinations?.map((c) => ({
                 name: c.variationName.name,
                 value: c.variationValue.value,
-              })) || []
+              })) || [],
             ),
           })),
         }),
@@ -344,25 +373,22 @@ export async function createOrder(formData) {
       return order;
     });
 
-    // ✅ Everything non-critical fires AFTER response — doesn't block user
-    setImmediate(() => {
-      addOrderTimeline({
-        orderId: result.id,
-        orderNo: result.orderNo,
-        status: "PENDING",
-        title: "Order Created",
-        message: "Your order has been created and is pending confirmation.",
-        createdBy: "user",
-      }).catch(console.error);
+    // Non-critical side effects
+    addOrderTimeline({
+      orderId: order.id,
+      orderNo: order.orderNo,
+      status: "PENDING",
+      title: "Order Created",
+      message: "Your order has been created and is pending confirmation.",
+      createdBy: "user",
+    }).catch(console.error);
 
-      revalidatePath("/admin/orders");
-      revalidateTag("orders");
-    });
-
-    return { success: true, data: result };
+    revalidatePath("/admin/orders");
+    revalidateTag("orders");
   } catch (error) {
-    console.log(error.message);
-    return { success: false, error: error.message };
+    // ⚠️ Log to your error monitoring (Sentry, etc.) — user already got success
+    console.error("Background order persist failed:", error.message);
+    // TODO: alert admin or add to a retry queue
   }
 }
 export async function getAllOrder(params) {

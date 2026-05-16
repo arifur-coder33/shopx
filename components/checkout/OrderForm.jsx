@@ -6,10 +6,7 @@ import DeliveryAddress from "./DeliveryAddress";
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
 import { createOrder } from "@/backend/serverActions/orderActions";
 import { useCart } from "@/context/CartContext";
-import { trackEvent } from "@/lib/SocialEventTracking";
-import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { getCookie } from "@/utils/cookie/cooike";
-import { trackFacebookEvent } from "@/utils/fbEventTrack";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -81,7 +78,7 @@ export default function OrderForm({
 
     if (response.success) {
       toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
-
+      if (!buyNow) clearCart();
       if (paymentMethod === "online") {
         const url = await initiateSSLcommerzPayment({
           amount: productPrice + deliveryCharge,
@@ -89,36 +86,21 @@ export default function OrderForm({
           email: data?.email,
           order_id: response?.data?.id,
         });
-        trackEvent({
-          event: EVENTS.CHECKOUT,
-          value: productPrice,
-          src: `/checkout`,
-          items: products.map((item) => ({
-            id: item?.sku,
-            quantity: item.quantity,
-            price: item.discountPrice || item?.regularPrice,
-            productName: item?.title,
-            category: item?.category?.name || "Uncategorized",
-          })),
-          user: {
-            email: session?.user?.email,
-            phone: session?.user?.phone,
-          },
-        });
+
         if (url) {
           console.log("SSLCommerz URL:", url);
           setLoading(false);
           window.location.href = url;
         }
       } else {
-        setLoading(false)
+        setLoading(false);
         router.push(
           `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
             response?.data?.phoneNumber,
           )}&orderSuccess=true`,
         );
       }
-      if (!buyNow) clearCart();
+
       // trackFacebookEvent("Purchase", {
       //   content_type: "product",
       //   content_ids: products.map((product) => product.productId),
@@ -129,18 +111,7 @@ export default function OrderForm({
       // form.reset(); // Clear the form on success
     } else {
       console.log(response.error);
-      // Track the "FailedOrder" event
-      console.log(products);
-      trackFacebookEvent("FailedOrder", {
-        content_type: "product",
-        content_ids: products.map((product) => product.productId),
-        value: products.reduce(
-          (total, product) => total + product.quantity * product.price,
-          0,
-        ),
-        currency: "BDT",
-        reason: response.error || "Unknown error",
-      });
+
       window.scrollTo(0, 0);
       setError(response.error || "Something went wrong");
     }

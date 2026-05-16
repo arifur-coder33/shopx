@@ -494,7 +494,7 @@ export async function getAllCategoryWithproduct() {
           }
 
           return {
-            id: product.id,
+            id: variations[0]?.sku,
             title: product.title,
             slug: product.slug,
             regularPrice: minRegular,

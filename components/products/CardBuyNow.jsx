@@ -6,35 +6,40 @@ import { useSession } from "next-auth/react";
 export default function CardBuyNow({ product, children }) {
   const { data: session, status } = useSession();
   const {
-    hasVariations,
-    discountPrice,
-    regularPrice,
+    id,
+    title,
     slug,
+    regularPrice,
+    discountPrice,
+    hasVariations,
+
     category,
-    productCode,
   } = product || {};
 
   const price =
     discountPrice && discountPrice > 0 ? discountPrice : regularPrice;
   const handleEventTrck = () => {
-    trackEvent({
-      event: EVENTS.CHECKOUT,
-      value: price,
-      src: `/product/${slug}`,
-      items: [
-        {
-          id: productCode,
-          quantity: 1,
-          price: discountPrice > 0 ? discountPrice : regularPrice,
-          productName: product?.title,
-          category: category?.name || "Uncategorized",
+    if (!hasVariations) {
+      trackEvent({
+        event: EVENTS.CHECKOUT,
+        value: price,
+        src: `/product/${slug}`,
+        items: [
+          {
+            id: id,
+            quantity: 1,
+            price: price,
+            productName: title,
+            category: category || "Uncategorized",
+          },
+        ],
+        user: {
+          email: session?.user?.email,
+          phone: session?.user?.phone,
         },
-      ],
-      user: {
-        email: session?.user?.email,
-        phone: session?.user?.phone,
-      },
-    });
+      });
+    }
+    return;
   };
 
   return (
