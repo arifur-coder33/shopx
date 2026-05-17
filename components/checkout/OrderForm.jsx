@@ -71,35 +71,33 @@ export default function OrderForm({
       0,
     );
     const formDataObj = Object.fromEntries(formData.entries());
-    console.log("formdata", formDataObj);
 
     // startTransition(async () => {
     const response = await createOrder(formData); // Call server action
 
     if (response.success) {
-      toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
       if (!buyNow) clearCart();
       if (paymentMethod === "online") {
-        const url = await initiateSSLcommerzPayment({
+        initiateSSLcommerzPayment({
           amount: productPrice + deliveryCharge,
           name: response?.data?.customerName,
           email: data?.email,
           order_id: response?.data?.id,
+        }).then((url) => {
+          if (url) {
+            window.location.href = url;
+          }
         });
-
-        if (url) {
-          console.log("SSLCommerz URL:", url);
-          setLoading(false);
-          window.location.href = url;
-        }
-      } else {
-        router.push(
-          `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
-            response?.data?.phoneNumber,
-          )}&orderSuccess=true`,
-        );
-        setLoading(false);
       }
+      router.push(
+        `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
+          response?.data?.phoneNumber,
+        )}&orderSuccess=true`,
+      );
+      setTimeout(() => {
+        toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
+      }, 0);
+      setLoading(false);
 
       // trackFacebookEvent("Purchase", {
       //   content_type: "product",
