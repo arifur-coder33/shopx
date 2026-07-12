@@ -1,12 +1,10 @@
 import LazyLoadOnScroll from "@/components/common/LazyLoadOnScroll";
-
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-
 const ProductImageGallery = dynamic(
   () => import("./ProductImageGallery"), // <-- Corrected
 );
 
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import dynamic from "next/dynamic"; // <-- Import dynamic
 import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
 import DeliveryInfo from "./DeliveryInfo";
@@ -33,13 +31,24 @@ export default function ProductDataView({
             src={cloudinaryMainImage(mainProductImageId, 600, 600)}
             alt={title}
             fill={true} // Use fill for responsive sizing within the container
-            priority={true}
+            // priority={true}
             sizes="(max-width: 768px) 100vw, 40vw"
             className="rounded-md object-contain"
             placeholder="blur"
             blurDataURL={blurDataURL}
             unoptimized
+            preload={true} // Preload the image for better performance
           />
+
+          {/* <ImageCustomServer
+            src={mainProductImageId}
+            w={600}
+            h={600}
+            alt={title}
+            priority={true}
+            className="rounded-md object-contain"
+            sizes="(max-width: 768px) 100vw, 40vw"
+          /> */}
         </ProductHeader>
       </div>
       <DeliveryInfo />

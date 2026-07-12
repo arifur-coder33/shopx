@@ -66,14 +66,12 @@ export default function ProductImageGallery({
     variationsImage.forEach((img) =>
       addMedia(img, "image", `${title} - variation`),
     );
-
     if (videoUrl) {
       addMedia({ id: videoUrl, url: videoUrl }, "video", `${title} - Video`);
     }
     return Array.from(mediaMap.values());
   }, [mainImage, gallery, variationsImage, title, videoUrl]);
-  console.log("videoUrl", videoUrl);
-  console.log("media", allMedia);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const isInitialMount = useRef(true);
@@ -215,7 +213,7 @@ export default function ProductImageGallery({
               ) : (
                 <div className={styles.videoThumbnail}>
                   <Image
-                    src={cloudinaryMainImage(mainImage.name, 800, 800)}
+                    src={cloudinaryMainImage(mainImage.name, 600, 600)}
                     alt="Video thumbnail"
                     priority
                     fill
@@ -230,9 +228,8 @@ export default function ProductImageGallery({
               //   alt: activeMedia.alt,
               //   priority: activeIndex === 0,
               // })
-
               <Image
-                src={cloudinaryMainImage(activeMedia.name, 800, 800)}
+                src={cloudinaryMainImage(activeMedia?.name, 600, 600)}
                 alt={activeMedia.alt}
                 priority={activeIndex === 0}
                 fill
