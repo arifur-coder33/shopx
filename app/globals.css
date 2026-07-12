@@ -1,34 +1,65 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+@plugin "tailwind-scrollbar-hide";
+@variant dark (&:where(.dark, .dark *)); /* ← add this line */
 
 /* ----------------------------- */
-/* 1️⃣ Base Variables & Dark Mode */
+/* Theme Tokens                  */
 /* ----------------------------- */
+@theme {
+  /* Colors */
+  --color-primary: #ea580c;
+  --color-secondary: #7c3aed;
+  --color-background: #f1f5f9;
+  --color-text: #334155;
+  --color-mint: #2dd4bf;
+  --color-ledger: #f7f5ef;
+
+  /* Fonts */
+  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-bengali: var(--font-tiro-bangla), ui-sans-serif, system-ui, sans-serif;
+  --font-kalpana: var(--font-kalpana);
+
+  /* Keyframes */
+  --animate-fade-in: fadeIn 0.4s ease-out;
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes blinkBorder {
+    0%,
+    50%,
+    100% {
+      border-color: transparent;
+      box-shadow: none;
+    }
+    25%,
+    75% {
+      border-color: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+    }
+  }
+}
+
+/* Dark mode color overrides */
 @layer base {
   :root {
     --radius: 0.5rem;
-
-    /* 🔥 Brand Colors */
-    --color-primary: #ea580c; /* orange */
-    --color-secondary: #7c3aed; /* purple */
-    --color-bg: #f1f5f9; /* background */
-    --color-text: #334155; /* text */
-    /* 🔹 Font Sizes (responsive) */
-    --font-base: 1rem;
-    --font-lg: 1.125rem;
-    --font-xl: 1.25rem;
-    --font-2xl: 1.5rem;
   }
 
   .dark {
     --color-primary: #fb923c;
     --color-secondary: #a78bfa;
-    --color-bg: #0f172a;
+    --color-background: #0f172a;
     --color-text: #cbd5f5;
   }
 }
-
 /* ----------------------------- */
 /* 2️⃣ Keyframes */
 /* ----------------------------- */
@@ -61,69 +92,123 @@
 @layer components {
   /* Theme Wrapper */
 
-  .theam {
+  /* .theam {
     @apply text-lg  sm:text-lg md:text-xl bg-background text-text;
-  }
+  } */
 
   /* Buttons */
-  .button {
+  /* .button {
     @apply rounded-md text-center text-xl md:text-2xl transition bg-primary text-white p-2 px-4;
-  }
+  } */
 
   /* Product Cards */
-  .product-card {
+  /* .product-card {
     @apply md:leading-6 flex-1 rounded-md max-w-64 cursor-pointer border-2 transition p-4 hover:border-primary hover:shadow-xl;
-  }
+  } */
 
   /* Brand Background / Text */
-  .bg-brand {
+  /* .bg-brand {
     @apply bg-primary text-white;
-  }
+  } */
 
-  .text-brand {
+  /* .text-brand {
     @apply text-text;
-  }
-  .card {
+  } */
+  /* .card {
     @apply rounded-2xl shadow-md border  border-gray-300 overflow-hidden p-6;
-  }
+  } */
 
   /* Image Placeholder */
-  .image-placeholder,
+  /* .image-placeholder,
   .image-placeholder > img {
     display: block;
     width: 100%;
     height: 100%;
-  }
+  } */
 
   /* Blur Effect */
-  .blur {
-    filter: blur(7px);
-    opacity: 0.8;
-    transform: scale(1);
-    transition:
-      filter 0.1s ease-out,
-      opacity 0.1s ease-out,
-      transform 0.1s ease-out;
-  }
-
-  .remove-blur {
-    filter: blur(0);
-    opacity: 1;
-    transform: scale(1);
-    transition:
-      filter 0.1s ease-in,
-      opacity 0.1s ease-in,
-      transform 0.1s ease-in;
-  }
-
-  /* Blink Border */
-  .blink-border {
-    border: 2px solid transparent;
-    animation: blinkBorder 1s ease-in-out;
-  }
 }
-@layer utilities {
+/* @layer utilities {
   .skeleton {
     @apply animate-pulse bg-gray-200;
   }
+} */
+@utility blur {
+  filter: blur(7px);
+  opacity: 0.8;
+  transform: scale(1);
+  transition:
+    filter 0.1s ease-out,
+    opacity 0.1s ease-out,
+    transform 0.1s ease-out;
+}
+@utility image-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  & > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+@utility remove-blur {
+  filter: blur(0);
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    filter 0.1s ease-in,
+    opacity 0.1s ease-in,
+    transform 0.1s ease-in;
+}
+
+/* Blink Border */
+@utility blink-border {
+  border: 2px solid transparent;
+  animation: blinkBorder 1s ease-in-out;
+}
+@utility theam {
+  @apply text-lg  sm:text-lg md:text-xl bg-background text-text;
+}
+
+@utility product-card {
+  @apply md:leading-6 flex-1 rounded-md max-w-64 cursor-pointer border-2 border-gray-300 transition p-4 hover:border-primary hover:shadow-xl;
+}
+@utility button {
+  @apply rounded-md text-center text-xl md:text-2xl transition bg-orange-500 text-white p-2 px-4;
+}
+
+@utility bg-brand {
+  @apply bg-primary text-white;
+}
+@utility card {
+  @apply rounded-2xl shadow-md border  border-gray-300 overflow-hidden p-6;
+}
+
+/* Blur Effect */
+@utility blur {
+  filter: blur(7px);
+  opacity: 0.8;
+  transform: scale(1);
+  transition:
+    filter 0.1s ease-out,
+    opacity 0.1s ease-out,
+    transform 0.1s ease-out;
+}
+
+@utility remove-blur {
+  filter: blur(0);
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    filter 0.1s ease-in,
+    opacity 0.1s ease-in,
+    transform 0.1s ease-in;
+}
+
+/* Blink Border */
+@utility blink-border {
+  border: 2px solid transparent;
+  animation: blinkBorder 1s ease-in-out;
 }

@@ -1020,7 +1020,10 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
 };
 
 export const getProductBySlug = async (slug) => {
-  const cookieHeader = headers().get("cookie") || "no cookie header";
+  const headersList = headers();
+
+  const cookieHeader =
+    headersList["cookie"] || headersList.get?.("cookie") || "no cookie header";
   const session = await auth();
 
   try {

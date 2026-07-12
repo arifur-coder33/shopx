@@ -15,9 +15,11 @@ export default function ProductHeader({ data, children }) {
         imageComponent={children} // The <Image> from page.js is passed here
         titleComponent={
           // The static h1 is created here on the server
-          <h1 className="text-4xl font-bold border-b-2">{title}</h1>
+          <h1 key={title} className="text-4xl font-bold border-b-2">
+            {title}
+          </h1>
         }
-        bottomComponent={sslActive && <EMISection />}
+        bottomComponent={sslActive && <EMISection key={sslActive} />}
       />
     </>
   );

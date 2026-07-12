@@ -96,3 +96,12 @@
 //     </div>
 //   );
 // }
+
+export default function PickupPointPage() {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold">Pickup Point Page</h1>
+      <p>This is the Pickup Point page content.</p>
+    </div>
+  );
+}

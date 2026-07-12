@@ -278,6 +278,7 @@ export default async function ProductPage({ params }) {
   return (
     <div className="mb-16">
       <ProductDataView data={data} blurDataURL={blurDataURL} />
+
       <Script
         id="jsonld"
         type="application/ld+json"

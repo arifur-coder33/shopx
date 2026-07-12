@@ -82,6 +82,9 @@ export default async function Home() {
 
   return (
     <>
+      <h1 className="text-red-500 dark:text-blue-400 text-3xl">
+        TAILWIND TEST
+      </h1>
       <HeroSection />
       <CategoryWiseProductList />
     </>

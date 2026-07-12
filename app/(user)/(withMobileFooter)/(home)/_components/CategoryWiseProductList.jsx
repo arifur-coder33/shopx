@@ -10,7 +10,7 @@ export default async function CategoryWiseProductList() {
       {data?.length > 0 &&
         data?.map((category) => (
           <div key={category?.id}>
-            <div className="mt-4 sm:mt-6 rounded-md border-2 border-b-4 p-2">
+            <div className="mt-4 sm:mt-6 rounded-md border-2 border-gray-300 border-b-4 p-2">
               <ProductList link={category?.slug} headerName={category?.name}>
                 {category?.products?.length > 0 &&
                   category?.products?.map((product, i) => (

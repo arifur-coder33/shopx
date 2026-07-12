@@ -5,13 +5,7 @@ import useMediaQuery from "@/hooks/useMediaQuery";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const MobileModalZoomer = dynamic(() => import("./MobileModalZoomer"), {
   loading: () => (
@@ -67,17 +61,19 @@ export default function ProductImageGallery({
     };
     addMedia(mainImage, "image", title);
     gallery.forEach((img, i) =>
-      addMedia(img, "image", `${title} - image ${i + 2}`)
+      addMedia(img, "image", `${title} - image ${i + 2}`),
     );
     variationsImage.forEach((img) =>
-      addMedia(img, "image", `${title} - variation`)
+      addMedia(img, "image", `${title} - variation`),
     );
+
     if (videoUrl) {
       addMedia({ id: videoUrl, url: videoUrl }, "video", `${title} - Video`);
     }
     return Array.from(mediaMap.values());
   }, [mainImage, gallery, variationsImage, title, videoUrl]);
-
+  console.log("videoUrl", videoUrl);
+  console.log("media", allMedia);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const isInitialMount = useRef(true);
@@ -95,7 +91,7 @@ export default function ProductImageGallery({
   useEffect(() => {
     if (activeImageId) {
       const newIndex = allMedia.findIndex(
-        (media) => media.id === activeImageId
+        (media) => media.id === activeImageId,
       );
       if (newIndex !== -1 && newIndex !== activeIndex) {
         setActiveIndex(newIndex);
@@ -142,7 +138,7 @@ export default function ProductImageGallery({
       width: (1 / ZOOM_LEVEL) * 100,
       height: (1 / ZOOM_LEVEL) * 100,
     }),
-    []
+    [],
   );
 
   const handleMouseMove = useCallback(
@@ -153,15 +149,15 @@ export default function ProductImageGallery({
         .getBoundingClientRect();
       const x = Math.max(
         0,
-        Math.min((e.clientX - imageRect.left) / imageRect.width, 1)
+        Math.min((e.clientX - imageRect.left) / imageRect.width, 1),
       );
       const y = Math.max(
         0,
-        Math.min((e.clientY - imageRect.top) / imageRect.height, 1)
+        Math.min((e.clientY - imageRect.top) / imageRect.height, 1),
       );
       setDesktopZoomPosition({ x, y });
     },
-    [isMobile, isVideoActive]
+    [isMobile, isVideoActive],
   );
 
   const lensPosition = useMemo(() => {
@@ -229,11 +225,19 @@ export default function ProductImageGallery({
                 </div>
               )
             ) : (
-              React.cloneElement(children, {
-                src: cloudinaryMainImage(activeMedia?.name, 800, 800),
-                alt: activeMedia.alt,
-                priority: activeIndex === 0,
-              })
+              // React.cloneElement(children, {
+              //   src: cloudinaryMainImage(activeMedia?.name, 800, 800),
+              //   alt: activeMedia.alt,
+              //   priority: activeIndex === 0,
+              // })
+
+              <Image
+                src={cloudinaryMainImage(activeMedia.name, 800, 800)}
+                alt={activeMedia.alt}
+                priority={activeIndex === 0}
+                fill
+                style={{ objectFit: "cover" }}
+              />
             )}
           </div>
           {isMobile && !isVideoActive && (
@@ -298,7 +302,7 @@ export default function ProductImageGallery({
           backgroundImage: `url(${cloudinaryMainImage(
             activeMedia.name,
             1800,
-            1800
+            1800,
           )})`,
           backgroundSize: `${ZOOM_LEVEL * 100}%`,
           // --- START: THE FIX ---
