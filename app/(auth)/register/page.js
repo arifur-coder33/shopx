@@ -1,4 +1,3 @@
-export const dynamic = "force-static";
 import { auth } from "@/auth";
 import { registrationAction } from "@/backend/serverActions/authActions";
 import RegistrationForm from "@/components/auth/RegistrationForm";

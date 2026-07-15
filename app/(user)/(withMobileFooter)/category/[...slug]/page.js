@@ -1,4 +1,4 @@
-export const dynamic = "force-static"; //
+// export const dynamic = "force-static"; //
 import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";

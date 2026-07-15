@@ -1,4 +1,4 @@
-export const dynamic = "force-static";
+// export const dynamic = "force-static";
 import {
   getProductBySlug,
   getProducts,
@@ -24,7 +24,7 @@ export default async function BuyNowPage({ params }) {
       return data?.data;
     },
     [slug],
-    { revalidate: 60, tags: [`product-${slug}`] } // Use string array for tags
+    { revalidate: 60, tags: [`product-${slug}`] }, // Use string array for tags
   );
 
   const data = await getProduct();
