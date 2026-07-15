@@ -7,8 +7,8 @@ import { memo, useState } from "react";
 // ================= ICON =================
 function PlusMinus({ open }) {
   return (
-    <span className="w-5 h-5 flex items-center justify-center text-sm font-bold">
-      {open ? <Minus className="text-red-600" /> : <Plus />}
+    <span className="w-5 h-5 flex items-center justify-center text-sm font-bold cursor-pointer">
+      {open ? <Minus className="text-red-600 " /> : <Plus />}
     </span>
   );
 }
@@ -39,7 +39,7 @@ const CategoryItem = memo(function CategoryItem({
         className={`flex items-center justify-between px-4 py-3 transition-all rounded-xl cursor-pointer group
         ${
           level === 0
-            ? "hover:bg-gray-100 dark:hover:bg-slate-800"
+            ? "hover:bg-slate-800"
             : "bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 ml-2"
         }`}
         style={{ paddingLeft: `${level * 14 + 14}px` }}
@@ -118,7 +118,7 @@ export default function CategoryTree({ initialData = [], setIsOpen }) {
   return (
     <div className="p-2">
       {/* Header */}
-      <div className="px-3 py-2 mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
+      <div className="px-3 py-2 mb-2 text-sm font-semibold text-gray-300 border-b-2 ">
         Categories
       </div>
 
@@ -138,16 +138,10 @@ export default function CategoryTree({ initialData = [], setIsOpen }) {
       </div>
 
       {/* Extra */}
-      <div className="border-t mt-3 pt-2 text-sm text-gray-600 dark:text-gray-300">
-        <div className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg">
-          🎁 Offers
-        </div>
-        <div className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg">
-          Compare
-        </div>
-        <div className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg">
-          Pre-order
-        </div>
+      <div className="border-t mt-3 pt-2 text-sm text-gray-300">
+        <div className="px-3 py-2 hover:bg-slate-800 rounded-lg">🎁 Offers</div>
+        <div className="px-3 py-2 hover:bg-slate-800 rounded-lg">Compare</div>
+        <div className="px-3 py-2 hover:bg-slate-800 rounded-lg">Pre-order</div>
       </div>
     </div>
   );

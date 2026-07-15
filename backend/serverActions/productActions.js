@@ -1,19 +1,16 @@
 "use server";
 
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
-import { revalidatePath, revalidateTag } from "next/cache";
-import { headers } from "next/headers";
+import { cacheLife, cacheTag, revalidatePath, revalidateTag } from "next/cache";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { buildSearchText } from "../utils/buildSearchText";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { hasPermission } from "../utils/hasPermission";
 import { normalizeText } from "../utils/search";
-
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
     return [];
@@ -1020,12 +1017,14 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
 };
 
 export const getProductBySlug = async (slug) => {
-  const headersList = headers();
+  // const headersList = headers();
 
-  const cookieHeader =
-    headersList["cookie"] || headersList.get?.("cookie") || "no cookie header";
-  const session = await auth();
-
+  // const cookieHeader =
+  //   headersList["cookie"] || headersList.get?.("cookie") || "no cookie header";
+  // const session = await auth();
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`product-${slug}`);
   try {
     const data = await prisma.product.findUnique({
       where: { slug },

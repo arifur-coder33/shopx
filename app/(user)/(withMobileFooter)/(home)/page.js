@@ -1,5 +1,3 @@
-export const dynamic = "force-static"; // Ensures the page is statically generated
-
 // import { getProducts } from "@/backend/serverActions/productActions";
 import CategoryWiseProductList from "./_components/CategoryWiseProductList";
 import HeroSection from "./_components/HeroSection";
@@ -68,7 +66,7 @@ export async function generateMetadata() {
       site: siteUrl,
       title: `বিডিমার্ট24  - আপনার বিশ্বস্ত অনলাইন শপ`,
       description:
-        "এখানে আপনি মেশিনারি পণ্য, ফ্যাশন, গ্যাজেট এবং আরও অনেক কিছু পাবেন। কোন টাকা অ্যাডভাঞ্চ আজই অর্ডার করুন এবং ডিসকাউন্ট উপভোগ করুন।",
+        "এখানে আপনি মেশিনারি পণ্য, ফ্যাশন, গ্যাজেট এবং আরও অনেক কিছু পাবেন। কোন টাকা অ্যাডভাঞ্চ করতে হবে না। আজই অর্ডার করুন এবং ডিসকাউন্ট উপভোগ করুন।",
     },
     alternates: {
       canonical: siteUrl,
@@ -82,9 +80,7 @@ export default async function Home() {
 
   return (
     <>
-      <h1 className="text-red-500 dark:text-blue-400 text-3xl">
-        TAILWIND TEST
-      </h1>
+      <h1 className="text-red-500 dark:text-blue-400 text-3xl"></h1>
       <HeroSection />
       <CategoryWiseProductList />
     </>

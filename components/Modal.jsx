@@ -43,7 +43,7 @@ export default function Modal({
     <div>
       {/* Overlay */}
       <div
-        className={`fixed  inset-0 bg-black dark:bg-slate-950 bg-opacity-50 dark:bg-opacity-50 z-50 transition-opacity duration-300 ${
+        className={`fixed  inset-0 bg-black/50 dark:bg-slate-950/50 z-50 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={toggleDrawer}
@@ -58,7 +58,7 @@ export default function Modal({
           >
             ✗
           </button>
-          <div className="p-4 h-full">
+          <div className="p-4 h-full bg-slate-900 shadow-2xl  ">
             {title && (
               <h2 className="text-xl font-bold border-b-2 text-slate-900 dark:text-slate-200 tracking-wider">
                 {title}

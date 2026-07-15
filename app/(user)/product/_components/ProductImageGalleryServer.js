@@ -37,10 +37,10 @@ export default function ProductImageGalleryServer({
     };
     addMedia(mainImage, "image", title);
     gallery.forEach((img, i) =>
-      addMedia(img, "image", `${title} - image ${i + 2}`)
+      addMedia(img, "image", `${title} - image ${i + 2}`),
     );
     variationsImage.forEach((img) =>
-      addMedia(img, "image", `${title} - variation`)
+      addMedia(img, "image", `${title} - variation`),
     );
     if (videoUrl) {
       addMedia({ id: videoUrl, url: videoUrl }, "video", `${title} - Video`);
@@ -85,7 +85,8 @@ export default function ProductImageGalleryServer({
                     width={60}
                     height={60}
                     className={styles.thumbnailImage}
-                    priority={index < 5} // Prioritize the first image
+                    // priority={index < 5} // Prioritize the first image
+                    loading="lazy" // Lazy load the rest for performance
                   />
                 )}
               </div>

@@ -20,7 +20,7 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
 
   return (
     <div
-      className={`fixed  inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70  transition-opacity duration-300 ease-in-out ${
+      className={`fixed  inset-0 z-50 flex items-center justify-center bg-black/70 transition-opacity duration-300 ease-in-out ${
         isOpen ? "opacity-100" : "opacity-0"
       }`}
     >

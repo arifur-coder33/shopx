@@ -32,18 +32,11 @@
 
 import { getBanner } from "@/backend/serverActions/bannerAction";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import { unstable_cache } from "next/cache";
+
 import Image from "next/image"; // <--- Import the standard next/image
 
-// Your data fetching is great, keep it as is.
-export const getCachedBanner = unstable_cache(
-  async () => getBanner(),
-  ["my-banner"],
-  { revalidate: 3600 }
-);
-
 export default async function HeroSection() {
-  const { data } = await getCachedBanner();
+  const { data } = await getBanner();
 
   if (!data?.thumbnail?.name) {
     // This is a good fallback for when no image exists
@@ -60,13 +53,15 @@ export default async function HeroSection() {
       src={cloudinaryMainImage(
         data.thumbnail.name,
         1280, // Width for the image
-        500 // Height for the image
+        500, // Height for the image
       )}
       // Essential props for LCP optimization
       width={1280}
       height={500}
       alt={data?.name || "Banner"}
       priority={true} // Same as loading="eager" AND fetchpriority="high"
+      fetchPriority="high"
+      loading="eager"
       // Your styling props
       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1280px"
       className="rounded-md"

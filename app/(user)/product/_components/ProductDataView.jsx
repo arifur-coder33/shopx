@@ -37,7 +37,9 @@ export default function ProductDataView({
             placeholder="blur"
             blurDataURL={blurDataURL}
             unoptimized
-            preload={true} // Preload the image for better performance
+            priority
+            fetchPriority="high"
+            loading="eager"
           />
 
           {/* <ImageCustomServer

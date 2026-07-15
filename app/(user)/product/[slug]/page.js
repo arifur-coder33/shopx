@@ -1,5 +1,4 @@
 // export const revalidate = 60;
-export const dynamic = "force-static"; // Ensures the page is statically generated
 
 import {
   getProductBySlug,
