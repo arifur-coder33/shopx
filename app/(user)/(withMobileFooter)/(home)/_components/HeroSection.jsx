@@ -31,10 +31,7 @@
 // app/your-page/HeroSection.js
 
 import { getBanner } from "@/backend/serverActions/bannerAction";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-
-import Image from "next/image"; // <--- Import the standard next/image
-
+import ImageCustomServer from "@/components/images/ImageCustomServer";
 export default async function HeroSection() {
   const { data } = await getBanner();
 
@@ -47,22 +44,14 @@ export default async function HeroSection() {
 
   // Use the standard next/image component for your LCP element
   return (
-    <Image
-      // Generate the Cloudinary URL directly here.
-      // You can move the `cloudinaryMainImage` function to a shared utils file.
-      src={cloudinaryMainImage(
-        data.thumbnail.name,
-        1280, // Width for the image
-        500, // Height for the image
-      )}
-      // Essential props for LCP optimization
-      width={1280}
-      height={500}
+    <ImageCustomServer
+      src={data.thumbnail.name}
+      w={1280}
+      h={500}
       alt={data?.name || "Banner"}
       priority={true} // Same as loading="eager" AND fetchpriority="high"
       fetchPriority="high"
-      loading="eager"
-      // Your styling props
+      unoptimized={true} // Disable next/image optimization for Cloudinary images
       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1280px"
       className="rounded-md"
       style={{ objectFit: "fit" }} // Use style for objectFit

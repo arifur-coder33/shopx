@@ -18,7 +18,10 @@ export default function ProductCard({ product, index }) {
   return (
     <div>
       <div className="product-card">
-        <Link href={`/product/${encodeURIComponent(product?.slug)}`}>
+        <Link
+          href={`/product/${encodeURIComponent(product?.slug)}`}
+          prefetch={true}
+        >
           <div className="relative aspect-square w-full">
             <ImageCustomServer
               src={product?.mainImage || thumbnail?.name}
@@ -28,6 +31,7 @@ export default function ProductCard({ product, index }) {
               className="rounded-md object-cover w-full h-full"
               sizes="(max-width: 480px) 150px, (max-width: 768px) 200px, 300px"
               quality={75}
+              fetchPriority={index < 5 ? "high" : "low"} // Prioritize the first few images for better performance
               priority={index < 5} // Crucial for performance
             />
           </div>

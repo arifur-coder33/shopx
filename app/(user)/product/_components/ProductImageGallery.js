@@ -15,6 +15,7 @@ const MobileModalZoomer = dynamic(() => import("./MobileModalZoomer"), {
   ),
 });
 
+import Imagecustom from "@/components/images/ImageCustom";
 import styles from "./ProductImageGallery.module.css";
 const VideoPlayer = dynamic(() => import("./VideoPlayer"), {
   loading: () => (
@@ -228,12 +229,22 @@ export default function ProductImageGallery({
               //   alt: activeMedia.alt,
               //   priority: activeIndex === 0,
               // })
-              <Image
-                src={cloudinaryMainImage(activeMedia?.name, 600, 600)}
+              // <Image
+              //   src={cloudinaryMainImage(activeMedia?.name, 600, 600)}
+              //   alt={activeMedia.alt}
+              //   priority={activeIndex === 0}
+              //   fill
+              //   style={{ objectFit: "cover" }}
+              // />
+              <Imagecustom
+                src={activeMedia?.name}
+                w={600}
+                h={600}
                 alt={activeMedia.alt}
                 priority={activeIndex === 0}
                 fill
-                style={{ objectFit: "cover" }}
+                objectFit="cover"
+                className={styles.mainImage}
               />
             )}
           </div>

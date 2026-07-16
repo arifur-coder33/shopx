@@ -1,16 +1,13 @@
 import LazyLoadOnScroll from "@/components/common/LazyLoadOnScroll";
-import Image from "next/image";
-const ProductImageGallery = dynamic(
-  () => import("./ProductImageGallery"), // <-- Corrected
-);
-
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import ImageCustomServer from "@/components/images/ImageCustomServer";
 import dynamic from "next/dynamic"; // <-- Import dynamic
 import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
 import DeliveryInfo from "./DeliveryInfo";
 import ProductHeader from "./ProductHeader";
+const ProductImageGallery = dynamic(
+  () => import("./ProductImageGallery"), // <-- Corrected
+);
 // --- LAZY-LOADED COMPONENTS ---
-
 const ProductDescription = dynamic(
   () => import("@/components/products/productDescription"),
 );
@@ -27,7 +24,7 @@ export default function ProductDataView({
     <>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         <ProductHeader data={data}>
-          <Image
+          {/* <Image
             src={cloudinaryMainImage(mainProductImageId, 600, 600)}
             alt={title}
             fill={true} // Use fill for responsive sizing within the container
@@ -39,10 +36,9 @@ export default function ProductDataView({
             unoptimized
             priority
             fetchPriority="high"
-            loading="eager"
-          />
+          /> */}
 
-          {/* <ImageCustomServer
+          <ImageCustomServer
             src={mainProductImageId}
             w={600}
             h={600}
@@ -50,7 +46,9 @@ export default function ProductDataView({
             priority={true}
             className="rounded-md object-contain"
             sizes="(max-width: 768px) 100vw, 40vw"
-          /> */}
+            fetchPriority="high"
+            unoptimized="true"
+          />
         </ProductHeader>
       </div>
       <DeliveryInfo />

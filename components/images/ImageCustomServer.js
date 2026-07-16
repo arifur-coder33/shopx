@@ -12,6 +12,8 @@ export default async function ImageCustomServer({
   className,
   sizes,
   quality = 75,
+  unoptimized,
+  fetchPriority,
 }) {
   // Generate the full-size image URL and the blur placeholder URL in parallel
 
@@ -30,10 +32,12 @@ export default async function ImageCustomServer({
         className={className}
         sizes={sizes}
         quality={quality}
+        fetchPriority={fetchPriority}
         // Let next/image handle everything automatically!
         priority={priority} // If true, sets loading="eager". If false, sets loading="lazy".
         placeholder="blur" // Use the blur-up effect.
         blurDataURL={blurDataURL} // Provide the data for the blur.
+        unoptimized={true} // Disable next/image optimization for Cloudinary images.
       />
     </>
   );
