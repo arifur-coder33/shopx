@@ -7,7 +7,7 @@
 // });
 const nextConfig = {
   reactStrictMode: true,
-  cacheComponents: true,
+  // cacheComponents: true,
   images: {
     remotePatterns: [
       {

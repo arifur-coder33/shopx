@@ -6,7 +6,7 @@ import ImageCustomServer from "@/components/images/ImageCustomServer";
 import LazyModalButton from "@/components/modal/LazyModalButton";
 import Link from "next/link";
 import { Suspense } from "react";
-
+export const dynamic = "force-static";
 export default async function ProfilePage() {
   const session = await auth();
   const userId = session?.user?.id;

@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
-import { cacheLife, cacheTag, revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { buildSearchText } from "../utils/buildSearchText";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
@@ -1022,9 +1022,7 @@ export const getProductBySlug = async (slug) => {
   // const cookieHeader =
   //   headersList["cookie"] || headersList.get?.("cookie") || "no cookie header";
   // const session = await auth();
-  "use cache";
-  cacheLife("hours");
-  cacheTag(`product-${slug}`);
+
   try {
     const data = await prisma.product.findUnique({
       where: { slug },

@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { getNotice } from "@/backend/serverActions/noticeaction";
 import NoticeForm from "./_components/NoticeForm";
 
-// export const dynamic = "force-static";
+export const dynamic = "force-static";
 
 export default async function OfferPage() {
   const session = await auth();

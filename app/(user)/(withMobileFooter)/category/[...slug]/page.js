@@ -3,7 +3,7 @@ import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
 import prisma from "@/lib/prisma";
-
+export const dynamic = "force-static";
 export async function generateStaticParams() {
   const categories = await prisma.category.findMany({
     select: {

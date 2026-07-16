@@ -1,11 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { cacheLife, cacheTag, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
 export async function getBanner() {
-  "use cache";
-
-  cacheLife("hours");
-  cacheTag("home-banner");
   try {
     console.time("getBanner DB Query");
     const data = await prisma.banner.findFirst({

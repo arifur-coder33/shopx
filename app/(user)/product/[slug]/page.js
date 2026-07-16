@@ -10,7 +10,7 @@ import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
 import Script from "next/script";
 import ProductDataView from "../_components/ProductDataView";
-
+export const dynamic = "force-static";
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 

@@ -1,4 +1,5 @@
 // import { getProducts } from "@/backend/serverActions/productActions";
+export const dynamic = "force-static";
 import CategoryWiseProductList from "./_components/CategoryWiseProductList";
 import HeroSection from "./_components/HeroSection";
 export async function generateMetadata() {
@@ -80,7 +81,6 @@ export default async function Home() {
 
   return (
     <>
-      <h1 className="text-red-500 dark:text-blue-400 text-3xl"></h1>
       <HeroSection />
       <CategoryWiseProductList />
     </>

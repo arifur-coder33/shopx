@@ -4,7 +4,7 @@ import {
 } from "@/backend/serverActions/bannerAction";
 import DynamicForm from "@/components/common/DynamicForm";
 
-// export const dynamic = "force-static";
+export const dynamic = "force-static";
 
 export default async function BannerPage() {
   const { data } = await getBanner();

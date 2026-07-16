@@ -7,7 +7,7 @@ import {
 import { unstable_cache } from "next/cache";
 import { Suspense } from "react";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
-
+export const dynamic = "force-static";
 export async function generateStaticParams() {
   const data = await getProducts();
   return data?.data.map((product) => ({

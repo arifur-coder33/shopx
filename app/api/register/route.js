@@ -1,7 +1,7 @@
 import { userregistration } from "@/backend/serverActions/authActions";
 import prisma from "@/lib/prisma";
 
-// export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 export async function GET(request) {
   const allUsers = await prisma.user.findMany();
 
