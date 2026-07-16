@@ -85,6 +85,7 @@ export default function Imagecustom({
         className={finalImageClassName}
         loading={priority ? "eager" : "lazy"}
         alt=""
+        unoptimized={true}
       />
     );
   }

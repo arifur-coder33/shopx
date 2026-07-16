@@ -54,12 +54,11 @@ export default function ProductDataView({
       <DeliveryInfo />
       <LazyLoadOnScroll>
         <ProductDescription description={description} />
+        <ViewProductEvent product={data} />
       </LazyLoadOnScroll>
 
       {/* --- LAZY LOAD THE FACEBOOK TRACKER --- */}
       {/* This doesn't need to fire until the user scrolls a bit */}
-
-      <ViewProductEvent product={data} />
     </>
   );
 }
