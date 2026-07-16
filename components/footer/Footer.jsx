@@ -1,11 +1,7 @@
 import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
-import {
-  Facebook,
-  Mail,
-  MapPin,
-  MessageCircleMore,
-  PhoneCall,
-} from "lucide-react";
+import { Mail, MapPin, MessageCircleMore, PhoneCall } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 export default async function Footer() {
   const { data } = await getSiteSetting();
@@ -40,7 +36,7 @@ export default async function Footer() {
               <MapPin size={16} /> Bangladesh
             </p>
             <p className="flex items-center gap-2">
-              <Facebook size={16} />
+              Facebook
               <Link
                 href={data?.facebook || "#"}
                 target="_blank"
