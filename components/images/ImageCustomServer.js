@@ -17,9 +17,9 @@ export default async function ImageCustomServer({
 }) {
   // Generate the full-size image URL and the blur placeholder URL in parallel
 
-  const [finalSrc, blurDataURL] = await Promise.all([
-    cloudinaryMainImage(src, w, h),
+  const [blurDataURL, finalSrc] = await Promise.all([
     getBase64ImageUrl(src), // Generate the blur placeholder
+    cloudinaryMainImage(src, w, h),
   ]);
 
   return (

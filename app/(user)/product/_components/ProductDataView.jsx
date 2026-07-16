@@ -40,14 +40,15 @@ export default function ProductDataView({
 
           <ImageCustomServer
             src={mainProductImageId}
-            w={600}
-            h={600}
+            w={800}
+            h={800}
             alt={title}
             priority={true}
             className="rounded-md object-contain"
             sizes="(max-width: 768px) 100vw, 40vw"
             fetchPriority="high"
             unoptimized="true"
+            fill={true}
           />
         </ProductHeader>
       </div>

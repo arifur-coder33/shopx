@@ -238,8 +238,8 @@ export default function ProductImageGallery({
               // />
               <Imagecustom
                 src={activeMedia?.name}
-                w={600}
-                h={600}
+                w={800}
+                h={800}
                 alt={activeMedia.alt}
                 priority={activeIndex === 0}
                 fill
