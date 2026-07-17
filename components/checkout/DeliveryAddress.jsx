@@ -103,7 +103,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <SearchableDropdown
         defaultId={district}
         label={"আপনার জেলাঃ *"}
-        name="city"
+        name="district"
         onSelect={handleDistrictChange}
         dropDownLists={
           division
