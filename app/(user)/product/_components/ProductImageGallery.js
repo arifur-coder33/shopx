@@ -227,7 +227,6 @@ export default function ProductImageGallery({
                   <Image
                     src={cloudinaryMainImage(mainImage.name, 600, 600)}
                     alt="Video thumbnail"
-                    priority
                     fill
                     style={{ objectFit: "cover" }}
                   />

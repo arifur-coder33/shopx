@@ -74,7 +74,8 @@ export default function ProductImageGalleryServer({
                       width={60}
                       height={60}
                       className={styles.thumbnailImage}
-                      priority={true}
+                      // priority={true}
+                      loading="lazy"
                     />
                     <VideoThumbnailIcon />
                   </div>
