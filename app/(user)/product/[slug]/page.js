@@ -5,7 +5,7 @@ import {
   getProducts,
 } from "@/backend/serverActions/productActions";
 
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import { cloudinaryMainImage, getBase64ImageUrl } from "@/utils/cloudinaryUrl";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
 import Script from "next/script";
