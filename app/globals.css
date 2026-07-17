@@ -169,7 +169,7 @@
   animation: blinkBorder 1s ease-in-out;
 }
 @utility theam {
-  @apply text-lg  sm:text-lg md:text-xl bg-background text-text;
+  @apply text-xl bg-background text-text;
 }
 
 @utility product-card {

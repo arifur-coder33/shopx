@@ -186,19 +186,20 @@ const MediaItem = memo(
           h={150}
           className="object-cover w-full h-full transition-transform duration-200 group-hover:scale-105"
         />
+
         {/* Selection Indicator */}
         {isSelected && (
-          <div className="absolute inset-0 bg-blue-500 bg-opacity-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-blue-500/50 bg-opacity-40 flex items-center justify-center">
             <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-white drop-shadow-md" />
           </div>
         )}
         {/* Hover overlay when not selected */}
         {!isSelected && (
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-150 ease-in-out"></div>
+          <div className="absolute inset-0  group-hover:bg-opacity-20 transition-opacity duration-150 ease-in-out"></div>
         )}
       </div>
     );
-  }
+  },
 );
 MediaItem.displayName = "MediaItem"; // Add display name for DevTools
 
@@ -240,7 +241,7 @@ const MediaSelector = memo(
           setMedia(formattedData);
           // Correctly set initial selected state based on fetched & formatted data
           const initiallySelected = formattedData.filter(
-            (item) => item.isSelected
+            (item) => item.isSelected,
           );
           setSelectedMedia(initiallySelected);
         }
@@ -262,7 +263,7 @@ const MediaSelector = memo(
       (itemToSelect) => {
         setSelectedMedia((prevSelected) => {
           const isAlreadySelected = prevSelected.some(
-            (m) => m.id === itemToSelect.id
+            (m) => m.id === itemToSelect.id,
           );
           if (multipleSelect) {
             return isAlreadySelected
@@ -273,7 +274,7 @@ const MediaSelector = memo(
           }
         });
       },
-      [multipleSelect]
+      [multipleSelect],
     ); // Add multipleSelect as dependency
 
     // --- Handle Upload Completion (Wrap in useCallback) ---
@@ -284,7 +285,7 @@ const MediaSelector = memo(
         // No need to setIsUploading(false) here, fetchMedia does it now
         fetchMedia(); // Refetch the media list
       },
-      [fetchMedia]
+      [fetchMedia],
     ); // Depends on fetchMedia
 
     // --- Handle Upload Start (Wrap in useCallback) ---
@@ -310,11 +311,11 @@ const MediaSelector = memo(
     // Creates a Set for faster lookups inside the map loop. Only recalculates when selectedMedia changes.
     const selectedIdsSet = React.useMemo(
       () => new Set(selectedMedia.map((m) => m.id)),
-      [selectedMedia]
+      [selectedMedia],
     );
     const isItemSelected = useCallback(
       (itemId) => selectedIdsSet.has(itemId),
-      [selectedIdsSet]
+      [selectedIdsSet],
     );
     // const isItemSelected = (itemId) => selectedMedia.some((m) => m.id === itemId); // Original, less optimized for many calls
 
@@ -391,7 +392,7 @@ const MediaSelector = memo(
         </div>
       </div>
     );
-  }
+  },
 ); // Close the memo wrapper for MediaSelector
 
 MediaSelector.displayName = "MediaSelector"; // Add display name for DevTools

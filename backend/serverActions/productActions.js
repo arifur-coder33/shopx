@@ -389,22 +389,28 @@ export async function createProductAction(formData) {
         seoKeyWord: data.seoKeyWord,
       });
       const preparedData = {
-        ...filteredData,
         productCode: newProductCode,
+        title: data.title,
+        slug: slug,
+        description: data?.description || null,
+        category: data?.category
+          ? { connect: { id: data.category } }
+          : undefined,
+        canonicalUrl: data?.canonicalUrl || null,
+        thumbnail: { connect: { id: data.thumbnail } },
+
+        // This flag is key for your UI to know whether to show variation options
+        hasVariations: parsedProductVariations.length > 0,
+        google_Category_id: data?.google_Category_id || null,
         isActive: Boolean(data?.isActive === "on" || data?.isActive === true),
         isFeatured: Boolean(
           data?.isFeatured === "on" || data?.isFeatured === true,
         ),
-        slug: slug,
-        category: data?.category
-          ? { connect: { id: data.category } }
-          : undefined,
-        thumbnail: { connect: { id: data.thumbnail } },
-        weight: parseOptionalNumber(data.weight), // Base weight
-        dimensions: data.dimensions || null, // Optional dimensions
-        // This flag is key for your UI to know whether to show variation options
-        hasVariations: parsedProductVariations.length > 0,
-        description: data?.description || null,
+
+        videoUrl: data?.videoUrl || null,
+        gender: data?.gender || null,
+        ageGroup: data?.ageGroup || null,
+
         seoKeyWord: data?.seoKeyWord || null,
         seoDescription: data?.seoDescription || null,
         searchText: searchText,
@@ -470,7 +476,8 @@ export async function createProductAction(formData) {
                 variantData.discountPrice,
                 parseOptionalNumber(data.discountPrice),
               ),
-
+              weight: parseOptionalNumber(data.weight), // Base weight
+              dimensions: data.dimensions || null, // Base dimensions
               thumbnail: variantData.image
                 ? { connect: { id: variantData.image } }
                 : { connect: { id: data.thumbnail } },
@@ -487,6 +494,8 @@ export async function createProductAction(formData) {
             // Use product code for SKU and matcherId for consistency
             sku: product.productCode,
             matcherId: product.productCode,
+            weight: parseOptionalNumber(data.weight), // Base weight
+            dimensions: data.dimensions || null, // Base dimensions
             // Use the main form data for price/stock
             stock: parseOptionalNumber(data.stock, 0),
             regularPrice: Number(data.regularPrice),
@@ -1148,6 +1157,8 @@ export async function updateProductActions({ id: productId, formData }) {
         videoUrl: data.videoUrl || null,
         description: data.description || null,
         categoryId: data.category || null,
+        canonicalUrl: data.canonicalUrl || null,
+        google_Category_id: data.google_Category_id || null,
         thumbnailId: data.thumbnail || existingProduct.thumbnailId,
         regularPrice: hasSubmittedVariations
           ? null
@@ -1491,6 +1502,7 @@ export async function updateProductAction({ id: productId, formData }) {
 
   try {
     const data = Object.fromEntries(formData.entries());
+    console.log("update data", data);
 
     if (!data?.title || !data?.thumbnail) {
       throw new Error(
@@ -1545,15 +1557,18 @@ export async function updateProductAction({ id: productId, formData }) {
         category: data?.category
           ? { connect: { id: data.category } }
           : existingProduct.categoryId,
+        canonicalUrl: data.canonicalUrl || null,
         thumbnail: data.thumbnail
           ? { connect: { id: data?.thumbnail } }
           : existingProduct.thumbnailId,
-
+        videoUrl: data.videoUrl || null,
         seoKeyWord: data.seoKeyWord || null,
         seoDescription: data.seoDescription || null,
+
         isFeatured: Boolean(data.isFeatured === "on"),
         isActive: Boolean(data.isActive === "on"),
         hasVariations: hasSubmittedVariations,
+        google_Category_id: data.google_Category_id || null,
         searchText: searchText,
       };
 

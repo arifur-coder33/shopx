@@ -1,6 +1,7 @@
 // import bdLocation from "@/utils/data/bd-location.json";
 import { useState } from "react";
 import FloatingInput from "../input/FloatingInput";
+import SearchableDropdown from "../input/SearchableDropdown";
 
 export default function DeliveryAddress({ setDeliveryArea }) {
   // Use null for initial state to be more explicit about "no selection"
@@ -40,18 +41,15 @@ export default function DeliveryAddress({ setDeliveryArea }) {
   // In DeliveryAddress.jsx
 
   const loadDivisionList = async () => {
-    // 1. Await the dynamic import to get the module object
     const location = await import("@/utils/data/bd-location-bn.json");
 
-    // 2. Access the JSON content via the `default` property
-    const bdLocation = location.default;
-
-    // 3. Now, bdLocation is the object you expect, and you can map its `divisions`
-    return bdLocation.divisions.map((division) => ({
-      id: division.name.toLowerCase(),
-      name: division.name,
-      districts: division.districts,
-    }));
+    return {
+      data: location.default.divisions.map((division) => ({
+        id: division.name.toLowerCase(),
+        name: division.name,
+        districts: division.districts,
+      })),
+    };
   };
 
   return (
@@ -86,26 +84,26 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         colSpan={"full"}
       />
 
-      {/* <SearchableDropdown
-        defaultId={""}
+      <SearchableDropdown
+        defaultId={division}
         label={"আপনার বিভাগঃ *"}
         name="division"
         loadLists={loadDivisionList}
         onSelect={handleDivisionChange}
-        dropDownLists={[]} // Initially empty, will be loaded dynamically
-        // dropDownLists={bdLocation.divisions.map((division) => ({
-        //   id: division.name.toLowerCase(),
-        //   name: division.name,
-        //   districts: division.districts,
-        // }))}
-        // autoComplete="address-level1"
-        searchOff={true}
-      /> */}
+        // dropDownLists={loadDivisionList} // Initially empty, will be loaded dynamically
+        //   dropDownLists={loadDivisionList.divisions.map((division) => ({
+        //     id: division.name.toLowerCase(),
+        //     name: division.name,
+        //     districts: division.districts,
+        //   }))}
+        //   autoComplete="address-level1"
+        //   searchOff={true}
+      />
 
-      {/* <SearchableDropdown
-        defaultId={division?.id || ""}
+      <SearchableDropdown
+        defaultId={district}
         label={"আপনার জেলাঃ *"}
-        name="district"
+        name="city"
         onSelect={handleDistrictChange}
         dropDownLists={
           division
@@ -118,7 +116,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         }
         searchOff={true}
         // autoComplete="address-level2"
-      /> */}
+      />
 
       {/* <SearchableDropdown
         defaultId={district?.id || ""}
@@ -148,7 +146,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         inputType={"text"}
         autoComplete="address-line1"
         colSpan={"full"}
-        placeholder="  "
+        placeholder="          বাসা/ফ্ল্যাট/রোড/এলাকা / উপজেলা "
       />
 
       <FloatingInput

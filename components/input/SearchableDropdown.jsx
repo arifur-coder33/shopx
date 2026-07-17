@@ -244,6 +244,9 @@ export default function SearchableDropdown({
   useEffect(() => {
     if (defaultId?.id) {
       setSelected(defaultId);
+    } else {
+      setSelected(null);
+      setQuery("");
     }
   }, [defaultId]);
 

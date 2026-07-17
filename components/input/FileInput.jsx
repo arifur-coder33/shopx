@@ -93,7 +93,6 @@ export default function FileInput({
               h={h}
               alt={image?.alt || `Selected image ${image?.id}`} // Add alt text
             />
-
             <button
               type="button" // Prevent form submission
               onClick={() => removeImage(image?.id)}
@@ -103,10 +102,9 @@ export default function FileInput({
               <X size={14} strokeWidth={3} />
             </button>
             {/* Optional: Add a subtle overlay on hover */}
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-colors duration-200 ease-in-out rounded-md"></div>
+            <div className="absolute inset-0  group-hover:bg-opacity-10 transition-colors duration-200 ease-in-out rounded-md"></div>
           </div>
         ))}
-
         {/* "Add Image" Button */}
         {showAddButton && (
           <ModalButton

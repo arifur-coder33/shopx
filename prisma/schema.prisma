@@ -283,6 +283,8 @@ model OrderItem{
   updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
 
 }
+
+
 model OrderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
   idNo            Int @unique 

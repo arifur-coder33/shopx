@@ -11,7 +11,7 @@ export default function CheckOutSubTotal({
   setDeliveryCharge,
 }) {
   let deliveryCharge = 0;
-  deliveryCharge = deliveryArea == "inside-dhaka" ? 80 : 100;
+  deliveryCharge = deliveryArea == "ঢাকা" ? 80 : 100;
   const extraCharge = totalWeight > 1 ? Math.ceil(Number(totalWeight)) * 20 : 0;
   console.log("extrachage", extraCharge);
   useEffect(() => {

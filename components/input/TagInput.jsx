@@ -22,7 +22,7 @@ export default function TagInput({
         defaultValue
           .split(",")
           .map((tag) => tag.trim())
-          .filter((tag) => tag !== "")
+          .filter((tag) => tag !== ""),
       );
     } else {
       setTags([]);
@@ -137,6 +137,7 @@ export default function TagInput({
           {label}
         </label>
       </div>
+      <input type="hidden" name={name} value={tags.join(", ")} />
       <div className="mt-2">
         <span>{renderTags()}</span>
       </div>
