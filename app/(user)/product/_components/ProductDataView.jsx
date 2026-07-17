@@ -1,6 +1,7 @@
 import LazyLoadOnScroll from "@/components/common/LazyLoadOnScroll";
-import ImageCustomServer from "@/components/images/ImageCustomServer";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import dynamic from "next/dynamic"; // <-- Import dynamic
+import Image from "next/image";
 import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
 import DeliveryInfo from "./DeliveryInfo";
 import ProductHeader from "./ProductHeader";
@@ -20,35 +21,27 @@ export default function ProductDataView({
   const mainProductImageId = data?.thumbnail?.name || data?.mainImage;
 
   const { title, description } = data;
+  const imageProps = {
+    initialSrc: mainProductImageId,
+    blurDataURL,
+    alt: title,
+  };
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <ProductHeader data={data}>
-          {/* <Image
+        <ProductHeader data={data} imageProps={imageProps}>
+          <Image
             src={cloudinaryMainImage(mainProductImageId, 600, 600)}
             alt={title}
             fill={true} // Use fill for responsive sizing within the container
             // priority={true}
             sizes="(max-width: 768px) 100vw, 40vw"
             className="rounded-md object-contain"
-            placeholder="blur"
-            blurDataURL={blurDataURL}
+            placeholder="empty"
+            // blurDataURL={blurDataURL}
             unoptimized
             priority
             fetchPriority="high"
-          /> */}
-
-          <ImageCustomServer
-            src={mainProductImageId}
-            w={800}
-            h={800}
-            alt={title}
-            priority={true}
-            className="rounded-md object-contain"
-            sizes="(max-width: 768px) 100vw, 40vw"
-            fetchPriority="high"
-            unoptimized="true"
-            fill={true}
           />
         </ProductHeader>
       </div>

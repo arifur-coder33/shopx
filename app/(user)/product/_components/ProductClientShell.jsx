@@ -12,6 +12,7 @@ export default function ProductClientShell({
   imageComponent, // This is the prioritized <Image> from page.js
   titleComponent,
   bottomComponent,
+  imageProps,
 }) {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -54,6 +55,7 @@ export default function ProductClientShell({
           staticContent
         ) : (
           <ProductImageGallery
+            imageProps={imageProps}
             mainImage={thumbnail || mainImage}
             gallery={gallery || imageGallery}
             variationsImage={variationsImage}

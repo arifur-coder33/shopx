@@ -2,7 +2,7 @@
 import EMISection from "./EMI/EMISection";
 import ProductClientShell from "./ProductClientShell";
 
-export default function ProductHeader({ data, children }) {
+export default function ProductHeader({ data, imageProps, children }) {
   const { title } = data;
 
   // The Server Component passes both the data and the server-rendered
@@ -11,6 +11,7 @@ export default function ProductHeader({ data, children }) {
   return (
     <>
       <ProductClientShell
+        imageProps={imageProps}
         data={data}
         imageComponent={children} // The <Image> from page.js is passed here
         titleComponent={

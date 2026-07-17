@@ -15,7 +15,6 @@ const MobileModalZoomer = dynamic(() => import("./MobileModalZoomer"), {
   ),
 });
 
-import Imagecustom from "@/components/images/ImageCustom";
 import styles from "./ProductImageGallery.module.css";
 const VideoPlayer = dynamic(() => import("./VideoPlayer"), {
   loading: () => (
@@ -51,6 +50,7 @@ export default function ProductImageGallery({
   variationsImage = [],
   activeImageId = null,
   videoUrl = "https://www.youtube.com/watch?v=KvdBePTOmc4",
+  imageProps,
 }) {
   const allMedia = useMemo(() => {
     const mediaMap = new Map();
@@ -76,7 +76,7 @@ export default function ProductImageGallery({
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const isInitialMount = useRef(true);
-
+  const [imageSrc, setImageSrc] = useState(imageProps.initialSrc);
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -105,11 +105,22 @@ export default function ProductImageGallery({
   const activeMedia = allMedia[activeIndex] || {};
   const isVideoActive = activeMedia.type === "video";
 
+  // const handleThumbnailClick = (index) => {
+  //   if (allMedia[index].type === "video") {
+  //     setLoadVideoPlayer(true);
+  //   }
+  //   setActiveIndex(index);
+  // };
   const handleThumbnailClick = (index) => {
     if (allMedia[index].type === "video") {
       setLoadVideoPlayer(true);
     }
+
     setActiveIndex(index);
+
+    if (allMedia[index].type === "image") {
+      setImageSrc(allMedia[index].name);
+    }
   };
 
   const openModal = () => {
@@ -236,15 +247,17 @@ export default function ProductImageGallery({
               //   fill
               //   style={{ objectFit: "cover" }}
               // />
-              <Imagecustom
-                src={activeMedia?.name}
-                w={800}
-                h={800}
-                alt={activeMedia.alt}
-                priority={activeIndex === 0}
+              <Image
+                src={cloudinaryMainImage(imageSrc, 800, 800)}
+                alt={imageProps.alt}
                 fill
-                objectFit="cover"
-                className={styles.mainImage}
+                placeholder="blur"
+                blurDataURL={imageProps.blurDataURL}
+                priority={activeIndex === 0}
+                fetchPriority={activeIndex === 0 ? "high" : undefined}
+                unoptimized
+                sizes="(max-width:768px)100vw,40vw"
+                className="rounded-md object-contain"
               />
             )}
           </div>
