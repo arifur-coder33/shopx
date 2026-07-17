@@ -33,13 +33,13 @@ export default function ProductDataView({
           <Image
             src={cloudinaryMainImage(mainProductImageId, 600, 600)}
             alt={title}
-            fill={true} // Use fill for responsive sizing within the container
+            fill
             // priority={true}
             sizes="(max-width: 768px) 100vw, 40vw"
             className="rounded-md object-contain"
             placeholder="empty"
             // blurDataURL={blurDataURL}
-            unoptimized
+
             priority
             fetchPriority="high"
           />

@@ -248,14 +248,13 @@ export default function ProductImageGallery({
               //   style={{ objectFit: "cover" }}
               // />
               <Image
-                src={cloudinaryMainImage(imageSrc, 800, 800)}
-                alt={imageProps.alt}
+                src={cloudinaryMainImage(imageSrc, 600, 600)}
                 fill
+                alt={imageProps.alt}
                 placeholder="blur"
                 blurDataURL={imageProps.blurDataURL}
                 priority={activeIndex === 0}
                 fetchPriority={activeIndex === 0 ? "high" : undefined}
-                unoptimized
                 sizes="(max-width:768px)100vw,40vw"
                 className="rounded-md object-contain"
               />

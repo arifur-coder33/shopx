@@ -85,7 +85,7 @@ export default async function Footer() {
             width={800}
             height={200}
             className="w-full h-auto opacity-80"
-            priority
+            loading="lazy"
           />
         </div>
 

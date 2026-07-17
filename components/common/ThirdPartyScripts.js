@@ -106,7 +106,7 @@ export default function ThirdPartyScripts() {
       {gtmId && (
         <Script
           id="gtm"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -131,7 +131,7 @@ export default function ThirdPartyScripts() {
           />
           <Script
             id="ga4"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `
                 window.dataLayer = window.dataLayer || [];
@@ -148,7 +148,7 @@ export default function ThirdPartyScripts() {
       {fbId && (
         <Script
           id="fb"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               !function(f,b,e,v,n,t,s)
@@ -170,7 +170,7 @@ export default function ThirdPartyScripts() {
       {tiktokId && (
         <Script
           id="tiktok"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               !function (w, d, t) {

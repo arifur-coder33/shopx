@@ -12,7 +12,7 @@ export function cloudinaryMainImage(publicId, widthHint, heightHint) {
   // Note: We're assuming height is not part of the transform string based on your original function.
   // If you also wanted to support height, you'd add a similar `heightTransform`.
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${widthTransform}f_auto,q_auto:good,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${widthTransform}f_auto,q_auto:eco,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
 }
 
 // export function cloudinaryMainImage(imageName, width, height) {
@@ -22,7 +22,7 @@ export function cloudinaryMainImage(publicId, widthHint, heightHint) {
 // https://res.cloudinary.com/shopzarif/image/upload
 export function cloudinaryBlurImage(imageName) {
   console.log(
-    `https://res.cloudinary.com/bdmart24/image/upload/e_blur:200,w_10/f_auto,q_auto/bdmart24/${imageName}`
+    `https://res.cloudinary.com/bdmart24/image/upload/e_blur:200,w_10/f_auto,q_auto/bdmart24/${imageName}`,
   );
   return `https://res.cloudinary.com/bdmart24/image/upload/e_blur:200,w_10/f_auto,q_auto/bdmart24/${imageName}`;
 }
