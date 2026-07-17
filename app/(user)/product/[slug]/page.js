@@ -221,7 +221,7 @@ export default async function ProductPage({ params }) {
     cloudinaryMainImage(thumbnail.name || mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
   const primaryImage = thumbnail?.name || mainImage;
-  // const blurDataURL = await getBase64ImageUrl(primaryImage);
+  const blurDataURL = await getBase64ImageUrl(primaryImage);
   //for facebook product schema listing
   const schema = {
     "@context": "http://schema.org",
@@ -276,7 +276,7 @@ export default async function ProductPage({ params }) {
 
   return (
     <div className="mb-16">
-      <ProductDataView data={data} blurDataURL={"blurDataURL"} />
+      <ProductDataView data={data} blurDataURL={blurDataURL} />
 
       <Script
         id="jsonld"

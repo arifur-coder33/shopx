@@ -37,9 +37,8 @@ export default function ProductDataView({
             // priority={true}
             sizes="(max-width: 768px) 100vw, 40vw"
             className="rounded-md object-contain"
-            placeholder="empty"
-            // blurDataURL={blurDataURL}
-
+            placeholder="blur"
+            blurDataURL={blurDataURL}
             priority
             fetchPriority="high"
           />
