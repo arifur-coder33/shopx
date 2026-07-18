@@ -67,8 +67,6 @@ export default function UserMenu({ children }) {
           </div>
         )}
       </div>
-
-      <Logout className="flex items-center md:hidden gap-2 px-4 py-2 text-sm w-full text-left hover:bg-red-900"></Logout>
     </>
   );
 }

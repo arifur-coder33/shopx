@@ -39,7 +39,7 @@ export default async function NavActions() {
         </Cart>
       </div>
 
-      <ThemeToggle className="nav-hover" />
+      <ThemeToggle className="nav-hover hidden md:block" />
     </div>
   );
 }

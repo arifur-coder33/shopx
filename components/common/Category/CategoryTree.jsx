@@ -1,5 +1,7 @@
 "use client";
 
+import Logout from "@/components/auth/Logout";
+import ThemeToggle from "@/components/TheamToggle";
 import { Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import { memo, useState } from "react";
@@ -40,7 +42,7 @@ const CategoryItem = memo(function CategoryItem({
         ${
           level === 0
             ? "hover:bg-slate-800"
-            : "bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 ml-2"
+            : "bg-gray-700 dark:bg-slate-800 hover:bg-gray-800 dark:hover:bg-slate-700 ml-2"
         }`}
         style={{ paddingLeft: `${level * 14 + 14}px` }}
       >
@@ -60,7 +62,7 @@ const CategoryItem = memo(function CategoryItem({
               e.stopPropagation();
               setActiveId(isOpen ? null : category.id);
             }}
-            className="ml-2 rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 p-1"
+            className="ml-2 rounded-md hover:bg-gray-500 dark:hover:bg-slate-600 p-1"
           >
             <PlusMinus open={isOpen} />
           </button>
@@ -138,10 +140,20 @@ export default function CategoryTree({ initialData = [], setIsOpen }) {
       </div>
 
       {/* Extra */}
-      <div className="border-t mt-3 pt-2 text-sm text-gray-300">
-        <div className="px-3 py-2 hover:bg-slate-800 rounded-lg">🎁 Offers</div>
-        <div className="px-3 py-2 hover:bg-slate-800 rounded-lg">Compare</div>
-        <div className="px-3 py-2 hover:bg-slate-800 rounded-lg">Pre-order</div>
+      <div className="border-t mt-3 bg-black pt-2 text-sm text-gray-300 absolute bottom-10 left-0 w-full md:hidden">
+        <Link
+          className="px-8 py-2 hover:bg-slate-800 rounded-lg"
+          href="/order-tracking"
+        >
+          Order Tracking
+        </Link>
+
+        <div className="px-3  hover:bg-slate-800 rounded-lg">
+          <ThemeToggle sun="Light Mode" moon="Dark Mode" />
+        </div>
+        <div className="px-8  hover:bg-slate-800 rounded-lg">
+          <Logout className="flex flex-row gap-2 items-center">Sign Out</Logout>
+        </div>
       </div>
     </div>
   );

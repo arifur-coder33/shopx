@@ -13,7 +13,7 @@ export default function NavItem2({ children, href, mobile = false }) {
       {mobile ? (
         <Link
           href={href}
-          className={`  p-4 rounded-xl  shadow-lg  text-center font-medium nav-hover flex flex-col items-center gap-2 hover:scale-105 ${active ? "bg-gradient-to-b from-primary to-background   hover:text-white" : ""}`}
+          className={`  p-4 rounded-xl  shadow-lg dark:shadow-slate-500 text-center font-medium nav-hover flex flex-col items-center gap-2 hover:scale-105 ${active ? "bg-gradient-to-b from-primary to-background   hover:text-white" : ""}`}
         >
           {children}
         </Link>

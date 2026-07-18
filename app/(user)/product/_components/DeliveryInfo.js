@@ -22,12 +22,10 @@ export default function DeliveryInfo() {
           <CreditCard size={20} />
         </div>
 
-        <div>
-          <p className="font-semibold text-gray-800 pl-4 relative">
-            <span className="text-red-500 text-4xl absolute -left-1 -top-1">
-              ১
-            </span>{" "}
-            টাকাও আগে দিতে হবে না
+        <div className="overflow-hidden">
+          <p className="font-semibold text-gray-800 pl-4 ">
+            <span className="text-red-500 text-4xl ">১</span> টাকাও আগে দিতে হবে
+            না
           </p>
           <p className="text-xs text-gray-500 ml-4">
             রাইডারের সামনে প্রোডাক্ট চেক করে টাকা দিবেন।

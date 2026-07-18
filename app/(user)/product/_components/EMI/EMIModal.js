@@ -393,9 +393,9 @@ export default function EMIModal({ price, onClose }) {
                     : "bg-white hover:bg-gray-100"
                 }`}
               >
-                <div className="w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white text-xs">
+                {/* <div className="w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white text-xs">
                   {bank.name[0]}
-                </div>
+                </div> */}
                 <p className="text-xs leading-tight">{bank.name}</p>
               </div>
             ))}

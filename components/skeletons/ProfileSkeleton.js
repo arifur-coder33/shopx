@@ -9,9 +9,9 @@ export default function ProfileSkeleton() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
       {/* Title */}
-      <SkeletonText width="w-40" height="h-8" />
+      <h1 className="text-3xl font-bold mb-6 text-gray-900">Profile</h1>
 
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6">
+      <div className=" p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6">
         {/* Avatar */}
         <div className="flex flex-col items-center space-y-3">
           <SkeletonCircle size="w-24 h-24" />
@@ -23,7 +23,7 @@ export default function ProfileSkeleton() {
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="flex justify-between items-center bg-gray-50 p-4 rounded-lg"
+              className="flex justify-between items-center p-4 rounded-lg"
             >
               <div className="space-y-2">
                 <SkeletonText width="w-20" height="h-3" />

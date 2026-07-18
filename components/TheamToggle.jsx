@@ -3,7 +3,7 @@
 import { MoonStar, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export default function ThemeToggle({ className }) {
+export default function ThemeToggle({ className, sun, moon }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Load theme from localStorage or default to light mode
@@ -38,9 +38,14 @@ export default function ThemeToggle({ className }) {
       className={`p-2 rounded-md `}
     >
       {isDarkMode ? (
-        <Sun className={`${className}`} />
+        <div className="flex flex-row gap-2 items-center">
+          <Sun className={`${className}`} /> {sun && "Light Mode"}{" "}
+        </div>
       ) : (
-        <MoonStar className={`${className}`} />
+        <div className="flex flex-row gap-2 items-center">
+          <MoonStar className={`${className}`} />
+          {moon && "Dark mode"}
+        </div>
       )}
     </button>
   );

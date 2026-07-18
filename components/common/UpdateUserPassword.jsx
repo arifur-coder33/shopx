@@ -25,7 +25,7 @@ export default function UpdateUserPassword({}) {
   ];
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white rounded-lg shadow-lg mt-2">
+    <div className="max-w-lg mx-auto p-6  rounded-lg shadow-lg mt-2">
       <h1 className="card text-2xl text-center ">Update Password</h1>
       <DynamicForm
         fromFields={fromFields}

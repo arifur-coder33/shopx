@@ -78,13 +78,13 @@ export default async function Footer() {
 
       {/* Payment Section */}
       <div className="border-t border-slate-800 py-6 px-4 text-center">
-        <div className="w-full max-w-7xl mx-auto mb-3">
+        <div className="w-full max-w-7xl mx-auto mb-3 ">
           <Image
             src="https://securepay.sslcommerz.com/public/image/SSLCommerz-Pay-With-logo-All-Size-01.png"
             alt="payment methods"
             width={800}
             height={200}
-            className="w-full h-auto opacity-80"
+            className="w-full h-auto "
             loading="lazy"
           />
         </div>
