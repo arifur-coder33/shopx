@@ -4,13 +4,12 @@ import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
-import { createOrder } from "@/backend/serverActions/orderActions";
+// import { createOrder } from "@/backend/serverActions/orderActions";
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { toast } from "react-toastify";
 import LoadingSpinner from "../common/LoadingSpinner";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 export default function OrderForm({
@@ -32,11 +31,13 @@ export default function OrderForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingStep, setLoadingStep] = useState(null); // "creating", "success", "redirecting"
   const router = useRouter();
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
     setLoading(true);
+    setLoadingStep("creating");
     setError(null);
     setSuccess(null);
     const form = e.target; // Reference to the form element
@@ -44,7 +45,7 @@ export default function OrderForm({
     // if (buyNow) {
     //   products[0].quantity = Number(formData.get("quantity"));
     // }
-    console.log();
+
     if (session?.user?.id) {
       formData.append("userId", session?.user?.id);
     }
@@ -72,11 +73,26 @@ export default function OrderForm({
     const formDataObj = Object.fromEntries(formData.entries());
 
     // startTransition(async () => {
-    const response = await createOrder(formData); // Call server action
-
+    // const response = await createOrder(formData); // Call server action
+    const response = {
+      success: true,
+      data: {
+        id: "123456",
+        orderNo: "ORD123456",
+        customerName: "John Doe",
+        phoneNumber: "1234567890",
+      },
+    };
     if (response.success) {
+      setLoadingStep("success");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       if (!buyNow) clearCart();
       if (paymentMethod === "online") {
+        setLoadingStep("success");
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setLoadingStep("redirecting");
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         initiateSSLcommerzPayment({
           amount: productPrice + deliveryCharge,
           name: response?.data?.customerName,
@@ -87,16 +103,19 @@ export default function OrderForm({
             window.location.href = url;
           }
         });
+      } else {
+        router.push(
+          `/order-success/${response?.data?.orderNo}?p=${encodeURIComponent(
+            response?.data?.phoneNumber,
+          )}&orderSuccess=true`,
+        );
+        setLoadingStep(null);
       }
-      router.push(
-        `/tracking/${response?.data?.orderNo}?p=${encodeURIComponent(
-          response?.data?.phoneNumber,
-        )}&orderSuccess=true`,
-      );
-      setTimeout(() => {
-        toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
-      }, 0);
-      setLoading(false);
+
+      // setTimeout(() => {
+      //   toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
+      // }, 0);
+      // setLoading(false);
 
       // trackFacebookEvent("Purchase", {
       //   content_type: "product",
@@ -111,6 +130,7 @@ export default function OrderForm({
 
       window.scrollTo(0, 0);
       setError(response.error || "Something went wrong");
+      setLoadingStep(null);
     }
     // });
   };
@@ -157,9 +177,30 @@ export default function OrderForm({
       >
         Place Order
       </Button>
-      {loading && !error && (
-        <div className="fixed top-0 left-0 w-screen h-screen bg-black bg-opacity-30 z-30 flex items-center justify-center">
+      {/* {loading && !error && (
+        <div className="fixed top-0 left-0 w-screen h-screen bg-black/70 z-30 flex items-center justify-center">
           <LoadingSpinner message="অর্ডার নিশ্চিত হচ্ছে ..." />
+        </div>
+      )} */}
+
+      {loadingStep && !error && (
+        <div className="fixed top-0 left-0 w-screen h-screen bg-black/70 z-30 flex items-center justify-center">
+          <LoadingSpinner
+            status={
+              loadingStep === "creating"
+                ? "loading"
+                : loadingStep === "success"
+                  ? "success"
+                  : "redirecting"
+            }
+            message={
+              loadingStep === "creating"
+                ? "আপনার অর্ডার নিশ্চিত করা হচ্ছে..."
+                : loadingStep === "success"
+                  ? "অর্ডার সফলভাবে নিশ্চিত হয়েছে।"
+                  : "নিরাপদ পেমেন্ট পেজে নিয়ে যাওয়া হচ্ছে..."
+            }
+          />
         </div>
       )}
     </form>
