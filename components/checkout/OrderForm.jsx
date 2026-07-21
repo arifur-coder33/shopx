@@ -4,7 +4,7 @@ import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
-// import { createOrder } from "@/backend/serverActions/orderActions";
+import { createOrder } from "@/backend/serverActions/orderActions";
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
 import { useSession } from "next-auth/react";
@@ -73,16 +73,16 @@ export default function OrderForm({
     const formDataObj = Object.fromEntries(formData.entries());
 
     // startTransition(async () => {
-    // const response = await createOrder(formData); // Call server action
-    const response = {
-      success: true,
-      data: {
-        id: "123456",
-        orderNo: "ORD123456",
-        customerName: "John Doe",
-        phoneNumber: "1234567890",
-      },
-    };
+    const response = await createOrder(formData); // Call server action
+    // const response = {
+    //   success: true,
+    //   data: {
+    //     id: "123456",
+    //     orderNo: "ORD123456",
+    //     customerName: "John Doe",
+    //     phoneNumber: "1234567890",
+    //   },
+    // };
     if (response.success) {
       setLoadingStep("success");
       await new Promise((resolve) => setTimeout(resolve, 1000));

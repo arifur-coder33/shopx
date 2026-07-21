@@ -146,7 +146,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         inputType={"text"}
         autoComplete="address-line1"
         colSpan={"full"}
-        placeholder="          বাসা/ফ্ল্যাট/রোড/এলাকা / উপজেলা "
+        placeholder="                                   বাসা/ফ্ল্যাট/রোড/ উপজেলা "
       />
 
       <FloatingInput
