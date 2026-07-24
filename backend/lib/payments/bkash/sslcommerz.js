@@ -4,8 +4,10 @@ export async function initiateSSLcommerzPayment({
   amount,
   name,
   email,
-  emi,
+  emiAllow,
+  onlyEmi,
   order_id,
+  orderNo,
   phone,
 }) {
   const tran_id = "TXN_" + Date.now();
@@ -29,9 +31,10 @@ export async function initiateSSLcommerzPayment({
     product_name: "Test",
     product_category: "General",
     product_profile: "general",
-    emi_option: emi ? 1 : 0,
-    emi_allow_only: emi ? 1 : 0,
+    emi_option: emiAllow ? 1 : 0,
+    emi_allow_only: onlyEmi ? 1 : 0,
     value_a: order_id,
+    value_b: orderNo,
   };
 
   const res = await fetch(
@@ -44,8 +47,8 @@ export async function initiateSSLcommerzPayment({
       body: new URLSearchParams(data),
     },
   );
-
+  console.log("orderID", order_id);
   const response = await res.json();
-  console.log("SSLCommerz Response Status:", response);
+
   return response.GatewayPageURL;
 }

@@ -2,8 +2,9 @@ import Link from "next/link";
 
 export default async function PaymentSuccess({ searchParams }) {
   const params = await searchParams;
-  const tran_id = params.tran_id;
-  const order_id = params.order_id;
+
+  const { order_id, orderNo } = params;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-green-50">
       <div className="bg-white p-6 rounded-2xl shadow-md text-center max-w-md w-full">
@@ -16,14 +17,18 @@ export default async function PaymentSuccess({ searchParams }) {
         </p>
 
         <div className="bg-gray-100 p-3 rounded mb-4">
-          <p className="text-sm text-gray-500">Transaction ID</p>
-          <p className="font-semibold">{tran_id}</p>
-          <p className="font-semibold">{order_id}</p>
+          <p className="font-semibold">{orderNo}</p>
         </div>
+        <Link
+          href={`/tracking/?orderId=${order_id}`}
+          className="inline-block mt-4 bg-orange-500 text-white px-5 py-2 rounded-lg"
+        >
+          View Order Details
+        </Link>
 
         <Link
           href="/"
-          className="inline-block bg-brand text-white px-5 py-2 rounded-lg"
+          className="inline-block bg-brand text-white px-5 py-2 rounded-lg mt-5"
         >
           Continue Shopping
         </Link>

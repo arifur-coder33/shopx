@@ -16,7 +16,7 @@ async function handleSSL(req) {
   const val_id = formData.get("val_id");
   const order_id = formData.get("value_a");
 
-  console.log("SSL Data:", { tran_id, val_id });
+  console.log("SSL Data:", { tran_id, val_id, order_id });
 
   if (!val_id) {
     return NextResponse.redirect(

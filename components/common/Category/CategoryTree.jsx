@@ -143,7 +143,7 @@ export default function CategoryTree({ initialData = [], setIsOpen }) {
       <div className="border-t mt-3 bg-black pt-2 text-sm text-gray-300 absolute bottom-10 left-0 w-full md:hidden">
         <Link
           className="px-8 py-2 hover:bg-slate-800 rounded-lg"
-          href="/order-tracking"
+          href="/tracking"
         >
           Order Tracking
         </Link>

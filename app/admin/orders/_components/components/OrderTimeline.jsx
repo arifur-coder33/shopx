@@ -33,14 +33,14 @@ export const statusConfig = {
   REFUNDED: { icon: DollarSign, color: "text-green-600 bg-green-100" },
 };
 
-export default function OrderTimelineNew({ orderId }) {
+export default function OrderTimelineNew({ orderId, orderNo, phoneNumber }) {
   const [timeline, setTimeline] = useState([]);
-
+  const order = orderId || (orderNo && phoneNumber);
   useEffect(() => {
     async function fetchTimeline() {
       try {
-        if (!orderId) return;
-        const response = await getOrderTimeline(orderId);
+        if (!order) return;
+        const response = await getOrderTimeline(orderId, orderNo, phoneNumber);
         // response.data should be array of {status, title, message, createdAt}
         setTimeline(response.data || []);
       } catch (error) {
@@ -48,8 +48,9 @@ export default function OrderTimelineNew({ orderId }) {
       }
     }
 
-    if (orderId) fetchTimeline();
-  }, [orderId]);
+    if (order) fetchTimeline();
+  }, [order]);
+  if (timeline.length === 0) return;
 
   // Format date/time
   const formatDate = (dateStr) => {
@@ -64,7 +65,9 @@ export default function OrderTimelineNew({ orderId }) {
 
   return (
     <div className="card ">
-      <h3 className="font-semibold text-slate-800 mb-6">Order Tracking</h3>
+      <h3 className="font-semibold text-slate-800 mb-6">
+        Order Tracking {timeline.length}
+      </h3>
 
       <div className="relative">
         {/* vertical line */}
@@ -105,7 +108,7 @@ export default function OrderTimelineNew({ orderId }) {
         </div>
 
         {/* delivery progress */}
-        <div className="mt-8">
+        {/* <div className="mt-8">
           <div className="flex justify-between text-xs text-slate-500 mb-2">
             <span>Delivery Progress</span>
             <span>{timeline.length} Updates</span>
@@ -119,7 +122,7 @@ export default function OrderTimelineNew({ orderId }) {
               }}
             ></div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

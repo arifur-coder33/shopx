@@ -1,6 +1,7 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import Imagecustom from "../images/ImageCustom";
 export default function OrderItemTable({ data }) {
+  console.log(data?.orderItems);
   return (
     <div className="relative overflow-x-scroll sm:col-span-full mt-8">
       <table className="w-full table-fixed text-sm text-left rtl:text-right dark:text-gray-400">

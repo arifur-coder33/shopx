@@ -29,6 +29,9 @@ const NavActionsSkeleton = () => (
 export default async function NavActions() {
   return (
     <div className="flex flex-row justify-end gap-1 items-center">
+      <Link className="hidden md:block" href={"/tracking"}>
+        Order Tracking
+      </Link>
       <UserMenu>
         <User2Icon className="nav-hover" />
       </UserMenu>

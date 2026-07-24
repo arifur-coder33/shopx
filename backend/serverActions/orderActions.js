@@ -297,6 +297,7 @@ export async function createOrder(formData) {
     return {
       success: true,
       data: {
+        id: data?.id,
         orderNo: newOrderNumber,
         phoneNumber: data.phoneNumber,
       },
@@ -468,11 +469,40 @@ export async function getOrderCount(params) {
 //     return { success: false, error: error.message };
 //   }
 // }
-export async function getOrderByOrderNo(orderNo, phoneNumber) {
+export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
   console.log("start load", orderNo, phoneNumber);
   try {
+    let finalOrderId = orderId;
+
+    // orderId না থাকলে orderNo + phoneNumber দিয়ে Order খুঁজবে
+    if (!finalOrderId) {
+      if (!orderNo || !phoneNumber) {
+        throw new Error(
+          "Either orderId or both orderNo and phoneNumber are required",
+        );
+      }
+
+      const order = await prisma.order.findFirst({
+        where: {
+          orderNo,
+          phoneNumber,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!order) {
+        return {
+          supersede: true,
+          data: [],
+        };
+      }
+
+      finalOrderId = order.id;
+    }
     const data = await prisma.order.findUnique({
-      where: { orderNo: orderNo, phoneNumber },
+      where: { id: finalOrderId },
       include: {
         orderItems: {
           include: {

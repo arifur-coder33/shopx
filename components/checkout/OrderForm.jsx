@@ -87,7 +87,7 @@ export default function OrderForm({
       setLoadingStep("success");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       if (!buyNow) clearCart();
-      if (paymentMethod === "online") {
+      if (paymentMethod === "online" || paymentMethod === "emi") {
         setLoadingStep("success");
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setLoadingStep("redirecting");
@@ -98,10 +98,14 @@ export default function OrderForm({
           name: response?.data?.customerName,
           email: data?.email,
           order_id: response?.data?.id,
+          orderId: response?.data?.orderNo,
+          emiAllow: paymentMethod === "emi",
+          onlyEmi: paymentMethod === "emi",
         }).then((url) => {
           if (url) {
             window.location.href = url;
           }
+          setLoadingStep(null);
         });
       } else {
         router.push(

@@ -179,7 +179,7 @@ export async function generateMetadata({ params }) {
 
 export async function generateStaticParams() {
   const { data: products } = await getProducts();
-  return products.map((product) => ({
+  return products?.map((product) => ({
     slug: product.slug,
   }));
 }

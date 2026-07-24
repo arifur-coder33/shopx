@@ -1,6 +1,7 @@
 // import bdLocation from "@/utils/data/bd-location.json";
 import { useState } from "react";
 import FloatingInput from "../input/FloatingInput";
+import PhoneInput from "../input/PhoneInput";
 import SearchableDropdown from "../input/SearchableDropdown";
 
 export default function DeliveryAddress({ setDeliveryArea }) {
@@ -57,31 +58,25 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label={"আপনার নামঃ *"}
+        label={"আপনার নামঃ "}
         name={"customerName"}
         inputType={"text"}
         autoComplete="name"
         colSpan={"full"}
-      />
-      <FloatingInput
-        defaultValue=""
-        type={"text"}
-        label={"আপনার ফোন নাম্বারঃ *"}
-        name={"phoneNumber"}
-        inputType={"text"}
-        inputMode={"numeric"}
-        autoComplete="tel"
-        colSpan={"full"}
+        required={true}
       />
 
-      <FloatingInput
+      <PhoneInput
         defaultValue=""
-        type={"text"}
-        label={"আপনার ইমেইলঃ (optional)"}
-        name={"email"}
-        inputType={"email"}
-        autoComplete="email"
-        colSpan={"full"}
+        label="আপনার ফোন নাম্বারঃ (১১ ডিজিট)"
+        name="phoneNumber"
+        inputType="text"
+        inputMode="numeric"
+        autoComplete="tel"
+        colSpan="full"
+        max={11}
+        min={11}
+        required
       />
 
       <SearchableDropdown
@@ -141,18 +136,27 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label={"ডেলিভারি ঠিকানা *"}
+        label={"ডেলিভারি ঠিকানা "}
         name={"deliveryAddress"}
         inputType={"text"}
         autoComplete="address-line1"
         colSpan={"full"}
         placeholder="                                   বাসা/ফ্ল্যাট/রোড/ উপজেলা "
+        required={true}
       />
-
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label={"অর্ডার নোটঃ (optional)"}
+        label={"আপনার ইমেইলঃ (অপশনাল)"}
+        name={"email"}
+        inputType={"email"}
+        autoComplete="email"
+        colSpan={"full"}
+      />
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"অর্ডার নোটঃ (অপশনাল)"}
         name={"note"}
         inputType={"text"}
         colSpan={"full"}

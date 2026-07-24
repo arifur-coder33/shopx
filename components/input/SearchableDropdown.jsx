@@ -351,7 +351,7 @@ export default function SearchableDropdown({
   return (
     <div ref={wrapperRef} className={`relative col-span-${colSpan}`}>
       {label && (
-        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+        <label className="block mb-2 text-xl font-medium text-gray-900 dark:text-white">
           {label}
         </label>
       )}
@@ -372,7 +372,7 @@ export default function SearchableDropdown({
             setQuery(e.target.value);
             setSelected(null);
           }}
-          className="w-full border rounded-md py-2 px-3 text-sm
+          className="w-full border rounded-md py-2 px-3 text-xl
           bg-slate-200 dark:bg-slate-600
           text-slate-700 dark:text-slate-300
           focus:ring-2 focus:ring-blue-500"

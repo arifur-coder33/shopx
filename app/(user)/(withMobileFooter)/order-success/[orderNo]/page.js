@@ -49,7 +49,7 @@ export default async function OrderTrackingPage({ params, searchParams }) {
           Continue Shopping
         </Link>
         <Link
-          href={`/tracking/${orderNo}?orderSuccess=true`}
+          href={`/tracking/?p=${p}&o=${orderNo}`}
           className="inline-block mt-4 bg-orange-500 text-white px-5 py-2 rounded-lg"
         >
           View Order Details

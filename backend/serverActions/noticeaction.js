@@ -1,11 +1,8 @@
 "use server";
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function getNotice() {
-  const session = await auth();
-  console.log("from notice action", session);
   try {
     const data = await prisma.notice.findFirst();
     return { success: true, data: data };
