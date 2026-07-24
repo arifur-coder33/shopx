@@ -19,7 +19,6 @@ export default function BuyNowProductDetails({
   if (isArray) {
     totalPrices = data.reduce(
       (acc, item) => {
-        console.log("item", item);
         const qty = item.quantity || 1;
         acc.totalDiscountPrice += (item.discountPrice || 0) * qty;
         acc.totalRegularPrice += (item.regularPrice || 0) * qty;
@@ -36,9 +35,6 @@ export default function BuyNowProductDetails({
       totalWeight: data.weight * productQty || 1,
     };
   }
-
-  console.log("weigjht", totalPrices);
-  console.log("qty", productQty);
 
   return (
     <>

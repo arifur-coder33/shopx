@@ -6,7 +6,7 @@ import { cloudinaryDestroy, cloudinaryUpload } from "../utils/cloudinary";
 export async function getSiteSetting(params) {
   try {
     const data = await prisma.siteSetting.findFirst({ ...params });
-    console.log("site setting data", data);
+
     return { success: true, data: data };
   } catch (error) {
     return { success: false, message: error.message };

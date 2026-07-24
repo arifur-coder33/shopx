@@ -22,7 +22,7 @@ export default function OrderHeader({ orderId, status, date }) {
           <Package size={28} />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Order #{orderId}</h1>
+          <h1 className="text-2xl font-bold ">Order #{orderId}</h1>
           <p className="text-sm text-gray-500">
             Placed on {dateConvertToLocalString(date)}
           </p>

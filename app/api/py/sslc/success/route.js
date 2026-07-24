@@ -14,9 +14,9 @@ async function handleSSL(req) {
 
   const tran_id = formData.get("tran_id");
   const val_id = formData.get("val_id");
-  const order_id = formData.get("value_a");
-
-  console.log("SSL Data:", { tran_id, val_id, order_id });
+  const orderNo = formData.get("value_a");
+  const phoneNumber = formData.get("value_b");
+  console.log("SSL Data:", { tran_id, orderNo, phoneNumber });
 
   if (!val_id) {
     return NextResponse.redirect(
@@ -31,16 +31,16 @@ async function handleSSL(req) {
 
   if (data.status === "VALID") {
     // ✅ DB update
-    firePurchaseServer(order_id).catch(() => {
+    firePurchaseServer({ orderNo }).catch(() => {
       console.log("error");
     });
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}&&order_id=${order_id}`,
+      `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}&&o=${orderNo}&&p=${orderNo}`,
     );
   }
 
   return NextResponse.redirect(
-    `${process.env.NEXT_PUBLIC_SITE_URL}payment/failed${order_id}`,
+    `${process.env.NEXT_PUBLIC_SITE_URL}payment/failed${orderNo}`,
   );
 }
 

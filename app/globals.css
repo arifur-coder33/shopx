@@ -213,7 +213,7 @@
   @apply bg-primary text-white;
 }
 @utility card {
-  @apply rounded-2xl shadow-md border  border-gray-300 overflow-hidden p-6;
+  @apply rounded-2xl shadow-md border  border-gray-300 dark:shadow-slate-300 overflow-hidden p-6;
 }
 
 /* Blur Effect */

@@ -297,7 +297,6 @@ export async function createOrder(formData) {
     return {
       success: true,
       data: {
-        id: data?.id,
         orderNo: newOrderNumber,
         phoneNumber: data.phoneNumber,
       },
@@ -664,7 +663,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
       createdBy: "admin",
     });
     if (order.paymentMethod === "cod" && status === "PROCESSING") {
-      firePurchaseServer(orderId).catch((err) =>
+      firePurchaseServer({ orderId }).catch((err) =>
         console.error("Tracking failed:", err),
       );
     }

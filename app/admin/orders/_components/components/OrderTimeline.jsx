@@ -64,10 +64,8 @@ export default function OrderTimelineNew({ orderId, orderNo, phoneNumber }) {
   };
 
   return (
-    <div className="card ">
-      <h3 className="font-semibold text-slate-800 mb-6">
-        Order Tracking {timeline.length}
-      </h3>
+    <div className="card w-full ">
+      <h3 className="font-semibold  mb-6">Order Tracking</h3>
 
       <div className="relative">
         {/* vertical line */}
@@ -91,16 +89,14 @@ export default function OrderTimelineNew({ orderId, orderNo, phoneNumber }) {
                 <div className="flex-1">
                   {/* status + time */}
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm text-slate-800">
-                      {item.title}
-                    </h4>
-                    <span className="text-xs text-slate-400">
+                    <h4 className="font-semibold text-sm">{item.title}</h4>
+                    <span className=" text-slate-400">
                       {formatDate(item.createdAt)}
                     </span>
                   </div>
 
                   {/* message */}
-                  <p className="text-sm text-slate-500 mt-1">{item.message}</p>
+                  <p className="text-sm  mt-1">{item.message}</p>
                 </div>
               </div>
             );

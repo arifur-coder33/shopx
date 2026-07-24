@@ -18,7 +18,7 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       <form
         // action={`/tracking/?p=${p}&orderNo=${orderNo}`}
         method="GET"
-        className="bg-white p-6 rounded-2xl shadow-md text-center  w-full grid grid-cols-3 gap-2"
+        className="card p-6 w-full grid grid-cols-3 gap-2"
       >
         <FloatingInput defaultValue={o} label="অর্ডার নং" name="o" />
         <PhoneInput
@@ -37,24 +37,25 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       <br></br>
       {orderId ||
         (o && p && (
-          <Suspense>
-            <OrderInfo orderId={orderId} orderNo={o} phoneNumber={p} />
-          </Suspense>
+          <>
+            <Suspense fallback={<div>Loading order timeline...</div>}>
+              <OrderTimelineNew orderId={orderId} orderNo={o} phoneNumber={p} />
+            </Suspense>
+            <br></br>
+            <Suspense>
+              <OrderInfo orderId={orderId} orderNo={o} phoneNumber={p} />
+            </Suspense>
+          </>
         ))}
 
       <br></br>
-      <Suspense fallback={<div>Loading order timeline...</div>}>
-        <OrderTimelineNew orderId={orderId} orderNo={o} phoneNumber={p} />
-      </Suspense>
 
-      <div className="bg-white p-6 rounded-2xl shadow-md text-center max-w-md w-full">
-        <Link
-          href="/"
-          className="inline-block bg-brand text-white px-5 py-2 rounded-lg"
-        >
-          Continue Shopping
-        </Link>
-      </div>
+      <Link
+        href="/"
+        className="inline-block bg-brand text-white px-5 py-2 rounded-lg"
+      >
+        Continue Shopping
+      </Link>
     </div>
   );
 }

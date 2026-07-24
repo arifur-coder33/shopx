@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default async function OrderTrackingPage({ params, searchParams }) {
   const { orderNo } = await params;
-  const { p, orderSuccess } = await searchParams;
+  const { p, orderSuccess, o } = await searchParams;
   // const { success, data, error } = await getOrderByOrderNo(orderNo, p);
   // if ((!success && error) || !data) {
   //   return <p>কোন ডাটা পাওয়া যায়নি।</p>;
@@ -39,20 +39,20 @@ export default async function OrderTrackingPage({ params, searchParams }) {
         <div className="bg-gray-100 p-3 rounded mb-4">
           <p className="text-sm text-gray-500">Order NO </p>
 
-          <p className="font-semibold">{orderNo}</p>
+          <p className="font-semibold">{o}</p>
         </div>
 
         <Link
-          href="/"
-          className="inline-block bg-brand text-white px-5 py-2 rounded-lg"
-        >
-          Continue Shopping
-        </Link>
-        <Link
-          href={`/tracking/?p=${p}&o=${orderNo}`}
-          className="inline-block mt-4 bg-orange-500 text-white px-5 py-2 rounded-lg"
+          href={`/tracking/?o=${o}&p=${p}`}
+          className="inline-block  bg-orange-500 text-white px-5 py-2 rounded-lg"
         >
           View Order Details
+        </Link>
+        <Link
+          href="/"
+          className="inline-block mt-4 bg-brand text-white px-5 py-2 rounded-lg"
+        >
+          Continue Shopping
         </Link>
       </div>
     </div>

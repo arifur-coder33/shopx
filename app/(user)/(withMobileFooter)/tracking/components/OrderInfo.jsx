@@ -24,7 +24,6 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
           phoneNumber,
         });
         setOrder(fatchData.data);
-        console.log("order", fatchData);
       } catch (error) {
         setError("Failed to load product data.");
         setOrder(null);
@@ -48,11 +47,11 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
       </div>
     );
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl w-full mx-auto space-y-6">
       {/* Header Section */}
       <OrderHeader
         orderId={order?.orderNo}
-        status={status}
+        status={order.status}
         date={order?.createdAt || "N/A"}
       />
 

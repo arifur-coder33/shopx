@@ -3,7 +3,7 @@ import Link from "next/link";
 export default async function PaymentSuccess({ searchParams }) {
   const params = await searchParams;
 
-  const { order_id, orderNo } = params;
+  const { o, p, orderNo } = params;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-green-50">
@@ -17,10 +17,10 @@ export default async function PaymentSuccess({ searchParams }) {
         </p>
 
         <div className="bg-gray-100 p-3 rounded mb-4">
-          <p className="font-semibold">{orderNo}</p>
+          <p className="font-semibold">অর্ডার নংঃ {o}</p>
         </div>
         <Link
-          href={`/tracking/?orderId=${order_id}`}
+          href={`/tracking/?o=${o}&p=${p}`}
           className="inline-block mt-4 bg-orange-500 text-white px-5 py-2 rounded-lg"
         >
           View Order Details

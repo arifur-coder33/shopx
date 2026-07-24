@@ -44,7 +44,7 @@ export async function POST(req) {
       },
     };
 
-    console.log("route", payload);
+    // console.log("route", payload);
     await Promise.all([
       fireFacebookCAPI(payload),
       fireGoogleServer(payload),

@@ -89,16 +89,17 @@ export default function OrderForm({
       if (!buyNow) clearCart();
       if (paymentMethod === "online" || paymentMethod === "emi") {
         setLoadingStep("success");
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         setLoadingStep("redirecting");
-
+        console.log("res", response);
         await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log("order ID:", response?.data?.id);
         initiateSSLcommerzPayment({
           amount: productPrice + deliveryCharge,
           name: response?.data?.customerName,
           email: data?.email,
-          order_id: response?.data?.id,
-          orderId: response?.data?.orderNo,
+          orderNo: response?.data?.orderNo,
+          phoneNumber: response?.data?.phoneNumber,
           emiAllow: paymentMethod === "emi",
           onlyEmi: paymentMethod === "emi",
         }).then((url) => {
@@ -109,9 +110,9 @@ export default function OrderForm({
         });
       } else {
         router.push(
-          `/order-success/${response?.data?.orderNo}?p=${encodeURIComponent(
+          `/order-success?p=${encodeURIComponent(
             response?.data?.phoneNumber,
-          )}&orderSuccess=true`,
+          )}&o=${response?.data?.orderNo}&orderSuccess=true`,
         );
         setLoadingStep(null);
       }

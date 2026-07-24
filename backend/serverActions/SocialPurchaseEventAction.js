@@ -5,10 +5,10 @@ import { fireFacebookCAPI } from "../utils/SocialServerEvent/fireFacebookCAPI";
 import { fireGoogleServer } from "../utils/SocialServerEvent/fireGoogleServer";
 import { fireTikTokServer } from "../utils/SocialServerEvent/fireTikTokServer";
 
-export async function firePurchaseServer(orderId) {
+export async function firePurchaseServer({ orderNo, orderId }) {
   try {
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: orderNo ? { orderNo } : { id: orderId },
 
       select: {
         id: true,

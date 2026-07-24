@@ -8,11 +8,11 @@ export default function OrderSummary({
     <div className="card">
       <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
       <div className="space-y-3 text-sm">
-        <div className="flex justify-between text-gray-600">
+        <div className="flex justify-between ">
           <span>Subtotal</span>
           <span>{subtotal} BDT</span>
         </div>
-        <div className="flex justify-between text-gray-600">
+        <div className="flex justify-between ">
           <span>Delivery Charge</span>
           <span>+ {delivery} BDT</span>
         </div>
@@ -21,8 +21,8 @@ export default function OrderSummary({
           <span>- {adminDiscount} BDT</span>
         </div>
         <div className="border-t pt-3 mt-3 flex justify-between items-center">
-          <span className="font-bold text-lg text-gray-900">Total Amount</span>
-          <span className="font-bold text-xl text-indigo-600">{total} BDT</span>
+          <span className="font-bold text-lg 0">Total Amount</span>
+          <span className="font-bold text-xl ">{total} BDT</span>
         </div>
       </div>
     </div>
