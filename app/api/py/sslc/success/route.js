@@ -1,6 +1,6 @@
+import { markPaymentSuccess } from "@/backend/serverActions/paymentAction";
 import { firePurchaseServer } from "@/backend/serverActions/SocialPurchaseEventAction";
 import { NextResponse } from "next/server";
-
 async function handleSSL(req) {
   let formData;
 
@@ -16,6 +16,9 @@ async function handleSSL(req) {
   const val_id = formData.get("val_id");
   const orderNo = formData.get("value_a");
   const phoneNumber = formData.get("value_b");
+  const orderId = formData.get("value_d");
+  const paymentId = formData.get("value_c");
+  const total_amount = formData.get("total_amount");
   console.log("SSL Data:", { tran_id, orderNo, phoneNumber });
 
   if (!val_id) {
@@ -30,12 +33,24 @@ async function handleSSL(req) {
   const data = await res.json();
 
   if (data.status === "VALID") {
+    await markPaymentSuccess({
+      orderId: orderId,
+      orderNo,
+      paymentId: paymentId,
+      amount: data?.amount,
+      storeAmount: data.store_amount,
+      transactionId: data.tran_id,
+      bankTransactionId: data.bank_tran_id,
+      cardType: data?.card_type,
+      cardNo: data?.card_no,
+      gatewayResponse: data,
+    });
     // ✅ DB update
     firePurchaseServer({ orderNo }).catch(() => {
       console.log("error");
     });
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}&&o=${orderNo}&&p=${orderNo}`,
+      `${process.env.NEXT_PUBLIC_SITE_URL}/payment/success?tran_id=${tran_id}&&o=${orderNo}&&p=${phoneNumber}`,
     );
   }
 

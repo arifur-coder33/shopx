@@ -105,8 +105,8 @@ export default function OrderForm({
         }).then((url) => {
           if (url) {
             window.location.href = url;
+            setLoadingStep(null);
           }
-          setLoadingStep(null);
         });
       } else {
         router.push(

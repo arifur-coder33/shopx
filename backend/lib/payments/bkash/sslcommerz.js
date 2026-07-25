@@ -1,5 +1,8 @@
 "use server";
 
+import { getOrderIdByOrderNoPhoneNo } from "@/backend/serverActions/orderActions";
+import { createPayment } from "@/backend/serverActions/paymentAction";
+
 export async function initiateSSLcommerzPayment({
   amount,
   name,
@@ -11,6 +14,15 @@ export async function initiateSSLcommerzPayment({
 }) {
   const tran_id = "TXN_" + Date.now();
 
+  const order = await getOrderIdByOrderNoPhoneNo({ orderNo, phoneNumber });
+  console.log("order", order);
+
+  const payment = await createPayment({
+    orderId: order?.data?.id,
+    gateway: "SSLCOMMERZ",
+    paymentMethod: "Online",
+    amount: amount,
+  });
   const data = {
     store_id: process.env.SSLCZ_STORE_ID,
     store_passwd: process.env.SSLCZ_STORE_PASSWD,
@@ -34,8 +46,9 @@ export async function initiateSSLcommerzPayment({
     emi_allow_only: onlyEmi ? 1 : 0,
     value_b: phoneNumber,
     value_a: orderNo,
+    value_c: payment.id,
+    value_d: order.data.id,
   };
-
   const res = await fetch(
     "https://sandbox.sslcommerz.com/gwprocess/v4/api.php",
     {

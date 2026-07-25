@@ -18,7 +18,7 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       <form
         // action={`/tracking/?p=${p}&orderNo=${orderNo}`}
         method="GET"
-        className="card p-6 w-full grid grid-cols-3 gap-2"
+        className="card p-6 w-full grid md:grid-cols-3 md:gap-2"
       >
         <FloatingInput defaultValue={o} label="অর্ডার নং" name="o" />
         <PhoneInput
@@ -30,7 +30,7 @@ export default async function OrderTrackingPage({ params, searchParams }) {
           colSpan={4}
           inputType="text"
         />
-        <button type="submit" className="bg-brand text-white  rounded-lg">
+        <button type="submit" className="bg-brand text-white py-2 rounded-lg">
           Track Order
         </button>
       </form>

@@ -329,6 +329,9 @@ async function persistOrderInBackground({
           orderPrice: Number(data.orderPrice),
           deliveryAddress: data.deliveryAddress,
           paymentMethod: data.paymentMethod,
+          paymentStatus: data.paymentMethod === "cod" ? "UNPAID" : "PENDING",
+          paidAmount: 0,
+          dueAmount: Number(data.orderPrice) + Number(data.deliveryCharge),
           note: data?.note,
           fbc: data?.fbc,
           fbp: data?.fbp,
@@ -374,7 +377,7 @@ async function persistOrderInBackground({
     });
 
     // Non-critical side effects
-    addOrderTimeline({
+    await addOrderTimeline({
       orderId: order.id,
       orderNo: order.orderNo,
       status: "PENDING",
@@ -889,4 +892,32 @@ export async function getOrderCountsbyUserId(userId) {
   });
 
   return counts;
+}
+
+export async function getOrderIdByOrderNoPhoneNo({ orderNo, phoneNumber }) {
+  try {
+    if (!orderNo || !phoneNumber) {
+      throw new Error(
+        "Either orderId or both orderNo and phoneNumber are required",
+      );
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        orderNo,
+        phoneNumber,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!order) {
+      throw new Error("No order Found");
+    }
+
+    return { success: true, data: order }; // Return success with product data
+  } catch (error) {
+    return { success: false, error: error.message }; // Return structured error
+  }
 }

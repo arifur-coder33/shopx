@@ -243,10 +243,14 @@ model Order {
   deliveryAddress String 
   deliveryArea    String?
   paymentMethod   String?                    // Address for product delivery
+  paymentStatus   PaymentStatus @default(UNPAID)
+  paidAmount      Float @default(0)
+  dueAmount       Float?
   note            String?
   status         OrderStatus @default(PENDING) // Order status enumeration
   shipping           Shipping?    
   timeline       OrderTimeline[]
+  payments        Payment[]
   refunds   Refund[]
   ledgers   Ledger[]
   fbc  String?
@@ -322,36 +326,99 @@ model OrderTimeline {
 
   createdAt DateTime @default(now())
 }
+
+enum PaymentGateway {
+  COD
+  SSLCOMMERZ
+  BKASH
+  NAGAD
+  ROCKET
+  STRIPE
+  MANUAL
+}
+model Payment {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  orderId          String   @db.ObjectId
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  transactionId    String? 
+  bankTransactionId String?
+
+  gateway          PaymentGateway
+  paymentMethod    String?
+
+  amount           Float
+store_amount       Float?
+  status           PaymentStatus @default(PENDING)
+
+  currency         String @default("BDT")
+card_type          String?
+ 
+  card_no         String?
+  card_issuer         String?
+  card_brand         String?
+  gatewayResponse  Json?
+
+  paidAt           DateTime?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  refunds          Refund[]
+  ledgers          Ledger[]
+}
+enum RefundStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
 model Refund {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  orderId     String   @db.ObjectId
-  order       Order    @relation(fields: [orderId], references: [id],onDelete: Cascade)
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
 
-  amount      Float
-  method      String   // bkash | nagad | bank | cash
-  trxId       String?  // transaction id
-  note        String?
+  orderId        String   @db.ObjectId
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  status      String   @default("PENDING") // PENDING | COMPLETED | FAILED
+  paymentId      String?  @db.ObjectId
+  payment        Payment? @relation(fields: [paymentId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  amount         Float
+
+  reason         String?
+  adminNote      String?
+
+  status         RefundStatus @default(PENDING)
+
+  refundedAt     DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Ledger {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  orderId     String   @db.ObjectId
-  order       Order    @relation(fields: [orderId], references: [id])
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
 
-  type        String   // CREDIT | DEBIT
-  category    String   // ORDER_PAYMENT | REFUND | DELIVERY | COST
+  orderId       String   @db.ObjectId
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  amount      Float
-  method      String?  // bkash | cash | bank
+  paymentId     String?  @db.ObjectId
+  payment       Payment? @relation(fields: [paymentId], references: [id])
 
-  note        String?
+  type          LedgerType
 
-  createdAt   DateTime @default(now())
+  direction     LedgerDirection
+
+  amount        Float
+
+  description   String?
+
+  reference     String?
+
+  createdBy     String?
+
+  createdAt     DateTime @default(now())
 }
 model CourierPickupPoint {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
@@ -421,11 +488,32 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  FAILED
+  CANCELLED
+}
 enum ProductStatus {
   ACTIVE
   INACTIVE
   DRAFT
   DELETED
+}
+
+enum LedgerType {
+  PAYMENT
+  REFUND
+  DELIVERY_CHARGE
+  DISCOUNT
+  ADJUSTMENT
+}
+
+enum LedgerDirection {
+  CREDIT
+  DEBIT
 }
 
 // Enumeration for user roles

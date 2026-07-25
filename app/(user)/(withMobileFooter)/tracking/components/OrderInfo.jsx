@@ -40,7 +40,8 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
         <LoadingSpinner message="Just a second.. " />
       </div>
     );
-  if (!loading && !order)
+  console.log(order);
+  if (!loading && order.length === 0)
     return (
       <div>
         <p className="text-red-500">কোন ডাটা পাওয়া যায়নি।</p>
