@@ -31,5 +31,5 @@ export default function ProductQuickView({ id }) {
     );
   if (error) return <div>{error}</div>;
   if (!data) return <div>No Data Found</div>;
-  return <ProductDataView data={data} />;
+  return <ProductDataView data={data} adminView={true} />;
 }

@@ -27,15 +27,44 @@ export default function OrderForm({
 }) {
   const { data: session } = useSession();
   const { clearCart } = useCart();
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState(null); // "creating", "success", "redirecting"
   const router = useRouter();
+  const scrollToPaymentMethod = () => {
+    const el = document.getElementById("paymentMethod");
+
+    if (!el) return;
+
+    el.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    // remove if already exists (re-click safe)
+    el.classList.remove("blink-border");
+
+    // force reflow to restart animation
+    void el.offsetWidth;
+
+    el.classList.add("blink-border");
+
+    // optional: clean up class after 1s
+    setTimeout(() => {
+      el.classList.remove("blink-border");
+    }, 1000);
+  };
+  console.log("paymentMethod:", paymentMethod);
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
+    if (paymentMethod === "") {
+      console.log("Payment method not selected");
+      scrollToPaymentMethod();
+      return;
+    }
     setLoading(true);
     setLoadingStep("creating");
     setError(null);
@@ -87,11 +116,11 @@ export default function OrderForm({
       setLoadingStep("success");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       if (!buyNow) clearCart();
-      if (paymentMethod === "online" || paymentMethod === "emi") {
+      if (paymentMethod === "ONLINE" || paymentMethod === "EMI") {
         setLoadingStep("success");
         await new Promise((resolve) => setTimeout(resolve, 500));
         setLoadingStep("redirecting");
-        console.log("res", response);
+
         await new Promise((resolve) => setTimeout(resolve, 1000));
         console.log("order ID:", response?.data?.id);
         initiateSSLcommerzPayment({
@@ -100,8 +129,8 @@ export default function OrderForm({
           email: data?.email,
           orderNo: response?.data?.orderNo,
           phoneNumber: response?.data?.phoneNumber,
-          emiAllow: paymentMethod === "emi",
-          onlyEmi: paymentMethod === "emi",
+          emiAllow: paymentMethod === "EMI",
+          onlyEmi: paymentMethod === "EMI",
         }).then((url) => {
           if (url) {
             window.location.href = url;

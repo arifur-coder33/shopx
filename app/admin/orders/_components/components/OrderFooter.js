@@ -219,7 +219,7 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
   const isReturnAvailable = async () => {
     const getStatus = await getOrderTimeline(orderId);
     const lastStatus = getStatus?.data?.[0];
-    console.log("Last Status:", lastStatus);
+
     if (lastStatus?.status !== "DELIVERED") return false;
 
     const deliveryData = new Date(lastStatus.createdAt);

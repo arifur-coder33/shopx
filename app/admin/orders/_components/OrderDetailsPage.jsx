@@ -13,7 +13,8 @@ import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
 import OrderNote from "./components/OrderNote";
 import OrderSummary from "./components/OrderSummary";
-import OrderTimelineNew from "./components/OrderTimeline";
+import OrderTimelineClient from "./components/OrderTimelineClient";
+import PaymentSummary from "./components/PaymentSummary";
 import CourierManagement from "./courier/CourierManagement";
 
 // Server component ke lazy load kora hocche
@@ -100,9 +101,15 @@ export default function OrderDetailsPage({ order, children }) {
               delivery={order.deliveryCharge}
               adminDiscount={adminDiscount}
               total={order.orderPrice + order.deliveryCharge - adminDiscount}
+              dueAmount={order.dueAmount}
+              paidAmount={order.paidAmount}
             />
             <OrderNote note={order?.note} />
-
+            <PaymentSummary
+              payments={order.payments}
+              paidAmount={order?.paidAmount}
+              dueAmount={order?.dueAmount}
+            />
             {status !== "PENDING" && status !== "CANCELLED" && (
               <CourierManagement
                 setStatus={setStatus}
@@ -117,7 +124,7 @@ export default function OrderDetailsPage({ order, children }) {
 
             {children}
             <Suspense fallback={<div>Loading order timeline...</div>}>
-              <OrderTimelineNew orderId={order.id} />
+              <OrderTimelineClient orderId={order.id} />
             </Suspense>
           </div>
 
@@ -146,7 +153,7 @@ export default function OrderDetailsPage({ order, children }) {
               onView={() => handleDownloadInvoice("view")}
               onAWB={() => alert("Downloading AWB...")}
             />
-            <InvoiceButton orderData={order} actionType={"view"} />
+            <InvoiceButton orderData={order} actionType={"print"} />
           </div>
         </div>
       </div>

@@ -14,6 +14,8 @@ export default function OrderItemsTable({
   status,
   orderNo,
   date,
+  orderId,
+  dueAmount,
 }) {
   return (
     <div className=" card">

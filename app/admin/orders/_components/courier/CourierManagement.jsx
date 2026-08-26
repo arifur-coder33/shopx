@@ -26,10 +26,10 @@ export default function CourierManagement({ order, status, setStatus }) {
   const [data, setData] = useState({
     name: order?.customerName || "",
     phone: order?.phoneNumber.slice(-11) || "",
-    address: order?.deliveryAddress || "",
-    price: order?.orderPrice + order?.deliveryCharge - (order?.discount || 0),
-    weight: 0.5,
-    city: "",
+    address: `${order?.deliveryAddress}, ${order?.thana}, ${order?.city}` || "",
+    price: order?.dueAmount,
+    weight: order?.orderWeight,
+    city: order?.city,
     storeId: "WH-01",
   });
 

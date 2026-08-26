@@ -73,6 +73,14 @@ export async function markPaymentSuccess({
         status: "PAID",
         transactionId,
         gatewayResponse,
+        amount,
+        storeAmount,
+        transactionId,
+        bankTransactionId,
+        cardType,
+        cardNo,
+        gatewayResponse,
+
         paidAt: new Date(),
       },
       include: {
@@ -143,5 +151,84 @@ export async function markPaymentSuccess({
     });
 
     return payment;
+  });
+}
+
+export async function markPaymentFailed({
+  paymentId,
+  orderId,
+  orderNo,
+  gatewayResponse,
+  reason,
+}) {
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.update({
+      where: {
+        id: paymentId,
+      },
+      data: {
+        status: "FAILED",
+        gatewayResponse,
+      },
+    });
+
+    await tx.orderTimeline.create({
+      data: {
+        orderId,
+        orderNo,
+        title: "Payment Failed",
+        status: "PENDING",
+        message: reason || "Online payment failed.",
+        createdBy: "user",
+      },
+    });
+
+    return payment;
+  });
+}
+
+export async function markPaymentCancelled({
+  paymentId,
+  orderId,
+  orderNo,
+  gatewayResponse,
+  reason,
+}) {
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({
+      where: { id: paymentId },
+    });
+
+    if (!payment) {
+      throw new Error("Payment not found");
+    }
+
+    // Already completed payment cannot be cancelled
+    if (payment.status === "PAID") {
+      return payment;
+    }
+
+    const updatedPayment = await tx.payment.update({
+      where: {
+        id: paymentId,
+      },
+      data: {
+        status: "CANCELLED",
+        gatewayResponse,
+      },
+    });
+
+    await tx.orderTimeline.create({
+      data: {
+        orderId,
+        orderNo,
+        title: "Payment Cancelled",
+        status: "PENDING",
+        message: reason || "Customer cancelled the payment.",
+        createdBy: "user",
+      },
+    });
+
+    return updatedPayment;
   });
 }

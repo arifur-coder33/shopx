@@ -83,3 +83,37 @@ export async function fetchSingleData({ model, where = {}, select = {} }) {
     return { success: false, data: null, error: error.message };
   }
 }
+
+/// usegaes
+
+//  const fatchData = await fetchSingleData({
+//     model: "order",
+//     where: { id: orderId, userId },
+//     select: {
+//       id: true,
+//       createdAt: true,
+//       status: true,
+//       orderNo: true,
+//       orderPrice: true,
+//       deliveryCharge: true,
+//       deliveryAddress: true,
+//       adminDiscount: true,
+//       customerName: true,
+//       phoneNumber: true,
+//       email: true,
+//       paymentMethod: true,
+//       paymentStatus: true,
+//       dueAmount: true,
+//       paidAmount: true,
+//       orderItems: {
+//         select: {
+//           id: true,
+//           productName: true,
+//           quantity: true,
+//           price: true,
+//           sku: true,
+//           thumbnail: true,
+//         },
+//       },
+//     },
+//   });

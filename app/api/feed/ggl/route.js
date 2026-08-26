@@ -60,7 +60,7 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
   <channel>
-    <title>${escapeXml(process.env.NEXT_SHOP_NAME || "Shop")}</title>
+    <title>${escapeXml(process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop")}</title>
     <link>${process.env.NEXT_PUBLIC_SITE_URL}</link>
     <description>Google Merchant Centre Product Feed</description>
     ${xmlItems}

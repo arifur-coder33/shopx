@@ -8,7 +8,7 @@ import { fetchSingleData } from "@/backend/serverActions/fetchDataActon";
 import InvoiceButton from "@/components/PDF/getInvoice";
 
 export default async function UerOrderViewPage({ params }) {
-  const orderId = params.orderId;
+  const { orderId } = await params;
   const session = await auth();
   const userId = session?.user?.id;
   // const fatchData = await getOrderById(orderId, userId);
@@ -29,6 +29,9 @@ export default async function UerOrderViewPage({ params }) {
       phoneNumber: true,
       email: true,
       paymentMethod: true,
+      paymentStatus: true,
+      dueAmount: true,
+      paidAmount: true,
       orderItems: {
         select: {
           id: true,
@@ -57,8 +60,13 @@ export default async function UerOrderViewPage({ params }) {
         delivery={order.deliveryCharge}
         adminDiscount={order.adminDiscount}
         total={order.orderPrice + order.deliveryCharge - order.adminDiscount}
+        dueAmount={order?.dueAmount}
+        paidAmount={order?.paidAmount}
+        orderId={orderId}
+        paymentMethod={order?.paymentMethod}
       />
       <InvoiceButton orderData={order} actionType={"view"} />
+
       <OrderTimelineServer orderId={orderId} />
     </div>
   );

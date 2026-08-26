@@ -1,4 +1,4 @@
-import OrderTimelineNew from "@/app/admin/orders/_components/components/OrderTimeline";
+import OrderTimelineClient from "@/app/admin/orders/_components/components/OrderTimelineClient";
 import FloatingInput from "@/components/input/FloatingInput";
 import PhoneInput from "@/components/input/PhoneInput";
 import Link from "next/link";
@@ -39,7 +39,11 @@ export default async function OrderTrackingPage({ params, searchParams }) {
         (o && p && (
           <>
             <Suspense fallback={<div>Loading order timeline...</div>}>
-              <OrderTimelineNew orderId={orderId} orderNo={o} phoneNumber={p} />
+              <OrderTimelineClient
+                orderId={orderId}
+                orderNo={o}
+                phoneNumber={p}
+              />
             </Suspense>
             <br></br>
             <Suspense>

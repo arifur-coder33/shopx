@@ -327,6 +327,7 @@ async function persistOrderInBackground({
           city: data.district,
           deliveryCharge: Number(data.deliveryCharge),
           orderPrice: Number(data.orderPrice),
+          orderWeight: Number(data.orderWeight),
           deliveryAddress: data.deliveryAddress,
           paymentMethod: data.paymentMethod,
           paymentStatus: data.paymentMethod === "cod" ? "UNPAID" : "PENDING",
@@ -533,6 +534,7 @@ export async function getOrderById(orderId) {
           },
         },
         shipping: true,
+        payments: true,
       },
     });
     console.log("Fetched order by ID:", data);
@@ -641,7 +643,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
     // 🧠 dynamic title বানানো
     const titleMap = {
       PENDING: "Order Placed",
-      PROCESSING: "Processing Order",
+      PROCESSING: " Order Comfirmed & Processing for Shipment",
       READY_TO_SHIP: "Ready to Ship",
       SHIPPED: "Order Shipped",
       DELIVERED: "Order Delivered",

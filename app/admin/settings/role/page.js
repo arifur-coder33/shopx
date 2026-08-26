@@ -10,10 +10,15 @@
 //   console.log(data);
 //   return <UserListTable data={data} />;
 // }
-
 import AdminListPage from "@/app/admin/_components/AdminListPage";
+import { auth } from "@/auth";
+import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { roleConfig } from "./config";
 
-export default function RoleListPage() {
+export default async function RoleListPage() {
+  const session = await auth();
+  if (!hasUIPermission(session.user.permissions, "role", "view")) {
+    return <div>Unauthorized</div>;
+  }
   return <AdminListPage {...roleConfig} />;
 }

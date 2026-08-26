@@ -196,7 +196,7 @@ export async function getInvoiceTemplate(orderData) {
       process.cwd(),
       "public",
       "fonts",
-      "SolaimanLipi.ttf"
+      "SolaimanLipi.ttf",
     );
     if (fs.existsSync(fontPath)) {
       fontBase64 = fs.readFileSync(fontPath).toString("base64");
@@ -211,7 +211,7 @@ export async function getInvoiceTemplate(orderData) {
     const logoPath = path.join(
       process.cwd(),
       "public",
-      "android-chrome-192x192.png"
+      "android-chrome-192x192.png",
     );
     if (fs.existsSync(logoPath)) {
       const logoBase64 = fs.readFileSync(logoPath).toString("base64");
@@ -226,13 +226,13 @@ export async function getInvoiceTemplate(orderData) {
   const dateOptions = { year: "numeric", month: "long", day: "numeric" };
   const formattedDate = new Date(orderData.createdAt).toLocaleDateString(
     "en-BD",
-    dateOptions
+    dateOptions,
   );
 
   // ৫. ক্যালকুলেশন
   const subTotal = orderData.orderItems.reduce(
     (acc, item) => acc + item.price * item.quantity,
-    0
+    0,
   );
   const total =
     subTotal + (orderData.deliveryCharge || 0) + (orderData.tax || 0);
@@ -257,13 +257,13 @@ export async function getInvoiceTemplate(orderData) {
         </td>
         <td style="text-align: center;">${item.quantity}</td>
         <td style="text-align: right;">${item.price.toLocaleString(
-          "en-BD"
+          "en-BD",
         )}</td>
         <td style="text-align: right;">${(
           item.price * item.quantity
         ).toLocaleString("en-BD")}</td>
     </tr>
-  `
+  `,
     )
     .join("");
 
@@ -399,7 +399,7 @@ export async function getInvoiceTemplate(orderData) {
                     <div class="total-row">
                         <span>Shipping:</span>
                         <span>${orderData.deliveryCharge.toLocaleString(
-                          "en-BD"
+                          "en-BD",
                         )} Tk</span>
                     </div>`
                         : ""
@@ -417,6 +417,11 @@ export async function getInvoiceTemplate(orderData) {
                         <span>GRAND TOTAL:</span>
                         <span>${total.toLocaleString("en-BD")} Tk</span>
                     </div>
+ <br/>
+                       <div class="total-row ">
+                        <span>Due:</span>
+                        <span>${orderData?.dueAmount.toLocaleString("en-BD")} Tk</span>
+                    </div>
                 </div>
             </div>
 
@@ -427,7 +432,9 @@ export async function getInvoiceTemplate(orderData) {
                     <p>${orderData.note || "Thanks for your business!"}</p>
                     <p style="margin-top: 10px;"><strong>Payment Method:</strong> ${
                       orderData.paymentMethod
-                    }</p>
+                    }
+                      [${orderData.paymentStatus}]  
+                    </p>
                 </div>
                 <div class="qr-area">
                     <img src="${qrCodeDataUrl}" class="qr-img" />
@@ -436,7 +443,8 @@ export async function getInvoiceTemplate(orderData) {
             </div>
             
             <div class="bottom-text">
-                Thank you for doing business with us. <br/> www.bdmart24.com
+                Thank you for doing business with us. <br/>${process.env.NEXT_PUBLIC_SITE_URL}
+
             </div>
         </div>
     </body>

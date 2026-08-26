@@ -3,7 +3,7 @@ import { useState } from "react";
 import RadioButton from "../RadioButton";
 
 export default function PaymentMethodSelector({ setPaymentMethod, className }) {
-  const [selectedMethod, setSelectedMethod] = useState("cod");
+  const [selectedMethod, setSelectedMethod] = useState("");
   const sslActive = process.env.NEXT_PUBLIC_SSLCZ_STORE_ID;
   function onChangeHandler(id) {
     setPaymentMethod(id);
@@ -12,32 +12,40 @@ export default function PaymentMethodSelector({ setPaymentMethod, className }) {
 
   return (
     <div
+      id="paymentMethod"
       className={`bg-slate-200 dark:text-slate-300 dark:bg-slate-600 p-2 rounded-md font-bold ${className}`}
     >
       <p> পেমেন্ট মেথডঃ</p>
       <div className="flex flex-row gap-2">
         <RadioButton
-          id="cod"
+          id="COD"
           name="paymentMethod"
           label="ক্যাশ অন ডেলিভারি"
-          isSelected={selectedMethod === "cod"}
+          isSelected={selectedMethod === "COD"}
+          onSelect={onChangeHandler}
+        />
+        <RadioButton
+          id="BKASH"
+          name="paymentMethod"
+          label="Bkash"
+          isSelected={selectedMethod === "BKASH"}
           onSelect={onChangeHandler}
         />
         {sslActive && (
           <>
             <RadioButton
-              id="online"
+              id="ONLINE"
               name="paymentMethod"
-              label="Online/Bkash/Card"
-              isSelected={selectedMethod === "online"}
+              label="Online/Card"
+              isSelected={selectedMethod === "ONLINE"}
               onSelect={onChangeHandler}
             />
 
             <RadioButton
-              id="emi"
+              id="EMI"
               name="paymentMethod"
               label="EMI"
-              isSelected={selectedMethod === "emi"}
+              isSelected={selectedMethod === "EMI"}
               onSelect={onChangeHandler}
             />
           </>

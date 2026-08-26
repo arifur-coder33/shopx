@@ -20,7 +20,7 @@ export async function initiateSSLcommerzPayment({
   const payment = await createPayment({
     orderId: order?.data?.id,
     gateway: "SSLCOMMERZ",
-    paymentMethod: "Online",
+    paymentMethod: "ONLINE",
     amount: amount,
   });
   const data = {

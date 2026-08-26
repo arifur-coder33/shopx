@@ -2,7 +2,19 @@
 import { useState } from "react";
 import FloatingInput from "../input/FloatingInput";
 import PhoneInput from "../input/PhoneInput";
-import SearchableDropdown from "../input/SearchableDropdown";
+const loadDivisionList = async () => {
+  // const location = await import("@/utils/data/bd-location-bn.json");
+
+  const location = await import("@/utils/data/bangladesh-location.json");
+
+  return {
+    data: location.default.map((division) => ({
+      id: division.division_en.toLowerCase(),
+      name: division.division_bn,
+      districts: division.districts,
+    })),
+  };
+};
 
 export default function DeliveryAddress({ setDeliveryArea }) {
   // Use null for initial state to be more explicit about "no selection"
@@ -31,30 +43,21 @@ export default function DeliveryAddress({ setDeliveryArea }) {
     setUpazila(null);
   };
 
-  // 2. Handler for District selection
   const handleDistrictChange = (selectedDistrict) => {
     setDistrict(selectedDistrict);
     setUpazila(null);
-    setDeliveryArea(selectedDistrict?.name.toLowerCase() || ""); // Set delivery area based on district
+  };
+
+  const handleUpzillaChange = (selectedUpzilla) => {
+    console.log(selectedUpzilla);
+    setUpazila(selectedUpzilla);
+
     // When district changes, reset upazila
   };
-
   // In DeliveryAddress.jsx
 
-  const loadDivisionList = async () => {
-    const location = await import("@/utils/data/bd-location-bn.json");
-
-    return {
-      data: location.default.divisions.map((division) => ({
-        id: division.name.toLowerCase(),
-        name: division.name,
-        districts: division.districts,
-      })),
-    };
-  };
-
   return (
-    <address className="grid grid-cols-2">
+    <address className="grid grid-cols-2 gap-3 ">
       <FloatingInput
         defaultValue=""
         type={"text"}
@@ -79,23 +82,28 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         required
       />
 
-      <SearchableDropdown
-        defaultId={division}
-        label={"আপনার বিভাগঃ *"}
-        name="division"
-        loadLists={loadDivisionList}
-        onSelect={handleDivisionChange}
-        // dropDownLists={loadDivisionList} // Initially empty, will be loaded dynamically
-        //   dropDownLists={loadDivisionList.divisions.map((division) => ({
-        //     id: division.name.toLowerCase(),
-        //     name: division.name,
-        //     districts: division.districts,
-        //   }))}
-        //   autoComplete="address-level1"
-        //   searchOff={true}
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"আপনার জেলাঃ *"}
+        name={"district"}
+        inputType={"text"}
+        autoComplete="address-level1"
+        colSpan={"full"}
+        required={true}
       />
 
-      <SearchableDropdown
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"আপনার থানা/উপজেলা *"}
+        name={"thana"}
+        inputType={"text"}
+        autoComplete="address-level2"
+        colSpan={"full"}
+        required={true}
+      />
+      {/* <SearchableDropdown
         defaultId={district}
         label={"আপনার জেলাঃ *"}
         name="district"
@@ -103,34 +111,32 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         dropDownLists={
           division
             ? division.districts.map((district) => ({
-                id: district.name.toLowerCase(),
-                name: district.name,
+                id: district.district_en.toLowerCase(),
+                name: district.district_bn,
                 upazilas: district.upazilas,
               }))
             : []
         }
         searchOff={true}
         // autoComplete="address-level2"
-      />
+      /> */}
 
       {/* <SearchableDropdown
-        defaultId={district?.id || ""}
-        label={"আপনার উপজেলা"}
-        name="upazila"
-        onSelect={setUpazila}
+        colSpan={"full"}
+        defaultId={upazila}
+        label={"আপনার থানা/ উপজেলা *"}
+        name="thana"
+        onSelect={handleUpzillaChange}
         dropDownLists={
-          district && district.upazilas.length > 0
-            ? district.upazilas
-                .map((upazila) => ({
-                  id: upazila?.name
-                    ? upazila.name.toLowerCase()
-                    : upazila.toLowerCase(),
-                  name: upazila?.name ? upazila.name : upazila,
-                }))
-                .sort((a, b) => a.name.localeCompare(b.name))
+          district
+            ? district.upazilas.map((upzilla) => ({
+                id: upzilla.en.toLowerCase(),
+                name: upzilla.bn,
+              }))
             : []
         }
         searchOff={true}
+        // autoComplete="address-level2"
       /> */}
 
       <FloatingInput
@@ -141,7 +147,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         inputType={"text"}
         autoComplete="address-line1"
         colSpan={"full"}
-        placeholder="                                   বাসা/ফ্ল্যাট/রোড/ উপজেলা "
+        placeholder=" বাসা/ফ্ল্যাট/রোড/ "
         required={true}
       />
       <FloatingInput

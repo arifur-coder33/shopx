@@ -13,4 +13,5 @@ export const componentsMap = {
     import("@/app/admin/settings/resources/_component/RecourceForm"),
   UserUpdateForm: () =>
     import("@/app/(user)/(withMobileFooter)/(myAccount)/my-account/_components/UserUpdateForm"),
+  SupplierForm: () => import("@/app/admin/suppliers/Components/SupplierForm"),
 };

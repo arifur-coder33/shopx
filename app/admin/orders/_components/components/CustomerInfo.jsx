@@ -26,7 +26,7 @@ export default function CustomerInfo({ customer }) {
           <div>
             <p className="text-sm text-gray-500">Shipping Address</p>
             <p className="font-medium leading-snug">
-              {customer?.deliveryAddress}
+              {customer?.deliveryAddress},{customer?.thana} ,{customer?.city}
             </p>
           </div>
         </div>
@@ -35,7 +35,7 @@ export default function CustomerInfo({ customer }) {
           <div>
             <p className="text-sm text-gray-500">Payment Method</p>
             <p className="font-medium badge badge-ghost">
-              {customer?.paymentMethod}
+              {customer?.paymentMethod} [ {customer.paymentStatus} ]
             </p>
           </div>
         </div>

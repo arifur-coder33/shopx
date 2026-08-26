@@ -19,7 +19,7 @@ export async function generateMetadata({ params }) {
 
   if (!data) {
     return {
-      title: `Product not found - ${process.env.NEXT_SHOP_NAME}`,
+      title: `Product not found - ${process.env.NEXT_PUBLIC_NEXT_SHOP_NAME}`,
       description: "The product you are looking for could not be found.",
       openGraph: {
         title: "Product not found",
@@ -65,7 +65,7 @@ export async function generateMetadata({ params }) {
   }).format(Number(discountPrice));
 
   const availability = "in stock"; // Ensure this field is included and valid
-  const brandName = data.brand || process.env.NEXT_SHOP_NAME;
+  const brandName = data.brand || process.env.NEXT_PUBLIC_NEXT_SHOP_NAME;
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
 
   return {

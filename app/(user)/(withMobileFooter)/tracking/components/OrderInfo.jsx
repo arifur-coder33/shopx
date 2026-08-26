@@ -43,8 +43,10 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
   console.log(order);
   if (!loading && order.length === 0)
     return (
-      <div>
-        <p className="text-red-500">কোন ডাটা পাওয়া যায়নি।</p>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-red-600">Invalid Order</h1>
+
+        <p className="mt-3 text-gray-500">এই অর্ডারটি খুঁজে পাওয়া যায়নি।</p>
       </div>
     );
   return (
@@ -71,6 +73,8 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
             total={
               order?.orderPrice + order?.deliveryCharge - order?.adminDiscount
             }
+            paidAmount={order.paidAmount}
+            dueAmount={order.dueAmount}
           />
           {order?.note && <OrderNote note={order?.note} />}
 

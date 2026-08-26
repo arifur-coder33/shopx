@@ -37,6 +37,7 @@ export default function DynamicForm({
   updateAction,
   fromFields,
   children,
+  name,
 }) {
   const { closeModal } = useModalContext();
   const [isPending, startTransition] = useTransition();
@@ -106,6 +107,7 @@ export default function DynamicForm({
       onSubmit={handleSubmit}
       className="relative md:min-w-96  min-w-[calc(100vw-6rem)]"
     >
+      <div className="w-full rounded-md card text-center">{name}</div>
       {success && <p style={{ color: "green" }}>{success}</p>}
       {error && (
         <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">

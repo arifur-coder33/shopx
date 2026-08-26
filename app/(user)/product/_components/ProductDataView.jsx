@@ -17,6 +17,7 @@ const FacebookEventTrac = dynamic(() => import("./FacebookEventTrack"));
 export default function ProductDataView({
   data,
   blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  adminView,
 }) {
   const mainProductImageId = data?.thumbnail?.name || data?.mainImage;
 
@@ -47,7 +48,7 @@ export default function ProductDataView({
       <DeliveryInfo />
       <LazyLoadOnScroll>
         <ProductDescription description={description} />
-        <ViewProductEvent product={data} />
+        {!adminView && <ViewProductEvent product={data} />}
       </LazyLoadOnScroll>
 
       {/* --- LAZY LOAD THE FACEBOOK TRACKER --- */}

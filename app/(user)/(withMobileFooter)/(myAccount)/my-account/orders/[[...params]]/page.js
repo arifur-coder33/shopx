@@ -35,6 +35,7 @@ export default async function UserOrderPage({ params }) {
       id: true,
       status: true,
       orderNo: true,
+      dueAmount: true,
       orderItems: {
         select: {
           id: true,
@@ -70,10 +71,12 @@ export default async function UserOrderPage({ params }) {
         >
           <div className="transition-all duration-200 md:hover:scale-[1.02] md:hover:shadow-md">
             <OrderItemsTable
+              orderId={order.id}
               orderNo={order.orderNo}
               date={order.createdAt}
               status={order.status}
               items={order.orderItems}
+              dueAmount={order.dueAmount}
               style="user"
             />
           </div>
