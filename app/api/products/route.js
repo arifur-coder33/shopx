@@ -3,7 +3,6 @@ import { getProductsOnScroll } from "@/backend/serverActions/productActions";
 export async function GET(request) {
   // const data = await prisma.product.findMany();
   const session = await auth();
-  console.log(session);
   if (!session) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,

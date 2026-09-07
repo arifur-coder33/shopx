@@ -1,3 +1,7 @@
+"use client";
+
+import { useId } from "react";
+
 export default function DefaultInput({
   colSpan,
   value,
@@ -7,9 +11,8 @@ export default function DefaultInput({
   placeholder,
   required,
 }) {
-  const uniqueId = `input-${name}-${Math.random()
-    .toString(36)
-    .substring(2, 9)}`;
+  const reactId = useId();
+  const uniqueId = `input-${name}-${reactId.replace(/:/g, "")}`;
   return (
     <div className={`${colSpan} mt-3`}>
       <label

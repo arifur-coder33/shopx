@@ -3,8 +3,9 @@ import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
 import prisma from "@/lib/prisma";
-export const dynamic = "force-static";
-export async function generateStaticParams() {
+import Breadcrumb from "@/components/common/Breadcrumb";
+export const revalidate = 60;
+async function generateStaticParams() {
   const categories = await prisma.category.findMany({
     select: {
       id: true,
@@ -47,15 +48,20 @@ export default async function CategoryWithProductPage({ params }) {
   //   { revalidate: 3600, tags: ["category"] }
   // );
 
-  const { data } = await getCategoryPageData(slug[slug.length - 1]);
-  console.log("data", data);
+  const result = await getCategoryPageData(slug[slug.length - 1]);
+  const data = result?.data || [];
 
   return (
     <>
-      <ProductList headerName={data?.name}>
-        {data?.length > 0
-          ? data?.map((product) => (
-              <ProductCard key={product?.id} product={product} />
+      <Breadcrumb items={result?.breadcrumbs || []} className="mb-2" />
+      <ProductList headerName={result?.category?.name}>
+        {data.length > 0
+          ? data.map((product, index) => (
+              <ProductCard
+                key={product?.id}
+                product={product}
+                priority={index < 2}
+              />
             ))
           : "No Product found."}
       </ProductList>

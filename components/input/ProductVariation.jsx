@@ -607,14 +607,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
               />
               <FloatingInput
                 defaultValue={
-                  derivedInitialEnabled ? "" : initialCombinations[0]?.stock
-                }
-                name="stock"
-                label="Quantity"
-              />
-
-              <FloatingInput
-                defaultValue={
                   derivedInitialEnabled ? "" : initialCombinations[0]?.weight
                 }
                 name="weight"
@@ -830,12 +822,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                             </th>
                             <th
                               scope="col"
-                              className="px-2 py-2 font-semibold "
-                            >
-                              Qty
-                            </th>
-                            <th
-                              scope="col"
                               className="px-2 py-2 font-semibold w-4"
                             >
                               Weight (KG)
@@ -944,20 +930,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                       )
                                     }
                                     className="px-2 py-1.5 border w-16 border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  />
-                                </td>
-                                <td className="px-2 py-2 align-middle">
-                                  <input
-                                    type="number"
-                                    placeholder="0"
-                                    aria-label={`Quantity for ${row.uiKey}`}
-                                    step="1"
-                                    min="0"
-                                    value={row.qty ?? ""}
-                                    onChange={(e) =>
-                                      handleInputChange(e, row.uiKey, "qty")
-                                    }
-                                    className=" px-2 py-1.5 border w-16 border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </td>
                                 <td className="px-2 py-2 align-middle">

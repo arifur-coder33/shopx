@@ -1,25 +1,18 @@
 "use client";
 
-import { createBkashPayment } from "@/backend/lib/payments/bkash/bkashPayments";
+import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
+import { useState } from "react";
 
-export default function BkashPayButton({ amount, orderId }) {
+export default function BkashPayButton({ paymentId }) {
+  const [loading, setLoading] = useState(false);
   const handlePayment = async () => {
-    const data = await createBkashPayment(amount, orderId);
-    console.log("Bkash Payment Response:", data);
-    if (data.bkashURL) {
-      window.location.href = data.bkashURL; // redirect to bKash
-    } else {
-      alert("Payment failed to initiate");
+    setLoading(true);
+    const result = await initiateConfiguredPayment(paymentId);
+    if (result.success && result.url) window.location.href = result.url;
+    else {
+      window.alert(result.message || "Payment failed to initiate");
+      setLoading(false);
     }
   };
-
-  return (
-    <button
-      type="button"
-      onClick={handlePayment}
-      className="bg-pink-600 text-white px-6 py-3 rounded-lg"
-    >
-      Pay with bKash
-    </button>
-  );
+  return <button disabled={loading} type="button" onClick={handlePayment} className="rounded-lg bg-pink-600 px-6 py-3 text-white disabled:opacity-50">{loading ? "Opening bKash…" : "Pay with bKash"}</button>;
 }

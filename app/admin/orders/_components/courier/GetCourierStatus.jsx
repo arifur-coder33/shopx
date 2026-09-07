@@ -1,7 +1,7 @@
 import { getCourierDeliveryStatusAction } from "@/backend/serverActions/courierAction";
 import { useEffect, useState } from "react";
 
-export default function GetCourierStatus({ courierId, courierName }) {
+export default function GetCourierStatus({ courierId, courierProviderId }) {
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -9,19 +9,18 @@ export default function GetCourierStatus({ courierId, courierName }) {
       try {
         const fatchResponse = await getCourierDeliveryStatusAction({
           courierId,
-          courierName,
+          courierProviderId,
         });
 
         if (fatchResponse.success) {
           setData(fatchResponse.data);
         }
       } catch (error) {
-        setStatus("Unknown");
-        console.error("Error fetching courier status:", error);
+        setData({ status: "Unknown" });
       }
     };
     fetchStatus();
-  }, [courierId, courierName]);
+  }, [courierId, courierProviderId]);
   if (data?.status) {
     return (
       <>

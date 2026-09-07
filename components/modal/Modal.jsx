@@ -20,20 +20,27 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
 
   return (
     <div
-      className={`fixed  inset-0 z-50 flex items-center justify-center bg-black/70 transition-opacity duration-300 ease-in-out ${
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 transition-opacity duration-300 ease-in-out sm:p-4 ${
         isOpen ? "opacity-100" : "opacity-0"
       }`}
     >
       <div
-        className={` bg-white max-w-[calc(100dvw-20px)] max-h-[calc(100dvh-20px)] md:max-w-6xl dark:bg-slate-900 rounded border-2 shadow-xl shadow-black dark:shadow-slate-500 p-4 md:p-6 lg:p-8 m-4 relative transition-all duration-500 ease-in-out transform ${
+        role="dialog"
+        aria-modal="true"
+        className={`relative max-h-[calc(100dvh-1rem)] w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-surface p-3 shadow-2xl transition-all duration-300 sm:max-h-[calc(100dvh-2rem)] sm:p-6 ${
           isAnimating ? "scale-100 opacity-100" : "scale-0 opacity-50 "
         } `}
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+          aria-label="Close dialog"
+          className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted text-text-muted hover:text-text"
         >
           <svg
             className="h-6 w-6"
@@ -51,7 +58,7 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
         </button>
 
         {/* Modal Content */}
-        <div className="max-h-[90vh] overflow-y-auto p-px">{children}</div>
+        <div className="max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain p-px pt-10 sm:max-h-[calc(100dvh-6rem)]">{children}</div>
       </div>
     </div>
   );

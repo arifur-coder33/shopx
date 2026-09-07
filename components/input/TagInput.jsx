@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useId, useState } from "react";
 
 export default function TagInput({
   modal,
@@ -9,9 +11,8 @@ export default function TagInput({
   onChange,
   ...props
 }) {
-  const uniqueId = `input-${name}-${Math.random()
-    .toString(36)
-    .substring(2, 9)}`;
+  const reactId = useId();
+  const uniqueId = `input-${name}-${reactId.replace(/:/g, "")}`;
 
   const [tags, setTags] = useState([]);
   const [inputValue, setInputValue] = useState("");
@@ -37,7 +38,6 @@ export default function TagInput({
     }, 2000); // 2 seconds
 
     return () => clearTimeout(timer); // Clear timer on input change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputValue]);
 
   const handleInputChange = (e) => {

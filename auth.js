@@ -24,7 +24,6 @@ export const {
       },
 
       async authorize(credentials) {
-        console.log("Attempting login with credentials:", credentials);
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -36,8 +35,6 @@ export const {
             role: true,
           },
         });
-        console.log("User found for authentication:", user);
-
         if (!user || !user.password) return null;
 
         const isValid = await bcrypt.compare(

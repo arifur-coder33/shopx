@@ -207,11 +207,20 @@
 "use client";
 
 import { useModalContext } from "@/context/ModalContext";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
 import LazyModalButton from "../modal/LazyModalButton";
 import { confirmFromUser } from "../modal/confrim/confirm";
+
+const colSpanClasses = {
+  1: "col-span-1",
+  2: "col-span-2",
+  3: "col-span-3",
+  4: "col-span-4",
+  full: "col-span-full",
+};
 
 export default function SearchableDropdown({
   name,
@@ -226,8 +235,12 @@ export default function SearchableDropdown({
   searchOff = false,
   itemId,
   isConfirm = false,
+  required = false,
+  largeMobile = false,
 }) {
   const { modalClosed, setModalClosed } = useModalContext();
+  const generatedId = useId();
+  const inputId = `${name || "searchable-dropdown"}-${generatedId}`;
 
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
@@ -268,8 +281,13 @@ export default function SearchableDropdown({
   /* ---------------- Filter (fast) ---------------- */
   const filteredOptions = useMemo(() => {
     if (!query) return list;
+    const normalizedQuery = query.toLocaleLowerCase();
     return list.filter((item) =>
-      item.name.toLowerCase().includes(query.toLowerCase()),
+      [item.name, item.searchText, item.id]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(normalizedQuery),
     );
   }, [query, list]);
 
@@ -349,41 +367,63 @@ export default function SearchableDropdown({
   };
 
   return (
-    <div ref={wrapperRef} className={`relative col-span-${colSpan}`}>
-      {label && (
-        <label className="block mb-2 text-xl font-medium text-gray-900 dark:text-white">
-          {label}
-        </label>
-      )}
-
+    <div
+      ref={wrapperRef}
+      className={`relative ${colSpanClasses[colSpan] || colSpanClasses[1]}`}
+    >
       {/* Hidden input (form support) */}
       <input hidden name={name} value={selected?.id || ""} readOnly />
 
       {/* Input */}
       <div className="relative">
         <input
+          id={inputId}
           ref={inputRef}
           type="text"
           value={loading ? "Loading..." : query || selected?.name || ""}
-          placeholder="Select an option"
+          placeholder={label ? " " : "Select an option"}
           readOnly={searchOff}
           onFocus={openDropdown}
+          required={required}
           onChange={(e) => {
             setQuery(e.target.value);
             setSelected(null);
           }}
-          className="w-full border rounded-md py-2 px-3 text-xl
-          bg-slate-200 dark:bg-slate-600
-          text-slate-700 dark:text-slate-300
-          focus:ring-2 focus:ring-blue-500"
+          className={`peer block h-12 w-full appearance-none rounded-lg border border-gray-300 bg-slate-200 px-2.5 pr-11 ${largeMobile ? "text-xl md:text-lg" : "text-lg"} text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-500
+              user-invalid:border-red-500
+            user-invalid:blink-border
+              user-invalid:border-2
+    user-invalid:focus:border-red-500
+    user-invalid:focus:ring-red-500
+          `}
         />
+
+        {label && (
+          <label
+            htmlFor={inputId}
+            className={`pointer-events-none absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 rounded-md bg-slate-200 px-2 ${largeMobile ? "text-xl md:text-lg" : "text-lg"} font-medium text-slate-500 duration-300 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:px-2 peer-focus:text-blue-600 dark:bg-slate-600 dark:text-gray-400 peer-focus:dark:text-slate-200`}
+          >
+            {label}
+          </label>
+        )}
 
         <button
           type="button"
-          onClick={() => setIsOpen((p) => !p)}
-          className="absolute inset-y-0 right-2 text-gray-500"
+          aria-label={`${label || "Option"} তালিকা ${isOpen ? "বন্ধ" : "খুলুন"}`}
+          aria-expanded={isOpen}
+          onClick={() => {
+            if (isOpen) {
+              setIsOpen(false);
+              return;
+            }
+            inputRef.current?.focus();
+          }}
+          className="absolute inset-y-0 right-1 flex w-10 items-center justify-center rounded-r-lg text-slate-500 transition-colors hover:text-blue-600 dark:text-gray-300"
         >
-          ▼
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          />
         </button>
       </div>
 
@@ -394,7 +434,7 @@ export default function SearchableDropdown({
           <ul
             ref={dropdownRef}
             style={dropdownStyle}
-            className="max-h-44 overflow-y-auto rounded-md border
+            className="max-h-44 overflow-y-auto rounded-md border text-base
             bg-slate-100 dark:bg-slate-900
             text-slate-700 dark:text-slate-300
             shadow-lg"

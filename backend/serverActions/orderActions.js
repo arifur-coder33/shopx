@@ -1,5 +1,9 @@
 "use server";
 import prisma from "@/lib/prisma";
+import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
+import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
+import { postCodCollection } from "@/backend/services/paymentPostingService";
+import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { getIP } from "../utils/getIp";
@@ -242,81 +246,93 @@ const statusMap = {
 export async function createOrder(formData) {
   const [h, userId] = await Promise.all([headers(), getUserId()]);
   const ip = getIP(h);
-
   try {
-    const formDataObj = Object.fromEntries(formData.entries());
-    const data = { ...formDataObj };
+    const data = Object.fromEntries(formData.entries());
     const orderItems = JSON.parse(data?.products);
-
-    if (!data?.customerName || !data?.phoneNumber || !data?.deliveryAddress) {
+    const paymentMethod = String(data.paymentMethod || "").toUpperCase();
+    if (!data?.customerName || !data?.phoneNumber || !data?.division || !data?.district || !data?.thana || !data?.deliveryAddress || !Array.isArray(orderItems) || !orderItems.length) {
       throw new Error(
-        "আপনার নাম, মোবাইল নাম্বার এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
+        "আপনার নাম, মোবাইল নাম্বার, বিভাগ, জেলা, থানা এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
       );
     }
-
-    // ✅ Stock check BEFORE generating order number (fast fail)
+    if (!["COD", "ONLINE", "EMI"].includes(paymentMethod)) {
+      throw new Error("Select a valid payment method.");
+    }
+    if (paymentMethod !== "COD" && !data.paymentGatewayId) {
+      throw new Error("Select an online payment gateway.");
+    }
     const variationIds = orderItems.map((item) => item.variation.id);
     const variations = await prisma.productVariation.findMany({
       where: { id: { in: variationIds } },
-      select: { id: true, stock: true },
+      select: {
+        id: true,
+        sku: true,
+        regularPrice: true,
+        discountPrice: true,
+        weight: true,
+        stocks: { select: { available: true } },
+        product: { select: { id: true, title: true, productCode: true, allowOutOfStockOrder: true } },
+      },
     });
-
-    const variationMap = Object.fromEntries(variations.map((v) => [v.id, v]));
-
-    for (const item of orderItems) {
-      const variation = variationMap[item.variation.id];
+    const variationMap = Object.fromEntries(variations.map((v) => [v.id, { ...v, available: v.stocks.reduce((sum, stock) => sum + Math.max(0, stock.available || 0), 0) }]));
+    const requestedByVariation = orderItems.reduce((map, item) => map.set(item.variation.id, (map.get(item.variation.id) || 0) + Number(item.quantity)), new Map());
+    for (const [variationId, requested] of requestedByVariation) {
+      const variation = variationMap[variationId];
       if (!variation)
-        throw new Error(`Variation not found for "${item.title}"`);
-      if (variation.stock < item.quantity) {
+        throw new Error("Selected product variation was not found.");
+      if (!variation.product?.allowOutOfStockOrder && variation.available < requested) {
+        const item = orderItems.find((row) => row.variation.id === variationId);
         throw new Error(
-          `${item.title} স্টক শেষ। মাত্র ${variation.stock}টি বাকি আছে।`,
+          `${item.title} স্টক শেষ। মাত্র ${variation.available}টি বাকি আছে।`,
         );
       }
     }
+    const serverOrderPrice = orderItems.reduce((total, item) => {
+      const variation = variationMap[item.variation.id];
+      const unitPrice = variation.discountPrice ?? variation.regularPrice;
+      if (!Number.isFinite(Number(unitPrice))) throw new Error(`Price is unavailable for ${variation.product.title}.`);
+      return total + Number(item.quantity) * Number(unitPrice);
+    }, 0);
+    const serverOrderWeight = orderItems.reduce((total, item) => {
+      const variation = variationMap[item.variation.id];
+      return total + Math.max(0, Number(variation.weight) || 0) * Number(item.quantity);
+    }, 0);
+    const deliveryArea = data.deliveryArea === "inside-dhaka" ? "inside-dhaka" : "outside-dhaka";
 
-    // ✅ Generate order number instantly — 1 lightweight query
-    const counter = await prisma.orderCounter.upsert({
-      where: { idNo: 11 },
-      update: { lastOrderNumber: { increment: 1 } },
-      create: { idNo: 11, lastOrderNumber: 240000020 },
-      select: { lastOrderNumber: true },
-    });
-
-    const newOrderNumber = counter.lastOrderNumber.toString();
-
-    // ✅ Return INSTANTLY — user sees success immediately
-    // Fire all DB writes in background without awaiting
-    persistOrderInBackground({
-      newOrderNumber,
-      userId,
-      ip,
-      data,
-      orderItems,
-    });
-
-    return {
-      success: true,
-      data: {
-        orderNo: newOrderNumber,
-        phoneNumber: data.phoneNumber,
-      },
-    };
-  } catch (error) {
-    console.log(error.message);
-    return { success: false, error: error.message };
-  }
-}
-
-// 🔥 All heavy DB writes happen here — completely non-blocking
-async function persistOrderInBackground({
-  newOrderNumber,
-  userId,
-  ip,
-  data,
-  orderItems,
-}) {
-  try {
-    const order = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      const deliveryRates = await getCheckoutDeliveryRates(tx);
+      const deliveryCharge = calculateDeliveryCharge(deliveryArea, serverOrderWeight, deliveryRates);
+      const totalAmount = serverOrderPrice + deliveryCharge;
+      const provider = paymentMethod !== "COD"
+        ? await tx.paymentGateway.findUnique({
+            where: { id: data.paymentGatewayId },
+            include: { moneyAccount: true },
+          })
+        : null;
+      const providerConfiguration = provider
+        ? getProviderRuntimeConfiguration("gateway", provider)
+        : null;
+      if (paymentMethod !== "COD" && !providerConfiguration?.ready) {
+        throw new Error("The selected provider is unavailable or not fully configured.");
+      }
+      if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") {
+        throw new Error("Installment payment is available only through SSLCommerz.");
+      }
+      if (paymentMethod === "COD") {
+        const codGateway = await tx.paymentGateway.findFirst({
+          where: { adapterKey: "COD", isActive: true },
+        });
+        if (!getProviderRuntimeConfiguration("gateway", codGateway).ready) {
+          throw new Error("Cash on Delivery is currently disabled.");
+        }
+      }
+      const counter = await tx.orderCounter.upsert({
+        where: { idNo: 11 },
+        update: { lastOrderNumber: { increment: 1 } },
+        create: { idNo: 11, lastOrderNumber: 240000020 },
+        select: { lastOrderNumber: true },
+      });
+      const newOrderNumber = counter.lastOrderNumber.toString();
       const order = await tx.order.create({
         data: {
           orderNo: newOrderNumber,
@@ -325,14 +341,19 @@ async function persistOrderInBackground({
           phoneNumber: data.phoneNumber,
           email: data.email,
           city: data.district,
-          deliveryCharge: Number(data.deliveryCharge),
-          orderPrice: Number(data.orderPrice),
-          orderWeight: Number(data.orderWeight),
+          thana: data.thana,
+          deliveryArea,
+          deliveryCharge,
+          orderPrice: serverOrderPrice,
+          orderWeight: serverOrderWeight,
           deliveryAddress: data.deliveryAddress,
-          paymentMethod: data.paymentMethod,
-          paymentStatus: data.paymentMethod === "cod" ? "UNPAID" : "PENDING",
+          paymentMethod,
+          paymentStatus: "PENDING",
+          selectedPaymentGatewayId:
+            paymentMethod !== "COD" ? provider.id : null,
+          selectedCourierProviderId: null,
           paidAmount: 0,
-          dueAmount: Number(data.orderPrice) + Number(data.deliveryCharge),
+          dueAmount: totalAmount,
           note: data?.note,
           fbc: data?.fbc,
           fbp: data?.fbp,
@@ -342,26 +363,20 @@ async function persistOrderInBackground({
           ipAddress: ip,
         },
       });
-
-      await Promise.all([
-        ...orderItems.map((item) =>
-          tx.productVariation.update({
-            where: { id: item.variation.id },
-            data: { stock: { decrement: Number(item.quantity) } },
-          }),
-        ),
-        tx.orderItem.createMany({
-          data: orderItems.map((item, i) => ({
+      await tx.orderItem.createMany({
+          data: orderItems.map((item, i) => {
+            const variation = variationMap[item.variation.id];
+            return {
             orderNo: newOrderNumber,
             orderItemNo: i + 1,
-            productName: item.title,
-            price: Number(item.discountPrice || item.regularPrice),
+            productName: variation.product.title,
+            price: Number(variation.discountPrice ?? variation.regularPrice),
             quantity: Number(item.quantity),
-            productCode: item.productCode,
-            sku: item.sku,
+            productCode: variation.product.productCode,
+            sku: variation.sku,
             thumbnail: item.thumbnail,
-            productId: item.id,
-            variationId: item.variation.id,
+            productId: variation.product.id,
+            variationId: variation.id,
             orderId: order.id,
             combinationId: item.variation.combinationId || undefined,
             combinations: JSON.stringify(
@@ -370,29 +385,41 @@ async function persistOrderInBackground({
                 value: c.variationValue.value,
               })) || [],
             ),
-          })),
+          };
         }),
-      ]);
-
-      return order;
+      });
+      const payment = await tx.payment.create({
+        data: {
+          orderId: order.id,
+          gateway: paymentMethod !== "COD" ? provider.code : "COD",
+          paymentMethod,
+          paymentGatewayId: paymentMethod !== "COD" ? provider.id : null,
+          courierProviderId: null,
+          amount: totalAmount,
+          status: "PENDING",
+        },
+      });
+      await tx.orderTimeline.create({
+        data: {
+          orderId: order.id,
+          orderNo: order.orderNo,
+          status: "PENDING",
+          title: "Order Created",
+          message: "Your order has been created and is pending confirmation.",
+          createdBy: "user",
+        },
+      });
+      return {
+        ...order,
+        paymentId: payment.id,
+        providerCode: paymentMethod !== "COD" ? provider.code : "COD",
+      };
     });
-
-    // Non-critical side effects
-    await addOrderTimeline({
-      orderId: order.id,
-      orderNo: order.orderNo,
-      status: "PENDING",
-      title: "Order Created",
-      message: "Your order has been created and is pending confirmation.",
-      createdBy: "user",
-    }).catch(console.error);
-
     revalidatePath("/admin/orders");
     revalidateTag("orders");
+    return { success: true, data: result };
   } catch (error) {
-    // ⚠️ Log to your error monitoring (Sentry, etc.) — user already got success
-    console.error("Background order persist failed:", error.message);
-    // TODO: alert admin or add to a retry queue
+    return { success: false, error: error.message };
   }
 }
 export async function getAllOrder(params) {
@@ -533,8 +560,10 @@ export async function getOrderById(orderId) {
             combination: true,
           },
         },
-        shipping: true,
-        payments: true,
+        shipping: { include: { courierProvider: true } },
+        selectedPaymentGateway: true,
+        selectedCourierProvider: true,
+        payments: { include: { paymentGateway: true, courierProvider: true, moneyAccount: true } },
       },
     });
     console.log("Fetched order by ID:", data);
@@ -617,15 +646,51 @@ export async function updateOrderStatusAction(orderId, status, note) {
     // 🔎 get order first (for orderNo + old status)
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      select: { status: true, orderNo: true, id: true, paymentMethod: true },
+      select: {
+        status: true,
+        orderNo: true,
+        id: true,
+        paymentMethod: true,
+        dueAmount: true,
+        selectedCourierProviderId: true,
+        shipping: {
+          select: { cn: true, cod: true, courierProviderId: true },
+        },
+      },
     });
 
     if (!order) {
       throw new Error("Order not found");
     }
 
+    // Courier delivery is the COD collection event. The posting service is
+    // idempotent, so webhook, status polling, and a repeated update cannot
+    // credit the courier Money Account more than once.
+    const postDeliveredCod = async () => {
+      if (status !== "DELIVERED" || order.paymentMethod !== "COD") return null;
+      const collectionAmount = Number(
+        order.dueAmount ?? order.shipping?.cod ?? 0,
+      );
+      if (!Number.isFinite(collectionAmount) || collectionAmount <= 0) {
+        return null;
+      }
+      return postCodCollection({
+        orderId: order.id,
+        courierProviderId:
+          order.shipping?.courierProviderId ||
+          order.selectedCourierProviderId ||
+          undefined,
+        amount: collectionAmount,
+        reference: order.shipping?.cn || order.orderNo,
+        externalEventId: `ORDER_DELIVERED:${order.id}`,
+        collectedAt: new Date(),
+        createdBy: "courier-delivery",
+      });
+    };
+
     // ❌ duplicate same status prevent
     if (order.status === status) {
+      await postDeliveredCod();
       return {
         success: true,
         message: "Status already updated",
@@ -667,6 +732,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
       message: note || `Order status changed to ${status}`,
       createdBy: "admin",
     });
+    await postDeliveredCod();
     if (order.paymentMethod === "cod" && status === "PROCESSING") {
       firePurchaseServer({ orderId }).catch((err) =>
         console.error("Tracking failed:", err),
@@ -755,19 +821,8 @@ export async function cancelOrderById({
         throw new Error("Order already CANCELLED/returned");
       }
 
-      // 2️⃣ Stock restore
-      for (const item of order.orderItems) {
-        await tx.productVariation.update({
-          where: { id: item.variationId },
-          data: {
-            stock: {
-              increment: item.quantity, // ✅ stock back
-            },
-          },
-        });
-      }
-
-      // 3️⃣ Update order status
+      // Stock is maintained in the warehouse Stock model and is consumed on delivery.
+      // Cancelling an unfulfilled order therefore does not alter inventory.
       await tx.order.update({
         where: { id: orderId },
         data: {
@@ -911,6 +966,13 @@ export async function getOrderIdByOrderNoPhoneNo({ orderNo, phoneNumber }) {
       },
       select: {
         id: true,
+        orderNo: true,
+        phoneNumber: true,
+        status: true,
+        paymentStatus: true,
+        paymentMethod: true,
+        paidAmount: true,
+        dueAmount: true,
       },
     });
 
@@ -921,5 +983,72 @@ export async function getOrderIdByOrderNoPhoneNo({ orderNo, phoneNumber }) {
     return { success: true, data: order }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
+  }
+}
+
+export async function cancelUnpaidCustomerOrder({
+  orderNo,
+  phoneNumber,
+  reason,
+}) {
+  try {
+    if (!orderNo || !phoneNumber) throw new Error("Order information is required.");
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { orderNo, phoneNumber },
+        include: {
+          shipping: true,
+          payments: { select: { status: true } },
+          deliveries: { select: { id: true }, take: 1 },
+        },
+      });
+      if (!order) throw new Error("Order not found.");
+      if (order.status === "CANCELLED") return;
+      const hasPostedPayment = order.payments.some((payment) =>
+        ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED", "REFUNDED"].includes(
+          payment.status,
+        ),
+      );
+      if (
+        order.status !== "PENDING" ||
+        (order.paidAmount || 0) > 0 ||
+        hasPostedPayment ||
+        order.shipping?.cn ||
+        order.deliveries.length
+      ) {
+        throw new Error("This order can no longer be cancelled by the customer.");
+      }
+      await tx.payment.updateMany({
+        where: { orderId: order.id, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: "CANCELLED",
+          paymentStatus: "CANCELLED",
+          cancelReasonType: "CUSTOMER_CANCELLED",
+          cancelReason: String(reason || "Cancelled by customer before confirmation").slice(0, 500),
+        },
+      });
+      await tx.orderTimeline.create({
+        data: {
+          orderId: order.id,
+          orderNo: order.orderNo,
+          status: "CANCELLED",
+          title: "Order Cancelled",
+          message: String(reason || "Customer cancelled before order confirmation").slice(0, 500),
+          createdBy: "customer",
+        },
+      });
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath("/tracking");
+    return { success: true, message: "Order cancelled successfully." };
+  } catch (error) {
+    return {
+      success: false,
+      message: error?.message || "Order could not be cancelled.",
+    };
   }
 }

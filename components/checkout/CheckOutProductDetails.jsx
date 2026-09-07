@@ -1,5 +1,6 @@
 "use client";
 import { useCart } from "@/context/CartContext";
+import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { Truck } from "lucide-react";
 import { Suspense, useState } from "react";
@@ -8,7 +9,7 @@ export default function CheckoutProductDetails({ deliveryArea }) {
   const [orderItems, setOrderItems] = useState([]);
   const { totalCartPrice, totalCartRegularPrice } = useCart();
 
-  const deliveryCharge = deliveryArea == "dhaka" ? 90 : 120;
+  const deliveryCharge = calculateDeliveryCharge(deliveryArea, 1);
 
   return (
     <>

@@ -3,7 +3,7 @@ import OrderForm from "@/components/checkout/OrderForm";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import BuyNowProductDetails from "./BuyNowProductDetails";
-export default function BuyNowCheckout({ data }) {
+export default function BuyNowCheckout({ data, deliveryRates, checkoutProviders }) {
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
   const searchParams = useSearchParams();
   const initialQty = searchParams.get("qty") || 1;
@@ -74,6 +74,7 @@ export default function BuyNowCheckout({ data }) {
       variationId={variationId}
       totalPrice={totalPrice}
       orderWeight={orderWeight}
+      checkoutProviders={checkoutProviders}
     >
       <BuyNowProductDetails
         setProductQty={setProductQty}
@@ -83,6 +84,7 @@ export default function BuyNowCheckout({ data }) {
         setDeliveryCharge={setDeliveryCharge}
         setTotalPrice={setTotalPrice}
         setOrderWeight={setOrderWeight}
+        deliveryRates={deliveryRates}
       />
     </OrderForm>
   );

@@ -5,7 +5,7 @@ import GetCourierStatus from "./GetCourierStatus";
 export default function CourierStatus({ details, onCancel, order, status }) {
   const invoiceData = {
     shopId: "1181689",
-    invoice: details.cn,
+    invoice: order.orderNo,
     sfId: details.cn,
     deliveryType: "Home",
     weight: order.weight || 0.5,
@@ -54,10 +54,14 @@ export default function CourierStatus({ details, onCancel, order, status }) {
       <div>
         <div className="text-base font-bold  tracking-tighter mb-2">
           Current Courier Status :{" "}
-          <GetCourierStatus
-            courierId={details.cn}
-            courierName={details.courierName}
-          />
+          {details.courierName !== "Manual Delivery" ? (
+            <GetCourierStatus
+              courierId={details.cn}
+              courierProviderId={details.courierProviderId}
+            />
+          ) : (
+            <span className="rounded-3xl bg-slate-200 px-2">Manual</span>
+          )}
         </div>
       </div>
       <div className="flex gap-3">

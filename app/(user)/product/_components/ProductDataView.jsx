@@ -1,18 +1,13 @@
 import LazyLoadOnScroll from "@/components/common/LazyLoadOnScroll";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import dynamic from "next/dynamic"; // <-- Import dynamic
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
 import DeliveryInfo from "./DeliveryInfo";
 import ProductHeader from "./ProductHeader";
-const ProductImageGallery = dynamic(
-  () => import("./ProductImageGallery"), // <-- Corrected
-);
-// --- LAZY-LOADED COMPONENTS ---
 const ProductDescription = dynamic(
   () => import("@/components/products/productDescription"),
 );
-const FacebookEventTrac = dynamic(() => import("./FacebookEventTrack"));
 
 export default function ProductDataView({
   data,
@@ -42,6 +37,7 @@ export default function ProductDataView({
             blurDataURL={blurDataURL}
             priority
             fetchPriority="high"
+            unoptimized
           />
         </ProductHeader>
       </div>

@@ -19,7 +19,6 @@ export default function CourierManagement({ order, status, setStatus }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [courierDetails, setCourierDetails] = useState(order?.shipping || null);
-
   const [loading, setLoading] = useState(false);
   const { data: session } = useSession();
   const permissions = session?.user?.permissions;
@@ -30,7 +29,6 @@ export default function CourierManagement({ order, status, setStatus }) {
     price: order?.dueAmount,
     weight: order?.orderWeight,
     city: order?.city,
-    storeId: "WH-01",
   });
 
   const handleCreate = async (e) => {
@@ -38,15 +36,8 @@ export default function CourierManagement({ order, status, setStatus }) {
     setLoading(true);
     const form = e.target;
     const formData = new FormData(form);
-    const getCourierName = formData.get("courierName");
-    if (!getCourierName) {
-      if (selectedCourier.name)
-        formData.append("courierName", selectedCourier.name);
-    }
-
+    formData.append("courierProviderId", selectedCourier.id);
     formData.append("invoice", order?.orderNo);
-    let newData = Object.fromEntries(formData.entries());
-
     const response = await createCourierDeliveryAction({ formData });
 
     if (response.success) {
@@ -56,7 +47,7 @@ export default function CourierManagement({ order, status, setStatus }) {
       setView("status");
       setError(null);
       setSuccess(true);
-      setStatus("READY_TO_SHIP");
+      setStatus("PROCESSING");
     } else {
       toast.error(response.message || "Failed to create courier order");
       setLoading(false);
@@ -137,11 +128,11 @@ export default function CourierManagement({ order, status, setStatus }) {
                 setSelectedCourier(c);
                 setView("form");
               }}
-              activeCourierId={courierDetails?.courierId}
+              activeCourierId={courierDetails?.courierProviderId}
             />
           ) : (
             <CourierForm
-              courierName={selectedCourier?.name}
+              provider={selectedCourier}
               data={data}
               onSubmit={handleCreate}
               loading={loading}

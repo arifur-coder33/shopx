@@ -2,35 +2,40 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-// import Modal from "./Modal";
-import { useMounted } from "@/hooks/useMounted";
-import { LayoutGrid,  AlignJustify } from "lucide-react";
-import CategoryTree from "./CategoryTree";
-// Dynamically import CartPage. Its code will only be fetched from the server
-// when the user clicks the cart icon and `isOpen` becomes true.
-// const CategoryTree = dynamic(() => import("./CategoryTree"));
-const Modal = dynamic(() => import("@/components/Modal"), {
-  ssr: false, // Ensure the modal is only rendered on the client side
+import { Menu } from "lucide-react";
+
+const CategoryTree = dynamic(() => import("./CategoryTree"), {
+  loading: () => (
+    <div className="space-y-3 p-3" aria-label="বিভাগ লোড হচ্ছে">
+      {[1, 2, 3, 4].map((item) => (
+        <div key={item} className="h-12 animate-pulse rounded-xl bg-surface-muted" />
+      ))}
+    </div>
+  ),
 });
-// import Modal from "@/components/Modal"
-export default function CategoryDrawer({ className, children, initialData }) {
+const Modal = dynamic(() => import("@/components/Modal"), {
+  ssr: false,
+});
+
+export default function CategoryDrawer({ className = "", children, initialData }) {
   const [isOpen, setIsOpen] = useState(false);
-  const hasMounted = useMounted();
   return (
     <>
-      <div
-        onClick={() => setIsOpen(true)} // Changed to ensure it only opens
-        className="relative cursor-pointer"
+      <button
+        type="button"
+        aria-label="পণ্যের বিভাগ দেখুন"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen(true)}
+        className={`relative flex h-11 w-11 items-center justify-center rounded-brand border border-border bg-surface text-text shadow-sm transition hover:border-primary hover:bg-primary-soft hover:text-primary ${className}`}
       >
-        {children ||   <AlignJustify className="text-white dark:text-gray-300"/>}
-      </div>
+        {children || <Menu className="h-6 w-6" />}
+      </button>
 
-      {/* The Modal itself is lightweight. The expensive part is its content. */}
-      <Modal isOpen={isOpen} setIsOpen={setIsOpen} openStyle="left">
-        {isOpen && (
+      {isOpen && (
+        <Modal isOpen={isOpen} setIsOpen={setIsOpen} openStyle="left">
           <CategoryTree initialData={initialData} setIsOpen={setIsOpen} />
-        )}
-      </Modal>
+        </Modal>
+      )}
     </>
   );
 }

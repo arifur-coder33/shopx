@@ -201,6 +201,7 @@ import {
 } from "@/backend/serverActions/orderActions";
 import { getOrderTimeline } from "@/backend/serverActions/orderTimelineActin";
 import { confirmFromUser } from "@/components/modal/confrim/confirm";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
@@ -417,10 +418,10 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
               <>
                 <button
                   disabled={loading}
-                  onClick={() => handleStatusChange("PROCESSING")}
+                  onClick={scrollToCourier}
                   className="px-4 py-2 bg-green-600 text-white rounded"
                 >
-                  Confirm Order
+                  Confirm & Create Courier
                 </button>
 
                 <button
@@ -435,12 +436,12 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
 
             {status === "PROCESSING" && (
               <>
-                <button
-                  onClick={scrollToCourier}
+                <Link
+                  href="/admin/procurement/deliveries"
                   className="px-4 py-2 bg-indigo-600 text-white rounded"
                 >
-                  Select Courier
-                </button>
+                  Open Delivery Queue
+                </Link>
 
                 <button
                   onClick={() => setReasonType("cancel")}

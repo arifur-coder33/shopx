@@ -15,7 +15,9 @@ export async function getListCount({
     const value = filters[field];
     if (!value || value === "ALL") return;
 
-    if (type === "enum" || exactMatch) {
+    if (type === "boolean") {
+      where[field] = value === true || value === "true";
+    } else if (type === "enum" || exactMatch) {
       where[field] = value;
     } else {
       where[field] = { contains: value, mode: "insensitive" };

@@ -1,6 +1,5 @@
-import { deleteOrderById } from "@/backend/serverActions/orderActions";
-
 import {
+  deleteSupplier,
   getAllSuppliers,
   getSupplierCount,
 } from "@/backend/serverActions/supplierAction";
@@ -37,7 +36,7 @@ export const supplierConfig = {
 
   fetchAction: getAllSuppliers,
   getCountAction: getSupplierCount,
-  deleteAction: deleteOrderById,
+  deleteAction: deleteSupplier,
 
   fetchParams: {
     // time: "ALL",
@@ -47,14 +46,14 @@ export const supplierConfig = {
   filterSearchProperties: [
     { label: "Supplier No", field: "supplierCode" },
     { label: "Supplier Name", field: "companyName" },
-    { label: "Phone Number", field: "phoneNumber" },
+    { label: "Phone Number", field: "phone" },
   ],
 
   filterTagProperties: [
     {
       label: "Status",
-      field: "status",
-      options: ["ALL", "ACTIVE", "INACTIVE"],
+      field: "isActive",
+      options: ["ALL", "true", "false"],
       defaultValue: "ALL",
     },
     // {

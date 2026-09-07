@@ -6,7 +6,6 @@ export const dynamic = "force-static";
 
 export default async function OfferPage() {
   const session = await auth();
-  console.log(session);
 
   const { data } = await getNotice();
   console.log(data);

@@ -20,6 +20,12 @@ export const productFormFields = ({
     colSpan: "1",
   },
   {
+    type: "checkbox",
+    label: "Allow orders when stock is zero",
+    name: "allowOutOfStockOrder",
+    colSpan: "2",
+  },
+  {
     type: "file",
     label: "Main Image",
     name: "thumbnail",

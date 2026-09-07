@@ -96,7 +96,6 @@ export default function ProductImageGallery({
         setActiveIndex(newIndex);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeImageId]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);

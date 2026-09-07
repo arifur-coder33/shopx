@@ -1,19 +1,24 @@
 // utils/steadfast.js
 
-const BASE_URL = "https://portal.packzy.com/api/v1";
+const getBaseUrl = (providerConfiguration) =>
+  providerConfiguration?.config?.baseUrl ||
+  "https://portal.packzy.com/api/v1";
 
-const getHeaders = () => ({
-  "Api-Key": process.env.STEADFAST_API_KEY,
-  "Secret-Key": process.env.STEADFAST_SECRET_KEY,
+const getHeaders = (providerConfiguration) => ({
+  "Api-Key": providerConfiguration?.credentials?.apiKey,
+  "Secret-Key": providerConfiguration?.credentials?.secretKey,
   "Content-Type": "application/json",
 });
 
 // 1. Single Order Create
-export const createSteadfastOrder = async (orderData) => {
+export const createSteadfastOrder = async (
+  orderData,
+  providerConfiguration,
+) => {
   try {
-    const response = await fetch(`${BASE_URL}/create_order`, {
+    const response = await fetch(`${getBaseUrl(providerConfiguration)}/create_order`, {
       method: "POST",
-      headers: getHeaders(),
+      headers: getHeaders(providerConfiguration),
       body: JSON.stringify(orderData),
     });
 
@@ -36,7 +41,11 @@ export const createSteadfastOrder = async (orderData) => {
 };
 
 // 2. Check Delivery Status (3 ways)
-export const getSteadfastDeliveryStatus = async (type, value) => {
+export const getSteadfastDeliveryStatus = async (
+  type,
+  value,
+  providerConfiguration,
+) => {
   let endpoint = "";
 
   if (type === "consignment_id" || type === "cid") {
@@ -53,9 +62,9 @@ export const getSteadfastDeliveryStatus = async (type, value) => {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetch(`${getBaseUrl(providerConfiguration)}${endpoint}`, {
       method: "GET",
-      headers: getHeaders(),
+      headers: getHeaders(providerConfiguration),
     });
 
     const data = await response.json();
@@ -77,11 +86,11 @@ export const getSteadfastDeliveryStatus = async (type, value) => {
 };
 
 // 3. Check Current Balance
-export const getBalance = async () => {
+export const getBalance = async (providerConfiguration) => {
   try {
-    const response = await fetch(`${BASE_URL}/get_balance`, {
+    const response = await fetch(`${getBaseUrl(providerConfiguration)}/get_balance`, {
       method: "GET",
-      headers: getHeaders(),
+      headers: getHeaders(providerConfiguration),
     });
 
     const data = await response.json();

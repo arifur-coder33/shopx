@@ -12,8 +12,8 @@ export default async function SearchPage({ searchParams }) {
       {data.length === 0 && <div>No products found</div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {data.map((item) => (
-          <ProductCard key={item.id} product={item} />
+        {data.map((item, index) => (
+          <ProductCard key={item.id} product={item} priority={index < 2} />
         ))}
       </div>
     </div>

@@ -7,6 +7,7 @@ import OrderSummary from "@/app/admin/orders/_components/components/OrderSummary
 import { getOrderByOrderNo } from "@/backend/serverActions/orderActions";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import InvoiceButton from "@/components/PDF/getInvoice";
+import OrderPaymentRecovery from "@/components/payments/OrderPaymentRecovery";
 
 import { useEffect, useState } from "react";
 
@@ -32,7 +33,7 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
       }
     };
     getData();
-  }, [orderNo, phoneNumber]);
+  }, [orderId, orderNo, phoneNumber]);
 
   if (loading)
     return (
@@ -40,8 +41,7 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
         <LoadingSpinner message="Just a second.. " />
       </div>
     );
-  console.log(order);
-  if (!loading && order.length === 0)
+  if (!loading && (!order || error))
     return (
       <div className="text-center">
         <h1 className="text-2xl font-bold text-red-600">Invalid Order</h1>
@@ -57,6 +57,8 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
         status={order.status}
         date={order?.createdAt || "N/A"}
       />
+
+      <OrderPaymentRecovery order={order} onChanged={setOrder} />
 
       {/* Timeline Section
               <OrderTimeline status={status} /> */}

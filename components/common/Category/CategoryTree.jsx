@@ -2,25 +2,14 @@
 
 import Logout from "@/components/auth/Logout";
 import ThemeToggle from "@/components/TheamToggle";
-import { Minus, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderTree, PackageSearch } from "lucide-react";
 import Link from "next/link";
 import { memo, useState } from "react";
 
-// ================= ICON =================
-function PlusMinus({ open }) {
-  return (
-    <span className="w-5 h-5 flex items-center justify-center text-sm font-bold cursor-pointer">
-      {open ? <Minus className="text-red-600 " /> : <Plus />}
-    </span>
-  );
-}
-
-// ================= PATH BUILDER =================
 function buildCategoryPath(category, parentPath = "") {
   return parentPath ? `${parentPath}/${category.slug}` : category.slug;
 }
 
-// ================= ITEM =================
 const CategoryItem = memo(function CategoryItem({
   category,
   level = 0,
@@ -30,78 +19,66 @@ const CategoryItem = memo(function CategoryItem({
   parentPath = "",
 }) {
   const hasChildren = category.subCategories?.length > 0;
-  const isOpen = activeId === category.id;
-
+  const expanded = activeId === category.id;
   const fullPath = buildCategoryPath(category, parentPath);
 
   return (
-    <div>
-      {/* Row */}
-      <div
-        className={`flex items-center justify-between px-4 py-3 transition-all rounded-xl cursor-pointer group
-        ${
-          level === 0
-            ? "hover:bg-slate-800"
-            : "bg-gray-700 dark:bg-slate-800 hover:bg-gray-800 dark:hover:bg-slate-700 ml-2"
-        }`}
-        style={{ paddingLeft: `${level * 14 + 14}px` }}
-      >
-        {/* Link */}
+    <div className={level === 0 ? "rounded-2xl border border-border bg-surface shadow-sm" : ""}>
+      <div className="group flex min-h-12 items-center gap-2 rounded-xl px-2 transition-colors hover:bg-primary-soft">
+        {level === 0 && (
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <FolderTree className="h-4 w-4" aria-hidden="true" />
+          </span>
+        )}
+
         <Link
           href={`/category/${fullPath}`}
           onClick={() => setIsOpen?.(false)}
-          className="text-sm font-medium flex-1 group-hover:translate-x-1 transition-all"
+          className="min-w-0 flex-1 py-3 text-sm font-semibold text-text transition-colors group-hover:text-primary"
         >
-          {category.name}
+          <span className="block truncate">{category.name}</span>
         </Link>
 
-        {/* Toggle */}
-        {hasChildren && (
+        {hasChildren ? (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveId(isOpen ? null : category.id);
-            }}
-            className="ml-2 rounded-md hover:bg-gray-500 dark:hover:bg-slate-600 p-1"
+            type="button"
+            aria-label={`${category.name} এর উপবিভাগ ${expanded ? "বন্ধ" : "খুলুন"}`}
+            aria-expanded={expanded}
+            onClick={() => setActiveId(expanded ? null : category.id)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface hover:text-primary"
           >
-            <PlusMinus open={isOpen} />
+            {expanded ? (
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            )}
           </button>
+        ) : (
+          <ChevronRight className="h-4 w-4 shrink-0 text-text-muted/50" aria-hidden="true" />
         )}
       </div>
 
-      {/* Children with smooth animation */}
-      {hasChildren && (
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out
-          ${isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}
-        >
-          <SubList
-            categories={category.subCategories}
-            level={level + 1}
-            setIsOpen={setIsOpen}
-            parentPath={fullPath}
-          />
-        </div>
+      {hasChildren && expanded && (
+        <SubList
+          categories={category.subCategories}
+          level={level + 1}
+          setIsOpen={setIsOpen}
+          parentPath={fullPath}
+        />
       )}
     </div>
   );
 });
 
-// ================= SUB LIST =================
-const SubList = memo(function SubList({
-  categories,
-  level,
-  setIsOpen,
-  parentPath = "",
-}) {
+const SubList = memo(function SubList({ categories, level, setIsOpen, parentPath = "" }) {
   const [activeId, setActiveId] = useState(null);
 
   return (
-    <div className="ml-2 mt-1 border-l border-gray-200 dark:border-slate-700 pl-1 space-y-1">
-      {categories.map((cat) => (
+    <div className="mb-2 ml-6 mr-2 space-y-1 border-l border-border pl-2">
+      {categories.map((category) => (
         <CategoryItem
-          key={cat.id}
-          category={cat}
+          key={category.id}
+          category={category}
           level={level}
           activeId={activeId}
           setActiveId={setActiveId}
@@ -113,46 +90,51 @@ const SubList = memo(function SubList({
   );
 });
 
-// ================= MAIN =================
 export default function CategoryTree({ initialData = [], setIsOpen }) {
   const [activeRootId, setActiveRootId] = useState(null);
 
   return (
-    <div className="p-2">
-      {/* Header */}
-      <div className="px-3 py-2 mb-2 text-sm font-semibold text-gray-300 border-b-2 ">
-        Categories
+    <div className="flex min-h-full flex-col px-1">
+      <div className="mb-4 flex items-center gap-3 border-b border-border px-2 pb-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+          <PackageSearch className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div>
+          <h2 className="text-lg font-bold text-text">পণ্য বিভাগ</h2>
+          <p className="text-xs text-text-muted">আপনার প্রয়োজনীয় পণ্য খুঁজুন</p>
+        </div>
       </div>
 
-      {/* Root */}
-      <div className="space-y-1">
-        {initialData.map((cat) => (
+      <nav aria-label="পণ্য বিভাগ" className="flex-1 space-y-2 pb-5">
+        {initialData.length === 0 && (
+          <p className="rounded-2xl border border-border bg-surface-muted p-4 text-sm text-text-muted">
+            বিভাগগুলো এখন দেখানো যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।
+          </p>
+        )}
+        {initialData.map((category) => (
           <CategoryItem
-            key={cat.id}
-            category={cat}
-            level={0}
+            key={category.id}
+            category={category}
             activeId={activeRootId}
             setActiveId={setActiveRootId}
             setIsOpen={setIsOpen}
-            parentPath=""
           />
         ))}
-      </div>
+      </nav>
 
-      {/* Extra */}
-      <div className="border-t mt-3 bg-black pt-2 text-sm text-gray-300 absolute bottom-10 left-0 w-full md:hidden">
+      <div className="mt-auto space-y-1 border-t border-border bg-surface px-2 pt-3 text-sm text-text md:hidden">
         <Link
-          className="px-8 py-2 hover:bg-slate-800 rounded-lg"
+          className="block rounded-xl px-3 py-3 font-medium transition-colors hover:bg-primary-soft hover:text-primary"
           href="/tracking"
+          onClick={() => setIsOpen?.(false)}
         >
-          Order Tracking
+          অর্ডার ট্র্যাক করুন
         </Link>
-
-        <div className="px-3  hover:bg-slate-800 rounded-lg">
+        <div className="rounded-xl px-3 transition-colors hover:bg-primary-soft">
           <ThemeToggle sun="Light Mode" moon="Dark Mode" />
         </div>
-        <div className="px-8  hover:bg-slate-800 rounded-lg">
-          <Logout className="flex flex-row gap-2 items-center">Sign Out</Logout>
+        <div className="rounded-xl px-3 transition-colors hover:bg-primary-soft">
+          <Logout className="flex items-center gap-2">Sign Out</Logout>
         </div>
       </div>
     </div>

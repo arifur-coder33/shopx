@@ -6,15 +6,11 @@ import { useEffect, useState } from "react";
 export default function ThemeToggle({ className, sun, moon }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Load theme from localStorage or default to light mode
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
-    if (storedTheme === "dark") {
-      document.documentElement.classList.add("dark");
-      setIsDarkMode(true);
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    const dark = storedTheme === "dark" || (!storedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", dark);
+    setIsDarkMode(dark);
   }, []);
 
   // Toggle theme and save preference to localStorage
@@ -33,9 +29,9 @@ export default function ThemeToggle({ className, sun, moon }) {
   return (
     <button
       id="toggle"
-      aria-label="them toggle"
+      aria-label={isDarkMode ? "Use light theme" : "Use dark theme"}
       onClick={toggleTheme}
-      className={`p-2 rounded-md `}
+      className="flex h-11 w-11 items-center justify-center rounded-brand text-text-muted hover:bg-surface-muted hover:text-text"
     >
       {isDarkMode ? (
         <div className="flex flex-row gap-2 items-center">

@@ -1,6 +1,7 @@
 "use server";
 import { getListData } from "@/backend/utils/getListData";
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 import { generateCode } from "../utils/generateCode";
 import { getListCount } from "../utils/getListCount";
@@ -10,10 +11,10 @@ export async function getAllSuppliers(params) {
     model: "supplier",
     params,
     searchableFields: [
-      { field: "supplierNo", type: "string", mode: "sensitive" },
+      { field: "supplierCode", type: "string", mode: "sensitive" },
       { field: "companyName", type: "string", mode: "sensitive" },
-      { field: "phoneNumber", type: "string", mode: "sensitive" },
-      { field: "status", type: "enum" }, // ✅ ENUM safe
+      { field: "phone", type: "string", mode: "sensitive" },
+      { field: "isActive", type: "boolean", exactMatch: true },
     ],
     // relationSearch: {
     //   sku: {
@@ -33,10 +34,10 @@ export async function getSupplierCount(params) {
     model: "supplier",
     params,
     searchableFields: [
-      { field: "supplierNo", type: "string", mode: "sensitive" },
+      { field: "supplierCode", type: "string", mode: "sensitive" },
       { field: "companyName", type: "string", mode: "sensitive" },
-      { field: "phoneNumber", type: "string", mode: "sensitive" },
-      { field: "status", type: "enum" }, // ✅ ENUM safe
+      { field: "phone", type: "string", mode: "sensitive" },
+      { field: "isActive", type: "boolean", exactMatch: true },
     ],
     // relationSearch: {
     //   sku: {
@@ -113,11 +114,10 @@ export async function createSupplier(formData) {
     const newSupplierData = {
       companyName: data.companyName,
       contactName: data.contactName,
-      phoneNumber: data.phoneNumber,
+      phone: data.phone,
       email: data.email,
       address: data.address,
       city: data.city,
-      state: data.state,
       country: data.country,
       tradeLicense: data.tradeLicense,
       tin: data.tin,
@@ -183,18 +183,17 @@ export async function updateSupplier({ id, formData }) {
     const newSupplierData = {
       companyName: data.companyName,
       contactName: data.contactName,
-      phoneNumber: data.phoneNumber,
+      phone: data.phone,
       email: data.email,
       address: data.address,
       city: data.city,
-      state: data.state,
       country: data.country,
       tradeLicense: data.tradeLicense,
       tin: data.tin,
       bin: data.bin,
       notes: data.notes,
-      supplierCode: supplierCode,
       isActive: data.isActive === "on" || data.isActive === true,
+      openingBalance: data.openingBalance ? parseFloat(data.openingBalance) : 0,
     };
     const updatedSupplier = await prisma.supplier.update({
       where: { id },
@@ -202,6 +201,8 @@ export async function updateSupplier({ id, formData }) {
         ...newSupplierData,
       },
     });
+
+    revalidatePath("/admin/suppliers");
 
     return {
       success: true,
@@ -214,5 +215,24 @@ export async function updateSupplier({ id, formData }) {
       success: false,
       message: "Failed to update supplier.",
     };
+  }
+}
+
+export async function deleteSupplier(id) {
+  try {
+    const purchaseCount = await prisma.purchaseOrder.count({
+      where: { supplierId: id },
+    });
+    if (purchaseCount > 0) {
+      return {
+        success: false,
+        message: "Supplier has purchase orders and cannot be deleted.",
+      };
+    }
+    await prisma.supplier.delete({ where: { id } });
+    revalidatePath("/admin/suppliers");
+    return { success: true, message: "Supplier deleted successfully." };
+  } catch (error) {
+    return { success: false, message: error.message };
   }
 }

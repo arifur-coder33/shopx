@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import ThemeToggle from "../TheamToggle"; // Corrected spelling
 import UserMenu from "./UserMenu";
+import WishlistNavLink from "../wishlist/WishlistNavLink";
 const Cart = dynamic(() => import("@/components/Cart"));
 
 const NavActionsSkeleton = () => (
@@ -38,6 +39,8 @@ export default async function NavActions() {
       <UserMenu>
         <User2Icon className="nav-hover" />
       </UserMenu>
+
+      <WishlistNavLink className="hidden md:flex" />
 
       <div className="h-6 w-6 hidden md:block">
         <Cart>

@@ -1,21 +1,61 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { getProviderRuntimeConfiguration } from "../services/providerCredentialService";
 import {
   createSteadfastOrder,
   getSteadfastDeliveryStatus,
 } from "../lib/courier/steadfast";
 import { createPathaoOrder, getPathaoOrderInfo } from "../lib/pathao";
 import { updateOrderStatusAction } from "./orderActions";
+import { actionError, requireProcurementPermission } from "../utils/procurement";
+
+export async function getAvailableCourierProvidersForOrder() {
+  try {
+    await requireProcurementPermission("order", "view");
+    const providers = await prisma.courierProvider.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        adapterKey: true,
+        isActive: true,
+        moneyAccountId: true,
+        encryptedCredentials: true,
+        nonSecretConfig: true,
+        moneyAccount: { select: { id: true, isActive: true } },
+        pickupPoints: { select: { id: true, name: true, address: true, storeId: true } },
+      },
+    });
+    const data = providers
+      .filter(
+        (provider) =>
+          getProviderRuntimeConfiguration("courier", provider).ready,
+      )
+      .map(({ id, name, code, adapterKey, pickupPoints }) => ({
+        id,
+        name,
+        code,
+        adapterKey,
+        pickupPoints,
+      }));
+    return { success: true, data };
+  } catch (error) {
+    return actionError(error, "Failed to load couriers.");
+  }
+}
 
 export async function createCourierDeliveryAction({ formData }) {
   // Simulate API call to create a courier delivery
   try {
+    await requireProcurementPermission("order", "update");
     let data = Object.fromEntries(formData.entries());
 
     const order = await prisma.order.findUnique({
       where: { orderNo: data.invoice },
-      select: { id: true },
+      select: { id: true, status: true, shipping: { select: { id: true } } },
     });
 
     if (!order) {
@@ -24,14 +64,54 @@ export async function createCourierDeliveryAction({ formData }) {
         message: "No order found with the provided invoice number.",
       };
     }
-    const courierName = data.courierName;
+    if (order.shipping) {
+      throw new Error("A courier order has already been created for this order.");
+    }
+    if (!['PENDING', 'PROCESSING'].includes(order.status)) {
+      throw new Error("Only a pending or processing order can be sent to a courier.");
+    }
+    const provider = await prisma.courierProvider.findUnique({
+      where: { id: data.courierProviderId },
+      include: { moneyAccount: true },
+    });
+    const providerConfiguration = getProviderRuntimeConfiguration(
+      "courier",
+      provider,
+    );
+    if (!providerConfiguration.ready) {
+      throw new Error("Selected courier is unavailable or not fully configured.");
+    }
+    const courierName = provider.adapterKey;
+    const pickupPoint = data.pickupPointId
+      ? await prisma.courierPickupPoint.findFirst({
+          where: {
+            id: data.pickupPointId,
+            courierProviderId: provider.id,
+          },
+          select: { id: true, name: true, address: true, storeId: true },
+        })
+      : null;
+    if (data.pickupPointId && !pickupPoint) {
+      throw new Error("The selected pickup point does not belong to this courier.");
+    }
+    if (courierName === "PATHAO" && !pickupPoint?.storeId) {
+      throw new Error("Create and select a Pathao pickup point before booking.");
+    }
+
+    const pathaoStoreId = pickupPoint?.storeId ? Number(pickupPoint.storeId) : null;
+    if (
+      courierName === "PATHAO" &&
+      (!Number.isInteger(pathaoStoreId) || pathaoStoreId <= 0)
+    ) {
+      throw new Error("The selected Pathao pickup point has an invalid Store ID.");
+    }
 
     let courierData = {};
     let orderResponseData = null;
     switch (courierName) {
-      case "pathao":
+      case "PATHAO":
         courierData = {
-          store_id: Number(data.storeId),
+          store_id: pathaoStoreId,
           merchant_order_id: data.invoice,
           recipient_name: data.name,
           recipient_phone: data.phone,
@@ -45,7 +125,10 @@ export async function createCourierDeliveryAction({ formData }) {
           amount_to_collect: data.price || 0,
         };
 
-        const response = await createPathaoOrder(courierData);
+        const response = await createPathaoOrder(
+          courierData,
+          providerConfiguration,
+        );
 
         if (response.code === 200) {
           orderResponseData = {
@@ -53,7 +136,7 @@ export async function createCourierDeliveryAction({ formData }) {
             status: response.data.order_status,
             date: new Date().toLocaleDateString(),
             courierName: "Pathao",
-            storeName: data?.storeName || "",
+            storeName: pickupPoint.name,
             deliveryFee: response.data.delivery_fee,
             merchantOrderId: response.data.merchant_order_id,
             tracking_url: `https://pcom.page.link/${response.data?.consignment_id}`,
@@ -63,7 +146,7 @@ export async function createCourierDeliveryAction({ formData }) {
         }
 
         break;
-      case "steadfast":
+      case "STEADFAST":
         courierData = {
           invoice: data.invoice,
           recipient_name: data.name,
@@ -72,19 +155,17 @@ export async function createCourierDeliveryAction({ formData }) {
           cod_amount: Number(data.price) || 0,
           note: "Call before delivery",
         };
-        const steadfastResponse = await createSteadfastOrder(courierData);
-        console.log("Steadfast Response:", steadfastResponse);
+        const steadfastResponse = await createSteadfastOrder(
+          courierData,
+          providerConfiguration,
+        );
         if (steadfastResponse.success) {
-          console.log(
-            "Steadfast order created successfully",
-            steadfastResponse?.data?.consignment_id.toString(),
-          );
           orderResponseData = {
             cn: steadfastResponse?.data?.consignment_id.toString(),
             status: steadfastResponse?.data?.status,
             date: steadfastResponse?.data?.created_at,
-            courierName: "Steadfast",
-            storeName: data?.storeName || "",
+            courierName: provider.name,
+            storeName: pickupPoint?.name || "",
 
             merchantOrderId: "N/A",
           };
@@ -100,30 +181,30 @@ export async function createCourierDeliveryAction({ formData }) {
           cn: data?.cn || "N/A",
           status: "READY_TO_SHIP",
           date: new Date().toLocaleDateString(),
-          courierName: courierName,
-          storeName: data?.storeName || "",
+          courierName: provider.name,
+          storeName: pickupPoint?.name || "",
           deliveryFee: data?.deliveryFee || 0,
           merchantOrderId: data.invoice || "N/A",
         };
 
         break;
     }
-    console.log("Order Response Data:", orderResponseData);
     const shippingdata = await prisma.shipping.create({
       data: {
         orderId: order.id,
         orderNo: data.invoice,
         cn: orderResponseData.cn,
         courierName: orderResponseData.courierName,
+        courierProviderId: provider.id,
         deliveryFee: orderResponseData?.deliveryFee,
         cod: Number(data.price) || 0,
       },
     });
-    await updateOrderStatusAction(order.id, "READY_TO_SHIP");
-    console.log("Shipping Data Created:", shippingdata);
+    // Confirming the sale and creating its courier consignment is one action.
+    // Packing/stock allocation happens later from the Delivery Queue.
+    await updateOrderStatusAction(order.id, "PROCESSING");
     return { success: true, data: shippingdata || courierData };
   } catch (error) {
-    console.error("Error creating courier delivery:", error);
     return { success: false, message: error.message };
   }
 }
@@ -131,6 +212,7 @@ export async function createCourierDeliveryAction({ formData }) {
 export async function cancelCourierDeliveryAction(courierId, orderId) {
   // Simulate API call to cancel a courier delivery
   try {
+    await requireProcurementPermission("order", "update");
     if (!courierId || !orderId) {
       throw new Error(
         "Courier ID and Order ID are required to cancel delivery.",
@@ -155,21 +237,61 @@ export async function cancelCourierDeliveryAction(courierId, orderId) {
 
 export async function getCourierDeliveryStatusAction({
   courierId,
-  courierName,
+  courierProviderId,
 }) {
-  console.log("Getting status for:", courierId, courierName);
   // Simulate API call to get courier delivery status
   try {
-    if (!courierId || !courierName) {
-      throw new Error("Courier ID and Courier Name are required.");
+    await requireProcurementPermission("order", "view");
+    if (!courierId || !courierProviderId) {
+      throw new Error("Courier and consignment ID are required.");
     }
-    switch (courierName.toLowerCase()) {
-      case "pathao":
-        const response = await getPathaoOrderInfo(courierId);
-        console.log("Pathao Status Response:", response);
+    const provider = await prisma.courierProvider.findUnique({ where: { id: courierProviderId } });
+    if (!provider) throw new Error("Courier provider was not found.");
+    const providerConfiguration = getProviderRuntimeConfiguration(
+      "courier",
+      provider,
+    );
+    if (
+      !providerConfiguration.integrationAvailable ||
+      !providerConfiguration.credentialsConfigured
+    ) {
+      throw new Error("Courier credentials are unavailable.");
+    }
+    const syncDeliveredStatus = async (rawStatus) => {
+      const normalizedStatus = String(rawStatus || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_");
+      if (normalizedStatus !== "delivered") return;
+      const shipping = await prisma.shipping.findFirst({
+        where: { cn: String(courierId), courierProviderId: provider.id },
+        select: { orderId: true },
+      });
+      if (shipping) {
+        const synced = await updateOrderStatusAction(
+          shipping.orderId,
+          "DELIVERED",
+          `${provider.name} marked this shipment as delivered.`,
+        );
+        if (!synced.success) throw new Error(synced.message);
+      }
+    };
+
+    switch (provider.adapterKey) {
+      case "MANUAL":
+        return {
+          success: true,
+          data: { status: "Manual delivery", updatedAt: null },
+        };
+      case "PATHAO":
+        const response = await getPathaoOrderInfo(
+          courierId,
+          providerConfiguration,
+        );
         if (!response) {
           throw new Error("Failed to get Pathao order info");
         }
+        await syncDeliveredStatus(response.order_status);
         return {
           success: true,
           data: {
@@ -178,13 +300,14 @@ export async function getCourierDeliveryStatusAction({
           },
         };
         break;
-      case "steadfast":
+      case "STEADFAST":
         const statusResponse = await getSteadfastDeliveryStatus(
           "consignment_id",
           courierId,
+          providerConfiguration,
         );
         if (statusResponse.success) {
-          console.log("Steadfast Status Response:", statusResponse);
+          await syncDeliveredStatus(statusResponse.status);
           return {
             success: true,
             data: {
@@ -204,7 +327,6 @@ export async function getCourierDeliveryStatusAction({
     const status = "PENDING"; // This would be replaced with actual API call
     return { success: true, data: { status } };
   } catch (error) {
-    console.error("Error getting courier delivery status:", error);
     return { success: false, message: error.message };
   }
 }

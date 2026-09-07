@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { newSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
@@ -430,10 +431,13 @@ export async function getCategory() {
 export async function getAllCategoryWithproduct() {
   try {
     const data = await prisma.category.findMany({
-      include: {
-        _count: {
-          select: { products: true },
-        },
+      where: {
+        products: { some: { isActive: true } },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
         products: {
           where: { isActive: true },
           orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
@@ -461,7 +465,6 @@ export async function getAllCategoryWithproduct() {
     });
 
     const filteredData = data
-      .filter((category) => category._count.products > 0)
       .map((category) => ({
         ...category,
         products: category.products.map((product) => {
@@ -636,15 +639,32 @@ export async function getcategoryCount(params) {
 //   return buildTree(null); // start from root categories
 // }
 
-export async function getCategoryTree() {
-  const allCategories = await prisma.category.findMany({
+const getNavigationCategories = cache(() =>
+  prisma.category.findMany({
     select: {
       id: true,
       name: true,
       slug: true,
       parentCategoryId: true,
     },
-  });
+  }),
+);
+
+export async function getCategoryTree() {
+  let allCategories;
+
+  try {
+    // NavBar and MobileFooter both request this tree during one render.
+    // React cache keeps that to one database query without serving stale data.
+    allCategories = await getNavigationCategories();
+  } catch (error) {
+    // Category navigation is non-critical. Keep the storefront available when
+    // MongoDB is temporarily unreachable and let the next request retry.
+    if (process.env.NODE_ENV === "development") {
+      console.error("Category navigation is unavailable:", error.message);
+    }
+    return [];
+  }
 
   const map = new Map();
   const roots = [];
@@ -664,9 +684,6 @@ export async function getCategoryTree() {
   return roots;
 }
 export async function getCategoryPageData(slug) {
-  const decodedSlug = decodeURIComponent(slug);
-  const slugs = decodedSlug.split("/");
-
   try {
     // 1️⃣ all categories (for tree + recursion)
     const categories = await prisma.category.findMany({
@@ -674,6 +691,7 @@ export async function getCategoryPageData(slug) {
         id: true,
         name: true,
         slug: true,
+        fullPath: true,
         parentCategoryId: true,
       },
     });
@@ -681,9 +699,34 @@ export async function getCategoryPageData(slug) {
     // 2️⃣ find last category (e.g. shirt)
     const targetCategory = categories.find((c) => c.slug === slug);
 
-    if (!slugs) {
+    if (!targetCategory) {
       return { success: false, error: "Category not found" };
     }
+
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
+    const categoryHierarchy = [];
+    const visited = new Set();
+    let currentCategory = targetCategory;
+    while (currentCategory && !visited.has(currentCategory.id)) {
+      visited.add(currentCategory.id);
+      categoryHierarchy.unshift(currentCategory);
+      currentCategory = currentCategory.parentCategoryId
+        ? categoryById.get(currentCategory.parentCategoryId)
+        : null;
+    }
+    const breadcrumbs = categoryHierarchy.map((category, index) => ({
+      label: category.name,
+      href:
+        index === categoryHierarchy.length - 1
+          ? undefined
+          : `/category/${
+              category.fullPath ||
+              categoryHierarchy
+                .slice(0, index + 1)
+                .map((item) => item.slug)
+                .join("/")
+            }`,
+    }));
 
     // 3️⃣ recursive function for subcategories
     const getChildIds = (parentCategoryId) => {
@@ -773,7 +816,17 @@ export async function getCategoryPageData(slug) {
       };
     });
 
-    return { success: true, data: filteredProducts };
+    return {
+      success: true,
+      data: filteredProducts,
+      category: {
+        id: targetCategory.id,
+        name: targetCategory.name,
+        slug: targetCategory.slug,
+        fullPath: targetCategory.fullPath,
+      },
+      breadcrumbs,
+    };
   } catch (error) {
     return {
       success: false,

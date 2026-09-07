@@ -1,5 +1,6 @@
 "use client";
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import { useEffect } from "react";
 export default function CheckOutSubTotal({
   totalWeight,
@@ -9,22 +10,20 @@ export default function CheckOutSubTotal({
   setTotalPrice,
   setOrderWeight,
   setDeliveryCharge,
+  deliveryRates,
 }) {
-  let deliveryCharge = 0;
-  deliveryCharge = deliveryArea == "ঢাকা" ? 80 : 100;
-  const extraCharge = totalWeight > 1 ? Math.ceil(Number(totalWeight)) * 20 : 0;
+  const deliveryCharge = calculateDeliveryCharge(deliveryArea, totalWeight, deliveryRates);
 
   useEffect(() => {
     setTotalPrice(discountPrice);
     setOrderWeight(totalWeight);
-    setDeliveryCharge(deliveryCharge + extraCharge);
+    setDeliveryCharge(deliveryCharge);
   }, [
     discountPrice,
     setTotalPrice,
     totalWeight,
     setOrderWeight,
     deliveryCharge,
-    extraCharge,
     setDeliveryCharge,
   ]);
   return (
@@ -33,21 +32,15 @@ export default function CheckOutSubTotal({
 
       <Item
         label={"ডেলিভারি চার্জঃ (+)"}
-        value={deliveryCharge + extraCharge || 0}
+        value={deliveryCharge || 0}
       />
-      {/* <input hidden name="orderPrice" defaultValue={discountPrice} /> */}
       <Item
         label={"সর্বোমোট মুল্যঃ"}
-        value={discountPrice + deliveryCharge + extraCharge || 0}
+        value={discountPrice + deliveryCharge || 0}
         className={
           "font-bold border-t-4 border-t-slate-800 dark:border-t-slate-200"
         }
       />
-      {/* <input
-        hidden
-        name="deliveryCharge"
-        defaultValue={Number(deliveryCharge + extraCharge)}
-      /> */}
     </>
   );
 }

@@ -4,14 +4,10 @@ import { useCart } from "@/context/CartContext";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-// import Modal from "./Modal";
 import { useMounted } from "@/hooks/useMounted";
-import CartPage from "./cart/CartPage";
-// Dynamically import CartPage. Its code will only be fetched from the server
-// when the user clicks the cart icon and `isOpen` becomes true.
 const DynamicCartPage = dynamic(() => import("./cart/CartPage"));
 const Modal = dynamic(() => import("./Modal"), {
-  ssr: false, // Ensure the modal is only rendered on the client side
+  ssr: false,
 });
 export default function Cart({ className, children }) {
   const { totalCartQuantity } = useCart();
@@ -20,7 +16,7 @@ export default function Cart({ className, children }) {
   return (
     <>
       <div
-        onClick={() => setIsOpen(true)} // Changed to ensure it only opens
+        onClick={() => setIsOpen(true)}
         className="relative cursor-pointer"
       >
         {/* <ShoppingCart className={`${className}`} /> */}
@@ -33,15 +29,16 @@ export default function Cart({ className, children }) {
         )}
       </div>
 
-      {/* The Modal itself is lightweight. The expensive part is its content. */}
-      <Modal isOpen={isOpen} setIsOpen={setIsOpen} openStyle="right">
-        {/* 
-          We conditionally render the DynamicCartPage. Because it's a dynamic import,
-          React will suspend while it fetches the component's code the first time.
-          This happens ONLY after the user clicks.
-        */}
-        {isOpen && <CartPage setIsOpen={setIsOpen} />}
-      </Modal>
+      {isOpen && (
+        <Modal
+          isOpen={isOpen}
+          setIsOpen={setIsOpen}
+          openStyle="right"
+          contentClassName="overflow-hidden px-3 pb-0 pt-14"
+        >
+          <DynamicCartPage setIsOpen={setIsOpen} />
+        </Modal>
+      )}
     </>
   );
 }

@@ -8,6 +8,8 @@ import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
 import DocumentActions from "./components/DocumentActions";
 import { generateInvoicePDF } from "./components/GenerateInvoice"; // আপনার ইম্পোর্ট
+import { downloadAWBPDF } from "./components/GenerateAWB";
+import { generatePackingListPDF } from "./components/GeneratePackingList";
 import OrderFooter from "./components/OrderFooter";
 import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
@@ -48,9 +50,26 @@ export default function OrderDetailsPage({ order, children }) {
       console.log("Generate PDF Function called for:", type);
     }
   };
-  const handleServerDownload = () => {
-    downloadInvoice(order);
-  };
+  const handleDownloadAWB = order.shipping?.cn
+    ? () =>
+        downloadAWBPDF({
+          shopId: process.env.NEXT_PUBLIC_PATHAO_STORE_ID || "",
+          invoice: order.orderNo,
+          sfId: order.shipping.cn,
+          deliveryType: "Home",
+          weight: order.orderWeight || 0.5,
+          name: order.customerName,
+          phone: order.phoneNumber,
+          address: [order.deliveryAddress, order.thana, order.city]
+            .filter(Boolean)
+            .join(", "),
+          cod: order.shipping.cod ?? order.dueAmount ?? 0,
+          courierName:
+            order.shipping.courierName ||
+            order.selectedCourierProvider?.name ||
+            "Courier",
+        })
+    : undefined;
 
   const timeline = [
     {
@@ -103,6 +122,8 @@ export default function OrderDetailsPage({ order, children }) {
               total={order.orderPrice + order.deliveryCharge - adminDiscount}
               dueAmount={order.dueAmount}
               paidAmount={order.paidAmount}
+              orderId={order.id}
+              paymentMethod={order.paymentMethod}
             />
             <OrderNote note={order?.note} />
             <PaymentSummary
@@ -110,7 +131,7 @@ export default function OrderDetailsPage({ order, children }) {
               paidAmount={order?.paidAmount}
               dueAmount={order?.dueAmount}
             />
-            {status !== "PENDING" && status !== "CANCELLED" && (
+            {status !== "CANCELLED" && (
               <CourierManagement
                 setStatus={setStatus}
                 status={status}
@@ -151,7 +172,8 @@ export default function OrderDetailsPage({ order, children }) {
             <DocumentActions
               onDownload={() => handleDownloadInvoice("download")}
               onView={() => handleDownloadInvoice("view")}
-              onAWB={() => alert("Downloading AWB...")}
+              onAWB={handleDownloadAWB}
+              onPacking={() => generatePackingListPDF(order)}
             />
             <InvoiceButton orderData={order} actionType={"print"} />
           </div>

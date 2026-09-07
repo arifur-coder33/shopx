@@ -12,6 +12,7 @@ export default function BuyNowProductDetails({
   setDeliveryCharge,
   setTotalPrice,
   setOrderWeight,
+  deliveryRates,
 }) {
   let totalPrices;
   const isArray = Array.isArray(data);
@@ -74,6 +75,7 @@ export default function BuyNowProductDetails({
         setTotalPrice={setTotalPrice}
         setDeliveryCharge={setDeliveryCharge}
         setOrderWeight={setOrderWeight}
+        deliveryRates={deliveryRates}
       />
     </>
   );

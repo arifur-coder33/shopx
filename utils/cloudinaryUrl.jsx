@@ -1,4 +1,7 @@
 // utils/cloudinaryUrl.js
+export const DEFAULT_BLUR_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
 export function cloudinaryMainImage(publicId, widthHint, heightHint) {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   if (!cloudName || !publicId) {
@@ -21,9 +24,6 @@ export function cloudinaryMainImage(publicId, widthHint, heightHint) {
 
 // https://res.cloudinary.com/shopzarif/image/upload
 export function cloudinaryBlurImage(imageName) {
-  console.log(
-    `https://res.cloudinary.com/bdmart24/image/upload/e_blur:200,w_10/f_auto,q_auto/bdmart24/${imageName}`,
-  );
   return `https://res.cloudinary.com/bdmart24/image/upload/e_blur:200,w_10/f_auto,q_auto/bdmart24/${imageName}`;
 }
 
@@ -51,6 +51,6 @@ export async function getBase64ImageUrl(imageId) {
   } catch (error) {
     console.error("Failed to generate Base64 URL:", error);
     // Return a transparent pixel as a fallback
-    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+    return DEFAULT_BLUR_DATA_URL;
   }
 }

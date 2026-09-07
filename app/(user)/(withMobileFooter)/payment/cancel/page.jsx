@@ -2,12 +2,12 @@
 
 import { getOrderIdByOrderNoPhoneNo } from "@/backend/serverActions/orderActions";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
-import SSLCommerzPayButton from "@/components/payments/SSLCommerzPayButton";
-import { AlertTriangle, Home, RefreshCcw, ShoppingBag } from "lucide-react";
+import OrderPaymentRecovery from "@/components/payments/OrderPaymentRecovery";
+import { AlertTriangle, Home, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-export default function PaymentFailed() {
+export default function PaymentCancelled() {
   const searchParams = useSearchParams();
 
   const orderNo = searchParams.get("o");
@@ -15,7 +15,7 @@ export default function PaymentFailed() {
 
   const [loading, setLoading] = useState(true);
   const [validOrder, setValidOrder] = useState(false);
-  const [orderId, setOrderId] = useState(null);
+  const [order, setOrder] = useState(null);
 
   useEffect(() => {
     if (!orderNo || !phone) {
@@ -32,7 +32,7 @@ export default function PaymentFailed() {
 
         if (res.success) {
           setValidOrder(true);
-          setOrderId(res.data?.id);
+          setOrder(res.data);
         } else {
           setValidOrder(false);
         }
@@ -43,28 +43,6 @@ export default function PaymentFailed() {
 
     checkOrder();
   }, [orderNo, phone]);
-
-  const handleRetry = async () => {
-    if (!orderId) return;
-
-    const res = await fetch("/api/sslcommerz/initiate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        orderId,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data?.url) {
-      window.location.href = data.url;
-    } else {
-      alert("Payment restart failed.");
-    }
-  };
 
   if (!orderNo || !phone) {
     return (
@@ -114,12 +92,14 @@ export default function PaymentFailed() {
             <div className="bg-gray-100 rounded-xl mt-6 p-4 text-center">
               <p className="text-sm text-gray-500">অর্ডার নম্বর</p>
               <p className="font-bold text-lg break-all">{orderNo}</p>
+              <p className="mt-1 text-sm text-gray-500">
+                অর্ডার: {order?.status} · পেমেন্ট: {order?.paymentStatus}
+              </p>
             </div>
 
-            <SSLCommerzPayButton orderId={orderId}>
-              <RefreshCcw size={18} />
-              আবার পেমেন্ট করুন
-            </SSLCommerzPayButton>
+            <div className="mt-4">
+              <OrderPaymentRecovery order={order} onChanged={setOrder} />
+            </div>
 
             <Link
               href={`/tracking?o=${orderNo}&p=${phone}`}

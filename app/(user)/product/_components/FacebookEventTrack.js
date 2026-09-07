@@ -14,7 +14,6 @@ export default function FacebookEventTrac({ product }) {
     if (typeof fbq !== "undefined") {
       fbq("track", "ViewContent", schemaEvent);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.slug]); // Fires every time the slug changes
 
   return <div></div>;

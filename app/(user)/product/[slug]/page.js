@@ -1,20 +1,25 @@
 // export const revalidate = 60;
 
 import {
-  getProductBySlug,
-  getProducts,
-} from "@/backend/serverActions/productActions";
+  getStorefrontProductBySlug,
+  getStorefrontProductSlugs,
+} from "@/backend/services/storefrontProductService";
 
-import { cloudinaryMainImage, getBase64ImageUrl } from "@/utils/cloudinaryUrl";
+import {
+  cloudinaryMainImage,
+  DEFAULT_BLUR_DATA_URL,
+} from "@/utils/cloudinaryUrl";
 import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
 import { htmlToText } from "html-to-text";
 import Script from "next/script";
+import Breadcrumb from "@/components/common/Breadcrumb";
 import ProductDataView from "../_components/ProductDataView";
-export const dynamic = "force-static";
+export const revalidate = 60;
+export const dynamicParams = true;
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
-  const product = await getProductBySlug(slug);
+  const product = await getStorefrontProductBySlug(slug);
   const data = product?.data;
 
   if (!data) {
@@ -178,8 +183,9 @@ export async function generateMetadata({ params }) {
 }
 
 export async function generateStaticParams() {
-  const { data: products } = await getProducts();
-  return products?.map((product) => ({
+  const { data: products = [] } = await getStorefrontProductSlugs();
+
+  return products.map((product) => ({
     slug: product.slug,
   }));
 }
@@ -187,10 +193,9 @@ export async function generateStaticParams() {
 export default async function ProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;
-  const { success, data } = await getProductBySlug(slug);
+  const { success, data } = await getStorefrontProductBySlug(slug);
   if (!success) {
-    // Handle error case, e.g., show a not found message
-    return <div>Error: {error}</div>;
+    return <div>Product could not be loaded.</div>;
   }
 
   // const getProduct = unstable_cache(
@@ -218,10 +223,9 @@ export default async function ProductPage({ params }) {
   const name = category?.name || "General";
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
   const imageUrl =
-    cloudinaryMainImage(thumbnail.name || mainImage, 800, 800) ||
+    cloudinaryMainImage(thumbnail?.name || mainImage, 800, 800) ||
     `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
-  const primaryImage = thumbnail?.name || mainImage;
-  const blurDataURL = await getBase64ImageUrl(primaryImage);
+  const blurDataURL = DEFAULT_BLUR_DATA_URL;
   //for facebook product schema listing
   const schema = {
     "@context": "http://schema.org",
@@ -276,6 +280,19 @@ export default async function ProductPage({ params }) {
 
   return (
     <div className="mb-16">
+      <Breadcrumb
+        items={[
+          ...(category?.name
+            ? [
+                {
+                  label: category.name,
+                  href: `/category/${category.fullPath || category.slug}`,
+                },
+              ]
+            : []),
+          { label: title },
+        ]}
+      />
       <ProductDataView data={data} blurDataURL={blurDataURL} />
 
       <Script

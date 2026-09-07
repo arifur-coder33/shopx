@@ -1,0 +1,2662 @@
+[
+  {
+    "division_en": "Dhaka",
+    "division_bn": "ঢাকা",
+    "districts": [
+      {
+        "district_en": "Dhaka",
+        "district_bn": "ঢাকা",
+        "thanas": [
+          {
+            "thana_en": "Adabor",
+            "thana_bn": "আদাবর"
+          },
+          {
+            "thana_en": "Ashulia",
+            "thana_bn": "আশুলিয়া"
+          },
+          {
+            "thana_en": "Badda",
+            "thana_bn": "বাড্ডা"
+          },
+          {
+            "thana_en": "Banani",
+            "thana_bn": "বনানী"
+          },
+          {
+            "thana_en": "Bangshal",
+            "thana_bn": "বংশাল"
+          },
+          {
+            "thana_en": "Bhasan Tek",
+            "thana_bn": "ভাষানটেক"
+          },
+          {
+            "thana_en": "Bhatara",
+            "thana_bn": "ভাটারা"
+          },
+          {
+            "thana_en": "Biman Bandar",
+            "thana_bn": "বিমান বন্দর"
+          },
+          {
+            "thana_en": "Cantonment",
+            "thana_bn": "ক্যান্টনমেন্ট"
+          },
+          {
+            "thana_en": "Chak Bazar",
+            "thana_bn": "চকবাজার"
+          },
+          {
+            "thana_en": "Dakshinkhan",
+            "thana_bn": "দক্ষিণখান"
+          },
+          {
+            "thana_en": "Darus Salam",
+            "thana_bn": "দারুস সালাম"
+          },
+          {
+            "thana_en": "Demra",
+            "thana_bn": "ডেমরা"
+          },
+          {
+            "thana_en": "Dhamrai",
+            "thana_bn": "ধামরাই"
+          },
+          {
+            "thana_en": "Dhanmondi",
+            "thana_bn": "ধানমন্ডি"
+          },
+          {
+            "thana_en": "Dohar",
+            "thana_bn": "দোহার"
+          },
+          {
+            "thana_en": "Gendaria",
+            "thana_bn": "গেন্ডারিয়া"
+          },
+          {
+            "thana_en": "Gulshan",
+            "thana_bn": "গুলশান"
+          },
+          {
+            "thana_en": "Hatirjheel",
+            "thana_bn": "হাতিরঝিল"
+          },
+          {
+            "thana_en": "Hazaribagh",
+            "thana_bn": "হাজারীবাগ"
+          },
+          {
+            "thana_en": "Jatrabari",
+            "thana_bn": "যাত্রাবাড়ী"
+          },
+          {
+            "thana_en": "Kafrul",
+            "thana_bn": "কাফরুল"
+          },
+          {
+            "thana_en": "Kadamtali",
+            "thana_bn": "কদমতলী"
+          },
+          {
+            "thana_en": "Kalabagan",
+            "thana_bn": "কলাবাগান"
+          },
+          {
+            "thana_en": "Kamrangir Char",
+            "thana_bn": "কামরাঙ্গীরচর"
+          },
+          {
+            "thana_en": "Keraniganj",
+            "thana_bn": "কেরাণীগঞ্জ"
+          },
+          {
+            "thana_en": "Keraniganj (South)",
+            "thana_bn": "দক্ষিণ কেরাণীগঞ্জ"
+          },
+          {
+            "thana_en": "Khilgaon",
+            "thana_bn": "খিলগাঁও"
+          },
+          {
+            "thana_en": "Khilkhet",
+            "thana_bn": "খিলক্ষেত"
+          },
+          {
+            "thana_en": "Kotwali",
+            "thana_bn": "কোতোয়ালী"
+          },
+          {
+            "thana_en": "Lalbagh",
+            "thana_bn": "লালবাগ"
+          },
+          {
+            "thana_en": "Mirpur",
+            "thana_bn": "মিরপুর"
+          },
+          {
+            "thana_en": "Mohammadpur",
+            "thana_bn": "মোহাম্মদপুর"
+          },
+          {
+            "thana_en": "Motijheel",
+            "thana_bn": "মতিঝিল"
+          },
+          {
+            "thana_en": "Mugda",
+            "thana_bn": "মুগদা"
+          },
+          {
+            "thana_en": "Nawabganj",
+            "thana_bn": "নবাবগঞ্জ"
+          },
+          {
+            "thana_en": "New Market",
+            "thana_bn": "নিউ মার্কেট"
+          },
+          {
+            "thana_en": "Pallabi",
+            "thana_bn": "পল্লবী"
+          },
+          {
+            "thana_en": "Paltan",
+            "thana_bn": "পল্টন"
+          },
+          {
+            "thana_en": "Ramna",
+            "thana_bn": "রমনা"
+          },
+          {
+            "thana_en": "Rampura",
+            "thana_bn": "রামপুরা"
+          },
+          {
+            "thana_en": "Rupnagar",
+            "thana_bn": "রূপনগর"
+          },
+          {
+            "thana_en": "Sabujbagh",
+            "thana_bn": "সবুজবাগ"
+          },
+          {
+            "thana_en": "Savar",
+            "thana_bn": "সাভার"
+          },
+          {
+            "thana_en": "Shah Ali",
+            "thana_bn": "শাহ আলী"
+          },
+          {
+            "thana_en": "Shahbagh",
+            "thana_bn": "শাহবাগ"
+          },
+          {
+            "thana_en": "Shahjahanpur",
+            "thana_bn": "শাহজাহানপুর"
+          },
+          {
+            "thana_en": "Sher-E-Bangla Nagar",
+            "thana_bn": "শেরেবাংলা নগর"
+          },
+          {
+            "thana_en": "Shyampur",
+            "thana_bn": "শ্যামপুর"
+          },
+          {
+            "thana_en": "Sutrapur",
+            "thana_bn": "সূত্রাপুর"
+          },
+          {
+            "thana_en": "Tejgaon",
+            "thana_bn": "তেজগাঁও"
+          },
+          {
+            "thana_en": "Tejgaon Ind. Area",
+            "thana_bn": "তেজগাঁও শিল্প এলাকা"
+          },
+          {
+            "thana_en": "Turag",
+            "thana_bn": "তুরাগ"
+          },
+          {
+            "thana_en": "Uttar Khan",
+            "thana_bn": "উত্তরখান"
+          },
+          {
+            "thana_en": "Uttara Paschim",
+            "thana_bn": "উত্তরা পশ্চিম"
+          },
+          {
+            "thana_en": "Uttara Purba",
+            "thana_bn": "উত্তরা পূর্ব"
+          },
+          {
+            "thana_en": "Wari",
+            "thana_bn": "ওয়ারী"
+          }
+        ]
+      },
+      {
+        "district_en": "Faridpur",
+        "district_bn": "ফরিদপুর",
+        "thanas": [
+          {
+            "thana_en": "Faridpur Sadar",
+            "thana_bn": "ফরিদপুর সদর"
+          },
+          {
+            "thana_en": "Boalmari",
+            "thana_bn": "বোয়ালমারী"
+          },
+          {
+            "thana_en": "Sadarpur",
+            "thana_bn": "সদরপুর"
+          },
+          {
+            "thana_en": "Madhukhali",
+            "thana_bn": "মধুখালী"
+          },
+          {
+            "thana_en": "Bhanga",
+            "thana_bn": "ভাঙ্গা"
+          },
+          {
+            "thana_en": "Nagarkanda",
+            "thana_bn": "নগরকান্দা"
+          },
+          {
+            "thana_en": "Charbhadrasan",
+            "thana_bn": "চরভদ্রাসন"
+          },
+          {
+            "thana_en": "Alfadanga",
+            "thana_bn": "আলফাডাঙ্গা"
+          },
+          {
+            "thana_en": "Salpa",
+            "thana_bn": "শালথা"
+          }
+        ]
+      },
+      {
+        "district_en": "Gazipur",
+        "district_bn": "গাজীপুর",
+        "thanas": [
+          {
+            "thana_en": "Gazipur Sadar",
+            "thana_bn": "গাজীপুর সদর"
+          },
+          {
+            "thana_en": "Tongi",
+            "thana_bn": "টঙ্গী"
+          },
+          {
+            "thana_en": "Kaliakair",
+            "thana_bn": "কালিয়াকৈর"
+          },
+          {
+            "thana_en": "Sreepur",
+            "thana_bn": "শ্রীপুর"
+          },
+          {
+            "thana_en": "Kapasia",
+            "thana_bn": "কাপাসিয়া"
+          },
+          {
+            "thana_en": "Kaliganj",
+            "thana_bn": "কালীগঞ্জ"
+          }
+        ]
+      },
+      {
+        "district_en": "Gopalganj",
+        "district_bn": "গোপালগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Gopalganj Sadar",
+            "thana_bn": "গোপালগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Kashiani",
+            "thana_bn": "কাশিয়ানী"
+          },
+          {
+            "thana_en": "Kotalipara",
+            "thana_bn": "কোটালীপাড়া"
+          },
+          {
+            "thana_en": "Muksudpur",
+            "thana_bn": "মুকসুদপুর"
+          },
+          {
+            "thana_en": "Tungipara",
+            "thana_bn": "টুঙ্গিপাড়া"
+          }
+        ]
+      },
+      {
+        "district_en": "Kishoreganj",
+        "district_bn": "কিশোরগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Kishoreganj Sadar",
+            "thana_bn": "কিশোরগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Hossainpur",
+            "thana_bn": "হোসেনপুর"
+          },
+          {
+            "thana_en": "Pakundia",
+            "thana_bn": "পাকুন্দিয়া"
+          },
+          {
+            "thana_en": "Katiadi",
+            "thana_bn": "কটিয়াদি"
+          },
+          {
+            "thana_en": "Bajitpur",
+            "thana_bn": "বাজিতপুর"
+          },
+          {
+            "thana_en": "Kuliarchar",
+            "thana_bn": "কুলিয়ারচর"
+          },
+          {
+            "thana_en": "Bhairab",
+            "thana_bn": "ভৈরব"
+          },
+          {
+            "thana_en": "Nasirnagar",
+            "thana_bn": "নাসিরনগর"
+          },
+          {
+            "thana_en": "Tarail",
+            "thana_bn": "তাড়াইল"
+          },
+          {
+            "thana_en": "Itna",
+            "thana_bn": "ইটনা"
+          },
+          {
+            "thana_en": "Mithamoin",
+            "thana_bn": "মিঠামইন"
+          },
+          {
+            "thana_en": "Nikli",
+            "thana_bn": "নিকলী"
+          },
+          {
+            "thana_en": "Austagram",
+            "thana_bn": "অষ্টগ্রাম"
+          }
+        ]
+      },
+      {
+        "district_en": "Madaripur",
+        "district_bn": "মাদারীপুর",
+        "thanas": [
+          {
+            "thana_en": "Madaripur Sadar",
+            "thana_bn": "মাদারীপুর সদর"
+          },
+          {
+            "thana_en": "Shibchar",
+            "thana_bn": "শিবচর"
+          },
+          {
+            "thana_en": "Kalkini",
+            "thana_bn": "কালকিনি"
+          },
+          {
+            "thana_en": "Rajoir",
+            "thana_bn": "রাজৈর"
+          }
+        ]
+      },
+      {
+        "district_en": "Manikganj",
+        "district_bn": "মানিকগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Manikganj Sadar",
+            "thana_bn": "মানিকগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Singair",
+            "thana_bn": "সিঙ্গাইর"
+          },
+          {
+            "thana_en": "Shibalaya",
+            "thana_bn": "শিবালয়"
+          },
+          {
+            "thana_en": "Saturia",
+            "thana_bn": "সাটুরিয়া"
+          },
+          {
+            "thana_en": "Harirampur",
+            "thana_bn": "হরিরামপুর"
+          },
+          {
+            "thana_en": "Ghior",
+            "thana_bn": "ঘিওর"
+          },
+          {
+            "thana_en": "Daulatpur",
+            "thana_bn": "দৌলতপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Munshiganj",
+        "district_bn": "মুন্সিগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Munshiganj Sadar",
+            "thana_bn": "মুন্সিগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Sreenagar",
+            "thana_bn": "শ্রীনগর"
+          },
+          {
+            "thana_en": "Sirajdikhan",
+            "thana_bn": "সিরাজদিখান"
+          },
+          {
+            "thana_en": "Louhajang",
+            "thana_bn": "লৌহজং"
+          },
+          {
+            "thana_en": "Tongibari",
+            "thana_bn": "টঙ্গীবাড়ি"
+          },
+          {
+            "thana_en": "Gazaria",
+            "thana_bn": "গজারিয়া"
+          }
+        ]
+      },
+      {
+        "district_en": "Narayanganj",
+        "district_bn": "নারায়ণগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Narayanganj Sadar",
+            "thana_bn": "নারায়ণগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Fatullah",
+            "thana_bn": "ফতুল্লা"
+          },
+          {
+            "thana_en": "Siddirganj",
+            "thana_bn": "সিদ্ধিরগঞ্জ"
+          },
+          {
+            "thana_en": "Araihazar",
+            "thana_bn": "আড়াইহাজার"
+          },
+          {
+            "thana_en": "Sonargaon",
+            "thana_bn": "সোনারগাঁ"
+          },
+          {
+            "thana_en": "Rupganj",
+            "thana_bn": "রূপগঞ্জ"
+          }
+        ]
+      },
+      {
+        "district_en": "Narsingdi",
+        "district_bn": "নরসিংদী",
+        "thanas": [
+          {
+            "thana_en": "Narsingdi Sadar",
+            "thana_bn": "নরসিংদী সদর"
+          },
+          {
+            "thana_en": "Palash",
+            "thana_bn": "পলাশ"
+          },
+          {
+            "thana_en": "Raypura",
+            "thana_bn": "রায়পুরা"
+          },
+          {
+            "thana_en": "Shibpur",
+            "thana_bn": "শিবপুর"
+          },
+          {
+            "thana_en": "Monohardi",
+            "thana_bn": "মনোহরদী"
+          },
+          {
+            "thana_en": "Belabo",
+            "thana_bn": "বেলাবো"
+          }
+        ]
+      },
+      {
+        "district_en": "Rajbari",
+        "district_bn": "রাজবাড়ী",
+        "thanas": [
+          {
+            "thana_en": "Rajbari Sadar",
+            "thana_bn": "রাজবাড়ী সদর"
+          },
+          {
+            "thana_en": "Goalundo",
+            "thana_bn": "গোয়ালন্দ"
+          },
+          {
+            "thana_en": "Pangsha",
+            "thana_bn": "পাংশা"
+          },
+          {
+            "thana_en": "Baliakandi",
+            "thana_bn": "বালিয়াকান্দি"
+          },
+          {
+            "thana_en": "Kalukhali",
+            "thana_bn": "কালুখালী"
+          }
+        ]
+      },
+      {
+        "district_en": "Shariatpur",
+        "district_bn": "শরীয়তপুর",
+        "thanas": [
+          {
+            "thana_en": "Shariatpur Sadar",
+            "thana_bn": "শরীয়তপুর সদর"
+          },
+          {
+            "thana_en": "Naria",
+            "thana_bn": "নড়িয়া"
+          },
+          {
+            "thana_en": "Zajira",
+            "thana_bn": "জাজিরা"
+          },
+          {
+            "thana_en": "Gosairhat",
+            "thana_bn": "গোসাইরহাট"
+          },
+          {
+            "thana_en": "Bhedarganj",
+            "thana_bn": "ভেদরগঞ্জ"
+          },
+          {
+            "thana_en": "Damudya",
+            "thana_bn": "ডামুড্যা"
+          }
+        ]
+      },
+      {
+        "district_en": "Tangail",
+        "district_bn": "টাঙ্গাইল",
+        "thanas": [
+          {
+            "thana_en": "Tangail Sadar",
+            "thana_bn": "টাঙ্গাইল সদর"
+          },
+          {
+            "thana_en": "Sakhipur",
+            "thana_bn": "সখিপুর"
+          },
+          {
+            "thana_en": "Basail",
+            "thana_bn": "বাসাইল"
+          },
+          {
+            "thana_en": "Bhuapur",
+            "thana_bn": "ভুয়াপুর"
+          },
+          {
+            "thana_en": "Kalihati",
+            "thana_bn": "কালিহাতী"
+          },
+          {
+            "thana_en": "Madhupur",
+            "thana_bn": "মধুপুর"
+          },
+          {
+            "thana_en": "Ghatail",
+            "thana_bn": "ঘাটাইল"
+          },
+          {
+            "thana_en": "Mirzapur",
+            "thana_bn": "মির্জাপুর"
+          },
+          {
+            "thana_en": "Nagarpur",
+            "thana_bn": "নাগরপুর"
+          },
+          {
+            "thana_en": "Dhanbari",
+            "thana_bn": "ধনবাড়ী"
+          },
+          {
+            "thana_en": "Delduar",
+            "thana_bn": "দেলদুয়ার"
+          },
+          {
+            "thana_en": "Bhashantek",
+            "thana_bn": "বাসনটেক"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "division_en": "Chattogram",
+    "division_bn": "চট্টগ্রাম",
+    "districts": [
+      {
+        "district_en": "Chattogram",
+        "district_bn": "চট্টগ্রাম",
+        "thanas": [
+          {
+            "thana_en": "Kotwali",
+            "thana_bn": "কোতোয়ালী"
+          },
+          {
+            "thana_en": "Panchlaish",
+            "thana_bn": "পাঁচলাইশ"
+          },
+          {
+            "thana_en": "Chandgaon",
+            "thana_bn": "চান্দগাঁও"
+          },
+          {
+            "thana_en": "Khulsi",
+            "thana_bn": "খুলশী"
+          },
+          {
+            "thana_en": "Bakalia",
+            "thana_bn": "বাকলিয়া"
+          },
+          {
+            "thana_en": "Bayezid Bostami",
+            "thana_bn": "বায়েজিদ বোস্তামী"
+          },
+          {
+            "thana_en": "Double Mooring",
+            "thana_bn": "ডবলমুরিং"
+          },
+          {
+            "thana_en": "Halishahar",
+            "thana_bn": "হালিশহর"
+          },
+          {
+            "thana_en": "Patenga",
+            "thana_bn": "পতেঙ্গা"
+          },
+          {
+            "thana_en": "Karnafuli",
+            "thana_bn": "কর্ণফুলী"
+          },
+          {
+            "thana_en": "Pahartali",
+            "thana_bn": "পাহাড়তলী"
+          },
+          {
+            "thana_en": "Banshkhali",
+            "thana_bn": "বাঁশখালী"
+          },
+          {
+            "thana_en": "Boalkhali",
+            "thana_bn": "বোয়ালখালী"
+          },
+          {
+            "thana_en": "Fatikchhari",
+            "thana_bn": "ফটিকছড়ি"
+          },
+          {
+            "thana_en": "Hathazari",
+            "thana_bn": "হাটহাজারী"
+          },
+          {
+            "thana_en": "Lohagara",
+            "thana_bn": "লোহাগাড়া"
+          },
+          {
+            "thana_en": "Mirsharai",
+            "thana_bn": "মীরসরাই"
+          },
+          {
+            "thana_en": "Patiya",
+            "thana_bn": "পটিয়া"
+          },
+          {
+            "thana_en": "Rangunia",
+            "thana_bn": "রাঙ্গুনিয়া"
+          },
+          {
+            "thana_en": "Raozan",
+            "thana_bn": "রাউজান"
+          },
+          {
+            "thana_en": "Sandwip",
+            "thana_bn": "সন্দ্বীপ"
+          },
+          {
+            "thana_en": "Satkania",
+            "thana_bn": "সাতকানিয়া"
+          },
+          {
+            "thana_en": "Sitakunda",
+            "thana_bn": "সীতাকুণ্ড"
+          }
+        ]
+      },
+      {
+        "district_en": "Cox's Bazar",
+        "district_bn": "কক্সবাজার",
+        "thanas": [
+          {
+            "thana_en": "Cox's Bazar Sadar",
+            "thana_bn": "কক্সবাজার সদর"
+          },
+          {
+            "thana_en": "Chakaria",
+            "thana_bn": "চকরিয়া"
+          },
+          {
+            "thana_en": "Kutubdia",
+            "thana_bn": "কুতুবদিয়া"
+          },
+          {
+            "thana_en": "Ukhia",
+            "thana_bn": "উখিয়া"
+          },
+          {
+            "thana_en": "Teknaf",
+            "thana_bn": "টেকনাফ"
+          },
+          {
+            "thana_en": "Pekua",
+            "thana_bn": "পেকুয়া"
+          },
+          {
+            "thana_en": "Ramu",
+            "thana_bn": "রামু"
+          },
+          {
+            "thana_en": "Maheshkhali",
+            "thana_bn": "মহেশখালী"
+          },
+          {
+            "thana_en": "Eidgaon",
+            "thana_bn": "ঈদগাঁও"
+          }
+        ]
+      },
+      {
+        "district_en": "Bandarban",
+        "district_bn": "বান্দরবান",
+        "thanas": [
+          {
+            "thana_en": "Bandarban Sadar",
+            "thana_bn": "বান্দরবান সদর"
+          },
+          {
+            "thana_en": "Alikadam",
+            "thana_bn": "আলীকদম"
+          },
+          {
+            "thana_en": "Naikhongchhari",
+            "thana_bn": "নাইক্ষ্যংছড়ি"
+          },
+          {
+            "thana_en": "Rowangchhari",
+            "thana_bn": "রোয়াংছড়ি"
+          },
+          {
+            "thana_en": "Ruma",
+            "thana_bn": "রুমা"
+          },
+          {
+            "thana_en": "Thanchi",
+            "thana_bn": "থানচি"
+          },
+          {
+            "thana_en": "Lama",
+            "thana_bn": "লামা"
+          }
+        ]
+      },
+      {
+        "district_en": "Brahmanbaria",
+        "district_bn": "ব্রাহ্মণবাড়িয়া",
+        "thanas": [
+          {
+            "thana_en": "Brahmanbaria Sadar",
+            "thana_bn": "ব্রাহ্মণবাড়িয়া সদর"
+          },
+          {
+            "thana_en": "Ashuganj",
+            "thana_bn": "আশুগঞ্জ"
+          },
+          {
+            "thana_en": " Nasirnagar",
+            "thana_bn": "নাসিরনগর"
+          },
+          {
+            "thana_en": "Nabinagar",
+            "thana_bn": "নবীনগর"
+          },
+          {
+            "thana_en": "Kasba",
+            "thana_bn": "কসবা"
+          },
+          {
+            "thana_en": "Akhaura",
+            "thana_bn": "আখাউড়া"
+          },
+          {
+            "thana_en": "Bancharampur",
+            "thana_bn": "বাঞ্ছারামপুর"
+          },
+          {
+            "thana_en": "Bijoynagar",
+            "thana_bn": "বিজয়নগর"
+          },
+          {
+            "thana_en": "Sarail",
+            "thana_bn": "সরাইল"
+          }
+        ]
+      },
+      {
+        "district_en": "Chandpur",
+        "district_bn": "চাঁদপুর",
+        "thanas": [
+          {
+            "thana_en": "Chandpur Sadar",
+            "thana_bn": "চাঁদপুর সদর"
+          },
+          {
+            "thana_en": "Faridganj",
+            "thana_bn": "ফরিদগঞ্জ"
+          },
+          {
+            "thana_en": "Haimchar",
+            "thana_bn": "হাইমচর"
+          },
+          {
+            "thana_en": "Haziganj",
+            "thana_bn": "হাজীগঞ্জ"
+          },
+          {
+            "thana_en": "Kachua",
+            "thana_bn": "কচুয়া"
+          },
+          {
+            "thana_en": "Matlab Dakshin",
+            "thana_bn": "মতলব দক্ষিণ"
+          },
+          {
+            "thana_en": "Matlab Uttar",
+            "thana_bn": "মতলব উত্তর"
+          },
+          {
+            "thana_en": "Shahrasti",
+            "thana_bn": "শাহরাস্তি"
+          }
+        ]
+      },
+      {
+        "district_en": "Cumilla",
+        "district_bn": "কুমিল্লা",
+        "thanas": [
+          {
+            "thana_en": "Cumilla Sadar",
+            "thana_bn": "কুমিল্লা সদর"
+          },
+          {
+            "thana_en": "Barura",
+            "thana_bn": "বরুড়া"
+          },
+          {
+            "thana_en": "Brahmanpara",
+            "thana_bn": "ব্রাহ্মণপাড়া"
+          },
+          {
+            "thana_en": "Burichong",
+            "thana_bn": "বুড়িচং"
+          },
+          {
+            "thana_en": "Chandina",
+            "thana_bn": "চান্দিনা"
+          },
+          {
+            "thana_en": "Chauddagram",
+            "thana_bn": "চৌদ্দগ্রাম"
+          },
+          {
+            "thana_en": "Daudkandi",
+            "thana_bn": "দাউদকান্দি"
+          },
+          {
+            "thana_en": "Debidwar",
+            "thana_bn": "দেবিদ্বার"
+          },
+          {
+            "thana_en": "Homna",
+            "thana_bn": "হোমনা"
+          },
+          {
+            "thana_en": "Laksam",
+            "thana_bn": "লাকসাম"
+          },
+          {
+            "thana_en": "Monoharganj",
+            "thana_bn": "মনোহরগঞ্জ"
+          },
+          {
+            "thana_en": "Meghna",
+            "thana_bn": "মেঘনা"
+          },
+          {
+            "thana_en": "Muradnagar",
+            "thana_bn": "মুরাদনগর"
+          },
+          {
+            "thana_en": "Nangalkot",
+            "thana_bn": "নাঙ্গলকোট"
+          },
+          {
+            "thana_en": "Titas",
+            "thana_bn": "তিতাস"
+          }
+        ]
+      },
+      {
+        "district_en": "Feni",
+        "district_bn": "ফেনী",
+        "thanas": [
+          {
+            "thana_en": "Feni Sadar",
+            "thana_bn": "ফেনী সদর"
+          },
+          {
+            "thana_en": "Daganbhuiyan",
+            "thana_bn": "দাগনভূঞা"
+          },
+          {
+            "thana_en": "Chhagalnaiya",
+            "thana_bn": "ছাগলনাইয়া"
+          },
+          {
+            "thana_en": "Sonagazi",
+            "thana_bn": "সোনাগাজী"
+          },
+          {
+            "thana_en": "Parshuram",
+            "thana_bn": "পরশুরাম"
+          },
+          {
+            "thana_en": "Fulgazi",
+            "thana_bn": "ফুলগাজী"
+          }
+        ]
+      },
+      {
+        "district_en": "Khagrachhari",
+        "district_bn": "খাগড়াছড়ি",
+        "thanas": [
+          {
+            "thana_en": "Khagrachhari Sadar",
+            "thana_bn": "খাগড়াছড়ি সদর"
+          },
+          {
+            "thana_en": "Dighinala",
+            "thana_bn": "দীঘিনালা"
+          },
+          {
+            "thana_en": "Panchhari",
+            "thana_bn": "পানছড়ি"
+          },
+          {
+            "thana_en": "Laxmichhari",
+            "thana_bn": "লক্ষ্মীছড়ি"
+          },
+          {
+            "thana_en": "Mahalchhari",
+            "thana_bn": "মহালছড়ি"
+          },
+          {
+            "thana_en": "Manikchhari",
+            "thana_bn": "মানিকছড়ি"
+          },
+          {
+            "thana_en": "Ramgarh",
+            "thana_bn": "রামগড়"
+          },
+          {
+            "thana_en": "Matiranga",
+            "thana_bn": "মাটিরাঙ্গা"
+          }
+        ]
+      },
+      {
+        "district_en": "Lakshmipur",
+        "district_bn": "লক্ষ্মীপুর",
+        "thanas": [
+          {
+            "thana_en": "Lakshmipur Sadar",
+            "thana_bn": "লক্ষ্মীপুর সদর"
+          },
+          {
+            "thana_en": "Raipur",
+            "thana_bn": "রায়পুর"
+          },
+          {
+            "thana_en": "Ramganj",
+            "thana_bn": "রামগঞ্জ"
+          },
+          {
+            "thana_en": "Ramgati",
+            "thana_bn": "রামগতি"
+          },
+          {
+            "thana_en": "Kamalnagar",
+            "thana_bn": "কমলনগর"
+          }
+        ]
+      },
+      {
+        "district_en": "Noakhali",
+        "district_bn": "নোয়াখালী",
+        "thanas": [
+          {
+            "thana_en": "Noakhali Sadar",
+            "thana_bn": "নোয়াখালী সদর"
+          },
+          {
+            "thana_en": "Begumganj",
+            "thana_bn": "বেগমগঞ্জ"
+          },
+          {
+            "thana_en": "Chatkhil",
+            "thana_bn": "চাটখিল"
+          },
+          {
+            "thana_en": "Companiganj",
+            "thana_bn": "কোম্পানীগঞ্জ"
+          },
+          {
+            "thana_en": "Hatia",
+            "thana_bn": "হাতিয়া"
+          },
+          {
+            "thana_en": "Senbagh",
+            "thana_bn": "সেনবাগ"
+          },
+          {
+            "thana_en": "Suborno Char",
+            "thana_bn": "সুবর্ণচর"
+          },
+          {
+            "thana_en": "Kabirhat",
+            "thana_bn": "কবিরহাট"
+          }
+        ]
+      },
+      {
+        "district_en": "Rangamati",
+        "district_bn": "রাঙ্গামাটি",
+        "thanas": [
+          {
+            "thana_en": "Rangamati Sadar",
+            "thana_bn": "রাঙ্গামাটি সদর"
+          },
+          {
+            "thana_en": "Belaichhari",
+            "thana_bn": "বেলাইছড়ি"
+          },
+          {
+            "thana_en": "Bagaichhari",
+            "thana_bn": "বাঘাইছড়ি"
+          },
+          {
+            "thana_en": "Barkal",
+            "thana_bn": "বরকল"
+          },
+          {
+            "thana_en": "Juraichhari",
+            "thana_bn": "জুরাছড়ি"
+          },
+          {
+            "thana_en": "Rajasthali",
+            "thana_bn": "রাজস্থলী"
+          },
+          {
+            "thana_en": "Kaptai",
+            "thana_bn": "কাপ্তাই"
+          },
+          {
+            "thana_en": "Langadu",
+            "thana_bn": "লংগদু"
+          },
+          {
+            "thana_en": "Naniarchar",
+            "thana_bn": "নানিয়ারচর"
+          },
+          {
+            "thana_en": "Kaukhali",
+            "thana_bn": "কাউখালী"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "division_en": "Rajshahi",
+    "division_bn": "রাজশাহী",
+    "districts": [
+      {
+        "district_en": "Rajshahi",
+        "district_bn": "রাজশাহী",
+        "thanas": [
+          {
+            "thana_en": "Boalia",
+            "thana_bn": "বোয়ালিয়া"
+          },
+          {
+            "thana_en": "Motihar",
+            "thana_bn": "মতিহার"
+          },
+          {
+            "thana_en": "Rajpara",
+            "thana_bn": "রাজপাড়া"
+          },
+          {
+            "thana_en": "Shah Makdum",
+            "thana_bn": "শাহ মখদুম"
+          },
+          {
+            "thana_en": "Paba",
+            "thana_bn": "পবা"
+          },
+          {
+            "thana_en": "Durgapur",
+            "thana_bn": "দুর্গাপুর"
+          },
+          {
+            "thana_en": "Mohanpur",
+            "thana_bn": "মোহনপুর"
+          },
+          {
+            "thana_en": "Charghat",
+            "thana_bn": "চারঘাট"
+          },
+          {
+            "thana_en": "Bagha",
+            "thana_bn": "বাঘা"
+          },
+          {
+            "thana_en": "Tanore",
+            "thana_bn": "তানোর"
+          },
+          {
+            "thana_en": "Godagari",
+            "thana_bn": "গোদাগাড়ী"
+          }
+        ]
+      },
+      {
+        "district_en": "Bogura",
+        "district_bn": "বগুড়া",
+        "thanas": [
+          {
+            "thana_en": "Bogura Sadar",
+            "thana_bn": "বগুড়া সদর"
+          },
+          {
+            "thana_en": "Sherpur",
+            "thana_bn": "শেরপুর"
+          },
+          {
+            "thana_en": "Shajahanpur",
+            "thana_bn": "শাহজাহানপুর"
+          },
+          {
+            "thana_en": "Dupchanchia",
+            "thana_bn": "দুপচাঁচিয়া"
+          },
+          {
+            "thana_en": "Adamdighi",
+            "thana_bn": "আদমদিঘী"
+          },
+          {
+            "thana_en": "Kahaloo",
+            "thana_bn": "কাহালু"
+          },
+          {
+            "thana_en": "Nandigram",
+            "thana_bn": "নন্দীগ্রাম"
+          },
+          {
+            "thana_en": "Sariakandi",
+            "thana_bn": "সারিয়াকান্দি"
+          },
+          {
+            "thana_en": "Sonatala",
+            "thana_bn": "সোনাতলা"
+          },
+          {
+            "thana_en": "Gabtali",
+            "thana_bn": "গাবতলী"
+          },
+          {
+            "thana_en": "Dhunat",
+            "thana_bn": "ধুনট"
+          },
+          {
+            "thana_en": "Shibganj",
+            "thana_bn": "শিবগঞ্জ"
+          }
+        ]
+      },
+      {
+        "district_en": "Jaipurhat",
+        "district_bn": "জয়পুরহাট",
+        "thanas": [
+          {
+            "thana_en": "Jaipurhat Sadar",
+            "thana_bn": "জয়পুরহাট সদর"
+          },
+          {
+            "thana_en": "Akkelpur",
+            "thana_bn": "আক্কেলপুর"
+          },
+          {
+            "thana_en": "Kalai",
+            "thana_bn": "কালাই"
+          },
+          {
+            "thana_en": "Khetlal",
+            "thana_bn": "খেতলাল"
+          },
+          {
+            "thana_en": "Panchbibi",
+            "thana_bn": "পাঁচবিবি"
+          }
+        ]
+      },
+      {
+        "district_en": "Naogaon",
+        "district_bn": "নওগাঁ",
+        "thanas": [
+          {
+            "thana_en": "Naogaon Sadar",
+            "thana_bn": "নওগাঁ সদর"
+          },
+          {
+            "thana_en": "Mohadevpur",
+            "thana_bn": "মহাদেবপুর"
+          },
+          {
+            "thana_en": "Manda",
+            "thana_bn": "মান্দা"
+          },
+          {
+            "thana_en": "Niamatpur",
+            "thana_bn": "নিয়ামতপুর"
+          },
+          {
+            "thana_en": "Atrai",
+            "thana_bn": "আত্রাই"
+          },
+          {
+            "thana_en": "Raninagar",
+            "thana_bn": "রাণীনগর"
+          },
+          {
+            "thana_en": "Patnitala",
+            "thana_bn": "পত্নীতলা"
+          },
+          {
+            "thana_en": "Dhamoirhat",
+            "thana_bn": "ধামইরহাট"
+          },
+          {
+            "thana_en": "Sapahar",
+            "thana_bn": "সাপাহার"
+          },
+          {
+            "thana_en": "Porsha",
+            "thana_bn": "পোরশা"
+          },
+          {
+            "thana_en": "Badalgachhi",
+            "thana_bn": "বদলগাছী"
+          }
+        ]
+      },
+      {
+        "district_en": "Natore",
+        "district_bn": "নাটোর",
+        "thanas": [
+          {
+            "thana_en": "Natore Sadar",
+            "thana_bn": "নাটোর সদর"
+          },
+          {
+            "thana_en": "Singra",
+            "thana_bn": "সিংড়া"
+          },
+          {
+            "thana_en": "Baraigram",
+            "thana_bn": "বড়াইগ্রাম"
+          },
+          {
+            "thana_en": "Bagatipara",
+            "thana_bn": "বাগাতিপাড়া"
+          },
+          {
+            "thana_en": "Lalpur",
+            "thana_bn": "লালপুর"
+          },
+          {
+            "thana_en": "Gurudaspur",
+            "thana_bn": "গুরুদাসপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Chapai Nawabganj",
+        "district_bn": "চাঁপাইনবাবগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Nawabganj Sadar",
+            "thana_bn": "নবাবগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Shibganj",
+            "thana_bn": "শিবগঞ্জ"
+          },
+          {
+            "thana_en": "Nachole",
+            "thana_bn": "নাচোল"
+          },
+          {
+            "thana_en": "Gomostapur",
+            "thana_bn": "গোমস্তাপুর"
+          },
+          {
+            "thana_en": "Bholahat",
+            "thana_bn": "ভোলাহাট"
+          }
+        ]
+      },
+      {
+        "district_en": "Pabna",
+        "district_bn": "পাবনা",
+        "thanas": [
+          {
+            "thana_en": "Pabna Sadar",
+            "thana_bn": "পাবনা সদর"
+          },
+          {
+            "thana_en": "Ishwardi",
+            "thana_bn": "ঈশ্বরদী"
+          },
+          {
+            "thana_en": "Bhangura",
+            "thana_bn": "ভাঙ্গুড়া"
+          },
+          {
+            "thana_en": "Faridpur",
+            "thana_bn": "ফরিদপুর"
+          },
+          {
+            "thana_en": "Atgharia",
+            "thana_bn": "আটঘরিয়া"
+          },
+          {
+            "thana_en": "Chatmohar",
+            "thana_bn": "চাটমোহর"
+          },
+          {
+            "thana_en": "Santhia",
+            "thana_bn": "সাঁথিয়া"
+          },
+          {
+            "thana_en": "Sujanagar",
+            "thana_bn": "সুজানগর"
+          },
+          {
+            "thana_en": "Bera",
+            "thana_bn": "বেড়া"
+          }
+        ]
+      },
+      {
+        "district_en": "Sirajganj",
+        "district_bn": "সিরাজগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Sirajganj Sadar",
+            "thana_bn": "সিরাজগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Belkuchi",
+            "thana_bn": "বেলকুচি"
+          },
+          {
+            "thana_en": "Chauhali",
+            "thana_bn": "চৌহালি"
+          },
+          {
+            "thana_en": "Kamarkhanda",
+            "thana_bn": "কামারখন্দ"
+          },
+          {
+            "thana_en": "Kazipur",
+            "thana_bn": "কাজিপুর"
+          },
+          {
+            "thana_en": "Shahjadpur",
+            "thana_bn": "শাহজাদপুর"
+          },
+          {
+            "thana_en": "Ullapara",
+            "thana_bn": "উল্লাপাড়া"
+          },
+          {
+            "thana_en": "Enayetpur",
+            "thana_bn": "এনায়েতপুর"
+          },
+          {
+            "thana_en": "Raiganj",
+            "thana_bn": "রায়গঞ্জ"
+          },
+          {
+            "thana_en": "Tarash",
+            "thana_bn": "তাড়াশ"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "division_en": "Khulna",
+    "division_bn": "খুলনা",
+    "districts": [
+      {
+        "district_en": "Khulna",
+        "district_bn": "খুলনা",
+        "thanas": [
+          {
+            "thana_en": "Khulna Sadar",
+            "thana_bn": "খুলনা সদর"
+          },
+          {
+            "thana_en": "Sonadanga",
+            "thana_bn": "সোনাডাঙ্গা"
+          },
+          {
+            "thana_en": "Khalishpur",
+            "thana_bn": "খালিশপুর"
+          },
+          {
+            "thana_en": "Daulatpur",
+            "thana_bn": "দৌলতপুর"
+          },
+          {
+            "thana_en": "Khan Jahan Ali",
+            "thana_bn": "খান জাহান আলী"
+          },
+          {
+            "thana_en": "Batiaghata",
+            "thana_bn": "বটিয়াঘাটা"
+          },
+          {
+            "thana_en": "Dacope",
+            "thana_bn": "দাকোপ"
+          },
+          {
+            "thana_en": "Dumuria",
+            "thana_bn": "ডুমুরিয়া"
+          },
+          {
+            "thana_en": "Dighalia",
+            "thana_bn": "দিঘলিয়া"
+          },
+          {
+            "thana_en": "Koyra",
+            "thana_bn": "কয়রা"
+          },
+          {
+            "thana_en": "Paikgachha",
+            "thana_bn": "পাইকগাছা"
+          },
+          {
+            "thana_en": "Phultala",
+            "thana_bn": "ফুলতলা"
+          },
+          {
+            "thana_en": "Terokhada",
+            "thana_bn": "তেরখাদা"
+          }
+        ]
+      },
+      {
+        "district_en": "Bagerhat",
+        "district_bn": "বাগেরহাট",
+        "thanas": [
+          {
+            "thana_en": "Bagerhat Sadar",
+            "thana_bn": "বাগেরহাট সদর"
+          },
+          {
+            "thana_en": "Chitalmari",
+            "thana_bn": "চিতলমারী"
+          },
+          {
+            "thana_en": "Fakirhat",
+            "thana_bn": "ফকিরহাট"
+          },
+          {
+            "thana_en": "Kachua",
+            "thana_bn": "কচুয়া"
+          },
+          {
+            "thana_en": "Mollahat",
+            "thana_bn": "মোল্লাহাট"
+          },
+          {
+            "thana_en": "Mongla",
+            "thana_bn": "মংলা"
+          },
+          {
+            "thana_en": "Morrelganj",
+            "thana_bn": "মোড়েলগঞ্জ"
+          },
+          {
+            "thana_en": "Rampal",
+            "thana_bn": "রামপাল"
+          },
+          {
+            "thana_en": "Sarankhola",
+            "thana_bn": "শরণখোলা"
+          }
+        ]
+      },
+      {
+        "district_en": "Chuadanga",
+        "district_bn": "চুয়াডাঙ্গা",
+        "thanas": [
+          {
+            "thana_en": "Chuadanga Sadar",
+            "thana_bn": "চুয়াডাঙ্গা সদর"
+          },
+          {
+            "thana_en": "Alamdanga",
+            "thana_bn": "আলমডাঙ্গা"
+          },
+          {
+            "thana_en": "Damurhuda",
+            "thana_bn": "দামুড়হুদা"
+          },
+          {
+            "thana_en": " জীবননগর",
+            "thana_bn": "জীবননগর"
+          }
+        ]
+      },
+      {
+        "district_en": "Jashore",
+        "district_bn": "যশোর",
+        "thanas": [
+          {
+            "thana_en": "Jashore Sadar",
+            "thana_bn": "যশোর সদর"
+          },
+          {
+            "thana_en": "Abhaynagar",
+            "thana_bn": "অভয়নগর"
+          },
+          {
+            "thana_en": "Bagherpara",
+            "thana_bn": "বাঘারপাড়া"
+          },
+          {
+            "thana_en": "Chaugachha",
+            "thana_bn": "চৌগাছা"
+          },
+          {
+            "thana_en": "Jhikargachha",
+            "thana_bn": "ঝিকরগাছা"
+          },
+          {
+            "thana_en": "Keshabpur",
+            "thana_bn": "কেশবপুর"
+          },
+          {
+            "thana_en": "Manirampur",
+            "thana_bn": "মণিরামপুর"
+          },
+          {
+            "thana_en": "Sharsha",
+            "thana_bn": "শার্শা"
+          }
+        ]
+      },
+      {
+        "district_en": "Jhenaidah",
+        "district_bn": "ঝিনাইদহ",
+        "thanas": [
+          {
+            "thana_en": "Jhenaidah Sadar",
+            "thana_bn": "ঝিনাইদহ সদর"
+          },
+          {
+            "thana_en": "Harinakunda",
+            "thana_bn": "হরিণাকুন্ডু"
+          },
+          {
+            "thana_en": "Kaliganj",
+            "thana_bn": "কালীগঞ্জ"
+          },
+          {
+            "thana_en": "Kotchandpur",
+            "thana_bn": "কোটচাঁদপুর"
+          },
+          {
+            "thana_en": "Shailkupa",
+            "thana_bn": "শৈলকুপা"
+          },
+          {
+            "thana_en": "Maheshpur",
+            "thana_bn": "মহেশপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Kushtia",
+        "district_bn": "কুষ্টিয়া",
+        "thanas": [
+          {
+            "thana_en": "Kushtia Sadar",
+            "thana_bn": "কুষ্টিয়া সদর"
+          },
+          {
+            "thana_en": "Kumarkhali",
+            "thana_bn": "কুমারখালী"
+          },
+          {
+            "thana_en": "Khoksa",
+            "thana_bn": "খোকসা"
+          },
+          {
+            "thana_en": "Mirpur",
+            "thana_bn": "মিরপুর"
+          },
+          {
+            "thana_en": "Bheramara",
+            "thana_bn": "ভেড়ামারা"
+          },
+          {
+            "thana_en": "Daulatpur",
+            "thana_bn": "দৌলতপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Magura",
+        "district_bn": "মাগুরা",
+        "thanas": [
+          {
+            "thana_en": "Magura Sadar",
+            "thana_bn": "মাগুরা সদর"
+          },
+          {
+            "thana_en": "Mohammadpur",
+            "thana_bn": "মোহাম্মদপুর"
+          },
+          {
+            "thana_en": "Shalikha",
+            "thana_bn": "শালিখা"
+          },
+          {
+            "thana_en": "Sreepur",
+            "thana_bn": "শ্রীপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Meherpur",
+        "district_bn": "মেহেরপুর",
+        "thanas": [
+          {
+            "thana_en": "Meherpur Sadar",
+            "thana_bn": "মেহেরপুর সদর"
+          },
+          {
+            "thana_en": "Gangni",
+            "thana_bn": "গাংনী"
+          },
+          {
+            "thana_en": "Mujibnagar",
+            "thana_bn": "মুজিবনগর"
+          }
+        ]
+      },
+      {
+        "district_en": "Narail",
+        "district_bn": "নড়াইল",
+        "thanas": [
+          {
+            "thana_en": "Narail Sadar",
+            "thana_bn": "নড়াইল সদর"
+          },
+          {
+            "thana_en": "Lohagara",
+            "thana_bn": "লোহাগাড়া"
+          },
+          {
+            "thana_en": "Kalia",
+            "thana_bn": "কালিয়া"
+          }
+        ]
+      },
+      {
+        "district_en": "Satkhira",
+        "district_bn": "সাতক্ষীরা",
+        "thanas": [
+          {
+            "thana_en": "Satkhira Sadar",
+            "thana_bn": "সাতক্ষীরা সদর"
+          },
+          {
+            "thana_en": "Assassuni",
+            "thana_bn": "আশাশুনি"
+          },
+          {
+            "thana_en": "Debhata",
+            "thana_bn": "দেবহাটা"
+          },
+          {
+            "thana_en": "Kalaroa",
+            "thana_bn": "কলারোয়া"
+          },
+          {
+            "thana_en": "Kaliganj",
+            "thana_bn": "কালীগঞ্জ"
+          },
+          {
+            "thana_en": "Kuskhira",
+            "thana_bn": "শ্যামনগর"
+          },
+          {
+            "thana_en": "Tala",
+            "thana_bn": "তালা"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "division_en": "Barishal",
+    "division_bn": "বরিশাল",
+    "districts": [
+      {
+        "district_en": "Barishal",
+        "district_bn": "বরিশাল",
+        "thanas": [
+          {
+            "thana_en": "Kotwali",
+            "thana_bn": "কোতোয়ালী"
+          },
+          {
+            "thana_en": "Bandortila",
+            "thana_bn": "বন্দর"
+          },
+          {
+            "thana_en": "Babuganj",
+            "thana_bn": "বাবুগঞ্জ"
+          },
+          {
+            "thana_en": "Bakerganj",
+            "thana_bn": "বাকেরগঞ্জ"
+          },
+          {
+            "thana_en": "Banaripara",
+            "thana_bn": "বানারীপাড়া"
+          },
+          {
+            "thana_en": "Gaurnadi",
+            "thana_bn": "গৌরনদী"
+          },
+          {
+            "thana_en": "Hizla",
+            "thana_bn": "হিজলা"
+          },
+          {
+            "thana_en": "Mehendiganj",
+            "thana_bn": "মেহেন্দিগঞ্জ"
+          },
+          {
+            "thana_en": "Muladi",
+            "thana_bn": "মুলাদী"
+          },
+          {
+            "thana_en": "Wazirpur",
+            "thana_bn": "উজিরপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Barguna",
+        "district_bn": "বরগুনা",
+        "thanas": [
+          {
+            "thana_en": "Barguna Sadar",
+            "thana_bn": "বরগুনা সদর"
+          },
+          {
+            "thana_en": "Amtali",
+            "thana_bn": "আমতলী"
+          },
+          {
+            "thana_en": "Bamna",
+            "thana_bn": "বামনা"
+          },
+          {
+            "thana_en": "Betagi",
+            "thana_bn": "বেতাগী"
+          },
+          {
+            "thana_en": "Patharghata",
+            "thana_bn": "পাথরঘাটা"
+          },
+          {
+            "thana_en": "Taltali",
+            "thana_bn": "তালতলী"
+          }
+        ]
+      },
+      {
+        "district_en": "Bhola",
+        "district_bn": "ভোলা",
+        "thanas": [
+          {
+            "thana_en": "Bhola Sadar",
+            "thana_bn": "ভোলা সদর"
+          },
+          {
+            "thana_en": "Burhanuddin",
+            "thana_bn": "বুরহানউদ্দিন"
+          },
+          {
+            "thana_en": "Char Fasson",
+            "thana_bn": "চরফ্যাশন"
+          },
+          {
+            "thana_en": "Daulatkhan",
+            "thana_bn": "দৌলতখান"
+          },
+          {
+            "thana_en": "Lalmohan",
+            "thana_bn": "লালমোহন"
+          },
+          {
+            "thana_en": "Tazumuddin",
+            "thana_bn": "তাজুমুদ্দিন"
+          },
+          {
+            "thana_en": "Manpura",
+            "thana_bn": "মনপুরা"
+          }
+        ]
+      },
+      {
+        "district_en": "Jhalokati",
+        "district_bn": "ঝালকাঠী",
+        "thanas": [
+          {
+            "thana_en": "Jhalokati Sadar",
+            "thana_bn": "ঝালকাঠী সদর"
+          },
+          {
+            "thana_en": "Kathalia",
+            "thana_bn": "কাঠালিয়া"
+          },
+          {
+            "thana_en": "Nalchity",
+            "thana_bn": "নলছিটি"
+          },
+          {
+            "thana_en": "Rajapur",
+            "thana_bn": "রাজাপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Patuakhali",
+        "district_bn": "পটুয়াখালী",
+        "thanas": [
+          {
+            "thana_en": "Patuakhali Sadar",
+            "thana_bn": "পটুয়াখালী সদর"
+          },
+          {
+            "thana_en": "Bauphal",
+            "thana_bn": "বাউফল"
+          },
+          {
+            "thana_en": "Dashmina",
+            "thana_bn": "দশমিনা"
+          },
+          {
+            "thana_en": "Galachipa",
+            "thana_bn": "গলাচিপা"
+          },
+          {
+            "thana_en": "Kalapara",
+            "thana_bn": "কলাপাড়া"
+          },
+          {
+            "thana_en": "Mirzaganj",
+            "thana_bn": "মির্জাগঞ্জ"
+          },
+          {
+            "thana_en": "Rangabali",
+            "thana_bn": "রাঙ্গাবালী"
+          },
+          {
+            "thana_en": "Dumki",
+            "thana_bn": "দুমকি"
+          }
+        ]
+      },
+      {
+        "district_en": "Pirojpur",
+        "district_bn": "পিরোজপুর",
+        "thanas": [
+          {
+            "thana_en": "Pirojpur Sadar",
+            "thana_bn": "পিরোজপুর সদর"
+          },
+          {
+            "thana_en": "Bhandaria",
+            "thana_bn": "ভাণ্ডারিয়া"
+          },
+          {
+            "thana_en": "Kawkhali",
+            "thana_bn": "কাউখালী"
+          },
+          {
+            "thana_en": "Mathbaria",
+            "thana_bn": "মঠবাড়িয়া"
+          },
+          {
+            "thana_en": "Nazirpur",
+            "thana_bn": "নাজিরপুর"
+          },
+          {
+            "thana_en": "Nesarabad",
+            "thana_bn": "নেছারাবাদ"
+          },
+          {
+            "thana_en": "Zianagar",
+            "thana_bn": "জিয়ানগর"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "division_en": "Sylhet",
+    "division_bn": "সিলেট",
+    "districts": [
+      {
+        "district_en": "Sylhet",
+        "district_bn": "সিলেট",
+        "thanas": [
+          {
+            "thana_en": "Kotwali",
+            "thana_bn": "কোতোয়ালী"
+          },
+          {
+            "thana_en": "Jalalabad",
+            "thana_bn": "জালালাবাদ"
+          },
+          {
+            "thana_en": "South Surma",
+            "thana_bn": "দক্ষিণ সুরমা"
+          },
+          {
+            "thana_en": "Airport",
+            "thana_bn": "এয়ারপোর্ট"
+          },
+          {
+            "thana_en": "Beanibazar",
+            "thana_bn": "বিয়ানীবাজার"
+          },
+          {
+            "thana_en": "Bishwanath",
+            "thana_bn": "বিশ্বনাথ"
+          },
+          {
+            "thana_en": "Companiganj",
+            "thana_bn": "কোম্পানীগঞ্জ"
+          },
+          {
+            "thana_en": "Fenchuganj",
+            "thana_bn": "ফেঞ্চুগঞ্জ"
+          },
+          {
+            "thana_en": "Golapganj",
+            "thana_bn": "গোলাপগঞ্জ"
+          },
+          {
+            "thana_en": "Gowainghat",
+            "thana_bn": "গোয়াইনঘাট"
+          },
+          {
+            "thana_en": "Kanaighat",
+            "thana_bn": "কানাইঘাট"
+          },
+          {
+            "thana_en": "Zakiganj",
+            "thana_bn": "জকিগঞ্জ"
+          },
+          {
+            "thana_en": "Osmaninagar",
+            "thana_bn": "ওসমানীনগর"
+          }
+        ]
+      },
+      {
+        "district_en": "Habiganj",
+        "district_bn": "হবিগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Habiganj Sadar",
+            "thana_bn": "হবিগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Ajmiriganj",
+            "thana_bn": "আজমিরীগঞ্জ"
+          },
+          {
+            "thana_en": "Baniachong",
+            "thana_bn": "বানিয়াচং"
+          },
+          {
+            "thana_en": "Chunarughat",
+            "thana_bn": "চুনারুঘাট"
+          },
+          {
+            "thana_en": "Lakhai",
+            "thana_bn": "লাখাই"
+          },
+          {
+            "thana_en": "Madhabpur",
+            "thana_bn": "মাধবপুর"
+          },
+          {
+            "thana_en": "Nabiganj",
+            "thana_bn": "নবীগঞ্জ"
+          },
+          {
+            "thana_en": "Bahubal",
+            "thana_bn": "বাহুবল"
+          },
+          {
+            "thana_en": "Shayestaganj",
+            "thana_bn": "শায়েস্তাগঞ্জ"
+          }
+        ]
+      },
+      {
+        "district_en": "Moulvibazar",
+        "district_bn": "মৌলভীবাজার",
+        "thanas": [
+          {
+            "thana_en": "Moulvibazar Sadar",
+            "thana_bn": "মৌলভীবাজার সদর"
+          },
+          {
+            "thana_en": "Barlekha",
+            "thana_bn": "বড়লেখা"
+          },
+          {
+            "thana_en": "Juri",
+            "thana_bn": "জুড়ী"
+          },
+          {
+            "thana_en": "Kamalganj",
+            "thana_bn": "কমলগঞ্জ"
+          },
+          {
+            "thana_en": "Kulaura",
+            "thana_bn": "কুলাউড়া"
+          },
+          {
+            "thana_en": "Rajnagar",
+            "thana_bn": "রাজনগর"
+          },
+          {
+            "thana_en": "Sreemangal",
+            "thana_bn": "শ্রীমঙ্গল"
+          }
+        ]
+      },
+      {
+        "district_en": "Sunamganj",
+        "district_bn": "সুনামগঞ্জ",
+        "thanas": [
+          {
+            "thana_en": "Sunamganj Sadar",
+            "thana_bn": "সুনামগঞ্জ সদর"
+          },
+          {
+            "thana_en": "Bishwamvarpur",
+            "thana_bn": "বিশ্বম্ভরপুর"
+          },
+          {
+            "thana_en": "Chhatak",
+            "thana_bn": "ছাতক"
+          },
+          {
+            "thana_en": "Derai",
+            "thana_bn": "দিরাই"
+          },
+          {
+            "thana_en": "Dharamapasha",
+            "thana_bn": "ধর্মপাশা"
+          },
+          {
+            "thana_en": "Dowarabazar",
+            "thana_bn": "দোয়ারাবাজার"
+          },
+          {
+            "thana_en": "Jagannathpur",
+            "thana_bn": "জগন্নাথপুর"
+          },
+          {
+            "thana_en": "Jamalganj",
+            "thana_bn": "জামালগঞ্জ"
+          },
+          {
+            "thana_en": "Sullah",
+            "thana_bn": "শাল্লা"
+          },
+          {
+            "thana_en": "Tahirpur",
+            "thana_bn": "তাহিরপুর"
+          },
+          {
+            "thana_en": "Madhyanagar",
+            "thana_bn": "মধ্যনগর"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "division_en": "Rangpur",
+    "division_bn": "রংপুর",
+    "districts": [
+      {
+        "district_en": "Rangpur",
+        "district_bn": "রংপুর",
+        "thanas": [
+          {
+            "thana_en": "Kotwali",
+            "thana_bn": "কোতোয়ালী"
+          },
+          {
+            "thana_en": "Tajhat",
+            "thana_bn": "তাজহাট"
+          },
+          {
+            "thana_en": "Hajiganj",
+            "thana_bn": "হাজীগঞ্জ"
+          },
+          {
+            "thana_en": "Badarganj",
+            "thana_bn": "বদরগঞ্জ"
+          },
+          {
+            "thana_en": "Gangachara",
+            "thana_bn": "গংগাচড়া"
+          },
+          {
+            "thana_en": "Kaunia",
+            "thana_bn": "কাউনিয়া"
+          },
+          {
+            "thana_en": "Mithapukur",
+            "thana_bn": "মিঠাপুকুর"
+          },
+          {
+            "thana_en": "Pirgachha",
+            "thana_bn": "পীরগাছা"
+          },
+          {
+            "thana_en": "Pirganj",
+            "thana_bn": "পীরগঞ্জ"
+          },
+          {
+            "thana_en": "Taraganj",
+            "thana_bn": "তারাগঞ্জ"
+          }
+        ]
+      },
+      {
+        "district_en": "Dinajpur",
+        "district_bn": "দিনাজপুর",
+        "thanas": [
+          {
+            "thana_en": "Dinajpur Sadar",
+            "thana_bn": "দিনাজপুর সদর"
+          },
+          {
+            "thana_en": "Birampur",
+            "thana_bn": "বিরামপুর"
+          },
+          {
+            "thana_en": "Birganj",
+            "thana_bn": "বীরগঞ্জ"
+          },
+          {
+            "thana_en": "Bochaganj",
+            "thana_bn": "বোচাগঞ্জ"
+          },
+          {
+            "thana_en": "Parbatipur",
+            "thana_bn": "পার্বতীপুর"
+          },
+          {
+            "thana_en": "Phulbari",
+            "thana_bn": "ফুলবাড়ী"
+          },
+          {
+            "thana_en": "Ghoraghat",
+            "thana_bn": "ঘোড়াঘাট"
+          },
+          {
+            "thana_en": "Hakimpur",
+            "thana_bn": "হাকিমপুর"
+          },
+          {
+            "thana_en": "Kaharole",
+            "thana_bn": "কাহারোল"
+          },
+          {
+            "thana_en": "Khansama",
+            "thana_bn": "খানসামা"
+          },
+          {
+            "thana_en": "Nawabganj",
+            "thana_bn": "নবাবগঞ্জ"
+          },
+          {
+            "thana_en": "Birol",
+            "thana_bn": "বিরল"
+          }
+        ]
+      },
+      {
+        "district_en": "Gaibandha",
+        "district_bn": "গাইবান্ধা",
+        "thanas": [
+          {
+            "thana_en": "Gaibandha Sadar",
+            "thana_bn": "গাইবান্ধা সদর"
+          },
+          {
+            "thana_en": "Fulchhari",
+            "thana_bn": "ফুলছড়ি"
+          },
+          {
+            "thana_en": "Gobindaganj",
+            "thana_bn": "গোবিন্দগঞ্জ"
+          },
+          {
+            "thana_en": "Palashbari",
+            "thana_bn": "পলাশবাড়ী"
+          },
+          {
+            "thana_en": "Sadullapur",
+            "thana_bn": "সাদ্দুল্লাপুর"
+          },
+          {
+            "thana_en": "Sughatta",
+            "thana_bn": "সৈয়দপুর / সাঘাটা"
+          },
+          {
+            "thana_en": "Sundarganj",
+            "thana_bn": "সুন্দরগঞ্জ"
+          }
+        ]
+      },
+      {
+        "district_en": "Kurigram",
+        "district_bn": "কুড়িগ্রাম",
+        "thanas": [
+          {
+            "thana_en": "Kurigram Sadar",
+            "thana_bn": "কুড়িগ্রাম সদর"
+          },
+          {
+            "thana_en": "Bhurungamari",
+            "thana_bn": "ভুরুঙ্গামারী"
+          },
+          {
+            "thana_en": "Char Rajibpur",
+            "thana_bn": "চর রাজিবপুর"
+          },
+          {
+            "thana_en": "Chilmari",
+            "thana_bn": "চিলমারী"
+          },
+          {
+            "thana_en": "Phulbari",
+            "thana_bn": "ফুলবাড়ী"
+          },
+          {
+            "thana_en": "Rajarhat",
+            "thana_bn": "রাজারহাট"
+          },
+          {
+            "thana_en": "Rowmari",
+            "thana_bn": "রৌমারী"
+          },
+          {
+            "thana_en": "Nageshwari",
+            "thana_bn": "নাগেশ্বরী"
+          },
+          {
+            "thana_en": "Ulipur",
+            "thana_bn": "উলিপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Lalmonirhat",
+        "district_bn": "লালমনিরহাট",
+        "thanas": [
+          {
+            "thana_en": "Lalmonirhat Sadar",
+            "thana_bn": "লালমনিরহাট সদর"
+          },
+          {
+            "thana_en": "Aditmari",
+            "thana_bn": "আদিতমারী"
+          },
+          {
+            "thana_en": "Kaliganj",
+            "thana_bn": "কালীগঞ্জ"
+          },
+          {
+            "thana_en": "Hatibandha",
+            "thana_bn": "হাতীবান্ধা"
+          },
+          {
+            "thana_en": "Patgram",
+            "thana_bn": "পাটগ্রাম"
+          }
+        ]
+      },
+      {
+        "district_en": "Nilphamari",
+        "district_bn": "নীলফামারী",
+        "thanas": [
+          {
+            "thana_en": "Nilphamari Sadar",
+            "thana_bn": "নীলফামারী সদর"
+          },
+          {
+            "thana_en": "Jaldhaka",
+            "thana_bn": "জলঢাকা"
+          },
+          {
+            "thana_en": "Kishoreganj",
+            "thana_bn": "কিশোরগঞ্জ"
+          },
+          {
+            "thana_en": "Dimla",
+            "thana_bn": "ডিমলা"
+          },
+          {
+            "thana_en": "Domar",
+            "thana_bn": "ডোমার"
+          },
+          {
+            "thana_en": "Saidpur",
+            "thana_bn": "সৈয়দপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Panchagarh",
+        "district_bn": "পঞ্চগড়",
+        "thanas": [
+          {
+            "thana_en": "Panchagarh Sadar",
+            "thana_bn": "পঞ্চগড় সদর"
+          },
+          {
+            "thana_en": "Debiganj",
+            "thana_bn": "দেবীগঞ্জ"
+          },
+          {
+            "thana_en": "Boda",
+            "thana_bn": "বোদা"
+          },
+          {
+            "thana_en": "Atwari",
+            "thana_bn": "আটোয়ারী"
+          },
+          {
+            "thana_en": "Tetulia",
+            "thana_bn": "তেঁতুলিয়া"
+          }
+        ]
+      },
+      {
+        "district_en": "Thakurgaon",
+        "district_bn": "ঠাকুরগাঁও",
+        "thanas": [
+          {
+            "thana_en": "Thakurgaon Sadar",
+            "thana_bn": "ঠাকুরগাঁও সদর"
+          },
+          {
+            "thana_en": "Baliadangi",
+            "thana_bn": "বালীয়াডাঙ্গী"
+          },
+          {
+            "thana_en": "Haripur",
+            "thana_bn": "হরিপুর"
+          },
+          {
+            "thana_en": "Ranisankail",
+            "thana_bn": "রানীশংকৈল"
+          },
+          {
+            "thana_en": "Pirganj",
+            "thana_bn": "পীরগঞ্জ"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "division_en": "Mymensingh",
+    "division_bn": "ময়মনসিংহ",
+    "districts": [
+      {
+        "district_en": "Mymensingh",
+        "district_bn": "ময়মনসিংহ",
+        "thanas": [
+          {
+            "thana_en": "Kotwali",
+            "thana_bn": "কোতোয়ালী"
+          },
+          {
+            "thana_en": "Muktagachha",
+            "thana_bn": "মুক্তাগাছা"
+          },
+          {
+            "thana_en": "Trishal",
+            "thana_bn": "ত্রিশাল"
+          },
+          {
+            "thana_en": "Bhaluka",
+            "thana_bn": "ভালুকা"
+          },
+          {
+            "thana_en": "Gafargaon",
+            "thana_bn": "গফরগাঁও"
+          },
+          {
+            "thana_en": "Haluaghat",
+            "thana_bn": "হালুয়াঘাট"
+          },
+          {
+            "thana_en": "Nandail",
+            "thana_bn": "নান্দাইল"
+          },
+          {
+            "thana_en": "Phulpur",
+            "thana_bn": "ফুলপুর"
+          },
+          {
+            "thana_en": "Ishwarganj",
+            "thana_bn": "ঈশ্বরগঞ্জ"
+          },
+          {
+            "thana_en": "Dhobaura",
+            "thana_bn": "ধোবাউড়া"
+          },
+          {
+            "thana_en": "Tara Khanda",
+            "thana_bn": "তারাকান্দা"
+          },
+          {
+            "thana_en": "Gouripur",
+            "thana_bn": "গৌরীপুর"
+          }
+        ]
+      },
+      {
+        "district_en": "Jamalpur",
+        "district_bn": "জামালপুর",
+        "thanas": [
+          {
+            "thana_en": "Jamalpur Sadar",
+            "thana_bn": "জামালপুর সদর"
+          },
+          {
+            "thana_en": "Baksiganj",
+            "thana_bn": "বকসিগঞ্জ"
+          },
+          {
+            "thana_en": "Dewanganj",
+            "thana_bn": "দেওয়ানগঞ্জ"
+          },
+          {
+            "thana_en": "Islampur",
+            "thana_bn": "ইসলামপুর"
+          },
+          {
+            "thana_en": "Madarganj",
+            "thana_bn": "মাদারগঞ্জ"
+          },
+          {
+            "thana_en": "Melandaha",
+            "thana_bn": "মেলান্দহ"
+          },
+          {
+            "thana_en": "Sarishabari",
+            "thana_bn": "সরিষাবাড়ী"
+          }
+        ]
+      },
+      {
+        "district_en": "Netrokona",
+        "district_bn": "নেত্রকোণা",
+        "thanas": [
+          {
+            "thana_en": "Netrokona Sadar",
+            "thana_bn": "নেত্রকোণা সদর"
+          },
+          {
+            "thana_en": "Barhatta",
+            "thana_bn": "বরহাট্টা"
+          },
+          {
+            "thana_en": "Durgapur",
+            "thana_bn": "দুর্গাপুর"
+          },
+          {
+            "thana_en": "Kalmakanda",
+            "thana_bn": "কলমাকান্দা"
+          },
+          {
+            "thana_en": "Kendua",
+            "thana_bn": "কেন্দুয়া"
+          },
+          {
+            "thana_en": "Madan",
+            "thana_bn": "মদন"
+          },
+          {
+            "thana_en": "Mohanganj",
+            "thana_bn": "মোহনগঞ্জ"
+          },
+          {
+            "thana_en": "Purbadhala",
+            "thana_bn": "পূর্বধলা"
+          },
+          {
+            "thana_en": "Atpara",
+            "thana_bn": "আটপাড়া"
+          },
+          {
+            "thana_en": "Khaliajuri",
+            "thana_bn": "খালিয়াজুরী"
+          }
+        ]
+      },
+      {
+        "district_en": "Sherpur",
+        "district_bn": "শেরপুর",
+        "thanas": [
+          {
+            "thana_en": "Sherpur Sadar",
+            "thana_bn": "শেরপুর সদর"
+          },
+          {
+            "thana_en": "Jhenaigati",
+            "thana_bn": "ঝিনাইগাতী"
+          },
+          {
+            "thana_en": "Nakla",
+            "thana_bn": "নাকলা"
+          },
+          {
+            "thana_en": "Nalitabari",
+            "thana_bn": "নালিতাবাড়ী"
+          },
+          {
+            "thana_en": "Sreebordi",
+            "thana_bn": "শ্রীবরদী"
+          }
+        ]
+      }
+    ]
+  }
+]

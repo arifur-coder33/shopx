@@ -20,7 +20,6 @@ export default function AdminSideNav({
 }) {
   const { data: session } = useSession();
   const permissions = session?.user?.permissions || [];
-  console.log(session?.user);
   const filteredMenu = filterMenuByPermission(adminMenuItems, permissions);
 
   const handleLinkClick = () => {

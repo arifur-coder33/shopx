@@ -6,6 +6,7 @@ import OrderTimelineServer from "@/app/admin/orders/_components/components/Order
 import { auth } from "@/auth";
 import { fetchSingleData } from "@/backend/serverActions/fetchDataActon";
 import InvoiceButton from "@/components/PDF/getInvoice";
+import OrderPaymentRecovery from "@/components/payments/OrderPaymentRecovery";
 
 export default async function UerOrderViewPage({ params }) {
   const { orderId } = await params;
@@ -52,6 +53,18 @@ export default async function UerOrderViewPage({ params }) {
         orderId={order.orderNo}
         status={order.status}
         date={order.createdAt}
+      />
+      <OrderPaymentRecovery
+        order={{
+          id: order.id,
+          orderNo: order.orderNo,
+          phoneNumber: order.phoneNumber,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          paymentMethod: order.paymentMethod,
+          paidAmount: order.paidAmount,
+          dueAmount: order.dueAmount,
+        }}
       />
       <CustomerInfo customer={order} />
       <OrderItemsTable items={order.orderItems} />

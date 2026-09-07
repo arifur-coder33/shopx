@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 export async function getBanner() {
   try {
     const data = await prisma.banner.findFirst({
-      include: {
-        thumbnail: true,
+      select: {
+        name: true,
+        thumbnail: { select: { name: true } },
       },
     });
 

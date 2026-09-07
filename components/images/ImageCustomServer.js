@@ -1,9 +1,12 @@
-import { cloudinaryMainImage, getBase64ImageUrl } from "@/utils/cloudinaryUrl";
+import {
+  cloudinaryMainImage,
+  DEFAULT_BLUR_DATA_URL,
+} from "@/utils/cloudinaryUrl";
 
 import Image from "next/image";
 
 // This is now an ASYNC SERVER COMPONENT. No client-side JS!
-export default async function ImageCustomServer({
+export default function ImageCustomServer({
   src, // Image ID
   w,
   h,
@@ -12,15 +15,10 @@ export default async function ImageCustomServer({
   className,
   sizes,
   quality = 75,
-  unoptimized,
   fetchPriority,
 }) {
-  // Generate the full-size image URL and the blur placeholder URL in parallel
-
-  const [blurDataURL, finalSrc] = await Promise.all([
-    getBase64ImageUrl(src), // Generate the blur placeholder
-    cloudinaryMainImage(src, w, h),
-  ]);
+  // Do not block HTML on a second network request for a tiny placeholder.
+  const finalSrc = cloudinaryMainImage(src, w, h);
 
   return (
     <>
@@ -36,7 +34,7 @@ export default async function ImageCustomServer({
         placeholder="blur"
         // Let next/image handle everything automatically!
         priority={priority} // If true, sets loading="eager". If false, sets loading="lazy".
-        blurDataURL={blurDataURL} // Provide the data for the blur.
+        blurDataURL={DEFAULT_BLUR_DATA_URL}
         unoptimized={true} // Disable next/image optimization for Cloudinary images.
       />
     </>

@@ -18,16 +18,21 @@ export default async function OrderTrackingPage({ params, searchParams }) {
       <form
         // action={`/tracking/?p=${p}&orderNo=${orderNo}`}
         method="GET"
-        className="card p-6 w-full grid md:grid-cols-3 md:gap-2"
+        className="card p-6 w-full grid md:grid-cols-5 md:gap-2"
       >
-        <FloatingInput defaultValue={o} label="অর্ডার নং" name="o" />
+        <FloatingInput
+          defaultValue={o}
+          label="অর্ডার নং"
+          name="o"
+          colSpan={2}
+        />
         <PhoneInput
           max={11}
           min={11}
           defaultValue={p}
           label="ফোন নং"
           name="p"
-          colSpan={4}
+          colSpan={2}
           inputType="text"
         />
         <button type="submit" className="bg-brand text-white py-2 rounded-lg">
@@ -35,22 +40,21 @@ export default async function OrderTrackingPage({ params, searchParams }) {
         </button>
       </form>
       <br></br>
-      {orderId ||
-        (o && p && (
-          <>
-            <Suspense fallback={<div>Loading order timeline...</div>}>
-              <OrderTimelineClient
-                orderId={orderId}
-                orderNo={o}
-                phoneNumber={p}
-              />
-            </Suspense>
-            <br></br>
-            <Suspense>
-              <OrderInfo orderId={orderId} orderNo={o} phoneNumber={p} />
-            </Suspense>
-          </>
-        ))}
+      {(orderId || (o && p)) && (
+        <>
+          <Suspense fallback={<div>Loading order timeline...</div>}>
+            <OrderTimelineClient
+              orderId={orderId}
+              orderNo={o}
+              phoneNumber={p}
+            />
+          </Suspense>
+          <br></br>
+          <Suspense>
+            <OrderInfo orderId={orderId} orderNo={o} phoneNumber={p} />
+          </Suspense>
+        </>
+      )}
 
       <br></br>
 

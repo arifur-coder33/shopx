@@ -29,10 +29,9 @@ export default async function proxy(req) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // ❌ Only USER blocked
-    // if (!token?.role || token.role === "USER") {
-    //   return NextResponse.redirect(new URL("/unauthorized", req.url));
-    // }
+    if (!token?.role || token.role === "USER") {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    }
   }
   // 🔒 My Account Route → Only USER allowed
   if (url.pathname.startsWith("/my-account")) {

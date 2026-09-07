@@ -5,6 +5,7 @@ import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { cache } from "react";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { buildSearchText } from "../utils/buildSearchText";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
@@ -18,6 +19,7 @@ function transformVariations(productVariations) {
 
   // Map over each ProductVariation record. Each record is a unique variant.
   return productVariations.map((pv) => {
+    const warehouseStock = (pv.stocks || []).reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0);
     // Build the `combination` array by mapping over the nested `combinations`
     const combination = pv.combinations.map((combo) => ({
       variation: {
@@ -53,8 +55,8 @@ function transformVariations(productVariations) {
       sku: pv.sku || "",
       regularPrice: pv.regularPrice !== null ? String(pv.regularPrice) : "",
       discountPrice: pv.discountPrice !== null ? String(pv.discountPrice) : "",
-      stock: pv.stock !== null ? String(pv.stock) : "",
-      qty: pv.stock !== null ? String(pv.stock) : "",
+      stock: String(warehouseStock),
+      qty: String(warehouseStock),
       image: pv.thumbnail
         ? { id: pv.thumbnail.id, name: pv.thumbnail.name }
         : null,
@@ -158,6 +160,7 @@ export async function createProductActions(formData) {
         isFeatured: Boolean(
           data?.isFeatured === "on" || data?.isFeatured === true,
         ),
+        allowOutOfStockOrder: Boolean(data?.allowOutOfStockOrder === "on" || data?.allowOutOfStockOrder === true),
         slug: slug,
         category: data?.category
           ? { connect: { id: data.category } }
@@ -165,10 +168,6 @@ export async function createProductActions(formData) {
         thumbnail: { connect: { id: data.thumbnail } },
         regularPrice: mainProductRegularPrice,
         discountPrice: parseOptionalNumber(data.discountPrice),
-        stock:
-          parsedProductVariations.length > 0
-            ? 0
-            : parseOptionalNumber(data.stock, 0),
         insideDhaka: parseOptionalNumber(data.insideDhaka),
         outSideDhaka: parseOptionalNumber(data.outSideDhaka),
         weight: parseOptionalNumber(data.weight),
@@ -213,7 +212,6 @@ export async function createProductActions(formData) {
           const variantSku =
             variantData.sku ||
             `${product.productCode}-${variantData.matcherId}`;
-          const variantStock = parseOptionalNumber(variantData.qty, 0);
           const variantRegularPrice = parseOptionalNumber(
             variantData.regularPrice,
             product.regularPrice,
@@ -262,7 +260,6 @@ export async function createProductActions(formData) {
               product: { connect: { id: product.id } }, // Link to the parent product
               matcherId: variantData.matcherId,
               sku: variantSku,
-              stock: variantStock,
               regularPrice: variantRegularPrice,
               discountPrice: variantDiscountPrice,
               weight: variantWeight,
@@ -406,6 +403,7 @@ export async function createProductAction(formData) {
         isFeatured: Boolean(
           data?.isFeatured === "on" || data?.isFeatured === true,
         ),
+        allowOutOfStockOrder: Boolean(data?.allowOutOfStockOrder === "on" || data?.allowOutOfStockOrder === true),
 
         videoUrl: data?.videoUrl || null,
         gender: data?.gender || null,
@@ -467,7 +465,6 @@ export async function createProductAction(formData) {
               sku:
                 variantData.sku ||
                 `${product.productCode}-${variantData.matcherId}`,
-              stock: parseOptionalNumber(variantData.qty, 0),
               regularPrice: parseOptionalNumber(
                 variantData.regularPrice,
                 mainProductRegularPrice,
@@ -497,7 +494,6 @@ export async function createProductAction(formData) {
             weight: parseOptionalNumber(data.weight), // Base weight
             dimensions: data.dimensions || null, // Base dimensions
             // Use the main form data for price/stock
-            stock: parseOptionalNumber(data.stock, 0),
             regularPrice: Number(data.regularPrice),
             discountPrice: parseOptionalNumber(data.discountPrice),
 
@@ -545,6 +541,7 @@ export async function getProductById(id) {
         // [UPDATED] New include structure for variations
         variations: {
           include: {
+            stocks: { select: { available: true } },
             thumbnail: { select: { id: true, name: true } },
             // Include the combinations for each variation
             combinations: {
@@ -610,6 +607,7 @@ export const getProducts = async () => {
         // [UPDATED] New include structure for variations
         variations: {
           include: {
+            stocks: { select: { available: true } },
             thumbnail: { select: { id: true, name: true } },
             // Include the combinations for each variation
             combinations: {
@@ -637,6 +635,25 @@ export const getProducts = async () => {
     return { success: true, data: transformedData };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+};
+
+// Keep static product generation lightweight: the build only needs active slugs,
+// not every relation, image and variation returned by getProducts().
+export const getActiveProductSlugs = async () => {
+  try {
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      select: { slug: true },
+    });
+
+    return {
+      success: true,
+      data: products.filter((product) => product.slug),
+    };
+  } catch (error) {
+    console.error("Error loading product slugs for static generation:", error);
+    return { success: false, data: [], error: error.message };
   }
 };
 
@@ -718,15 +735,15 @@ export async function getAllProduct(params) {
 
       if (stockStatus === "IN STOCK") {
         whereClause.variations.some = {
-          stock: { gt: 0 }, // At least one variation has stock > 0
+          stocks: { some: { available: { gt: 0 } } },
         };
       } else if (stockStatus == "OUT STOCK") {
         whereClause.variations.none = {
-          stock: { gt: 0 },
+          stocks: { some: { available: { gt: 0 } } },
         };
       } else if (stockStatus == "LESS STOCK") {
         whereClause.variations.some = {
-          stock: { gt: 0, lte: 5 }, // Example: at least one variation has 1-5 stock
+          stocks: { some: { available: { gt: 0, lte: 5 } } },
         };
       }
     }
@@ -748,7 +765,7 @@ export async function getAllProduct(params) {
             thumbnail: { select: { id: true, name: true } },
             discountPrice: true,
             regularPrice: true,
-            stock: true,
+            stocks: { select: { available: true } },
             sku: true,
             combinations: {
               select: {
@@ -781,9 +798,7 @@ export async function getAllProduct(params) {
     const processedProducts = products.map((product) => {
       const { priceToDisplay, originalPriceToDisplay } =
         calculateInitialDisplayPrice(product.variations);
-      const stock = arraySum(
-        product.variations.map((v) => Number(v.stock) || 0),
-      );
+      const stock = arraySum(product.variations.map((v) => v.stocks.reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0)));
       const orderQty = arraySum(
         product.orders
           .filter((v) => v.status !== "CANCELED" && v.status !== "RETURNED")
@@ -798,6 +813,7 @@ export async function getAllProduct(params) {
         );
         return {
           ...item,
+          stock: item.stocks.reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0),
           orders: totalOrders,
           price: item.discountPrice || item.regularPrice,
         };
@@ -915,15 +931,15 @@ export async function getProductCount(params) {
 
       if (stockStatus === "IN STOCK") {
         whereClause.variations.some = {
-          stock: { gt: 0 }, // At least one variation has stock > 0
+          stocks: { some: { available: { gt: 0 } } },
         };
       } else if (stockStatus == "OUT STOCK") {
         whereClause.variations.none = {
-          stock: { gt: 0 },
+          stocks: { some: { available: { gt: 0 } } },
         };
       } else if (stockStatus == "LESS STOCK") {
         whereClause.variations.some = {
-          stock: { gt: 0, lte: 5 }, // Example: at least one variation has 1-5 stock
+          stocks: { some: { available: { gt: 0, lte: 5 } } },
         };
       }
     }
@@ -958,6 +974,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
         // [UPDATED] New include structure for variations
         variations: {
           include: {
+            stocks: { select: { available: true } },
             thumbnail: { select: { id: true, name: true } },
             // Include the combinations for each variation
             combinations: {
@@ -1025,7 +1042,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
   }
 };
 
-export const getProductBySlug = async (slug) => {
+const getProductBySlugCached = cache(async (slug) => {
   // const headersList = headers();
 
   // const cookieHeader =
@@ -1038,7 +1055,9 @@ export const getProductBySlug = async (slug) => {
       include: {
         category: {
           select: {
-            name: true, // Include only the category name
+            name: true,
+            slug: true,
+            fullPath: true,
           },
         },
         thumbnail: {
@@ -1059,6 +1078,7 @@ export const getProductBySlug = async (slug) => {
         },
         variations: {
           include: {
+            stocks: { select: { available: true } },
             thumbnail: { select: { name: true, id: true } },
             // Include the combinations for each variation
             combinations: {
@@ -1080,13 +1100,17 @@ export const getProductBySlug = async (slug) => {
       ...data,
 
       gallery: data.gallery.map((g) => g.media),
+      variations: data.variations.map((variation) => ({ ...variation, stock: variation.stocks.reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0) })),
     };
 
     return { success: true, data: transformedData }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
   }
-};
+});
+
+export const getProductBySlug = async (slug) =>
+  getProductBySlugCached(slug);
 // const cachedGetProductBySlug = cache(
 //   (slug) => getProductBySlug_uncached(slug),
 //   ["get-product-by-slug"],
@@ -1171,6 +1195,7 @@ export async function updateProductActions({ id: productId, formData }) {
         seoDescription: data.seoDescription || null,
         isFeatured: Boolean(data.isFeatured === "on"),
         isActive: Boolean(data.isActive === "on"),
+        allowOutOfStockOrder: Boolean(data.allowOutOfStockOrder === "on"),
         insideDhaka: parseOptionalNumber(data.insideDhaka),
         outSideDhaka: parseOptionalNumber(data.outSideDhaka),
         hasVariations: hasSubmittedVariations,
@@ -1217,7 +1242,6 @@ export async function updateProductActions({ id: productId, formData }) {
           const variantSku =
             variantData.sku ||
             `${updatedProduct.productCode}-${variantData.matcherId}`;
-          const variantStock = parseOptionalNumber(variantData.qty, 0);
 
           const variantRegularPrice = parseOptionalNumber(
             variantData.regularPrice,
@@ -1266,7 +1290,6 @@ export async function updateProductActions({ id: productId, formData }) {
               productId: updatedProduct.id,
               matcherId: variantData.matcherId,
               sku: variantSku,
-              stock: variantStock,
               regularPrice: variantRegularPrice,
               discountPrice: variantDiscountPrice,
               weight: variantWeight,
@@ -1373,6 +1396,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
         seoDescription: data.seoDescription || null,
         isFeatured: Boolean(data.isFeatured === "on"),
         isActive: Boolean(data.isActive === "on"),
+        allowOutOfStockOrder: Boolean(data.allowOutOfStockOrder === "on"),
         // The hasVariations flag is crucial for the UI.
         hasVariations: hasSubmittedVariations,
       };
@@ -1437,7 +1461,6 @@ export async function updateProductActionOld({ id: productId, formData }) {
               sku:
                 variantData.sku ||
                 `${updatedProduct.productCode}-${variantData.matcherId}`,
-              stock: parseOptionalNumber(variantData.qty, 0),
               regularPrice: parseOptionalNumber(
                 variantData.regularPrice,
                 mainProductRegularPrice,
@@ -1461,7 +1484,6 @@ export async function updateProductActionOld({ id: productId, formData }) {
             product: { connect: { id: updatedProduct.id } },
             sku: updatedProduct.productCode,
             matcherId: updatedProduct.productCode,
-            stock: parseOptionalNumber(data.stock, 0),
             regularPrice: Number(data.regularPrice),
             discountPrice: parseOptionalNumber(data.discountPrice),
             // Use the main product's thumbnail as the default
@@ -1567,6 +1589,7 @@ export async function updateProductAction({ id: productId, formData }) {
 
         isFeatured: Boolean(data.isFeatured === "on"),
         isActive: Boolean(data.isActive === "on"),
+        allowOutOfStockOrder: Boolean(data.allowOutOfStockOrder === "on"),
         hasVariations: hasSubmittedVariations,
         google_Category_id: data.google_Category_id || null,
         searchText: searchText,
@@ -1622,7 +1645,6 @@ export async function updateProductAction({ id: productId, formData }) {
           const variantSku =
             variantData.sku ||
             `${updatedProduct.productCode}-${variantData.matcherId}`;
-          const variantStock = parseOptionalNumber(variantData.qty, 0);
           const variantRegularPrice = parseOptionalNumber(
             variantData.regularPrice,
           );
@@ -1675,7 +1697,6 @@ export async function updateProductAction({ id: productId, formData }) {
               where: { id: existingVariant.id },
               data: {
                 sku: variantSku,
-                stock: variantStock,
                 regularPrice: variantRegularPrice,
                 discountPrice: variantDiscountPrice,
                 weight: variantWeight,
@@ -1694,7 +1715,6 @@ export async function updateProductAction({ id: productId, formData }) {
                 productId: updatedProduct.id,
                 matcherId: variantData.matcherId,
                 sku: variantSku,
-                stock: variantStock,
                 regularPrice: variantRegularPrice,
                 discountPrice: variantDiscountPrice,
                 weight: variantWeight,
@@ -1736,7 +1756,6 @@ export async function updateProductAction({ id: productId, formData }) {
         );
 
         const defaultSku = updatedProduct.productCode;
-        const defaultStock = parseOptionalNumber(data.stock, 0);
         const defaultWeight = parseOptionalNumber(data.weight, 0);
         const defaultDimentions = data.dimensions;
         const defaultRegularPrice = parseOptionalNumber(data.regularPrice);
@@ -1751,7 +1770,6 @@ export async function updateProductAction({ id: productId, formData }) {
             where: { id: defaultVariation.id },
             data: {
               sku: defaultSku,
-              stock: defaultStock,
               regularPrice: defaultRegularPrice,
               discountPrice: defaultDiscountPrice,
               thumbnailId: updatedProduct.thumbnailId,
@@ -1769,7 +1787,6 @@ export async function updateProductAction({ id: productId, formData }) {
               productId: updatedProduct.id,
               matcherId: defaultSku,
               sku: defaultSku,
-              stock: defaultStock,
               weight: defaultWeight,
               dimensions: defaultDimentions,
               regularPrice: defaultRegularPrice,

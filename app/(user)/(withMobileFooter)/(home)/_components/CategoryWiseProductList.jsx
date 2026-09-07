@@ -4,7 +4,6 @@ import ProductList from "@/components/products/productList";
 
 export default async function CategoryWiseProductList() {
   const { data } = await getAllCategoryWithproduct();
-  console.log("product data", data);
   return (
     <>
       {data?.length > 0 &&
@@ -13,11 +12,10 @@ export default async function CategoryWiseProductList() {
             <div className="mt-4 sm:mt-6 rounded-md border-2 border-gray-300 border-b-4 p-2">
               <ProductList link={category?.slug} headerName={category?.name}>
                 {category?.products?.length > 0 &&
-                  category?.products?.map((product, i) => (
+                  category?.products?.map((product) => (
                     <ProductCard
                       key={product?.id}
                       product={product}
-                      index={i}
                     />
                   ))}
               </ProductList>

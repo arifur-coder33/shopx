@@ -1,50 +1,49 @@
 import { getCategoryTree } from "@/backend/serverActions/catagoryActions";
 import Cart from "@/components/Cart";
-import { Heart, Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
+import { Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
 import CategoryDrawer from "../common/Category/CategoryDrawer";
+import WishlistNavLink from "../wishlist/WishlistNavLink";
 export default async function MobileFooter() {
   const ccategoryData = await getCategoryTree();
   return (
-    <div className="z-50 fixed bottom-0 md:hidden left-0 right-0 flex justify-center">
-      <div className="w-full max-w-md px-4 pb-4">
-        <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-700">
+    <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-50 flex justify-center pb-[env(safe-area-inset-bottom)] md:hidden">
+      <div className="w-full max-w-md px-2 pb-2">
+        <div className="relative rounded-2xl border border-border bg-surface/95 shadow-2xl backdrop-blur">
           {/* Center Button */}
           <div className="absolute -top-1 left-1/2 -translate-x-1/2">
             <Link href="/">
-              <div className="w-14 h-14 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg scale-110">
+              <div className="flex h-14 w-14 scale-110 items-center justify-center rounded-full bg-primary shadow-lg">
                 <Home className="text-white" size={26} />
               </div>
             </Link>
           </div>
 
           {/* Menu */}
-          <div className="flex justify-between items-center px-6 py-4">
+          <div className="flex min-h-16 items-center justify-between px-5 py-2 text-text-muted">
             <CategoryDrawer initialData={ccategoryData}>
-              <LayoutGrid className="text-gray-600 dark:text-gray-300" />
+              <LayoutGrid />
             </CategoryDrawer>
             {/* <Link href="/category">
               <LayoutGrid className="text-gray-600 dark:text-gray-300" />
             </Link> */}
 
-            <Link href="/wishlist">
-              <Heart className="text-gray-600 dark:text-gray-300" />
-            </Link>
+            <WishlistNavLink />
 
             <div className="w-28" />
             <Cart>
-              <ShoppingCart className="text-gray-600 dark:text-gray-300" />
+              <ShoppingCart />
             </Cart>
             {/* <Link href="/cart">
               <ShoppingCart className="text-gray-600 dark:text-gray-300" />
             </Link> */}
 
             <Link prefetch={true} href="/my-account">
-              <User className="text-gray-600 dark:text-gray-300" />
+              <User />
             </Link>
           </div>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }

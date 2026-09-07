@@ -23,15 +23,11 @@ import TableToolbar from "./TableToolbar";
 const buildRequestParams = (params) => {
   const newParams = { ...params };
 
-  // Handle search term
-  if (!newParams.searchTerm || !newParams.searchField) {
-    delete newParams.searchTerm;
-    delete newParams.searchField;
-  } else {
-    newParams[newParams.searchField] = newParams.searchTerm;
-    delete newParams.searchTerm;
-    delete newParams.searchField;
-  }
+  // Every searchable field has its own value, allowing combined field-wise search.
+  Object.entries(newParams.searchValues || {}).forEach(([field, value]) => {
+    if (String(value || "").trim()) newParams[field] = String(value).trim();
+  });
+  delete newParams.searchValues;
 
   // Clean up any "ALL" filters that are not meant for the API
   Object.keys(newParams).forEach((key) => {
@@ -107,11 +103,8 @@ export default function DynamicTableClient({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
-  const [searchField, setSearchField] = useState(
-    filterSearchProperties[0]?.field || "",
-  );
+  const [searchValues, setSearchValues] = useState({});
+  const debouncedSearchValues = useDebounce(searchValues, 500);
 
   // --- MODIFIED STATE INITIALIZATION ---
   const [activeFilters, setActiveFilters] = useState(() =>
@@ -130,10 +123,9 @@ export default function DynamicTableClient({
   const baseFetchConfig = useMemo(
     () => ({
       ...activeFilters,
-      searchTerm: debouncedSearchTerm,
-      searchField,
+      searchValues: debouncedSearchValues,
     }),
-    [activeFilters, debouncedSearchTerm, searchField],
+    [activeFilters, debouncedSearchValues],
   );
 
   const fetchData = useCallback(
@@ -192,7 +184,6 @@ export default function DynamicTableClient({
 
     fetchData(null, baseFetchConfig);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseFetchConfig, sortConfig, itemsPerPage, getDataCount, fetchData]); // filterTagProperties removed from deps
 
   const handleNext = () => {
@@ -229,6 +220,11 @@ export default function DynamicTableClient({
     });
   };
 
+  const clearFilters = () => {
+    setSearchValues({});
+    setActiveFilters({});
+  };
+
   const handleSort = (field) => {
     setSortConfig((prev) => ({
       field,
@@ -253,12 +249,11 @@ export default function DynamicTableClient({
       </div>
       <div className="px-2 sm:px-4">
         <TableToolbar
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          searchField={searchField}
-          setSearchField={setSearchField}
+          searchValues={searchValues}
+          setSearchValues={setSearchValues}
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}
+          onClearFilters={clearFilters}
           filterSearchProperties={filterSearchProperties}
           filterTagProperties={filterTagProperties}
         />

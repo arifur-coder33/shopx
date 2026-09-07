@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "db:provider-backfill": "node prisma/backfill-provider-accounts.js",
+    "test:accounting": "node prisma/verify-provider-accounting.js",
+    "test:providers": "node prisma/verify-provider-configuration.js",
     "postinstall": "prisma generate",
     "postbuild": "next-sitemap"
   },
@@ -66,11 +69,5 @@
     "prisma": "^6.19.3",
     "puppeteer": "^24.43.1",
     "tailwindcss": "^4.3.1"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
-  "browserslist": [
-    "defaults and fully supports es6-module"
-  ]
+  }
 }

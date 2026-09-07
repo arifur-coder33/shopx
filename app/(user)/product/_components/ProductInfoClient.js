@@ -25,23 +25,22 @@ export default function ProductInfoClient({
   const onVariationChangeHandler = (variation) => {
     setSelectedVariation(variation);
     setActiveImageId(variation?.thumbnailId);
-    console.log(selectedVariation);
   };
 
   // Memoize price ranges for variations on the client
   const regularPriceRange = useMemo(
     () =>
       getMinMax(
-        variations?.filter((v) => v.stock > 0).map((v) => v.regularPrice),
+        variations?.filter((v) => data.allowOutOfStockOrder || v.stock > 0).map((v) => v.regularPrice),
       ),
-    [variations],
+    [variations, data.allowOutOfStockOrder],
   );
   const discountPriceRange = useMemo(
     () =>
       getMinMax(
-        variations?.filter((v) => v.stock > 0).map((v) => v.discountPrice),
+        variations?.filter((v) => data.allowOutOfStockOrder || v.stock > 0).map((v) => v.discountPrice),
       ),
-    [variations],
+    [variations, data.allowOutOfStockOrder],
   );
 
   // This is the interactive price calculation logic, identical to your original component.
@@ -142,6 +141,7 @@ export default function ProductInfoClient({
           onVariationChange={onVariationChangeHandler}
           variations={variations}
           hasVariations={hasVariations}
+          allowOutOfStockOrder={data.allowOutOfStockOrder}
         />
       )}
 

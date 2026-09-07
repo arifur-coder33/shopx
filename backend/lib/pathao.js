@@ -1,34 +1,51 @@
 "use server";
 
-const BASE_URL = process.env.PATHAO_BASE_URI || "https://api-hermes.pathao.com";
-const CLIENT_ID = process.env.PATHAO_CLIENT_ID;
-const CLIENT_SECRET = process.env.PATHAO_CLIENT_SECRET;
-const USERNAME = process.env.PATHAO_USERNAME;
-const PASSWORD = process.env.PATHAO_PASSWORD;
+import { createHash } from "node:crypto";
 
-let cachedToken = null;
-let cachedExpiresAt = null;
+const tokenCache = new Map();
+
+const pathaoSettings = (providerConfiguration) => {
+  const credentials = providerConfiguration?.credentials || {};
+  const baseUrl =
+    providerConfiguration?.config?.baseUri ||
+    "https://api-hermes.pathao.com";
+  const required = [
+    credentials.clientId,
+    credentials.clientSecret,
+    credentials.username,
+    credentials.password,
+  ];
+  if (required.some((value) => !value)) {
+    throw new Error("Pathao credentials are not configured on the server.");
+  }
+  return { baseUrl, ...credentials };
+};
 
 /**
  * ✅ Issue Access Token (OAuth 2.0)
  */
-export async function getAccessToken() {
+export async function getAccessToken(providerConfiguration) {
   const now = Date.now();
+  const settings = pathaoSettings(providerConfiguration);
+  const cacheKey = createHash("sha256")
+    .update(`${settings.baseUrl}:${settings.clientId}:${settings.username}`)
+    .digest("hex");
+  const cached = tokenCache.get(cacheKey);
 
   // ✅ Use cached token if not expired
-  if (cachedToken && cachedExpiresAt && now < cachedExpiresAt) {
-    return cachedToken;
+  if (cached?.token && now < cached.expiresAt) {
+    return cached.token;
   }
 
-  const response = await fetch(`${BASE_URL}/aladdin/api/v1/issue-token`, {
+  const response = await fetch(`${settings.baseUrl}/aladdin/api/v1/issue-token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
+      client_id: settings.clientId,
+      client_secret: settings.clientSecret,
       grant_type: "password",
-      username: USERNAME,
-      password: PASSWORD,
+      username: settings.username,
+      password: settings.password,
     }),
   });
 
@@ -37,25 +54,24 @@ export async function getAccessToken() {
   }
 
   const data = await response.json();
-  cachedToken = data.access_token;
-  console.log("token", cachedToken);
-  cachedExpiresAt = now + data.expires_in * 1000 - 60000; // expire 1 min early for safety
-  console.log("tokem", cachedToken);
-  return cachedToken;
+  tokenCache.set(cacheKey, {
+    token: data.access_token,
+    expiresAt: now + data.expires_in * 1000 - 60000,
+  });
+  return data.access_token;
 }
 
 /**
  * ✅ Calculate Delivery Charge
  */
-export async function calculateDeliveryCharge({
-  store_id,
-  city_id,
-  zone_id,
-  weight = 0.5,
-}) {
-  const token = await getAccessToken();
+export async function calculateDeliveryCharge(
+  { store_id, city_id, zone_id, weight = 0.5 },
+  providerConfiguration,
+) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${BASE_URL}/merchant/price-plan`, {
+  const response = await fetch(`${baseUrl}/merchant/price-plan`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -82,10 +98,11 @@ export async function calculateDeliveryCharge({
 /**
  * ✅ Get All Cities
  */
-export async function getCities_Pathao() {
-  const token = await getAccessToken();
+export async function getCities_Pathao(providerConfiguration) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${BASE_URL}/city-list`, {
+  const response = await fetch(`${baseUrl}/city-list`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -101,10 +118,11 @@ export async function getCities_Pathao() {
 /**
  * ✅ Get Zones for a City
  */
-export async function getZones(city_id) {
-  const token = await getAccessToken();
+export async function getZones(city_id, providerConfiguration) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${BASE_URL}/cities/${city_id}/zone-list`, {
+  const response = await fetch(`${baseUrl}/cities/${city_id}/zone-list`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -120,10 +138,11 @@ export async function getZones(city_id) {
 /**
  * ✅ Get Areas for a Zone (Optional but useful for checkout forms)
  */
-export async function getAreas(zone_id) {
-  const token = await getAccessToken();
+export async function getAreas(zone_id, providerConfiguration) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${BASE_URL}/zones/${zone_id}/area-list`, {
+  const response = await fetch(`${baseUrl}/zones/${zone_id}/area-list`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -139,10 +158,11 @@ export async function getAreas(zone_id) {
 /**
  * ✅ Get Merchant Stores (to find store_id)
  */
-export async function getStores() {
-  const token = await getAccessToken();
+export async function getStores(providerConfiguration) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${BASE_URL}/stores`, {
+  const response = await fetch(`${baseUrl}/stores`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -158,10 +178,10 @@ export async function getStores() {
 /**
  * ✅ Create a Single Order
  */
-export async function createPathaoOrder(orderData) {
-  const token = await getAccessToken();
-  console.log("Creating Pathao order with data:", orderData);
-  const response = await fetch(`${BASE_URL}/aladdin/api/v1/orders`, {
+export async function createPathaoOrder(orderData, providerConfiguration) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
+  const response = await fetch(`${baseUrl}/aladdin/api/v1/orders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -171,7 +191,6 @@ export async function createPathaoOrder(orderData) {
   });
 
   const result = await response.json();
-  console.log("Pathao Order Response:", result);
   if (result.code !== 200) {
     throw new Error("❌ Failed to create order");
   }
@@ -182,10 +201,11 @@ export async function createPathaoOrder(orderData) {
 /**
  * ✅ Create Bulk Orders
  */
-export async function createBulkOrder(ordersArray) {
-  const token = await getAccessToken();
+export async function createBulkOrder(ordersArray, providerConfiguration) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${BASE_URL}/orders/bulk`, {
+  const response = await fetch(`${baseUrl}/orders/bulk`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -205,11 +225,12 @@ export async function createBulkOrder(ordersArray) {
 /**
  * ✅ Get Order Info by Consignment ID
  */
-export async function getPathaoOrderInfo(consignment_id) {
-  const token = await getAccessToken();
+export async function getPathaoOrderInfo(consignment_id, providerConfiguration) {
+  const token = await getAccessToken(providerConfiguration);
+  const { baseUrl } = pathaoSettings(providerConfiguration);
 
   const response = await fetch(
-    `${BASE_URL}/aladdin/api/v1/orders/${consignment_id}/info`,
+    `${baseUrl}/aladdin/api/v1/orders/${consignment_id}/info`,
     {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
@@ -217,7 +238,6 @@ export async function getPathaoOrderInfo(consignment_id) {
   );
 
   const result = await response.json();
-  console.log("Pathao Order Info Response:", result);
   if (!response.ok || result.code !== 200) {
     throw new Error("❌ Failed to fetch order info");
   }

@@ -127,7 +127,7 @@ export default function ThirdPartyScripts() {
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
           <Script
             id="ga4"

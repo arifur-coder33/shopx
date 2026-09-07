@@ -27,7 +27,9 @@ export async function getListData({
     const value = filters[field];
     if (!value || value === "ALL") return;
 
-    if (type === "enum" || exactMatch) {
+    if (type === "boolean") {
+      where[field] = value === true || value === "true";
+    } else if (type === "enum" || exactMatch) {
       where[field] = value; // exact match
     } else {
       where[field] = { contains: value, mode: "insensitive" }; // default insensitive
@@ -80,7 +82,6 @@ export async function getListData({
   ];
 
   const cursorObj = cursor ? { id: cursor } : undefined;
-  console.log("Final where clause in getListData:", where);
   const items = await prisma[model].findMany({
     take: take + 1,
     where,

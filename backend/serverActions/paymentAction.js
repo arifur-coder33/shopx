@@ -1,12 +1,28 @@
 "use server";
+
+import {
+  postCustomerPayment,
+  postProviderFee,
+} from "@/backend/services/paymentPostingService";
+import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import {
+  actionError,
+  requireProcurementPermission,
+  toDate,
+  toNumber,
+} from "../utils/procurement";
+
 export async function createPayment({
   orderId,
   gateway,
+  paymentGatewayId,
+  courierProviderId,
   paymentMethod,
   amount,
 }) {
-  return await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       select: {
@@ -17,218 +33,134 @@ export async function createPayment({
         paidAmount: true,
       },
     });
-
-    if (!order) {
-      throw new Error("Order not found");
-    }
-
-    const totalAmount =
+    if (!order) throw new Error("Order not found.");
+    const total =
       order.orderPrice +
       order.deliveryCharge +
       (order.taxAmount || 0) -
       (order.adminDiscount || 0);
-
-    const dueAmount = totalAmount - (order.paidAmount || 0);
-
-    if (amount <= 0) {
-      throw new Error("Invalid payment amount.");
+    const due = total - (order.paidAmount || 0);
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0 || numericAmount > due) {
+      throw new Error("Payment amount is invalid or exceeds the order due amount.");
     }
-
-    if (amount > dueAmount) {
-      throw new Error("Payment exceeds due amount.");
+    const provider = paymentGatewayId
+      ? await tx.paymentGateway.findUnique({
+          where: { id: paymentGatewayId },
+          include: { moneyAccount: true },
+        })
+      : courierProviderId
+        ? await tx.courierProvider.findUnique({
+            where: { id: courierProviderId },
+            include: { moneyAccount: true },
+          })
+        : null;
+    const providerConfiguration = provider
+      ? getProviderRuntimeConfiguration(
+          paymentGatewayId ? "gateway" : "courier",
+          provider,
+        )
+      : null;
+    if ((paymentGatewayId || courierProviderId) && !providerConfiguration?.ready) {
+      throw new Error("The selected payment provider is unavailable.");
     }
-
-    return await tx.payment.create({
+    return tx.payment.create({
       data: {
         orderId,
-        gateway,
+        gateway: provider?.code || gateway || "MANUAL",
+        paymentGatewayId: paymentGatewayId || null,
+        courierProviderId: courierProviderId || null,
         paymentMethod,
-        amount,
-        status: gateway === "COD" ? "UNPAID" : "PENDING",
-      },
-    });
-  });
-}
-
-export async function markPaymentSuccess({
-  orderId,
-  orderNo,
-  phoneNumber,
-  paymentId,
-  amount,
-  storeAmount,
-  transactionId,
-  bankTransactionId,
-  cardType,
-  cardNo,
-  gatewayResponse,
-}) {
-  return prisma.$transaction(async (tx) => {
-    // 1. Payment Update
-    const payment = await tx.payment.update({
-      where: {
-        id: paymentId,
-      },
-      data: {
-        status: "PAID",
-        transactionId,
-        gatewayResponse,
-        amount,
-        storeAmount,
-        transactionId,
-        bankTransactionId,
-        cardType,
-        cardNo,
-        gatewayResponse,
-
-        paidAt: new Date(),
-      },
-      include: {
-        order: true,
-      },
-    });
-
-    // 2. Ledger
-    await tx.ledger.create({
-      data: {
-        orderId: payment.orderId,
-        paymentId: payment.id,
-        amount: payment.amount,
-        type: "PAYMENT",
-        direction: "CREDIT",
-      },
-    });
-
-    // 3. Total Paid
-    const paid = await tx.payment.aggregate({
-      where: {
-        orderId: payment.orderId,
-        status: "PAID",
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    const paidAmount = paid._sum.amount || 0;
-
-    // 4. Order Total
-    const total =
-      payment.order.orderPrice +
-      payment.order.deliveryCharge +
-      (payment.order.taxAmount || 0) -
-      (payment.order.adminDiscount || 0);
-
-    const dueAmount = total - paidAmount;
-
-    // 5. Order Update
-    await tx.order.update({
-      where: {
-        id: payment.orderId,
-      },
-      data: {
-        paidAmount,
-        dueAmount,
-        paymentStatus:
-          dueAmount <= 0
-            ? "PAID"
-            : paidAmount > 0
-              ? "PARTIALLY_PAID"
-              : "UNPAID",
-      },
-    });
-
-    // 6. Timeline
-    await tx.orderTimeline.create({
-      data: {
-        orderId: payment.orderId,
-        orderNo,
-        title: "Payment Successful",
+        amount: numericAmount,
         status: "PENDING",
-        message: `Paid ৳${payment.amount}`,
-        createdBy: "user",
       },
     });
-
-    return payment;
   });
 }
 
-export async function markPaymentFailed({
-  paymentId,
-  orderId,
-  orderNo,
-  gatewayResponse,
-  reason,
-}) {
-  return prisma.$transaction(async (tx) => {
-    const payment = await tx.payment.update({
-      where: {
-        id: paymentId,
-      },
-      data: {
-        status: "FAILED",
-        gatewayResponse,
-      },
-    });
-
-    await tx.orderTimeline.create({
-      data: {
-        orderId,
-        orderNo,
-        title: "Payment Failed",
-        status: "PENDING",
-        message: reason || "Online payment failed.",
-        createdBy: "user",
-      },
-    });
-
-    return payment;
+export async function markPaymentSuccess(input) {
+  return postCustomerPayment({
+    paymentId: input.paymentId,
+    amount: input.amount,
+    storeAmount: input.storeAmount,
+    transactionId: input.transactionId,
+    bankTransactionId: input.bankTransactionId,
+    externalEventId: input.externalEventId || input.transactionId,
+    cardType: input.cardType,
+    cardNo: input.cardNo,
+    gatewayResponse: input.gatewayResponse,
+    paidAt: input.paidAt || new Date(),
+    createdBy: "payment-provider",
   });
 }
 
-export async function markPaymentCancelled({
-  paymentId,
-  orderId,
-  orderNo,
-  gatewayResponse,
-  reason,
-}) {
+async function markUnsuccessful({ paymentId, orderId, orderNo, gatewayResponse, reason }, status) {
   return prisma.$transaction(async (tx) => {
-    const payment = await tx.payment.findUnique({
+    const payment = await tx.payment.findUnique({ where: { id: paymentId } });
+    if (!payment) throw new Error("Payment not found.");
+    if (payment.status === "PAID" || payment.status === status) return payment;
+    const updated = await tx.payment.update({
       where: { id: paymentId },
+      data: { status, gatewayResponse },
     });
-
-    if (!payment) {
-      throw new Error("Payment not found");
+    const order = await tx.order.findUnique({
+      where: { id: orderId || payment.orderId },
+      select: { id: true, orderNo: true, status: true, paidAmount: true },
+    });
+    if (order) {
+      if ((order.paidAmount || 0) <= 0) {
+        const anotherPendingAttempt = await tx.payment.findFirst({
+          where: {
+            orderId: order.id,
+            id: { not: payment.id },
+            status: "PENDING",
+          },
+          select: { id: true },
+        });
+        await tx.order.update({
+          where: { id: order.id },
+          data: { paymentStatus: anotherPendingAttempt ? "PENDING" : status },
+        });
+      }
+      await tx.orderTimeline.create({
+        data: {
+          orderId: order.id,
+          orderNo: orderNo || order.orderNo,
+          title: status === "FAILED" ? "Payment Failed" : "Payment Cancelled",
+          status: order.status,
+          message: reason || `Online payment ${status.toLowerCase()}.`,
+          createdBy: "payment-provider",
+        },
+      });
     }
-
-    // Already completed payment cannot be cancelled
-    if (payment.status === "PAID") {
-      return payment;
-    }
-
-    const updatedPayment = await tx.payment.update({
-      where: {
-        id: paymentId,
-      },
-      data: {
-        status: "CANCELLED",
-        gatewayResponse,
-      },
-    });
-
-    await tx.orderTimeline.create({
-      data: {
-        orderId,
-        orderNo,
-        title: "Payment Cancelled",
-        status: "PENDING",
-        message: reason || "Customer cancelled the payment.",
-        createdBy: "user",
-      },
-    });
-
-    return updatedPayment;
+    return updated;
   });
+}
+
+export async function markPaymentFailed(input) {
+  return markUnsuccessful(input, "FAILED");
+}
+
+export async function markPaymentCancelled(input) {
+  return markUnsuccessful(input, "CANCELLED");
+}
+
+export async function recordProviderFee(formData) {
+  try {
+    const userId = await requireProcurementPermission("expense", "create");
+    const values = Object.fromEntries(formData.entries());
+    const result = await postProviderFee({
+      moneyAccountId: values.moneyAccountId,
+      amount: toNumber(values.amount),
+      providerName: String(values.providerName || "").trim(),
+      reference: String(values.reference || "").trim() || undefined,
+      feeDate: toDate(values.feeDate),
+      createdBy: userId,
+    });
+    revalidatePath("/admin/accounts");
+    revalidatePath("/admin/procurement/expenses");
+    return { success: true, message: "Provider fee recorded as an expense.", data: result };
+  } catch (error) {
+    return actionError(error, "Failed to record provider fee.");
+  }
 }

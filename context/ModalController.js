@@ -36,7 +36,6 @@ export default function ModalController() {
     // We only want this to run when the URL changes.
     // We disable the eslint warning because closeModal is stable via useCallback in the provider,
     // but including it could cause loops if not memoized correctly. fullUrl is the true trigger.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullUrl]);
 
   // This component renders nothing.

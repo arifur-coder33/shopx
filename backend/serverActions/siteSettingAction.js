@@ -1,11 +1,16 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
 import { cloudinaryDestroy, cloudinaryUpload } from "../utils/cloudinary";
+
+const getCachedSiteSetting = cache(() => prisma.siteSetting.findFirst());
 
 export async function getSiteSetting(params) {
   try {
-    const data = await prisma.siteSetting.findFirst({ ...params });
+    const data = params
+      ? await prisma.siteSetting.findFirst({ ...params })
+      : await getCachedSiteSetting();
 
     return { success: true, data: data };
   } catch (error) {

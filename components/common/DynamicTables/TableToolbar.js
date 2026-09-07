@@ -2,54 +2,49 @@
 
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import FilterTagButton from "./FilterTagButton";
 import TimeFilter from "./TimeFilter";
+import { useState } from "react";
 
 export default function TableToolbar({
-  searchTerm,
-  setSearchTerm,
-  searchField,
-  setSearchField,
+  searchValues,
+  setSearchValues,
   activeFilters,
   onFilterChange,
+  onClearFilters,
   filterSearchProperties = [],
   filterTagProperties = [],
 }) {
-  const selectedSearchLabel =
-    filterSearchProperties.find((p) => p.field === searchField)?.label ||
-    "Search";
+  const [searchField, setSearchField] = useState(filterSearchProperties[0]?.field || "");
+  const hasFilters = Object.values(searchValues || {}).some((value) => String(value || "").trim()) || Object.keys(activeFilters || {}).length > 0;
+  const selectedSearch = filterSearchProperties.find((item) => item.field === searchField);
+  const activeSearches = filterSearchProperties.filter((item) => String(searchValues[item.field] || "").trim());
 
   return (
-    <div className=" z-10 bg-white dark:bg-gray-900 py-2 flex md:flex-row flex-col gap-2 md:text-sm text-[10px] ">
+    <div className="z-10 space-y-2 bg-white py-2 text-[10px] dark:bg-gray-900 md:text-sm">
+      <div className="flex flex-col gap-2 md:flex-row md:items-start">
       {/* Search Input Section */}
-      <div className="flex items-center w-full md:w-auto">
-        <div className="flex rounded-md shadow-sm w-full  focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-900">
-          <select
-            value={searchField}
-            onChange={(e) => setSearchField(e.target.value)}
-            className="cursor-pointer py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-700 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 text-sm px-3"
-          >
-            {filterSearchProperties.map((prop) => (
-              <option key={prop.field} value={prop.field}>
-                {prop.label}
-              </option>
-            ))}
+      {filterSearchProperties.length > 0 && <div className="w-full md:max-w-md">
+        <div className="flex w-full rounded-md shadow-sm focus-within:ring-2 focus-within:ring-purple-500">
+          <select value={searchField} onChange={(event) => setSearchField(event.target.value)} className="max-w-36 cursor-pointer rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            {filterSearchProperties.map((prop) => <option key={prop.field} value={prop.field}>{prop.label}</option>)}
           </select>
-          <div className="relative flex-grow">
+          <div className="relative min-w-0 flex-1">
             <input
               type="text"
-              placeholder={`Search by ${selectedSearchLabel}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-r-md focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+              aria-label={`Search by ${selectedSearch?.label || "field"}`}
+              placeholder={`Search by ${selectedSearch?.label || "field"}...`}
+              value={searchValues[searchField] || ""}
+              onChange={(event) => setSearchValues((values) => ({ ...values, [searchField]: event.target.value }))}
+              className="w-full rounded-r-md border border-gray-300 py-2 pl-3 pr-9 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             />
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
               <Search className="w-5 h-5 text-gray-400" />
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* --- MODIFIED FILTERS SECTION --- */}
       {/* <div className="space-y-3 ">
@@ -98,7 +93,7 @@ export default function TableToolbar({
           </div>
         ))}
       </div> */}
-      <div className="space-y-3">
+      <div className="min-w-0 flex-1 space-y-2">
         {filterTagProperties?.map((filterGroup, i) => (
           <div key={filterGroup?.field || i}>
             {filterGroup.field === "time" ? (
@@ -151,6 +146,9 @@ export default function TableToolbar({
           </div>
         ))}
       </div>
+      {hasFilters && <button type="button" onClick={onClearFilters} className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1 rounded-md border border-gray-300 px-3 text-sm font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"><X className="h-4 w-4" /> Remove filters</button>}
+      </div>
+      {activeSearches.length > 0 && <div className="flex flex-wrap gap-2">{activeSearches.map((item) => <button key={item.field} type="button" onClick={() => setSearchValues((values) => ({ ...values, [item.field]: "" }))} className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary"><span>{item.label}: {searchValues[item.field]}</span><X className="h-3 w-3" /></button>)}</div>}
     </div>
   );
 }

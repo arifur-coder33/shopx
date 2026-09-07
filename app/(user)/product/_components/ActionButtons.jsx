@@ -7,14 +7,14 @@ export default function ActionButtons({
   selectedVariation,
 }) {
   return (
-    <div className="grid grid-cols-2  gap-2 mt-4 fixed bottom-0.5 left-0 w-full sm:static">
+    <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 gap-2 border-t border-border bg-surface p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:static sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0">
       {/* Add to cart button  */}
 
       <AddToCartButton
         product={product}
         productQty={productQty}
         selectedVariation={selectedVariation}
-        className={" w-full   text-4xl"}
+        className="w-full min-h-12 text-base sm:text-xl"
       />
 
       {/* buy now button  */}
@@ -27,7 +27,7 @@ export default function ActionButtons({
           }`}
           bgcolor="bg-purple"
           className={
-            " w-full hover:bg-orange-600 hover:border-b-orange-900 text-white  border-b-4  border-orange-800  py-2 text-4xl "
+            "button min-h-12 w-full text-base sm:text-xl"
           }
         />
 

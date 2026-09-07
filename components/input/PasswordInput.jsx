@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export default function PasswordInput({
   label,
@@ -12,9 +12,8 @@ export default function PasswordInput({
 }) {
   const [show, setShow] = useState(false);
 
-  const uniqueId = `input-${name}-${Math.random()
-    .toString(36)
-    .substring(2, 9)}`;
+  const reactId = useId();
+  const uniqueId = `input-${name}-${reactId.replace(/:/g, "")}`;
 
   return (
     <div className={`relative my-4 col-span-${colSpan}`}>

@@ -56,6 +56,14 @@ const statusConfig = {
     color: "bg-gray-100 text-gray-700",
     icon: XCircle,
   },
+  PARTIALLY_REFUNDED: {
+    color: "bg-orange-100 text-orange-700",
+    icon: ReceiptText,
+  },
+  REFUNDED: {
+    color: "bg-orange-100 text-orange-700",
+    icon: ReceiptText,
+  },
 };
 
 export default function PaymentSummary({
@@ -151,7 +159,7 @@ export default function PaymentSummary({
             >
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold">{payment.gateway}</h4>
+                  <h4 className="font-semibold">{payment.paymentGateway?.name || payment.courierProvider?.name || payment.gateway}</h4>
 
                   <p className="text-xs text-gray-500">
                     {payment.paymentMethod || "-"}
@@ -176,7 +184,7 @@ export default function PaymentSummary({
 
                 <div className="flex justify-between">
                   <span>Store Amount</span>
-                  <span>৳{payment.store_amount ?? 0}</span>
+                  <span>৳{payment.storeAmount ?? 0}</span>
                 </div>
 
                 <div className="flex justify-between">
@@ -190,7 +198,7 @@ export default function PaymentSummary({
                 <div className="flex justify-between">
                   <span>Card</span>
 
-                  <span>{payment.card_brand || "-"}</span>
+                  <span>{payment.cardBrand || payment.cardType || "-"}</span>
                 </div>
 
                 <div className="flex justify-between">
@@ -230,13 +238,13 @@ export default function PaymentSummary({
 
               return (
                 <tr key={payment.id} className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium">{payment.gateway}</td>
+                  <td className="px-4 py-3 font-medium"><span className="block">{payment.paymentGateway?.name || payment.courierProvider?.name || payment.gateway}</span>{payment.moneyAccount && <small className="text-gray-500">Posted to {payment.moneyAccount.name}</small>}</td>
 
                   <td className="px-4 py-3">{payment.paymentMethod || "-"}</td>
 
                   <td className="px-4 py-3 font-semibold">৳{payment.amount}</td>
 
-                  <td className="px-4 py-3">৳{payment.store_amount ?? 0}</td>
+                  <td className="px-4 py-3">৳{payment.storeAmount ?? 0}</td>
 
                   <td className="px-4 py-3">
                     <span

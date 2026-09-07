@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 const ProductVariationSelector = ({
   variations,
   hasVariations,
+  allowOutOfStockOrder = false,
   onVariationChange,
 }) => {
   const [selectedOptions, setSelectedOptions] = useState({});
@@ -93,13 +94,13 @@ const ProductVariationSelector = ({
     if (allOptionsSelected) {
       const finalVariation = possibleVariations[0]; // should be only one
       return {
-        available: finalVariation.stock > 0,
+        available: allowOutOfStockOrder || finalVariation.stock > 0,
         stock: finalVariation.stock,
       };
     }
 
     // If not a full selection, it's available as long as at least one of the possible future paths has stock
-    const isAnyPathInStock = possibleVariations.some((v) => v.stock > 0);
+    const isAnyPathInStock = allowOutOfStockOrder || possibleVariations.some((v) => v.stock > 0);
     return { available: isAnyPathInStock, stock: -1 }; // Stock is indeterminate
   };
 

@@ -1,7 +1,9 @@
 // import { getProducts } from "@/backend/serverActions/productActions";
-export const dynamic = "force-static";
 import CategoryWiseProductList from "./_components/CategoryWiseProductList";
 import HeroSection from "./_components/HeroSection";
+import { Suspense } from "react";
+
+export const revalidate = 60;
 export async function generateMetadata() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
@@ -82,7 +84,22 @@ export default async function Home() {
   return (
     <>
       <HeroSection />
-      <CategoryWiseProductList />
+      <Suspense fallback={<HomeProductsSkeleton />}>
+        <CategoryWiseProductList />
+      </Suspense>
     </>
+  );
+}
+
+function HomeProductsSkeleton() {
+  return (
+    <div className="mt-5 space-y-3" aria-label="পণ্য লোড হচ্ছে">
+      <div className="h-9 w-48 animate-pulse rounded-lg bg-surface-muted" />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {[1, 2, 3, 4, 5].map((item) => (
+          <div key={item} className="aspect-[3/4] animate-pulse rounded-brand bg-surface-muted" />
+        ))}
+      </div>
+    </div>
   );
 }

@@ -11,24 +11,25 @@ import NavActions from "./common/NavActions";
 import Notice from "./common/Notice";
 export default async function NavBar() {
   // Fetch all data in parallel!
-  const [noticeResult, siteSettingResult, categoryData] = await Promise.all([
+  const [noticeResult, siteSettingResult, categoryResult] = await Promise.allSettled([
     getNotice(),
-    getSiteSetting({ select: { logo: true, name: true } }),
+    getSiteSetting(),
     getCategoryTree(),
   ]);
 
-  const noticeData = noticeResult.data;
-  const siteSettingData = siteSettingResult.data;
+  const noticeData = noticeResult.status === "fulfilled" ? noticeResult.value?.data : null;
+  const siteSettingData = siteSettingResult.status === "fulfilled" ? siteSettingResult.value?.data : null;
+  const categoryData = categoryResult.status === "fulfilled" ? categoryResult.value : [];
 
   return (
     <>
       {/* Pass the fetched data down as props */}
       <Notice data={noticeData} />
 
-      <header className="sticky top-0 z-30 text-slate-200 w-full bg-gradient-to-br from-[rgba(15,23,42,0.85)] via-[rgba(0,0,0,0.85)] to-[rgba(15,23,42,0.85)] shadow-sm shadow-slate-200">
-        <div className="mx-auto flex flex-row justify-between gap-4 items-center max-w-7xl">
+      <header className="sticky top-0 z-30 w-full border-b border-border bg-surface/95 text-text shadow-sm backdrop-blur supports-[backdrop-filter]:bg-surface/85">
+        <div className="site-container flex min-h-16 items-center gap-2 py-2 sm:gap-4">
           <div
-            className={`md:text-5xl text-3xl font-bold text-brand flex flex-row gap-1 items-center `}
+            className="flex shrink-0 items-center gap-1 text-2xl font-bold text-brand md:text-4xl"
           >
             <div className="hidden md:block">
               <CategoryDrawer initialData={categoryData}></CategoryDrawer>
@@ -39,8 +40,8 @@ export default async function NavBar() {
               <Logo data={siteSettingData} />
             </Link>
           </div>
-          <SearchBoxWrapper />
-          <NavActions />
+          <div className="min-w-0 flex-1"><SearchBoxWrapper /></div>
+          <div className="shrink-0"><NavActions /></div>
         </div>
       </header>
     </>

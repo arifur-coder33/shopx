@@ -1,9 +1,9 @@
-'use client";';
+"use client";
 import { Truck } from "lucide-react";
 import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
-import { initiateSSLcommerzPayment } from "@/backend/lib/payments/bkash/sslcommerz";
+import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
 import { createOrder } from "@/backend/serverActions/orderActions";
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
@@ -24,10 +24,11 @@ export default function OrderForm({
   deliveryArea,
   totalPrice,
   orderWeight,
+  checkoutProviders,
 }) {
   const { data: session } = useSession();
   const { clearCart } = useCart();
-  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentSelection, setPaymentSelection] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -57,11 +58,9 @@ export default function OrderForm({
       el.classList.remove("blink-border");
     }, 1000);
   };
-  console.log("paymentMethod:", paymentMethod);
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
-    if (paymentMethod === "") {
-      console.log("Payment method not selected");
+    if (!paymentSelection) {
       scrollToPaymentMethod();
       return;
     }
@@ -79,7 +78,9 @@ export default function OrderForm({
       formData.append("userId", session?.user?.id);
     }
 
-    formData.append("paymentMethod", paymentMethod);
+    formData.append("paymentMethod", paymentSelection.paymentMethod);
+    if (paymentSelection.paymentGatewayId)
+      formData.append("paymentGatewayId", paymentSelection.paymentGatewayId);
     formData.append("orderPrice", totalPrice);
     formData.append("deliveryCharge", deliveryCharge);
     formData.append("orderWeight", orderWeight);
@@ -88,20 +89,10 @@ export default function OrderForm({
     formData.append("gclid", getCookie("gclid"));
     formData.append("ttclid", getCookie("ttclid"));
     formData.append("userAgent", navigator.userAgent);
-    formData.append("id", paymentMethod);
     formData.delete("quantity");
     formData.append("products", JSON.stringify(products));
 
     formData.append("deliveryArea", deliveryArea);
-    const productPrice = products.reduce(
-      (total, product) =>
-        total +
-        product.quantity * (product.discountPrice || product.regularPrice),
-      0,
-    );
-    const formDataObj = Object.fromEntries(formData.entries());
-
-    // startTransition(async () => {
     const response = await createOrder(formData); // Call server action
     // const response = {
     //   success: true,
@@ -114,29 +105,17 @@ export default function OrderForm({
     // };
     if (response.success) {
       setLoadingStep("success");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
       if (!buyNow) clearCart();
-      if (paymentMethod === "ONLINE" || paymentMethod === "EMI") {
+      if (paymentSelection.paymentMethod !== "COD") {
         setLoadingStep("success");
-        await new Promise((resolve) => setTimeout(resolve, 500));
         setLoadingStep("redirecting");
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        console.log("order ID:", response?.data?.id);
-        initiateSSLcommerzPayment({
-          amount: productPrice + deliveryCharge,
-          name: response?.data?.customerName,
-          email: data?.email,
-          orderNo: response?.data?.orderNo,
-          phoneNumber: response?.data?.phoneNumber,
-          emiAllow: paymentMethod === "EMI",
-          onlyEmi: paymentMethod === "EMI",
-        }).then((url) => {
-          if (url) {
-            window.location.href = url;
-            setLoadingStep(null);
-          }
-        });
+        const initiated = await initiateConfiguredPayment(response.data.paymentId);
+        if (!initiated.success || !initiated.url) {
+          setError(initiated.message || "Payment could not be initiated.");
+          setLoadingStep(null);
+          return;
+        }
+        window.location.href = initiated.url;
       } else {
         router.push(
           `/order-success?p=${encodeURIComponent(
@@ -160,8 +139,6 @@ export default function OrderForm({
 
       // form.reset(); // Clear the form on success
     } else {
-      console.log(response.error);
-
       window.scrollTo(0, 0);
       setError(response.error || "Something went wrong");
       setLoadingStep(null);
@@ -190,7 +167,8 @@ export default function OrderForm({
           {children}
           <PaymentMethodSelector
             className="mt-2"
-            setPaymentMethod={setPaymentMethod}
+            setPaymentSelection={setPaymentSelection}
+            initialProviders={checkoutProviders}
           />
         </div>
         <div className="w-full md:w-1/2">

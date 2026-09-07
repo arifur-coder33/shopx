@@ -1,74 +1,138 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+
+const drawerPositions = {
+  left: "left-0 top-0 h-dvh w-[min(24rem,calc(100vw-1rem))]",
+  right: "right-0 top-0 h-dvh w-[min(24rem,calc(100vw-1rem))]",
+  bottom:
+    "bottom-0 left-1/2 max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg -translate-x-1/2 rounded-t-2xl",
+};
+
 export default function Modal({
   isOpen,
   setIsOpen,
   children,
   title,
-  openStyle = "right", // Default to right
+  openStyle = "right",
+  contentClassName =
+    "overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14",
 }) {
-  // Function to toggle the drawer state
-  const toggleDrawer = () => {
-    setIsOpen(!isOpen);
-  };
+  const [entered, setEntered] = useState(false);
+  const closeTimerRef = useRef(null);
 
-  // Determine styles based on openStyle
-  const positionStyles = {
-    left: {
-      container: `fixed left-0 top-4 w-80 h-screen z-50 transform transition-transform duration-300 ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      }`,
-      buttopPosition: `top-0 right-0`,
-    },
-    right: {
-      container: `fixed right-0 top-4 w-80 h-screen z-50 transform transition-transform duration-300 ${
-        isOpen ? "translate-x-0" : "translate-x-96"
-      }`,
-      buttopPosition: `-top-2 -left-2`,
-    },
-    bottom: {
-      // container: `fixed bottom-0 left-1/2 transform  transition-transform duration-500 ease-in-out z-50 max-w-md w-full    ${
-      //   isOpen
-      //     ? "-translate-x-1/2  bottom-1/2 "
-      //     : "-translate-x-1/2 translate-y-96"
-      // }`,
-      container: `fixed  bottom-0 left-1/2 z-50 -translate-x-1/2 w-11/12  max-w-md transform transition-transform duration-300 ${
-        isOpen ? "bottom-1/2 " : "translate-y-96"
-      }`,
-      buttopPosition: `-top-2 -left-2`,
-    },
-  };
+  const closeDrawer = useCallback(() => {
+    if (closeTimerRef.current) return;
+    setEntered(false);
+    closeTimerRef.current = window.setTimeout(() => {
+      setIsOpen(false);
+    }, 280);
+  }, [setIsOpen]);
 
-  const selectedStyle = positionStyles[openStyle] || positionStyles.right;
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const animationFrame = window.requestAnimationFrame(() => {
+      setEntered(true);
+    });
 
-  return (
-    <div>
-      {/* Overlay */}
-      <div
-        className={`fixed  inset-0 bg-black/50 dark:bg-slate-950/50 z-50 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const bodyPaddingRight = Number.parseFloat(
+      window.getComputedStyle(document.body).paddingRight,
+    ) || 0;
+    const scrollbarWidth = Math.max(
+      0,
+      window.innerWidth - document.documentElement.clientWidth,
+    );
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") closeDrawer();
+    };
+
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${bodyPaddingRight + scrollbarWidth}px`;
+    }
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [closeDrawer, isOpen]);
+
+  if (!isOpen || typeof document === "undefined") return null;
+
+  const position = drawerPositions[openStyle] || drawerPositions.right;
+  const border =
+    openStyle === "left"
+      ? "border-r"
+      : openStyle === "right"
+        ? "border-l"
+        : "border-t";
+  const movement =
+    openStyle === "left"
+      ? entered
+        ? "translate-x-0"
+        : "-translate-x-full"
+      : openStyle === "right"
+        ? entered
+          ? "translate-x-0"
+          : "translate-x-full"
+        : entered
+          ? "translate-y-0"
+          : "translate-y-full";
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100]" role="presentation">
+      <button
+        type="button"
+        aria-label="Close drawer"
+        className={`absolute inset-0 h-full w-full cursor-default bg-slate-950/60 backdrop-blur-[2px] transition-opacity duration-300 ease-out ${
+          entered ? "opacity-100" : "opacity-0"
         }`}
-        onClick={toggleDrawer}
-      ></div>
+        onClick={closeDrawer}
+      />
 
-      {/* Drawer Content */}
-      <div className={selectedStyle.container}>
-        <div className="h-full z-50  bg-slate-100 dark:bg-slate-900 shadow-lg rounded-md dark:shadow-white">
-          <button
-            onClick={toggleDrawer}
-            className={`absolute ${selectedStyle.buttopPosition} bg-red-500 hover:bg-red-600 text-2xl w-8 h-8 rounded-full focus:outline-none text-white`}
-          >
-            ✗
-          </button>
-          <div className="p-4 h-full bg-slate-900 shadow-2xl  ">
-            {title && (
-              <h2 className="text-xl font-bold border-b-2 text-slate-900 dark:text-slate-200 tracking-wider">
-                {title}
-              </h2>
-            )}
-            {/* Drawer content */}
-            {children}
-          </div>
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || "Drawer"}
+        className={`fixed z-[110] overflow-hidden border-border bg-surface text-text shadow-2xl transition-transform duration-300 ease-out will-change-transform ${border} ${position} ${movement}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={closeDrawer}
+          aria-label="Close menu"
+          className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-muted text-xl leading-none text-text-muted transition-colors hover:bg-primary-soft hover:text-primary"
+        >
+          ×
+        </button>
+
+        <div
+          className={`h-full overscroll-contain bg-surface text-text ${contentClassName}`}
+        >
+          {title && (
+            <h2 className="mb-3 border-b border-border pb-3 text-xl font-bold text-text">
+              {title}
+            </h2>
+          )}
+          {children}
         </div>
-      </div>
-    </div>
+      </aside>
+    </div>,
+    document.body,
   );
 }

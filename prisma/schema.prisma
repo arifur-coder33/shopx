@@ -10,339 +10,405 @@ generator client {
 
 // User model with extended features
 model User {
-  id           String      @id @default(auto()) @map("_id") @db.ObjectId
-  email        String      @unique
-  phone       String?      @unique
-  name         String?
-  gender       String?
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  email  String  @unique
+  phone  String? @unique
+  name   String?
+  gender String?
 
-  password     String   
-  accounts      Account[]
-  sessions      Session[]                   
-  roleId String @db.ObjectId
-  role   Role   @relation(fields: [roleId], references: [id])
-   tokenVersion  Int      @default(0)
-  orders       Order[]                     // Relationship to track user orders
-  createdAt    DateTime?    @default(now()) // Timestamp for account creation
-  updatedAt    DateTime   @updatedAt      // Auto-updated timestamp
+  password     String
+  accounts     Account[]
+  sessions     Session[]
+  roleId       String    @db.ObjectId
+  role         Role      @relation(fields: [roleId], references: [id])
+  tokenVersion Int       @default(0)
+  orders       Order[] // Relationship to track user orders
+  createdAt    DateTime? @default(now()) // Timestamp for account creation
+  updatedAt    DateTime  @updatedAt // Auto-updated timestamp
 }
+
 model Role {
-  id   String @id @default(auto()) @map("_id") @db.ObjectId
-  name String @unique
-  users        User[]
-  permissions  RolePermission[] 
-    createdAt    DateTime    @default(now()) // Timestamp for account creation
-  updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  name        String           @unique
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now()) // Timestamp for account creation
+  updatedAt   DateTime         @updatedAt // Auto-updated timestamp
 }
 
 model Resource {
-  id   String @id @default(auto()) @map("_id") @db.ObjectId
-  key  String @unique // user, product, order
-  permissions  RolePermission[]
-    createdAt    DateTime    @default(now()) // Timestamp for account creation
-  updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  key         String           @unique // user, product, order
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now()) // Timestamp for account creation
+  updatedAt   DateTime         @updatedAt // Auto-updated timestamp
 }
-model Action {
-  id   String @id @default(auto()) @map("_id") @db.ObjectId
-  key  String @unique // create, view, update, delete
-  permissions  RolePermission[] 
-    createdAt    DateTime    @default(now()) // Timestamp for account creation
-  updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
-}
-model RolePermission {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  roleId     String   @db.ObjectId
-  resourceId String   @db.ObjectId
-  actionId   String   @db.ObjectId
-  allowed    Boolean  @default(true)
 
-  role       Role     @relation(fields: [roleId], references: [id])
-  resource   Resource @relation(fields: [resourceId], references: [id])
-  action     Action   @relation(fields: [actionId], references: [id])
+model Action {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  key         String           @unique // create, view, update, delete
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now()) // Timestamp for account creation
+  updatedAt   DateTime         @updatedAt // Auto-updated timestamp
+}
+
+model RolePermission {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  roleId     String  @db.ObjectId
+  resourceId String  @db.ObjectId
+  actionId   String  @db.ObjectId
+  allowed    Boolean @default(true)
+
+  role      Role     @relation(fields: [roleId], references: [id])
+  resource  Resource @relation(fields: [resourceId], references: [id])
+  action    Action   @relation(fields: [actionId], references: [id])
+  createdAt DateTime @default(now()) // Timestamp for account creation
+  updatedAt DateTime @updatedAt // Auto-updated timestamp
 
   @@unique([roleId, resourceId, actionId])
-    createdAt    DateTime    @default(now()) // Timestamp for account creation
-  updatedAt    DateTime    @updatedAt      // Auto-updated timestamp
 }
-
 
 // Category model for organizing products
 model Category {
-  id              String      @id @default(auto()) @map("_id") @db.ObjectId
-  name            String                      // Category name
-  slug            String      @unique         // Unique slug for URL identification
-  description     String?                     // Optional category description
-                    // Banner image for the category
-  thumbnailId      String?      @db.ObjectId   
-  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id], name: "categoryThumbnail") 
- bannerId      String?      @db.ObjectId   
- banner      Media?     @relation(fields: [bannerId], references: [id], name: "categoryBanner")
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  name          String // Category name
+  slug          String     @unique // Unique slug for URL identification
+  description   String? // Optional category description
+  // Banner image for the category
+  thumbnailId   String?    @db.ObjectId
+  thumbnail     Media?     @relation(fields: [thumbnailId], references: [id], name: "categoryThumbnail")
+  bannerId      String?    @db.ObjectId
+  banner        Media?     @relation(fields: [bannerId], references: [id], name: "categoryBanner")
   // Self-referencing relation for subcategories
-  subCategories   Category[] @relation("ParentChild")
+  subCategories Category[] @relation("ParentChild")
 
   // Self-referencing relation for parent category
-  parentCategory  Category?  @relation("ParentChild", fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentCategory Category? @relation("ParentChild", fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  parentCategoryId String?   @db.ObjectId   // Nullable field for subcategories
+  parentCategoryId String? @db.ObjectId // Nullable field for subcategories
 
-  isVariation     Boolean    @default(false)  // Flag to check if variations exist
-  variations      VariationValue[]                        // Array of variations
+  isVariation    Boolean          @default(false) // Flag to check if variations exist
+  variations     VariationValue[] // Array of variations
   variationNames VariationName[]
-  products        Product[]                   // One-to-many relationship with Product
-  fullPath          String?
+  products       Product[] // One-to-many relationship with Product
+  fullPath       String?
+  createdAt      DateTime         @default(now()) // Timestamp for category creation
+  updatedAt      DateTime         @updatedAt // Auto-updated timestamp
+
   @@index([fullPath])
-  createdAt       DateTime   @default(now())  // Timestamp for category creation
-  updatedAt       DateTime  @updatedAt      // Auto-updated timestamp
 }
 
 // Variation Model (Size, Color, etc.)
 model VariationName {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  name   String  @unique   
-  categoryId String? @db.ObjectId
-  category   Category? @relation(fields: [categoryId], references: [id])            
-  values VariationValue[] // Example: "Size", "Color"
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  name         String           @unique
+  categoryId   String?          @db.ObjectId
+  category     Category?        @relation(fields: [categoryId], references: [id])
+  values       VariationValue[] // Example: "Size", "Color"
   combinations Combination[]
-   createdAt       DateTime?   @default(now())  // Timestamp for category creation
-  updatedAt       DateTime?   @updatedAt      // Auto-updated timestamp
+  createdAt    DateTime?        @default(now()) // Timestamp for category creation
+  updatedAt    DateTime?        @updatedAt // Auto-updated timestamp
 }
 
 // Variation Value Model (Specific options like XL, Red, etc.)
 model VariationValue {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
-  variationId String  @db.ObjectId
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  variationId String        @db.ObjectId
   variation   VariationName @relation(fields: [variationId], references: [id])
-  categoryId  String?  @db.ObjectId  // Can be nullable if the variation is global
-  category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  value       String  // Example: "XL", "Red", "L"
+  categoryId  String?       @db.ObjectId // Can be nullable if the variation is global
+  category    Category?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  value       String // Example: "XL", "Red", "L"
   // Many-to-Many Relationship using Join Table
- 
+
   combinations Combination[] // Many-to-Many Relationship using Join Table
-   createdAt       DateTime?   @default(now())  // Timestamp for category creation
-  updatedAt       DateTime?   @updatedAt      // Auto-updated timestamp
+  createdAt    DateTime?     @default(now()) // Timestamp for category creation
+  updatedAt    DateTime?     @updatedAt // Auto-updated timestamp
 }
 
-model ProductCodeCounter{
-    id  String @id @default(auto()) @map("_id") @db.ObjectId
-    lastProductCode Int
+model ProductCodeCounter {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  lastProductCode Int
 }
 
 model Media {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  url       String
-  name      String
-  host      String
-  categoryThumbnail Category[] @relation(name: "categoryThumbnail")
-  categoryBanner Category[] @relation(name: "categoryBanner")
+  id                        String             @id @default(auto()) @map("_id") @db.ObjectId
+  url                       String
+  name                      String
+  host                      String
+  categoryThumbnail         Category[]         @relation(name: "categoryThumbnail")
+  categoryBanner            Category[]         @relation(name: "categoryBanner")
   // Reverse relations
-  productsAsThumbnail Product[] 
-  ProductVariationThumbnail ProductVariation[] 
-  productGallery ProductGallery[]  // Explicit Many-to-Many Relation
-  banner banner[]  // Explicit Many-to-Many Relation
-  supplierDocuments SupplierDocument[]  // Explicit Many-to-Many Relation
-  createdAt DateTime @default(now())
+  productsAsThumbnail       Product[]
+  ProductVariationThumbnail ProductVariation[]
+  productGallery            ProductGallery[] // Explicit Many-to-Many Relation
+  banner                    banner[] // Explicit Many-to-Many Relation
+  supplierDocuments         SupplierDocument[] // Explicit Many-to-Many Relation
+  createdAt                 DateTime           @default(now())
 }
 
 model Product {
-  id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  productCode    String? @unique
-  title          String                        // Product title
-  slug           String      @unique           // Unique slug for URL identification
-  description    String?                        // Optional detailed description
-  categoryId     String?      @db.ObjectId      // Foreign key for Category
-  category       Category?    @relation(fields: [categoryId], references: [id]) // Relation to Category
-  canonicalUrl     String?
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  productCode  String?   @unique
+  title        String // Product title
+  slug         String    @unique // Unique slug for URL identification
+  description  String? // Optional detailed description
+  categoryId   String?   @db.ObjectId // Foreign key for Category
+  category     Category? @relation(fields: [categoryId], references: [id]) // Relation to Category
+  canonicalUrl String?
 
-  thumbnailId    String?    @db.ObjectId
-  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
-  videoUrl String? // Optional video URL for the product
-  gallery ProductGallery[]
-  seoKeyWord     String?
-  seoDescription String?
-  isFeatured     Boolean?    @default(false)     // Indicates if the product is featured
-  isActive       Boolean?    @default(true)      // Marks if the product is active
-  status         ProductStatus? @default(ACTIVE) // Product status enumeration
-  hasVariations    Boolean? @default(false)           
-  google_Category_id String?
-  gender String?
-  ageGroup String?
-  variations      ProductVariation[] 
-  orders         OrderItem[] 
-   searchText  String?
-  Purchase   PurchaseItem[]
+  thumbnailId          String?            @db.ObjectId
+  thumbnail            Media?             @relation(fields: [thumbnailId], references: [id])
+  videoUrl             String? // Optional video URL for the product
+  gallery              ProductGallery[]
+  seoKeyWord           String?
+  seoDescription       String?
+  isFeatured           Boolean?           @default(false) // Indicates if the product is featured
+  isActive             Boolean?           @default(true) // Marks if the product is active
+  allowOutOfStockOrder Boolean            @default(false)
+  status               ProductStatus?     @default(ACTIVE) // Product status enumeration
+  hasVariations        Boolean?           @default(false)
+  google_Category_id   String?
+  gender               String?
+  ageGroup             String?
+  variations           ProductVariation[]
+  orders               OrderItem[]
+  searchText           String?
+  Purchase             PurchaseItem[]
+  createdAt            DateTime           @default(now()) // Timestamp for product creation
+  updatedAt            DateTime           @updatedAt // Auto-updated timestamp
+
   @@index([searchText])
-  createdAt      DateTime    @default(now())     // Timestamp for product creation
-  updatedAt      DateTime    @updatedAt          // Auto-updated timestamp
 }
 
 model ProductGallery {
-  id         String @id @default(auto()) @map("_id") @db.ObjectId
-  productId  String @db.ObjectId
-  mediaId    String @db.ObjectId
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  productId String @db.ObjectId
+  mediaId   String @db.ObjectId
 
-  product    Product @relation(fields: [productId], references: [id],onDelete: Cascade)
-  media      Media @relation(fields: [mediaId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  media   Media   @relation(fields: [mediaId], references: [id])
 
   createdAt DateTime @default(now())
 }
 
+model ProductVariation {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId     String?  @db.ObjectId // Foreign key for Category
+  product       Product? @relation(fields: [productId], references: [id], onDelete: Cascade) // Relation to Category
+  sku           String
+  weight        Float?
+  dimensions    String?
+  regularPrice  Float? // Regular price of the product
+  discountPrice Float? // Optional discount price
+  thumbnailId   String?  @db.ObjectId
+  thumbnail     Media?   @relation(fields: [thumbnailId], references: [id])
+  matcherId     String
 
-model ProductVariation{ 
-  id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  productId     String?      @db.ObjectId    // Foreign key for Category
-  product       Product?    @relation(fields: [productId], references: [id] ,onDelete: Cascade) // Relation to Category
-  sku          String
-  stock       Float?
-  weight Float?
-  dimensions String?
-  regularPrice   Float?                         // Regular price of the product
-  discountPrice  Float?                         // Optional discount price
-  thumbnailId    String?    @db.ObjectId
-  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
-  matcherId String
-  
-  combinations Combination[] // Many-to-Many Relationship using Join Table
-  orders OrderItem[]
-  purchases   PurchaseItem[]
+  combinations      Combination[] // Many-to-Many Relationship using Join Table
+  orders            OrderItem[]
+  purchases         PurchaseItem[]
   goodsReceiptItems GoodsReceiptItem[]
-   transactions InventoryTransaction[]
-   stocks Stock[]
+  transactions      InventoryTransaction[]
+  stocks            Stock[]
+  deliveryItems     DeliveryItem[]
 }
 
 model Combination {
-  id             String      @id @default(auto()) @map("_id") @db.ObjectId
- productVariationId String @db.ObjectId
+  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  productVariationId String           @db.ObjectId
   productVariation   ProductVariation @relation(fields: [productVariationId], references: [id], onDelete: Cascade)
- variationNameId String? @db.ObjectId
-  variationName VariationName? @relation(fields: [variationNameId],references: [id])
-  variationValueId String? @db.ObjectId
-  variationValue VariationValue? @relation(fields: [variationValueId],references: [id])
-  orderItems OrderItem[] // Relationship to OrderItem
+  variationNameId    String?          @db.ObjectId
+  variationName      VariationName?   @relation(fields: [variationNameId], references: [id])
+  variationValueId   String?          @db.ObjectId
+  variationValue     VariationValue?  @relation(fields: [variationValueId], references: [id])
+  orderItems         OrderItem[] // Relationship to OrderItem
   // Additional fields can be added as needed
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 }
-
-
-
 
 model Order {
-  id             String      @id @default(auto()) @map("_id") @db.ObjectId
-  orderNo        String @unique
-  orderItems     OrderItem[] 
-  userId         String?      @db.ObjectId    // Foreign key for User
-  user           User?        @relation(fields: [userId], references: [id]) // Relation to User
-  customerName   String
-  phoneNumber    String
-  email          String
-  orderPrice     Float                       // Price of the product at the time of order
-  orderWeight    Float?
-  adminDiscount   Float?
-  adminNote     String?
-  taxAmount     Float?
-  cancelReason  String?
-  cancelReasonType  String?
-  deliveryCharge Float 
-  city           String?
-  thana            String? 
-  deliveryAddress String 
-  deliveryArea    String?
-  paymentMethod   PaymentMethod?                    // Address for product delivery
-  paymentStatus   PaymentStatus @default(UNPAID)
-  paidAmount      Float @default(0)
-  dueAmount       Float?
-  note            String?
-  status         OrderStatus @default(PENDING) // Order status enumeration
-  shipping           Shipping?    
-  timeline       OrderTimeline[]
-  payments        Payment[]
-  refunds   Refund[]
-  ledgers   Ledger[]
-  fbc  String?
-  fbp String?
-  gclid String?
-  ttclid String
-  userAgent String?
-  ipAddress String?
-  createdAt      DateTime    @default(now()) // Timestamp for order placement
-  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp
+  id                        String           @id @default(auto()) @map("_id") @db.ObjectId
+  orderNo                   String           @unique
+  orderItems                OrderItem[]
+  userId                    String?          @db.ObjectId // Foreign key for User
+  user                      User?            @relation(fields: [userId], references: [id]) // Relation to User
+  customerName              String
+  phoneNumber               String
+  email                     String
+  orderPrice                Float // Price of the product at the time of order
+  orderWeight               Float?
+  adminDiscount             Float?
+  adminNote                 String?
+  taxAmount                 Float?
+  cancelReason              String?
+  cancelReasonType          String?
+  deliveryCharge            Float
+  city                      String?
+  thana                     String?
+  deliveryAddress           String
+  deliveryArea              String?
+  paymentMethod             PaymentMethod? // Address for product delivery
+  paymentStatus             PaymentStatus    @default(UNPAID)
+  paidAmount                Float            @default(0)
+  dueAmount                 Float?
+  note                      String?
+  status                    OrderStatus      @default(PENDING) // Order status enumeration
+  shipping                  Shipping?
+  selectedPaymentGatewayId  String?          @db.ObjectId
+  selectedPaymentGateway    PaymentGateway?  @relation("OrderPaymentGateway", fields: [selectedPaymentGatewayId], references: [id])
+  selectedCourierProviderId String?          @db.ObjectId
+  selectedCourierProvider   CourierProvider? @relation("OrderCourierProvider", fields: [selectedCourierProviderId], references: [id])
+  timeline                  OrderTimeline[]
+  payments                  Payment[]
+  refunds                   Refund[]
+  ledgers                   Ledger[]
+  deliveries                Delivery[]
+  fbc                       String?
+  fbp                       String?
+  gclid                     String?
+  ttclid                    String
+  userAgent                 String?
+  ipAddress                 String?
+  createdAt                 DateTime         @default(now()) // Timestamp for order placement
+  updatedAt                 DateTime         @updatedAt // Auto-updated timestamp
+
+  @@index([selectedPaymentGatewayId])
+  @@index([selectedCourierProviderId])
 }
 
-model OrderItem{
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  orderId         String      @db.ObjectId    
-  order           Order   @relation(fields: [orderId], references: [id],onDelete: Cascade) 
-  orderNo        String
-  orderItemNo    Int 
-  productName    String
-  sku            String
-  productCode     String?
-  thumbnail       String?
-  price          Float
-  quantity       Int // Foreign key for Product
-  productId      String      @db.ObjectId   
-  product      Product     @relation(fields: [productId], references: [id]) // Relation to Product
+model OrderItem {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  orderId       String           @db.ObjectId
+  order         Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderNo       String
+  orderItemNo   Int
+  productName   String
+  sku           String
+  productCode   String?
+  thumbnail     String?
+  price         Float
+  quantity      Int // Foreign key for Product
+  productId     String           @db.ObjectId
+  product       Product          @relation(fields: [productId], references: [id]) // Relation to Product
   combinations  String? // JSON string to store combination details
-  combinationId String? @db.ObjectId
-  combination   Combination? @relation(fields: [combinationId], references: [id])
-  variationId   String @db.ObjectId
-  variation     ProductVariation @relation(fields: [variationId], references: [id]) 
-  status         OrderStatus @default(PENDING)
-  createdAt      DateTime    @default(now()) // Timestamp for order placement
-  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
-
+  combinationId String?          @db.ObjectId
+  combination   Combination?     @relation(fields: [combinationId], references: [id])
+  variationId   String           @db.ObjectId
+  variation     ProductVariation @relation(fields: [variationId], references: [id])
+  deliveryItems DeliveryItem[]
+  status        OrderStatus      @default(PENDING)
+  createdAt     DateTime         @default(now()) // Timestamp for order placement
+  updatedAt     DateTime         @updatedAt // Auto-updated timestamp
 }
-
 
 model OrderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
-  idNo            Int @unique 
+  idNo            Int    @unique
   lastOrderNumber Int
 }
+
 model Counter {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  name      String   @unique   // SUPPLIER, PRODUCT, PURCHASE_ORDER
+  name String @unique // SUPPLIER, PRODUCT, PURCHASE_ORDER
 
-  prefix    String?
+  prefix String?
 
   nextValue Int
 
-  padding   Int @default(6)
+  padding Int @default(6)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 model Shipping {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  orderId         String  @unique  @db.ObjectId 
-  order           Order       @relation(fields: [orderId], references: [id] ,onDelete: Cascade)
-  orderNo        String?
-  cn              String?
-  courierName        String?
-  deliveryFee   Float?
-  cod      Float?
-  estimatedDelivery DateTime?
-  createdAt      DateTime    @default(now()) // Timestamp for order placement
-  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
+  id                     String           @id @default(auto()) @map("_id") @db.ObjectId
+  orderId                String           @unique @db.ObjectId
+  order                  Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderNo                String?
+  cn                     String?
+  courierName            String?
+  courierProviderId      String?          @db.ObjectId
+  courierProvider        CourierProvider? @relation(fields: [courierProviderId], references: [id])
+  deliveryFee            Float?
+  cod                    Float?
+  codCollectedAt         DateTime?
+  codCollectedAmount     Float?
+  codCollectionReference String?
+  estimatedDelivery      DateTime?
+  createdAt              DateTime         @default(now()) // Timestamp for order placement
+  updatedAt              DateTime         @updatedAt // Auto-updated timestamp
 
+  @@index([courierProviderId])
 }
+
+model PaymentGateway {
+  id                   String        @id @default(auto()) @map("_id") @db.ObjectId
+  name                 String
+  code                 String        @unique
+  adapterKey           String        @default("MANUAL")
+  isActive             Boolean       @default(false)
+  sortOrder            Int           @default(0)
+  moneyAccountId       String?       @db.ObjectId
+  moneyAccount         MoneyAccount? @relation(fields: [moneyAccountId], references: [id])
+  encryptedCredentials String?
+  credentialVersion    Int           @default(1)
+  credentialsUpdatedAt DateTime?
+  nonSecretConfig      Json?
+  orders               Order[]       @relation("OrderPaymentGateway")
+  payments             Payment[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  createdBy            String?
+  updatedBy            String?
+
+  @@index([isActive, sortOrder])
+  @@index([moneyAccountId])
+}
+
+model CourierProvider {
+  id                   String               @id @default(auto()) @map("_id") @db.ObjectId
+  name                 String
+  code                 String               @unique
+  adapterKey           String               @default("MANUAL")
+  isActive             Boolean              @default(false)
+  sortOrder            Int                  @default(0)
+  moneyAccountId       String?              @db.ObjectId
+  moneyAccount         MoneyAccount?        @relation(fields: [moneyAccountId], references: [id])
+  encryptedCredentials String?
+  credentialVersion    Int                  @default(1)
+  credentialsUpdatedAt DateTime?
+  nonSecretConfig      Json?
+  orders               Order[]              @relation("OrderCourierProvider")
+  shippings            Shipping[]
+  pickupPoints         CourierPickupPoint[]
+  payments             Payment[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  createdBy            String?
+  updatedBy            String?
+
+  @@index([isActive, sortOrder])
+  @@index([moneyAccountId])
+}
+
 model OrderTimeline {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  orderId         String    @db.ObjectId 
-  order           Order       @relation(fields: [orderId], references: [id],onDelete: Cascade)
+  orderId String @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  orderNo   String
+  orderNo String
 
-  status    OrderStatus
+  status OrderStatus
 
-  title     String
-  message   String?
+  title   String
+  message String?
 
-  location  String?     // warehouse / city / courier hub
-  createdBy String?     // admin / system / courier
+  location  String? // warehouse / city / courier hub
+  createdBy String? // admin / system / courier
 
   createdAt DateTime @default(now())
 }
@@ -354,50 +420,54 @@ enum PaymentMethod {
   CASH
   BANK
 }
+
 model Payment {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  orderId          String   @db.ObjectId
-  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  transactionId    String? 
+  transactionId     String?
   bankTransactionId String?
 
-  
-  gateway         PaymentAccount
-  paymentMethod    PaymentMethod?
+  gateway       String
+  paymentMethod PaymentMethod?
 
-  amount           Float
-  storeAmount       Float?
-  status           PaymentStatus @default(PENDING)
+  paymentGatewayId  String?          @db.ObjectId
+  paymentGateway    PaymentGateway?  @relation(fields: [paymentGatewayId], references: [id])
+  courierProviderId String?          @db.ObjectId
+  courierProvider   CourierProvider? @relation(fields: [courierProviderId], references: [id])
+  moneyAccountId    String?          @db.ObjectId
+  moneyAccount      MoneyAccount?    @relation(fields: [moneyAccountId], references: [id])
 
-  currency         String @default("BDT")
-  cardType          String?
- 
-  cardNo         String?
-  cardIssuer         String?
-  cardBrand         String?
-  gatewayResponse  Json?
+  amount      Float
+  storeAmount Float?
+  status      PaymentStatus @default(PENDING)
 
-  paidAt           DateTime?
+  currency String  @default("BDT")
+  cardType String?
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  cardNo          String?
+  cardIssuer      String?
+  cardBrand       String?
+  gatewayResponse Json?
 
-  refunds          Refund[]
-  ledgers          Ledger[]
-}
+  paidAt          DateTime?
+  postedAt        DateTime?
+  externalEventId String?
 
-enum PaymentAccount {
-  SSLCOMMERZ
-  BKASH
-  NAGAD
-  ROCKET
-  STEADFAST
-  PATHAO
-  REDX
-  BANK
-  CASH
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refunds           Refund[]
+  ledgers           Ledger[]
+  moneyTransactions MoneyTransaction[]
+
+  @@index([paymentGatewayId])
+  @@index([courierProviderId])
+  @@index([moneyAccountId])
+  @@index([transactionId])
+  @@index([externalEventId])
 }
 
 enum RefundStatus {
@@ -408,103 +478,113 @@ enum RefundStatus {
   CANCELLED
 }
 
-
 model Refund {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  orderId        String   @db.ObjectId
-  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  paymentId      String?  @db.ObjectId
-  payment        Payment? @relation(fields: [paymentId], references: [id])
+  paymentId      String?       @db.ObjectId
+  payment        Payment?      @relation(fields: [paymentId], references: [id])
+  moneyAccountId String?       @db.ObjectId
+  moneyAccount   MoneyAccount? @relation(fields: [moneyAccountId], references: [id])
 
-  amount         Float
+  amount Float
 
-  reason         String?
-  adminNote      String?
+  reason    String?
+  adminNote String?
 
-  status         RefundStatus @default(PENDING)
+  status RefundStatus @default(PENDING)
 
-  refundedAt     DateTime?
+  externalReference String?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  refundedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  moneyTransactions MoneyTransaction[]
+
+  @@index([moneyAccountId])
+  @@index([externalReference])
 }
-
 
 model Ledger {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  orderId       String   @db.ObjectId
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String @db.ObjectId
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  paymentId     String?  @db.ObjectId
-  payment       Payment? @relation(fields: [paymentId], references: [id])
+  paymentId String?  @db.ObjectId
+  payment   Payment? @relation(fields: [paymentId], references: [id])
 
-  type          LedgerType
+  type LedgerType
 
-  direction     LedgerDirection
+  direction LedgerDirection
 
-  amount        Float
+  amount Float
 
-  description   String?
+  description String?
 
-  reference     String?
+  reference String?
 
-  createdBy     String?
+  createdBy String?
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 }
+
 model CourierPickupPoint {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  name   String
-  address String
-  storeId String?
-  courierName String?
-  phoneNumber String?
-  email String?
-  createdAt      DateTime    @default(now()) // Timestamp for order placement
-  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  address           String
+  storeId           String?
+  courierName       String?
+  courierProviderId String?          @db.ObjectId
+  courierProvider   CourierProvider? @relation(fields: [courierProviderId], references: [id])
+  phoneNumber       String?
+  email             String?
+  createdAt         DateTime         @default(now()) // Timestamp for order placement
+  updatedAt         DateTime         @updatedAt // Auto-updated timestamp
+
+  @@index([courierProviderId])
 }
 
 model SiteSetting {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  name   String?
-  slogan  String?
-  logo   String?
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String?
+  slogan       String?
+  logo         String?
   phoneNumber1 String?
   phoneNumber2 String?
-  adress1 String?
-  adress2 String?
-  googleMap String?
-  email String?
-  fbLink  String?
-  youTubeLink String?
-  createdAt      DateTime    @default(now()) // Timestamp for order placement
-  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
-
+  adress1      String?
+  adress2      String?
+  googleMap    String?
+  email        String?
+  fbLink       String?
+  youTubeLink  String?
+  createdAt    DateTime @default(now()) // Timestamp for order placement
+  updatedAt    DateTime @updatedAt // Auto-updated timestamp
 }
 
-model Notice{
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  notice String?
-  start   DateTime?
-  end   DateTime?
-  createdAt      DateTime    @default(now()) // Timestamp for order placement
-  updatedAt      DateTime    @updatedAt      // Auto-updated timestamp 
+model Notice {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  notice    String?
+  start     DateTime?
+  end       DateTime?
+  createdAt DateTime  @default(now()) // Timestamp for order placement
+  updatedAt DateTime  @updatedAt // Auto-updated timestamp
 }
 
-
-model banner{
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  thumbnailId    String?    @db.ObjectId
-  thumbnail      Media?     @relation(fields: [thumbnailId], references: [id])
-  name String?
-  createdAt      DateTime    @default(now()) // Timestamp for order placement
-  updatedAt      DateTime    @updatedAt  
+model banner {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  thumbnailId String?  @db.ObjectId
+  thumbnail   Media?   @relation(fields: [thumbnailId], references: [id])
+  name        String?
+  createdAt   DateTime @default(now()) // Timestamp for order placement
+  updatedAt   DateTime @updatedAt
 }
+
 // Review and rating model for products
-
 
 // Enumeration for order status
 enum OrderStatus {
@@ -530,7 +610,10 @@ enum PaymentStatus {
   PARTIALLY_PAID
   FAILED
   CANCELLED
+  PARTIALLY_REFUNDED
+  REFUNDED
 }
+
 enum ProductStatus {
   ACTIVE
   INACTIVE
@@ -570,94 +653,94 @@ model Account {
   scope             String?
   id_token          String? @db.String
   session_state     String?
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   @@unique([provider, providerAccountId])
 }
- 
+
 model Session {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   sessionToken String   @unique
   userId       String   @db.ObjectId
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
- 
+
 model VerificationToken {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   identifier String
   token      String
   expires    DateTime
- 
+
   @@unique([identifier, token])
 }
 
 model Supplier {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
   supplierCode String? @unique
 
   companyName String
   contactName String?
 
-  phone       String?
-  email       String?
+  phone String?
+  email String?
 
-  address     String?
-  city        String?
-  country     String?
+  address String?
+  city    String?
+  country String?
 
-  tradeLicense String?
-  tin          String?
-  bin          String?
-  notes String?
-  openingBalance Float @default(0)
-  
+  tradeLicense   String?
+  tin            String?
+  bin            String?
+  notes          String?
+  openingBalance Float   @default(0)
+
   documents SupplierDocument[]
-  isActive Boolean @default(true)
+  isActive  Boolean            @default(true)
 
   purchaseOrders PurchaseOrder[]
-  payments SupplierPayment[]
+  payments       SupplierPayment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
+
+  @@index([companyName])
+  @@index([phone])
+  @@index([isActive])
 }
 
 model SupplierDocument {
   id         String @id @default(auto()) @map("_id") @db.ObjectId
-  supplierId  String @db.ObjectId
+  supplierId String @db.ObjectId
   mediaId    String @db.ObjectId
 
-  supplier    Supplier @relation(fields: [supplierId], references: [id],onDelete: Cascade)
-  media      Media @relation(fields: [mediaId], references: [id])
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  media    Media    @relation(fields: [mediaId], references: [id])
 
   createdAt DateTime @default(now())
 }
 
 enum SupplierStatus {
+  ACTIVE
 
-ACTIVE
-
-INACTIVE
-
+  INACTIVE
 }
 
 model PurchaseOrder {
-
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
   poNo String @unique
 
-  supplierId String @db.ObjectId
-  supplier Supplier @relation(fields:[supplierId],references:[id])
+  supplierId String   @db.ObjectId
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
 
   status PurchaseStatus @default(DRAFT)
 
@@ -681,236 +764,518 @@ model PurchaseOrder {
 
   items PurchaseItem[]
 
-  receipts GoodsReceipt[]
+  receipts         GoodsReceipt[]
   supplierPayments SupplierPayment[]
+  createdAt        DateTime          @default(now())
+
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@index([supplierId, status])
+  @@index([createdAt])
+}
+
+model PurchaseItem {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  purchaseOrderId String        @db.ObjectId
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  productId String  @db.ObjectId
+  product   Product @relation(fields: [productId], references: [id])
+
+  variationId String           @db.ObjectId
+  variation   ProductVariation @relation(fields: [variationId], references: [id])
+
+  quantity Float
+
+  unitCost Float
+
+  discount Float @default(0)
+
+  total Float
+
+  receivedQty Float @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([purchaseOrderId])
+  @@index([variationId])
+}
+
+model Warehouse {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  code String @unique
+
+  name String
+
+  address String?
+
+  phone String?
+
+  manager String?
+
+  isDefault Boolean @default(false)
+
+  stocks Stock[]
+
+  transactions InventoryTransaction[]
+  goodsReceipt GoodsReceipt[]
+  deliveries   Delivery[]
+  createdAt    DateTime               @default(now())
+
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+}
+
+model GoodsReceipt {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  grnNo String @unique
+
+  purchaseOrderId String @db.ObjectId
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+
+  warehouseId String @db.ObjectId
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status ReceiptStatus @default(PENDING)
+
+  items GoodsReceiptItem[]
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+
+  @@index([purchaseOrderId])
+  @@index([warehouseId, createdAt])
 }
 
-model PurchaseItem{
+model GoodsReceiptItem {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
+  goodsReceiptId String? @db.ObjectId
 
- purchaseOrderId String @db.ObjectId
- purchaseOrder PurchaseOrder @relation(fields:[purchaseOrderId],references:[id],onDelete:Cascade)
+  goodsReceipt GoodsReceipt? @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
 
- productId String @db.ObjectId
- product Product  @relation(fields:[productId],references:[id])
+  variationId String @db.ObjectId
 
- variationId String @db.ObjectId
- variation ProductVariation @relation(fields:[variationId],references:[id])
+  variation ProductVariation @relation(fields: [variationId], references: [id])
 
- quantity Float
+  batchNumber String? @unique
 
- unitCost Float
+  supplierLotNumber String?
 
- discount Float @default(0)
+  quantity Float
 
- total Float
+  deliveredQuantity Float @default(0)
 
- receivedQty Float @default(0)
+  deliveryItems DeliveryItem[]
 
- createdAt DateTime @default(now())
+  @@index([goodsReceiptId])
+  @@index([supplierLotNumber])
 }
 
-model Warehouse{
+model Delivery {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  deliveryNo  String         @unique
+  orderId     String         @db.ObjectId
+  order       Order          @relation(fields: [orderId], references: [id])
+  warehouseId String         @db.ObjectId
+  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
+  status      DeliveryStatus @default(PACKED)
+  note        String?
+  deliveredAt DateTime?
+  items       DeliveryItem[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
-
- code String @unique
-
- name String
-
- address String?
-
- phone String?
-
- manager String?
-
- isDefault Boolean @default(false)
-
- stocks Stock[]
-
- transactions InventoryTransaction[]
-goodsReceipt GoodsReceipt[]
- createdAt DateTime @default(now())
-
- updatedAt DateTime @updatedAt
-
+  @@index([orderId, createdAt])
+  @@index([warehouseId, createdAt])
 }
 
-model GoodsReceipt{
+model DeliveryItem {
+  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
+  deliveryId         String           @db.ObjectId
+  delivery           Delivery         @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  orderItemId        String           @db.ObjectId
+  orderItem          OrderItem        @relation(fields: [orderItemId], references: [id])
+  goodsReceiptItemId String           @db.ObjectId
+  goodsReceiptItem   GoodsReceiptItem @relation(fields: [goodsReceiptItemId], references: [id])
+  variationId        String           @db.ObjectId
+  variation          ProductVariation @relation(fields: [variationId], references: [id])
+  quantity           Float
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
-
- grnNo String @unique
-
- purchaseOrderId String @db.ObjectId
-
- purchaseOrder PurchaseOrder @relation(fields:[purchaseOrderId],references:[id])
-
- warehouseId String @db.ObjectId
-
- warehouse Warehouse @relation(fields:[warehouseId],references:[id])
-
- status ReceiptStatus @default(PENDING)
-
- items GoodsReceiptItem[]
-
- createdAt DateTime @default(now())
-
- updatedAt DateTime @updatedAt
-
+  @@index([deliveryId])
+  @@index([orderItemId])
+  @@index([goodsReceiptItemId])
 }
 
-model GoodsReceiptItem{
+model InventoryTransaction {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
+  variationId String           @db.ObjectId
+  variation   ProductVariation @relation(fields: [variationId], references: [id])
 
- goodsReceiptId String @db.ObjectId
+  warehouseId String    @db.ObjectId
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
- goodsReceipt GoodsReceipt @relation(fields:[goodsReceiptId],references:[id],onDelete:Cascade)
+  type InventoryType
 
- variationId String @db.ObjectId
+  quantity Float
 
- variation ProductVariation @relation(fields:[variationId],references:[id])
+  balanceAfter Float
 
- quantity Float
+  referenceType InventoryReference
 
+  referenceId String?
+
+  remarks String?
+
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  @@index([warehouseId, variationId, createdAt])
+  @@index([referenceType, referenceId])
 }
 
-model InventoryTransaction{
+model Stock {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
+  warehouseId String    @db.ObjectId
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
- variationId String @db.ObjectId
- variation ProductVariation @relation(fields:[variationId],references:[id])
+  variationId String           @db.ObjectId
+  variation   ProductVariation @relation(fields: [variationId], references: [id])
 
- warehouseId String @db.ObjectId
- warehouse Warehouse @relation(fields:[warehouseId],references:[id])
+  quantity Float @default(0)
 
- type InventoryType
+  reserved Float @default(0)
 
- quantity Float
+  available Float @default(0)
 
- balanceAfter Float
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
 
- referenceType InventoryReference
-
- referenceId String?
-
- remarks String?
-
- createdAt DateTime @default(now())
-
+  @@unique([warehouseId, variationId])
 }
 
-model Stock{
+model ExpenseCategory {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
 
- warehouseId String @db.ObjectId
- warehouse Warehouse @relation(fields:[warehouseId],references:[id])
-
- variationId String @db.ObjectId
- variation ProductVariation @relation(fields:[variationId],references:[id])
-
- quantity Float @default(0)
-
- reserved Float @default(0)
-
- available Float @default(0)
-
- updatedAt DateTime @updatedAt
-
- @@unique([warehouseId,variationId])
-
+  expenses  Expense[]
+  createdBy String?
+  updatedBy String?
 }
 
-model ExpenseCategory{
+model Expense {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId String          @db.ObjectId
+  category   ExpenseCategory @relation(fields: [categoryId], references: [id])
 
- name String
+  amount Float
 
- expenses Expense[]
+  description String?
 
+  expenseDate DateTime
+
+  paymentMethod String?
+
+  moneyAccountId    String?            @db.ObjectId
+  moneyAccount      MoneyAccount?      @relation(fields: [moneyAccountId], references: [id])
+  moneyTransactions MoneyTransaction[]
+
+  createdAt DateTime @default(now())
+  createdBy String?
+  updatedBy String?
+
+  @@index([categoryId, expenseDate])
+  @@index([moneyAccountId, expenseDate])
 }
 
-model Expense{
+model SupplierPayment {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
+  supplierId String @db.ObjectId
 
- categoryId String @db.ObjectId
- category ExpenseCategory @relation(fields:[categoryId],references:[id])
+  supplier Supplier @relation(fields: [supplierId], references: [id])
 
- amount Float
+  purchaseOrderId String? @db.ObjectId
 
- description String?
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
- expenseDate DateTime
+  moneyAccountId    String?            @db.ObjectId
+  moneyAccount      MoneyAccount?      @relation(fields: [moneyAccountId], references: [id])
+  moneyTransactions MoneyTransaction[]
 
- paymentMethod String?
+  amount Float
 
- createdAt DateTime @default(now())
+  paymentMethod String
 
+  reference String?
+
+  paidAt DateTime
+
+  createdAt DateTime @default(now())
+  createdBy String?
+  updatedBy String?
+
+  @@index([supplierId, paidAt])
+  @@index([purchaseOrderId])
+  @@index([moneyAccountId, paidAt])
 }
 
-model SupplierPayment{
+model FinancialAccount {
+  id        String               @id @default(auto()) @map("_id") @db.ObjectId
+  code      String               @unique
+  name      String
+  type      FinancialAccountType
+  isActive  Boolean              @default(true)
+  lines     JournalLine[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 
- id String @id @default(auto()) @map("_id") @db.ObjectId
-
- supplierId String @db.ObjectId
-
- supplier Supplier @relation(fields:[supplierId],references:[id])
-
- purchaseOrderId String? @db.ObjectId
-
- purchaseOrder PurchaseOrder? @relation(fields:[purchaseOrderId],references:[id])
-
- amount Float
-
- paymentMethod String
-
- reference String?
-
- paidAt DateTime
-
- createdAt DateTime @default(now())
-
+  @@index([type, isActive])
 }
 
+model MoneyAccount {
+  id                   String             @id @default(auto()) @map("_id") @db.ObjectId
+  name                 String
+  type                 MoneyAccountType
+  accountNumber        String?
+  balance              Float              @default(0)
+  isActive             Boolean            @default(true)
+  incomingTransactions MoneyTransaction[] @relation("MoneyTransactionTo")
+  outgoingTransactions MoneyTransaction[] @relation("MoneyTransactionFrom")
+  supplierPayments     SupplierPayment[]
+  expenses             Expense[]
+  paymentGateways      PaymentGateway[]
+  courierProviders     CourierProvider[]
+  payments             Payment[]
+  refunds              Refund[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  createdBy            String?
+  updatedBy            String?
+
+  @@index([type, isActive])
+}
+
+enum MoneyAccountType {
+  CASH
+  BANK
+  MOBILE_FINANCIAL
+  PAYMENT_GATEWAY
+  COURIER
+}
+
+model MoneyTransaction {
+  id                String               @id @default(auto()) @map("_id") @db.ObjectId
+  transactionNo     String               @unique
+  type              MoneyTransactionType
+  amount            Float
+  fromAccountId     String?              @db.ObjectId
+  fromAccount       MoneyAccount?        @relation("MoneyTransactionFrom", fields: [fromAccountId], references: [id])
+  toAccountId       String?              @db.ObjectId
+  toAccount         MoneyAccount?        @relation("MoneyTransactionTo", fields: [toAccountId], references: [id])
+  shareholderId     String?              @db.ObjectId
+  shareholder       Shareholder?         @relation(fields: [shareholderId], references: [id])
+  supplierPaymentId String?              @db.ObjectId
+  supplierPayment   SupplierPayment?     @relation(fields: [supplierPaymentId], references: [id])
+  expenseId         String?              @db.ObjectId
+  expense           Expense?             @relation(fields: [expenseId], references: [id])
+  paymentId         String?              @db.ObjectId
+  payment           Payment?             @relation(fields: [paymentId], references: [id])
+  refundId          String?              @db.ObjectId
+  refund            Refund?              @relation(fields: [refundId], references: [id])
+  idempotencyKey    String?
+  reference         String?
+  note              String?
+  transactionDate   DateTime             @default(now())
+  createdAt         DateTime             @default(now())
+  createdBy         String?
+
+  @@index([fromAccountId, transactionDate])
+  @@index([toAccountId, transactionDate])
+  @@index([shareholderId, transactionDate])
+  @@index([supplierPaymentId])
+  @@index([expenseId])
+  @@index([paymentId])
+  @@index([refundId])
+  @@index([idempotencyKey])
+}
+
+model Shareholder {
+  id              String             @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  phone           String?
+  email           String?
+  address         String?
+  sharePercentage Float?
+  isActive        Boolean            @default(true)
+  transactions    MoneyTransaction[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  createdBy       String?
+  updatedBy       String?
+
+  @@index([isActive, name])
+}
+
+enum MoneyTransactionType {
+  FUND_ADD
+  CUSTOMER_PAYMENT
+  TRANSFER
+  WITHDRAWAL
+  SUPPLIER_PAYMENT
+  EXPENSE
+  REFUND
+  PROVIDER_FEE
+}
+
+model FinancialYear {
+  id        String             @id @default(auto()) @map("_id") @db.ObjectId
+  name      String             @unique
+  startDate DateTime
+  endDate   DateTime
+  isClosed  Boolean            @default(false)
+  periods   AccountingPeriod[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([startDate, endDate])
+}
+
+model AccountingPeriod {
+  id              String                 @id @default(auto()) @map("_id") @db.ObjectId
+  financialYearId String                 @db.ObjectId
+  financialYear   FinancialYear          @relation(fields: [financialYearId], references: [id])
+  name            String
+  startDate       DateTime
+  endDate         DateTime
+  status          AccountingPeriodStatus @default(OPEN)
+  closedAt        DateTime?
+  closedBy        String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@unique([financialYearId, name])
+  @@index([startDate, endDate, status])
+}
+
+enum AccountingPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+model JournalEntry {
+  id            String              @id @default(auto()) @map("_id") @db.ObjectId
+  entryNo       String              @unique
+  entryDate     DateTime
+  description   String
+  referenceType AccountingReference
+  referenceId   String?
+  status        JournalStatus       @default(POSTED)
+  lines         JournalLine[]
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([entryDate])
+  @@index([referenceType, referenceId])
+}
+
+model JournalLine {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  journalEntryId String           @db.ObjectId
+  journalEntry   JournalEntry     @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String           @db.ObjectId
+  account        FinancialAccount @relation(fields: [accountId], references: [id])
+  debit          Float            @default(0)
+  credit         Float            @default(0)
+  memo           String?
+
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+enum FinancialAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum AccountingReference {
+  OPENING
+  GOODS_RECEIPT
+  SUPPLIER_PAYMENT
+  EXPENSE
+  SALE
+  CUSTOMER_PAYMENT
+  REFUND
+  ADJUSTMENT
+  FUND_ADD
+  ACCOUNT_TRANSFER
+  WITHDRAWAL
+}
+
+enum JournalStatus {
+  POSTED
+  VOID
+}
 
 enum PurchaseStatus {
-DRAFT
-APPROVED
-ORDERED
-PARTIALLY_RECEIVED
-RECEIVED
-CANCELLED
+  DRAFT
+  APPROVED
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
 }
 
 enum ReceiptStatus {
-PENDING
-COMPLETED
+  PENDING
+  COMPLETED
+}
+
+enum DeliveryStatus {
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
 }
 
 enum InventoryType {
-IN
-OUT
-RETURN_IN
-RETURN_OUT
-TRANSFER_IN
-TRANSFER_OUT
-ADJUSTMENT
+  IN
+  OUT
+  RETURN_IN
+  RETURN_OUT
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUSTMENT
 }
 
 enum InventoryReference {
-PURCHASE
-SALE
-RETURN
-TRANSFER
-ADJUSTMENT
-OPENING
+  PURCHASE
+  SALE
+  RETURN
+  TRANSFER
+  ADJUSTMENT
+  OPENING
 }
