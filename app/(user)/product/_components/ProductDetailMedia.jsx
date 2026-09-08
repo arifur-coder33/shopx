@@ -1,0 +1,113 @@
+import { cloudinaryDetailImage } from "@/utils/cloudinaryUrl";
+import Image from "next/image";
+
+function getVideoSource(rawUrl) {
+  if (!rawUrl) return null;
+
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.replace(/^www\./, "");
+    if (host === "youtu.be" || host.endsWith("youtube.com")) {
+      const id =
+        host === "youtu.be"
+          ? url.pathname.split("/").filter(Boolean)[0]
+          : url.searchParams.get("v") ||
+            url.pathname.split("/").filter(Boolean).pop();
+      return id
+        ? {
+            type: "embed",
+            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0`,
+          }
+        : null;
+    }
+    if (host.endsWith("vimeo.com")) {
+      const id = url.pathname.split("/").filter(Boolean).pop();
+      return id
+        ? { type: "embed", src: `https://player.vimeo.com/video/${id}?dnt=1` }
+        : null;
+    }
+    if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+      return { type: "file", src: rawUrl };
+    }
+    return { type: "embed", src: rawUrl };
+  } catch {
+    return null;
+  }
+}
+
+export default function ProductDetailMedia({ title, videoUrl, gallery = [] }) {
+  const video = getVideoSource(videoUrl);
+  const photos = Array.from(
+    new Map(
+      gallery
+        .filter((photo) => photo?.name)
+        .map((photo) => [photo.id || photo.name, photo]),
+    ).values(),
+  );
+
+  if (!video && photos.length === 0) return null;
+
+  return (
+    <section className="mx-auto mt-6 max-w-5xl space-y-6" aria-label="পণ্যের ভিডিও ও ছবি">
+      {video && (
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+          <h2 className="border-b border-border px-4 py-3 text-xl font-bold sm:text-2xl">
+            পণ্যের ভিডিও
+          </h2>
+          <div className="aspect-video w-full bg-black">
+            {video.type === "file" ? (
+              <video
+                className="h-full w-full"
+                src={video.src}
+                controls
+                preload="none"
+                playsInline
+              >
+                আপনার ব্রাউজার ভিডিওটি চালাতে পারছে না।
+              </video>
+            ) : (
+              <iframe
+                className="h-full w-full border-0"
+                src={video.src}
+                title={`${title} ভিডিও`}
+                loading="lazy"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {photos.length > 0 && (
+        <div>
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              বিস্তারিত দেখুন
+            </p>
+            <h2 className="text-xl font-bold sm:text-2xl">পণ্যের ছবিসমূহ</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {photos.map((photo, index) => (
+              <figure
+                key={photo.id || photo.name}
+                className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface-muted"
+              >
+                <Image
+                  src={cloudinaryDetailImage(photo.name, 1200)}
+                  alt={`${title} - ছবি ${index + 1}`}
+                  fill
+                  sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 50vw, 600px"
+                  className="object-contain"
+                  loading="lazy"
+                  unoptimized
+                />
+              </figure>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

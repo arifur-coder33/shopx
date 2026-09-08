@@ -1,25 +1,16 @@
 // file: app/product/_components/ProductClientShell.js
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ProductImageGallery from "./ProductImageGallery";
-import ProductImageGalleryServer from "./ProductImageGalleryServer";
 import ProductInfoClient from "./ProductInfoClient";
-import ProductInfoServer from "./ProductInfoServer";
 
 export default function ProductClientShell({
   data,
-  imageComponent, // This is the prioritized <Image> from page.js
   titleComponent,
   bottomComponent,
   imageProps,
 }) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  // This hook runs only on the client, after the initial render.
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
   const {
     thumbnail,
     mainImage,
@@ -27,7 +18,6 @@ export default function ProductClientShell({
     imageGallery,
     title,
     variations,
-    videoUrl,
   } = data;
 
   const variationsImage = useMemo(
@@ -37,42 +27,23 @@ export default function ProductClientShell({
     [variations],
   );
   const [activeImageId, setActiveImageId] = useState();
-  const staticContent = (
-    <ProductImageGalleryServer
-      mainImage={thumbnail || mainImage}
-      gallery={gallery || imageGallery}
-      variationsImage={variationsImage}
-      title={title}
-      videoUrl={videoUrl}
-    >
-      {imageComponent}
-    </ProductImageGalleryServer>
-  );
   return (
     <>
-      <div className="col-span-2">
-        {!isMounted ? (
-          staticContent
-        ) : (
-          <ProductImageGallery
-            imageProps={imageProps}
-            mainImage={thumbnail || mainImage}
-            gallery={gallery || imageGallery}
-            variationsImage={variationsImage}
-            title={title}
-            videoUrl={videoUrl}
-            activeImageId={activeImageId}
-          >
-            {imageComponent}
-          </ProductImageGallery>
-        )}
+      <div className="min-w-0 md:col-span-1">
+        <ProductImageGallery
+          imageProps={imageProps}
+          mainImage={thumbnail || mainImage}
+          gallery={gallery || imageGallery}
+          variationsImage={variationsImage}
+          title={title}
+          videoUrl={null}
+          activeImageId={activeImageId}
+        />
       </div>
 
-      <div className="md:col-span-2 mt-2 md:col-start-4 md:mt-0">
+      <div className="min-w-0 rounded-2xl bg-surface p-3 sm:p-5 md:col-span-1">
         {titleComponent}
-        <ProductInfoClient setActiveImageId={setActiveImageId} data={data}>
-          <ProductInfoServer product={data} />
-        </ProductInfoClient>
+        <ProductInfoClient setActiveImageId={setActiveImageId} data={data} />
         {bottomComponent}
       </div>
     </>

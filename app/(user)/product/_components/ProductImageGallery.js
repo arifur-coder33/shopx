@@ -43,7 +43,6 @@ const VideoThumbnailIcon = () => (
 );
 
 export default function ProductImageGallery({
-  children,
   mainImage,
   gallery = [],
   title,
@@ -55,6 +54,7 @@ export default function ProductImageGallery({
   const allMedia = useMemo(() => {
     const mediaMap = new Map();
     const addMedia = (item, type, alt) => {
+      if (!item) return;
       const key = item.id || item.url;
       if (key && !mediaMap.has(key)) {
         mediaMap.set(key, { ...item, type, alt });
@@ -74,18 +74,39 @@ export default function ProductImageGallery({
   }, [mainImage, gallery, variationsImage, title, videoUrl]);
 
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isFading, setIsFading] = useState(false);
-  const isInitialMount = useRef(true);
   const [imageSrc, setImageSrc] = useState(imageProps.initialSrc);
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    setIsFading(true);
-    const timer = setTimeout(() => setIsFading(false), 150);
-    return () => clearTimeout(timer);
-  }, [activeIndex]);
+  const [loadVideoPlayer, setLoadVideoPlayer] = useState(false);
+
+  const selectMedia = useCallback(
+    (index) => {
+      const media = allMedia[index];
+      if (!media) return undefined;
+
+      if (media.type === "video") {
+        setLoadVideoPlayer(true);
+        setActiveIndex(index);
+        return undefined;
+      }
+
+      // Keep the current photo visible until the requested photo is cached.
+      const preloader = new window.Image();
+      let cancelled = false;
+      const showLoadedImage = () => {
+        if (cancelled) return;
+        setImageSrc(media.name);
+        setActiveIndex(index);
+      };
+      preloader.onload = showLoadedImage;
+      preloader.src = cloudinaryMainImage(media.name, 600, 600);
+      if (preloader.complete) showLoadedImage();
+
+      return () => {
+        cancelled = true;
+        preloader.onload = null;
+      };
+    },
+    [allMedia],
+  );
 
   useEffect(() => {
     if (activeImageId) {
@@ -93,14 +114,14 @@ export default function ProductImageGallery({
         (media) => media.id === activeImageId,
       );
       if (newIndex !== -1 && newIndex !== activeIndex) {
-        setActiveIndex(newIndex);
+        return selectMedia(newIndex);
       }
     }
-  }, [activeImageId]);
+    return undefined;
+  }, [activeImageId, activeIndex, allMedia, selectMedia]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const [loadVideoPlayer, setLoadVideoPlayer] = useState(false);
   const activeMedia = allMedia[activeIndex] || {};
   const isVideoActive = activeMedia.type === "video";
 
@@ -110,17 +131,7 @@ export default function ProductImageGallery({
   //   }
   //   setActiveIndex(index);
   // };
-  const handleThumbnailClick = (index) => {
-    if (allMedia[index].type === "video") {
-      setLoadVideoPlayer(true);
-    }
-
-    setActiveIndex(index);
-
-    if (allMedia[index].type === "image") {
-      setImageSrc(allMedia[index].name);
-    }
-  };
+  const handleThumbnailClick = (index) => selectMedia(index);
 
   const openModal = () => {
     if (isMobile) {
@@ -209,11 +220,7 @@ export default function ProductImageGallery({
           onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
           onClick={openModal}
         >
-          <div
-            className={`${styles.transitionContainer} ${
-              isFading ? styles.fading : ""
-            }`}
-          >
+          <div className={styles.transitionContainer}>
             {isVideoActive && !isModalOpen ? (
               loadVideoPlayer ? (
                 <VideoPlayer
@@ -249,12 +256,11 @@ export default function ProductImageGallery({
                 src={cloudinaryMainImage(imageSrc, 600, 600)}
                 fill
                 alt={imageProps.alt}
-                placeholder="blur"
-                blurDataURL={imageProps.blurDataURL}
                 priority={activeIndex === 0}
                 fetchPriority={activeIndex === 0 ? "high" : undefined}
                 sizes="(max-width:768px)100vw,40vw"
                 className="rounded-md object-contain"
+                unoptimized
               />
             )}
           </div>
@@ -337,7 +343,7 @@ export default function ProductImageGallery({
           media={allMedia}
           initialIndex={activeIndex}
           onClose={closeModal}
-          onIndexChange={setActiveIndex}
+          onIndexChange={handleThumbnailClick}
           backgroundColor="rgba(0, 0, 0, 0.9)"
         />
       )}

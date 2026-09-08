@@ -5,19 +5,26 @@ const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    try {
       const storedCart = localStorage.getItem("cartItems");
       if (storedCart) {
-        setCartItems(JSON.parse(storedCart));
+        const parsedCart = JSON.parse(storedCart);
+        if (Array.isArray(parsedCart)) setCartItems(parsedCart);
       }
+    } catch {
+      // A damaged local value should not break the storefront.
+    } finally {
+      setStorageLoaded(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!storageLoaded) return;
     localStorage.setItem("cartItems", JSON.stringify(cartItems));
-  }, [cartItems]);
+  }, [cartItems, storageLoaded]);
 
   // ✅ Helper to safely compare two cart items
   const isSameCartItem = (a, b) => {
@@ -29,8 +36,6 @@ export const CartProvider = ({ children }) => {
 
   // ✅ Add to cart
   const addToCart = (product, qty) => {
-    console.log("product", product);
-
     setCartItems((prevItems) => {
       const existingItem = prevItems.find((item) =>
         isSameCartItem(item, product)

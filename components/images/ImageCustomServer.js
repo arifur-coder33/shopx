@@ -1,7 +1,4 @@
-import {
-  cloudinaryMainImage,
-  DEFAULT_BLUR_DATA_URL,
-} from "@/utils/cloudinaryUrl";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 
 import Image from "next/image";
 
@@ -31,10 +28,7 @@ export default function ImageCustomServer({
         sizes={sizes}
         quality={quality}
         fetchPriority={fetchPriority}
-        placeholder="blur"
-        // Let next/image handle everything automatically!
         priority={priority} // If true, sets loading="eager". If false, sets loading="lazy".
-        blurDataURL={DEFAULT_BLUR_DATA_URL}
         unoptimized={true} // Disable next/image optimization for Cloudinary images.
       />
     </>

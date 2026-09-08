@@ -1,9 +1,8 @@
 import LazyLoadOnScroll from "@/components/common/LazyLoadOnScroll";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
 import DeliveryInfo from "./DeliveryInfo";
+import ProductDetailMedia from "./ProductDetailMedia";
 import ProductHeader from "./ProductHeader";
 const ProductDescription = dynamic(
   () => import("@/components/products/productDescription"),
@@ -24,26 +23,21 @@ export default function ProductDataView({
   };
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <ProductHeader data={data} imageProps={imageProps}>
-          <Image
-            src={cloudinaryMainImage(mainProductImageId, 600, 600)}
-            alt={title}
-            fill
-            // priority={true}
-            sizes="(max-width: 768px) 100vw, 40vw"
-            className="rounded-md object-contain"
-            placeholder="blur"
-            blurDataURL={blurDataURL}
-            priority
-            fetchPriority="high"
-            unoptimized
-          />
-        </ProductHeader>
-      </div>
+      <section className="grid grid-cols-1 gap-4 overflow-hidden rounded-2xl border border-border bg-surface p-2 shadow-sm sm:p-4 md:grid-cols-2 md:gap-6">
+        <ProductHeader data={data} imageProps={imageProps} />
+      </section>
       <DeliveryInfo />
-      <LazyLoadOnScroll>
+      <LazyLoadOnScroll minHeight="480px">
         <ProductDescription description={description} />
+        <ProductDetailMedia
+          title={title}
+          videoUrl={data.videoUrl}
+          gallery={[
+            data.thumbnail,
+            ...(data.gallery || []),
+            ...(data.variations || []).map((variation) => variation.thumbnail),
+          ]}
+        />
         {!adminView && <ViewProductEvent product={data} />}
       </LazyLoadOnScroll>
 

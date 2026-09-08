@@ -6,8 +6,8 @@ export default function StorefrontPageSkeleton({ type = "grid" }) {
           <div className="h-5 w-52 max-w-[70vw] rounded bg-surface-muted" />
         </div>
 
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border p-2 sm:p-4 md:grid-cols-2 md:gap-6">
+          <div>
             <div className="aspect-square w-full rounded-xl bg-surface-muted" />
             <div className="mt-2 flex gap-2">
               {[1, 2, 3, 4].map((thumbnail) => (
@@ -19,7 +19,7 @@ export default function StorefrontPageSkeleton({ type = "grid" }) {
             </div>
           </div>
 
-          <div className="mt-2 space-y-5 md:col-span-2 md:col-start-4 md:mt-0">
+          <div className="space-y-5 rounded-2xl p-3 sm:p-5">
             <div className="border-b border-border pb-3">
               <div className="h-10 w-11/12 rounded bg-surface-muted" />
             </div>

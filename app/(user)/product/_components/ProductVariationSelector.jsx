@@ -13,9 +13,6 @@ const ProductVariationSelector = ({
 }) => {
   const [selectedOptions, setSelectedOptions] = useState({});
 
-  // This state will hold the string representation of the selected variant for display
-  const [selectedVariantText, setSelectedVariantText] = useState("");
-
   // --- LOGIC (No major changes here, just removal of one useEffect) ---
 
   const options = useMemo(() => {
@@ -55,11 +52,6 @@ const ProductVariationSelector = ({
         });
       });
 
-      // Update the display text
-      const text = Object.values(selectedOptions).join(" - ");
-      setSelectedVariantText(text);
-    } else {
-      setSelectedVariantText(""); // Reset text if not all options are selected
     }
 
     // Fire the callback to the parent

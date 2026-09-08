@@ -585,7 +585,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
             <h2 className="text-[10px] md:text-base font-semibold text-gray-800">
               Product Price
             </h2>
-            <div className="grid md:grid-cols-7 gap-2 ">
+            <div className="grid md:grid-cols-5 gap-2 ">
               <FloatingInput
                 defaultValue={
                   derivedInitialEnabled
@@ -810,13 +810,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                             {/* MODIFIED: Table Headers */}
                             <th
                               scope="col"
-                              className="px-2 py-2 font-semibold "
+                              className="min-w-32 px-2 py-2 font-semibold"
                             >
                               Regular Price
                             </th>
                             <th
                               scope="col"
-                              className="px-2 py-2 font-semibold "
+                              className="min-w-32 px-2 py-2 font-semibold"
                             >
                               Discount Price
                             </th>
@@ -911,7 +911,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                         "regularPrice",
                                       )
                                     }
-                                    className=" px-2 py-1.5 w-16 border border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-28 min-w-28 rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:ring-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </td>
                                 <td className="px-2 py-2 align-middle">
@@ -929,7 +929,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                         "discountPrice",
                                       )
                                     }
-                                    className="px-2 py-1.5 border w-16 border-gray-300 rounded-md shadow-sm  focus:ring-indigo-500 focus:border-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-28 min-w-28 rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-indigo-500 focus:ring-indigo-500 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                 </td>
                                 <td className="px-2 py-2 align-middle">

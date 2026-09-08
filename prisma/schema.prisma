@@ -142,6 +142,7 @@ model Media {
   ProductVariationThumbnail ProductVariation[]
   productGallery            ProductGallery[] // Explicit Many-to-Many Relation
   banner                    banner[] // Explicit Many-to-Many Relation
+  heroSlides                HeroSlide[]
   supplierDocuments         SupplierDocument[] // Explicit Many-to-Many Relation
   createdAt                 DateTime           @default(now())
 }
@@ -582,6 +583,30 @@ model banner {
   name        String?
   createdAt   DateTime @default(now()) // Timestamp for order placement
   updatedAt   DateTime @updatedAt
+}
+
+// Home slider is separate from the legacy single banner so the old banner can
+// remain available without being rendered on the storefront.
+model HeroSlide {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  title     String?
+  link      String?
+  sortOrder Int              @default(0)
+  isActive  Boolean          @default(true)
+  motion    HeroSlideMotion? @default(FADE)
+  imageId   String           @db.ObjectId
+  image     Media            @relation(fields: [imageId], references: [id])
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum HeroSlideMotion {
+  FADE
+  ZOOM
+  SLIDE_LEFT
+  SLIDE_RIGHT
 }
 
 // Review and rating model for products

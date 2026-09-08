@@ -19,9 +19,6 @@ export default function VariationInput({
 }) {
   const [rows, setRows] = useState([{ variation: "", value: "" }]);
   const [variationsList, setVariationsList] = useState([]);
-  const [selectedVariation, setSelectedVariation] = useState([
-    { variation: "", value: "" },
-  ]);
 
   // useEffect(() => {
   //   async function getVariationsList() {
@@ -32,32 +29,12 @@ export default function VariationInput({
   // }, []);
 
   useEffect(() => {
-    if (defaultValue) {
+    if (Array.isArray(defaultValue) && defaultValue.length) {
       setRows(defaultValue);
-      // setSelectedVariation(defaultValue.map((item) => item.variation));
-      // setVariationsList(defaultValue.map((item) => item.variation));
     }
   }, [defaultValue]);
-  const onSelect = (item, index) => {
-    setSelectedVariation((prev) => {
-      const updated = [...prev];
-
-      // যদি index পূর্বে না থাকে (মানে array ছোট হয়)
-      if (index >= updated.length) {
-        // index পর্যন্ত ফাঁকা জায়গা পূরণ করো (undefined দিয়ে)
-        while (updated.length < index) {
-          updated.push(undefined);
-        }
-        // তারপর নতুন item বসাও
-        updated.push(item);
-      } else {
-        // index আগে থেকেই থাকলে update করো
-        updated[index] = item;
-      }
-
-      return updated;
-    });
-    handleVariationChange(index, item); // Update the variation name in the rows state
+  const onSelect = (item, _itemId, index) => {
+    handleVariationChange(index, item);
   };
 
   const handleRemove = (index) => {
@@ -66,29 +43,27 @@ export default function VariationInput({
       updatedRows.splice(index, 1);
       return updatedRows;
     });
-    setSelectedVariation((prev) => {
-      const updated = [...prev];
-      updated.splice(index, 1);
-      return updated;
-    });
-    setVariationsList((prev) => {
-      const updated = [...prev];
-      updated.splice(index, 1);
-      return updated;
-    });
   };
   const handleVariationChange = (index, value) => {
+    if (!Number.isInteger(index) || index < 0) return;
     setRows((prev) => {
       const updatedRows = [...prev];
-      updatedRows[index].variation = value;
+      while (updatedRows.length <= index) {
+        updatedRows.push({ variation: "", value: "" });
+      }
+      updatedRows[index] = { ...updatedRows[index], variation: value };
       return updatedRows;
     });
   };
 
   const handleValueChange = (index, value) => {
+    if (!Number.isInteger(index) || index < 0) return;
     setRows((prev) => {
       const updatedRows = [...prev];
-      updatedRows[index].value = value;
+      while (updatedRows.length <= index) {
+        updatedRows.push({ variation: "", value: "" });
+      }
+      updatedRows[index] = { ...updatedRows[index], value };
       return updatedRows;
     });
   };
@@ -97,18 +72,11 @@ export default function VariationInput({
     setRows((prev) => [...prev, { variation: "", value: "" }]);
   };
 
-  const variationValues = rows
-    .filter((row) => row.variation && row.value)
-    .map((row) => ({
-      variationId: variationsList.find((v) => v.name === row.variation)?.id,
-      value: row.value.split(",").map((val) => val.trim()),
-    }));
-
   const loadVariations = async () => {
     const getData = await getVariations();
 
     setVariationsList(getData?.data || []);
-    // return getData?.data || [];
+    return getData;
   };
 
   return (
@@ -176,7 +144,9 @@ export default function VariationInput({
         type="hidden"
         name={name}
         value={JSON.stringify(
-          rows.filter((v) => v.variation !== "" && v.value.trim() !== ""),
+          rows.filter(
+            (v) => v.variation && String(v.value || "").trim() !== "",
+          ),
         )} // Filter out empty variations
       />
     </div>

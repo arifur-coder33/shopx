@@ -50,8 +50,6 @@ export default function WishlistManager() {
   }, [addToCart]);
 
   useEffect(() => {
-    syncButtons();
-
     const handleClick = async (event) => {
       const cartButton = event.target.closest?.("[data-product-card-cart]");
       if (cartButton) {
@@ -67,16 +65,16 @@ export default function WishlistManager() {
           // Full stock data is requested only after a user clicks Add to Cart.
           const result = await getStorefrontCartItem(slug);
           if (!result?.success || !result.data) {
-            throw new Error("Product is unavailable");
+            throw new Error(result?.error || "Product is unavailable");
           }
 
           addToCartRef.current(result.data, 1);
 
           const { toast } = await import("react-toastify");
           toast.success("পণ্যটি ব্যাগে যোগ হয়েছে");
-        } catch {
+        } catch (error) {
           const { toast } = await import("react-toastify");
-          toast.error("পণ্যটি এখন ব্যাগে যোগ করা যাচ্ছে না");
+          toast.error(error?.message || "পণ্যটি এখন ব্যাগে যোগ করা যাচ্ছে না");
         } finally {
           cartButton.disabled = false;
           cartButton.textContent = originalText;
@@ -109,28 +107,10 @@ export default function WishlistManager() {
     window.addEventListener(WISHLIST_CHANGE_EVENT, handleChange);
     window.addEventListener("storage", handleStorage);
 
-    // Product grids can arrive through Suspense after hydration. Observe only
-    // the short route-loading window, then disconnect to keep runtime work zero.
-    const lateContentObserver = new MutationObserver((mutations) => {
-      const items = readWishlist();
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE) syncButtons(items, node);
-        });
-      });
-    });
-    lateContentObserver.observe(document.body, { childList: true, subtree: true });
-    const observerTimeout = window.setTimeout(
-      () => lateContentObserver.disconnect(),
-      5000,
-    );
-
     return () => {
       document.removeEventListener("click", handleClick);
       window.removeEventListener(WISHLIST_CHANGE_EVENT, handleChange);
       window.removeEventListener("storage", handleStorage);
-      window.clearTimeout(observerTimeout);
-      lateContentObserver.disconnect();
     };
   }, [pathname]);
 

@@ -1,6 +1,5 @@
-// import { getProducts } from "@/backend/serverActions/productActions";
-import CategoryWiseProductList from "./_components/CategoryWiseProductList";
-import HeroSection from "./_components/HeroSection";
+import HomeStorefront from "./_components/HomeStorefront";
+import HeroSlider from "./_components/HeroSlider";
 import { Suspense } from "react";
 
 export const revalidate = 60;
@@ -83,9 +82,9 @@ export default async function Home() {
 
   return (
     <>
-      <HeroSection />
+      <HeroSlider />
       <Suspense fallback={<HomeProductsSkeleton />}>
-        <CategoryWiseProductList />
+        <HomeStorefront />
       </Suspense>
     </>
   );
@@ -93,13 +92,29 @@ export default async function Home() {
 
 function HomeProductsSkeleton() {
   return (
-    <div className="mt-5 space-y-3" aria-label="পণ্য লোড হচ্ছে">
-      <div className="h-9 w-48 animate-pulse rounded-lg bg-surface-muted" />
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {[1, 2, 3, 4, 5].map((item) => (
-          <div key={item} className="aspect-[3/4] animate-pulse rounded-brand bg-surface-muted" />
-        ))}
-      </div>
+    <div className="mt-5 space-y-7" aria-label="পণ্য লোড হচ্ছে">
+      <section>
+        <div className="mb-3 h-8 w-52 animate-pulse rounded-lg bg-surface-muted" />
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div
+              key={index}
+              className="aspect-square animate-pulse rounded-xl bg-surface-muted"
+            />
+          ))}
+        </div>
+      </section>
+      <section>
+        <div className="mb-3 h-8 w-32 animate-pulse rounded-lg bg-surface-muted" />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {Array.from({ length: 5 }, (_, index) => (
+            <div
+              key={index}
+              className="aspect-[3/4] animate-pulse rounded-brand bg-surface-muted"
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

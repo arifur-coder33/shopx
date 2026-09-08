@@ -12,7 +12,6 @@ export async function getStorefrontCartItem(slug) {
         id: true,
         title: true,
         slug: true,
-        mainImage: true,
         isActive: true,
         hasVariations: true,
         category: { select: { name: true, slug: true, fullPath: true } },
@@ -53,7 +52,7 @@ export async function getStorefrontCartItem(slug) {
         regularPrice: variation.regularPrice,
         variation: { id: variation.id, combinations: [] },
         thumbnail:
-          variation.thumbnail?.name || product.thumbnail?.name || product.mainImage,
+          variation.thumbnail?.name || product.thumbnail?.name || null,
         weight: variation.weight || 0,
         sku: variation.sku,
         category: product.category || "Uncategorized",

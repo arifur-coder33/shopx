@@ -1,0 +1,82 @@
+"use client";
+
+import { getMoreHomeProducts } from "@/backend/serverActions/homeStorefrontActions";
+import ProductCard from "@/components/products/ProductCard";
+import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
+import { useEffect, useRef, useState, useTransition } from "react";
+
+export default function InfiniteProductGrid({ initialProducts, initialCursor }) {
+  const [products, setProducts] = useState(initialProducts);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [error, setError] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const loaderRef = useRef(null);
+
+  const loadMore = () => {
+    if (!cursor || isPending) return;
+    setError("");
+    startTransition(async () => {
+      const result = await getMoreHomeProducts(cursor);
+      if (!result?.success) {
+        setError(result?.error || "আরও পণ্য লোড করা যায়নি");
+        return;
+      }
+      setProducts((current) => {
+        const knownIds = new Set(current.map((product) => product.id));
+        return [
+          ...current,
+          ...result.products.filter((product) => !knownIds.has(product.id)),
+        ];
+      });
+      setCursor(result.nextCursor);
+    });
+  };
+
+  useEffect(() => {
+    const target = loaderRef.current;
+    if (!target || !cursor || error) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadMore();
+      },
+      { rootMargin: "500px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [cursor, error, isPending]);
+
+  return (
+    <>
+      <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">
+        {products.map((product, index) => (
+          <div
+            key={product.id}
+            className={
+              index >= initialProducts.length
+                ? "home-product-reveal"
+                : undefined
+            }
+          >
+            <ProductCard product={product} />
+          </div>
+        ))}
+      </div>
+      <WishlistHydrationSync />
+
+      <div ref={loaderRef} className="flex min-h-20 items-center justify-center py-4">
+        {isPending && (
+          <span className="text-sm text-text-muted">আরও পণ্য আসছে…</span>
+        )}
+        {!isPending && error && (
+          <button type="button" onClick={loadMore} className="button">
+            আবার চেষ্টা করুন
+          </button>
+        )}
+        {!cursor && products.length > 0 && (
+          <span className="text-sm text-text-muted">সব পণ্য দেখা হয়েছে</span>
+        )}
+      </div>
+    </>
+  );
+}

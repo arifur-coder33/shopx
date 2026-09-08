@@ -18,7 +18,6 @@ export default function Imagecustom({
   sizes,
   quality,
 }) {
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(!!priority);
   const placeholderRef = useRef(null);
 
@@ -55,7 +54,6 @@ export default function Imagecustom({
     src: finalSrc,
     alt: alt || "image",
     quality,
-    onLoad: () => setIsLoaded(true),
     priority: !!priority,
     sizes,
   };
@@ -72,9 +70,7 @@ export default function Imagecustom({
     imageStyle.objectFit = objectFit;
   }
 
-  const finalImageClassName = `rounded-md ${imageClassName || ""} ${
-    isLoaded ? "remove-blur" : "blur"
-  }`;
+  const finalImageClassName = `rounded-md ${imageClassName || ""}`;
 
   if (priority || isInView) {
     return (
@@ -94,7 +90,7 @@ export default function Imagecustom({
     <div
       ref={placeholderRef}
       style={{ width: "100%", height: "100%" }}
-      className={`image-placeholder rounded-md ${wrapperClassName || ""} blur`}
+      className={`image-placeholder rounded-md bg-surface-muted ${wrapperClassName || ""}`}
     ></div>
   );
 }

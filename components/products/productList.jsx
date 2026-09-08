@@ -1,4 +1,5 @@
 import ProductListHeader from "./productListHeader";
+import WishlistHydrationSync from "../wishlist/WishlistHydrationSync";
 
 export default function ProductList({
   headerName,
@@ -16,6 +17,7 @@ export default function ProductList({
       >
         {children}
       </div>
+      <WishlistHydrationSync />
     </div>
   );
 }

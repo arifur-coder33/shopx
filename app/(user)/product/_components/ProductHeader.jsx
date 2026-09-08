@@ -3,33 +3,44 @@ import { getCheckoutProviders } from "@/backend/serverActions/providerConfigurat
 import EMISection from "./EMI/EMISection";
 import ProductClientShell from "./ProductClientShell";
 import WishlistButton from "@/components/wishlist/WishlistButton";
+import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
+import { Suspense } from "react";
 
-export default async function ProductHeader({ data, imageProps, children }) {
-  const { title } = data;
-
-  // The Server Component passes both the data and the server-rendered
-  // components (as props) to the Client Component.
+async function ProductEmiAvailability() {
   const providers = await getCheckoutProviders();
   const sslActive = providers.gateways.some(
     (provider) => provider.code === "SSLCOMMERZ",
   );
+  return sslActive ? <EMISection /> : null;
+}
+
+export default function ProductHeader({ data, imageProps }) {
+  const { title } = data;
+
   return (
     <>
       <ProductClientShell
         imageProps={imageProps}
         data={data}
-        imageComponent={children} // The <Image> from page.js is passed here
         titleComponent={
           // The static h1 is created here on the server
-          <div className="flex items-start gap-2 border-b-2 pb-2">
-            <h1 key={title} className="min-w-0 flex-1 text-3xl font-bold sm:text-4xl">
+          <div className="flex items-start gap-3 border-b border-border pb-3">
+            <h1
+              key={title}
+              className="min-w-0 flex-1 text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl"
+            >
               {title}
             </h1>
             <WishlistButton product={data} />
           </div>
         }
-        bottomComponent={sslActive && <EMISection key="sslcommerz-emi" />}
+        bottomComponent={
+          <Suspense fallback={null}>
+            <ProductEmiAvailability />
+          </Suspense>
+        }
       />
+      <WishlistHydrationSync />
     </>
   );
 }

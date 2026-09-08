@@ -141,10 +141,20 @@
 @utility blink-border { border: 2px solid var(--brand-danger) !important; animation: blink-border 1s ease-in-out; }
 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes product-reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hero-zoom { from { opacity: 0.5; transform: scale(1.06); } to { opacity: 1; transform: scale(1); } }
+@keyframes hero-slide-left { from { opacity: 0.65; transform: translateX(8%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes hero-slide-right { from { opacity: 0.65; transform: translateX(-8%); } to { opacity: 1; transform: translateX(0); } }
 @keyframes blink-border { 0%, 50%, 100% { box-shadow: none; } 25%, 75% { box-shadow: 0 0 12px color-mix(in srgb, var(--brand-danger) 55%, transparent); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes moneyMove { from { transform: translateX(-35px); opacity: 0; } 20% { opacity: 1; } to { transform: translateX(55px); opacity: 0; } }
+
+.hero-motion-fade { animation: fade-in 500ms ease-out both; }
+.hero-motion-zoom { animation: hero-zoom 650ms ease-out both; }
+.hero-motion-slide-left { animation: hero-slide-left 550ms ease-out both; }
+.hero-motion-slide-right { animation: hero-slide-right 550ms ease-out both; }
+.home-product-reveal { animation: product-reveal 320ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
