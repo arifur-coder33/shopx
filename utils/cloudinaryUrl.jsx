@@ -27,6 +27,19 @@ export function cloudinaryBlurImage(imageName) {
   return `https://res.cloudinary.com/bdmart24/image/upload/e_blur:200,w_10/f_auto,q_auto/bdmart24/${imageName}`;
 }
 
+// Use this for responsive <picture> sources. Each URL has a real pixel width,
+// so a small screen never downloads the desktop banner through dpr_auto.
+export function cloudinaryResponsiveImage(publicId, width) {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const folder = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
+
+  if (!cloudName || !publicId || !width) {
+    return DEFAULT_BLUR_DATA_URL;
+  }
+
+  return `https://res.cloudinary.com/${cloudName}/image/upload/c_limit,w_${width},f_auto,q_auto:eco/${folder}/${publicId}`;
+}
+
 // export function cloudinaryMainImage(imageName) {
 //   const urlGen =  `https://res.cloudinary.com/bdmart24/image/upload/bdmart24/`+imageName;
 // console.log(urlGen)

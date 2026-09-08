@@ -1,7 +1,16 @@
 import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
 import { Mail, MapPin, MessageCircleMore, PhoneCall } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+
+const paymentMethods = [
+  { name: "Cash on delivery", src: "/images/payments/cod.svg", width: 140 },
+  { name: "SSLCommerz", src: "/images/payments/sslcommerz.svg", width: 160 },
+  { name: "Card", src: "/images/payments/card.svg", width: 140 },
+  { name: "bKash", src: "/images/payments/bkash.svg", width: 140 },
+  { name: "Nagad", src: "/images/payments/nagad.svg", width: 140 },
+  { name: "Rocket", src: "/images/payments/rocket.svg", width: 140 },
+  { name: "EMI", src: "/images/payments/emi.svg", width: 140 },
+];
 
 export default async function Footer() {
   const { data } = await getSiteSetting();
@@ -78,15 +87,23 @@ export default async function Footer() {
 
       {/* Payment Section */}
       <div className="border-t border-slate-800 py-6 px-4 text-center">
-        <div className="w-full max-w-7xl mx-auto mb-3 ">
-          <Image
-            src="https://securepay.sslcommerz.com/public/image/SSLCommerz-Pay-With-logo-All-Size-01.png"
-            alt="payment methods"
-            width={800}
-            height={200}
-            className="w-full h-auto "
-            loading="lazy"
-          />
+        <div
+          className="mx-auto mb-4 grid w-full max-w-4xl grid-cols-4 gap-2 sm:grid-cols-7"
+          aria-label="Supported payment methods"
+        >
+          {paymentMethods.map((method) => (
+            // These tiny local SVGs avoid downloading a large combined raster banner.
+            <img
+              key={method.name}
+              src={method.src}
+              alt={method.name}
+              width={method.width}
+              height="72"
+              loading="lazy"
+              decoding="async"
+              className="h-auto w-full rounded-lg"
+            />
+          ))}
         </div>
 
         <p className="text-xs text-slate-500">

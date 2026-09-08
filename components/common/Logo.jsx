@@ -9,7 +9,9 @@ export default function Logo({ data }) {
       <Image
         // DO NOT USE Imagecustom here. This is the fix.
         src={
-          data?.logo ? cloudinaryMainImage(data.logo) : "/images/default.png"
+          data?.logo
+            ? cloudinaryMainImage(data.logo, 96)
+            : "/images/default-64.webp"
         }
         width={60}
         height={60}

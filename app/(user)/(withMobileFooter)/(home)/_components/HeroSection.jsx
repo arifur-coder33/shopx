@@ -31,7 +31,7 @@
 // app/your-page/HeroSection.js
 
 import { getBanner } from "@/backend/serverActions/bannerAction";
-import ImageCustomServer from "@/components/images/ImageCustomServer";
+import { cloudinaryResponsiveImage } from "@/utils/cloudinaryUrl";
 export default async function HeroSection() {
   const { data } = await getBanner();
 
@@ -42,19 +42,26 @@ export default async function HeroSection() {
     );
   }
 
-  // Use the standard next/image component for your LCP element
+  const mobileSrc = cloudinaryResponsiveImage(data.thumbnail.name, 480);
+  const tabletSrc = cloudinaryResponsiveImage(data.thumbnail.name, 768);
+  const desktopSrc = cloudinaryResponsiveImage(data.thumbnail.name, 1280);
+
+  // A single URL per breakpoint intentionally caps the downloaded banner size.
+  // This also renders without waiting for next/image hydration or blur removal.
   return (
-    <ImageCustomServer
-      src={data.thumbnail.name}
-      w={1280}
-      h={500}
-      alt={data?.name || "Banner"}
-      priority={true} // Same as loading="eager" AND fetchpriority="high"
-      fetchPriority="high"
-      unoptimized={true} // Disable next/image optimization for Cloudinary images
-      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1280px"
-      className="rounded-md"
-      style={{ objectFit: "fit" }} // Use style for objectFit
-    />
+    <picture>
+      <source media="(max-width: 639px)" srcSet={mobileSrc} />
+      <source media="(max-width: 1023px)" srcSet={tabletSrc} />
+      <img
+        src={desktopSrc}
+        width="1280"
+        height="500"
+        alt={data?.name || "Banner"}
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
+        className="block h-auto w-full rounded-md"
+      />
+    </picture>
   );
 }
