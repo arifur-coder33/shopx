@@ -33,6 +33,22 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <FloatingInput
         defaultValue=""
         type={"text"}
+        label={"জেলাঃ"}
+        name={"district"}
+        inputType={"text"}
+        autoComplete="address-line2"
+      />
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"থানাঃ"}
+        name={"thana"}
+        inputType={"text"}
+        autoComplete="address-line1"
+      />
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
         label={"ঠিকানাঃ"}
         name={"deliveryAddress"}
         inputType={"text"}

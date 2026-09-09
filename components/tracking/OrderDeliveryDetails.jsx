@@ -14,6 +14,8 @@ export default function OrderDeliveryDetails({ data }) {
           <p>নামঃ {data?.customerName} </p>
           <p>মোবাইল নংঃ {data?.phoneNumber}</p>
           <p>ইমেইল {data?.email}</p>
+          <p> জেলা: {data?.district}</p>
+          <p> থানা: {data?.thana}</p>
           <p> ঠিকানাঃ {data?.deliveryAddress}</p>
 
           <p> পেমেন্ট মেথড {data?.paymentMethod}</p>

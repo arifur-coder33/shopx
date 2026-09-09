@@ -84,7 +84,9 @@ model Order {
   customerName   String
   phoneNumber    String
   orderPrice     Float                       // Price of the product at the time of order
-  deliveryCharge Float     
+  deliveryCharge Float  
+  district        String?
+  thana          String?   
   deliveryArea   String                  // Delivery charge for the order
   deliveryAddress String 
   orderNotes     String?

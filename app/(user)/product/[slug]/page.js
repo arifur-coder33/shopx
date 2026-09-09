@@ -51,7 +51,7 @@ export async function generateMetadata({ params }) {
   const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
   const ogImage = convertImageToOG_cloudinary(
     cloudinaryMainImage(p.mainImage, 1200, 630),
-    "t_to_og"
+    "t_to_og",
   );
 
   return {
@@ -244,6 +244,7 @@ export default async function ProductPage({ params }) {
           <ProductDescription description={p.description} />
         </div>
 
+        {p?.videoLink && <YouTubeVideo url={p.videoLink} />}
         {/* এক্সট্রা গ্যালারি */}
         {p.imageGallery && p.imageGallery.length > 0 && (
           <ProductImageGallery imageGallery={p.imageGallery} title={p.title} />
@@ -253,5 +254,22 @@ export default async function ProductPage({ params }) {
         <FacebookEventTrac product={{ ...p, ...fbEvent }} />
       </div>
     </>
+  );
+}
+
+function YouTubeVideo({ url }) {
+  const videoId = new URL(url).searchParams.get("v");
+
+  if (!videoId) return null;
+
+  return (
+    <div className="aspect-video w-full overflow-hidden rounded-xl">
+      <iframe
+        className="h-full w-full"
+        src={`https://www.youtube.com/embed/${videoId}`}
+        title="YouTube video"
+        allowFullScreen
+      />
+    </div>
   );
 }
