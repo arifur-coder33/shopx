@@ -5,7 +5,7 @@ import {
   saveSocialTrackingConfiguration,
 } from "@/backend/serverActions/socialTrackingAction";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { Eye, EyeOff, Facebook, KeyRound, Save } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -19,21 +19,51 @@ const providers = [
     key: "facebook",
     title: "Facebook / Meta",
     description: "Browser Pixel and server-side Conversions API configuration.",
-    icon: Facebook,
+    icon: "",
     fields: [
-      { key: "facebookPixelId", label: "Facebook Pixel ID", env: "Browser Pixel + server CAPI" },
-      { key: "facebookAccessToken", label: "Conversions API access token", env: "FB_ACCESS_TOKEN", secret: true },
-      { key: "facebookTestEventCode", label: "Test event code", env: "FB_TEST_EVENT_CODE", secret: true, optional: true },
+      {
+        key: "facebookPixelId",
+        label: "Facebook Pixel ID",
+        env: "Browser Pixel + server CAPI",
+      },
+      {
+        key: "facebookAccessToken",
+        label: "Conversions API access token",
+        env: "FB_ACCESS_TOKEN",
+        secret: true,
+      },
+      {
+        key: "facebookTestEventCode",
+        label: "Test event code",
+        env: "FB_TEST_EVENT_CODE",
+        secret: true,
+        optional: true,
+      },
     ],
   },
   {
     key: "google",
     title: "Google",
-    description: "Google Tag Manager, GA4 browser tracking and Measurement Protocol.",
+    description:
+      "Google Tag Manager, GA4 browser tracking and Measurement Protocol.",
     fields: [
-      { key: "googleTagId", label: "Google Tag Manager ID", env: "NEXT_PUBLIC_GOOGLE_TAG_ID", optional: true },
-      { key: "googleAnalyticsId", label: "GA4 measurement ID", env: "NEXT_PUBLIC_GOOGLE_ANALYTICS_ID" },
-      { key: "googleAnalyticsSecret", label: "GA4 API secret", env: "GOOGLE_ANALYTICS_SECRET", secret: true },
+      {
+        key: "googleTagId",
+        label: "Google Tag Manager ID",
+        env: "NEXT_PUBLIC_GOOGLE_TAG_ID",
+        optional: true,
+      },
+      {
+        key: "googleAnalyticsId",
+        label: "GA4 measurement ID",
+        env: "NEXT_PUBLIC_GOOGLE_ANALYTICS_ID",
+      },
+      {
+        key: "googleAnalyticsSecret",
+        label: "GA4 API secret",
+        env: "GOOGLE_ANALYTICS_SECRET",
+        secret: true,
+      },
     ],
   },
   {
@@ -41,8 +71,17 @@ const providers = [
     title: "TikTok",
     description: "TikTok browser Pixel and Events API configuration.",
     fields: [
-      { key: "tiktokPixelId", label: "TikTok Pixel ID", env: "NEXT_PUBLIC_TIKTOK_PIXEL_ID" },
-      { key: "tiktokAccessToken", label: "Events API access token", env: "TT_ACCESS_TOKEN", secret: true },
+      {
+        key: "tiktokPixelId",
+        label: "TikTok Pixel ID",
+        env: "NEXT_PUBLIC_TIKTOK_PIXEL_ID",
+      },
+      {
+        key: "tiktokAccessToken",
+        label: "Events API access token",
+        env: "TT_ACCESS_TOKEN",
+        secret: true,
+      },
     ],
   },
 ];
@@ -73,7 +112,9 @@ function SecretField({ field, configured, disabled, value, setValue }) {
     <div>
       <label className="mb-1.5 block text-sm font-semibold text-text">
         {field.label}
-        {field.optional && <span className="ml-1 font-normal text-text-muted">(optional)</span>}
+        {field.optional && (
+          <span className="ml-1 font-normal text-text-muted">(optional)</span>
+        )}
       </label>
       <div className="relative">
         <input
@@ -87,7 +128,11 @@ function SecretField({ field, configured, disabled, value, setValue }) {
           }}
           disabled={disabled || clearValue}
           autoComplete="new-password"
-          placeholder={configured ? "Saved — enter a new value to replace" : "Not configured"}
+          placeholder={
+            configured
+              ? "Saved — enter a new value to replace"
+              : "Not configured"
+          }
         />
         <button
           type="button"
@@ -150,17 +195,23 @@ export default function SocialTrackingForm({ initialSettings }) {
     <main className="mx-auto w-full max-w-5xl space-y-4 pb-10">
       <header className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
         <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-primary/10 p-2.5 text-primary"><KeyRound size={22} /></div>
+          <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+            <KeyRound size={22} />
+          </div>
           <div>
-            <h1 className="text-xl font-bold text-text sm:text-2xl">Social tracking settings</h1>
+            <h1 className="text-xl font-bold text-text sm:text-2xl">
+              Social tracking settings
+            </h1>
             <p className="mt-1 text-sm text-text-muted">
-              Manage storefront pixels and server conversion credentials from the database.
+              Manage storefront pixels and server conversion credentials from
+              the database.
             </p>
           </div>
         </div>
         {!initialSettings.encryptionReady && (
           <p className="mt-4 rounded-brand border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-            Set PROVIDER_CREDENTIAL_ENCRYPTION_KEY (minimum 32 characters) on the server before saving secrets.
+            Set PROVIDER_CREDENTIAL_ENCRYPTION_KEY (minimum 32 characters) on
+            the server before saving secrets.
           </p>
         )}
       </header>
@@ -169,12 +220,19 @@ export default function SocialTrackingForm({ initialSettings }) {
         {providers.map((provider) => {
           const Icon = provider.icon;
           return (
-            <section key={provider.key} className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+            <section
+              key={provider.key}
+              className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
+            >
               <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">
                 {Icon && <Icon size={22} className="text-primary" />}
                 <div>
-                  <h2 className="text-lg font-bold text-text">{provider.title}</h2>
-                  <p className="text-sm text-text-muted">{provider.description}</p>
+                  <h2 className="text-lg font-bold text-text">
+                    {provider.title}
+                  </h2>
+                  <p className="text-sm text-text-muted">
+                    {provider.description}
+                  </p>
                 </div>
               </div>
               <div className="grid gap-5 md:grid-cols-2">
@@ -186,13 +244,22 @@ export default function SocialTrackingForm({ initialSettings }) {
                       configured={initialSettings.configuredSecrets[field.key]}
                       disabled={disabled || !initialSettings.encryptionReady}
                       value={secretValues[field.key] || ""}
-                      setValue={(value) => setSecretValues((current) => ({ ...current, [field.key]: value }))}
+                      setValue={(value) =>
+                        setSecretValues((current) => ({
+                          ...current,
+                          [field.key]: value,
+                        }))
+                      }
                     />
                   ) : (
                     <div key={field.key}>
                       <label className="mb-1.5 block text-sm font-semibold text-text">
                         {field.label}
-                        {field.optional && <span className="ml-1 font-normal text-text-muted">(optional)</span>}
+                        {field.optional && (
+                          <span className="ml-1 font-normal text-text-muted">
+                            (optional)
+                          </span>
+                        )}
                       </label>
                       <input
                         className={inputClass}
@@ -201,7 +268,9 @@ export default function SocialTrackingForm({ initialSettings }) {
                         disabled={disabled}
                         placeholder={`Enter ${field.label}`}
                       />
-                      <code className="mt-1.5 block text-xs text-text-muted">{field.env}</code>
+                      <code className="mt-1.5 block text-xs text-text-muted">
+                        {field.env}
+                      </code>
                     </div>
                   ),
                 )}
@@ -211,12 +280,18 @@ export default function SocialTrackingForm({ initialSettings }) {
         })}
 
         <div className="sticky bottom-3 z-10 flex justify-end rounded-2xl border border-border bg-surface/95 p-3 shadow-lg backdrop-blur">
-          <button type="submit" disabled={disabled} className="button flex items-center gap-2 bg-primary text-white disabled:cursor-not-allowed disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={disabled}
+            className="button flex items-center gap-2 bg-primary text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <Save size={17} /> {pending ? "Saving…" : "Save settings"}
           </button>
         </div>
         {!canUpdate && status !== "loading" && (
-          <p className="text-right text-sm text-danger">You do not have permission to update these settings.</p>
+          <p className="text-right text-sm text-danger">
+            You do not have permission to update these settings.
+          </p>
         )}
       </form>
     </main>

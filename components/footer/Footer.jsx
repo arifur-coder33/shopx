@@ -1,6 +1,6 @@
 import { getPublicContactDetails } from "@/backend/services/contactDetailsService";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
-import { Facebook, Mail, MessageCircleMore, PhoneCall, Send } from "lucide-react";
+import { Mail, MessageCircleMore, PhoneCall, Send } from "lucide-react";
 import Link from "next/link";
 
 export default async function Footer() {
@@ -16,7 +16,9 @@ export default async function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Brand */}
         <div>
-          <h2 className="text-2xl font-semibold text-white mb-3">{identity.name}</h2>
+          <h2 className="text-2xl font-semibold text-white mb-3">
+            {identity.name}
+          </h2>
           <p className="text-sm leading-relaxed">
             আপনার বিশ্বস্ত অনলাইন শপ — মেশিনারি ও ফ্যাশন পণ্যের জন্য একটি
             নির্ভরযোগ্য প্ল্যাটফর্ম।
@@ -27,11 +29,54 @@ export default async function Footer() {
         <div>
           <h3 className="text-lg text-white mb-3">যোগাযোগ</h3>
           <div className="space-y-2 text-sm">
-            {contact.phoneNumber && <a href={`tel:${contact.phoneNumber.replace(/[^+\d]/g, "")}`} className="flex items-center gap-2 transition hover:text-white"><PhoneCall size={16} /> {contact.phoneNumber}</a>}
-            {contact.whatsappNumber && <a href={`https://wa.me/${whatsappDigits}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white"><MessageCircleMore size={16} /> WhatsApp: {contact.whatsappNumber}</a>}
-            {contact.email && <a href={`mailto:${contact.email}`} className="flex items-center gap-2 transition hover:text-white"><Mail size={16} /> {contact.email}</a>}
-            {contact.facebookPage && <a href={contact.facebookPage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white"><Facebook size={16} /> Facebook</a>}
-            {contact.messenger && <a href={contact.messenger} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white"><Send size={16} /> Messenger</a>}
+            {contact.phoneNumber && (
+              <a
+                href={`tel:${contact.phoneNumber.replace(/[^+\d]/g, "")}`}
+                className="flex items-center gap-2 transition hover:text-white"
+              >
+                <PhoneCall size={16} /> {contact.phoneNumber}
+              </a>
+            )}
+            {contact.whatsappNumber && (
+              <a
+                href={`https://wa.me/${whatsappDigits}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 transition hover:text-white"
+              >
+                <MessageCircleMore size={16} /> WhatsApp:{" "}
+                {contact.whatsappNumber}
+              </a>
+            )}
+            {contact.email && (
+              <a
+                href={`mailto:${contact.email}`}
+                className="flex items-center gap-2 transition hover:text-white"
+              >
+                <Mail size={16} /> {contact.email}
+              </a>
+            )}
+            {contact.facebookPage && (
+              <a
+                href={contact.facebookPage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 transition hover:text-white"
+              >
+                {" "}
+                Facebook
+              </a>
+            )}
+            {contact.messenger && (
+              <a
+                href={contact.messenger}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 transition hover:text-white"
+              >
+                <Send size={16} /> Messenger
+              </a>
+            )}
           </div>
         </div>
 
@@ -60,7 +105,10 @@ export default async function Footer() {
               </Link>
             </li>
             <li>
-              <Link href="/return-policy" className="hover:text-white transition">
+              <Link
+                href="/return-policy"
+                className="hover:text-white transition"
+              >
                 রিটার্ন পলিসি
               </Link>
             </li>

@@ -1,7 +1,7 @@
-import { getPublicContentPage } from "@/backend/services/contentPageService";
 import { getPublicContactDetails } from "@/backend/services/contactDetailsService";
+import { getPublicContentPage } from "@/backend/services/contentPageService";
 import Breadcrumb from "@/components/common/Breadcrumb";
-import { Facebook, Mail, MessageCircle, Phone, Send } from "lucide-react";
+import { Mail, MessageCircle, Phone, Send } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export async function contentPageMetadata(slug) {
@@ -21,37 +21,83 @@ export default async function ContentPageView({ slug }) {
   if (!page) notFound();
 
   const whatsappDigits = contact?.whatsappNumber?.replace(/\D/g, "");
-  const contactItems = slug === "contact"
-    ? [
-        contact?.phoneNumber && { label: "ফোন", value: contact.phoneNumber, href: `tel:${contact.phoneNumber.replace(/[^+\d]/g, "")}`, icon: Phone },
-        contact?.whatsappNumber && { label: "WhatsApp", value: contact.whatsappNumber, href: `https://wa.me/${whatsappDigits}`, icon: MessageCircle },
-        contact?.email && { label: "ইমেইল", value: contact.email, href: `mailto:${contact.email}`, icon: Mail },
-        contact?.facebookPage && { label: "Facebook", value: "Facebook পেজ দেখুন", href: contact.facebookPage, icon: Facebook, external: true },
-        contact?.messenger && { label: "Messenger", value: "Messenger-এ কথা বলুন", href: contact.messenger, icon: Send, external: true },
-      ].filter(Boolean)
-    : [];
+  const contactItems =
+    slug === "contact"
+      ? [
+          contact?.phoneNumber && {
+            label: "ফোন",
+            value: contact.phoneNumber,
+            href: `tel:${contact.phoneNumber.replace(/[^+\d]/g, "")}`,
+            icon: Phone,
+          },
+          contact?.whatsappNumber && {
+            label: "WhatsApp",
+            value: contact.whatsappNumber,
+            href: `https://wa.me/${whatsappDigits}`,
+            icon: MessageCircle,
+          },
+          contact?.email && {
+            label: "ইমেইল",
+            value: contact.email,
+            href: `mailto:${contact.email}`,
+            icon: Mail,
+          },
+          contact?.facebookPage && {
+            label: "Facebook",
+            value: "Facebook পেজ দেখুন",
+            href: contact.facebookPage,
+            icon: "fb",
+            external: true,
+          },
+          contact?.messenger && {
+            label: "Messenger",
+            value: "Messenger-এ কথা বলুন",
+            href: contact.messenger,
+            icon: Send,
+            external: true,
+          },
+        ].filter(Boolean)
+      : [];
 
   return (
     <div className="pb-8">
       <Breadcrumb items={[{ label: page.title }]} className="mb-3" />
       <article className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         <header className="border-b border-border bg-gradient-to-br from-primary-soft to-surface p-5 sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Information</p>
-          <h1 className="mt-2 text-2xl font-black text-text sm:text-4xl">{page.title}</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+            Information
+          </p>
+          <h1 className="mt-2 text-2xl font-black text-text sm:text-4xl">
+            {page.title}
+          </h1>
         </header>
         {contactItems.length > 0 && (
           <div className="grid gap-3 border-b border-border p-5 sm:grid-cols-2 sm:p-8 lg:grid-cols-3">
-            {contactItems.map(({ label, value, href, icon: Icon, external }) => (
-              <a
-                key={label}
-                href={href}
-                {...(external && { target: "_blank", rel: "noopener noreferrer" })}
-                className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-muted p-4 transition hover:border-primary hover:bg-primary-soft"
-              >
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-white"><Icon size={20} /></span>
-                <span className="min-w-0"><strong className="block text-sm text-text-muted">{label}</strong><span className="block break-words font-semibold text-text group-hover:text-primary">{value}</span></span>
-              </a>
-            ))}
+            {contactItems.map(
+              ({ label, value, href, icon: Icon, external }) => (
+                <a
+                  key={label}
+                  href={href}
+                  {...(external && {
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                  })}
+                  className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-muted p-4 transition hover:border-primary hover:bg-primary-soft"
+                >
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-white">
+                    <Icon size={20} />
+                  </span>
+                  <span className="min-w-0">
+                    <strong className="block text-sm text-text-muted">
+                      {label}
+                    </strong>
+                    <span className="block break-words font-semibold text-text group-hover:text-primary">
+                      {value}
+                    </span>
+                  </span>
+                </a>
+              ),
+            )}
           </div>
         )}
         <div
