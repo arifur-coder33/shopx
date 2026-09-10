@@ -48,7 +48,8 @@ export default function ProductImageGallery({
   title,
   variationsImage = [],
   activeImageId = null,
-  videoUrl = "https://www.youtube.com/watch?v=KvdBePTOmc4",
+  videoUrl = null,
+  videos = [],
   imageProps,
 }) {
   const allMedia = useMemo(() => {
@@ -67,11 +68,22 @@ export default function ProductImageGallery({
     variationsImage.forEach((img) =>
       addMedia(img, "image", `${title} - variation`),
     );
-    if (videoUrl) {
+    videos.forEach((video, index) =>
+      addMedia(
+        {
+          id: video.id || `video-${index}-${video.url}`,
+          url: video.url,
+          header: video.header,
+        },
+        "video",
+        video.header || `${title} - Video ${index + 1}`,
+      ),
+    );
+    if (!videos.length && videoUrl) {
       addMedia({ id: videoUrl, url: videoUrl }, "video", `${title} - Video`);
     }
     return Array.from(mediaMap.values());
-  }, [mainImage, gallery, variationsImage, title, videoUrl]);
+  }, [mainImage, gallery, variationsImage, title, videoUrl, videos]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [imageSrc, setImageSrc] = useState(imageProps.initialSrc);
@@ -290,6 +302,9 @@ export default function ProductImageGallery({
             {allMedia.map((media, index) => (
               <button
                 key={media.id}
+                type="button"
+                aria-label={media.type === "video" ? `ভিডিও খুলুন: ${media.header || media.alt}` : `ছবি খুলুন: ${media.alt}`}
+                title={media.type === "video" ? media.header || media.alt : media.alt}
                 className={`${styles.thumbnailButton} ${
                   index === activeIndex ? styles.thumbnailActive : ""
                 }`}

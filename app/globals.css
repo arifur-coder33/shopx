@@ -69,7 +69,7 @@
   }
 
   *, ::before, ::after { box-sizing: border-box; border-color: var(--brand-border); }
-  html { min-width: 320px; scroll-behavior: smooth; text-size-adjust: 100%; }
+  html { min-width: 320px; text-size-adjust: 100%; }
   body {
     min-height: 100dvh;
     overflow-x: hidden;

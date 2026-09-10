@@ -1,9 +1,14 @@
-import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
-import { Mail, MapPin, MessageCircleMore, PhoneCall } from "lucide-react";
+import { getPublicContactDetails } from "@/backend/services/contactDetailsService";
+import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import { Facebook, Mail, MessageCircleMore, PhoneCall, Send } from "lucide-react";
 import Link from "next/link";
 
 export default async function Footer() {
-  const { data } = await getSiteSetting();
+  const [contact, identity] = await Promise.all([
+    getPublicContactDetails(),
+    getPublicSiteIdentity(),
+  ]);
+  const whatsappDigits = contact.whatsappNumber.replace(/\D/g, "");
 
   return (
     <footer className="bg-slate-950 text-slate-300 mt-10 border-t border-slate-800">
@@ -11,7 +16,7 @@ export default async function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Brand */}
         <div>
-          <h2 className="text-2xl font-semibold text-white mb-3">BDMart24</h2>
+          <h2 className="text-2xl font-semibold text-white mb-3">{identity.name}</h2>
           <p className="text-sm leading-relaxed">
             আপনার বিশ্বস্ত অনলাইন শপ — মেশিনারি ও ফ্যাশন পণ্যের জন্য একটি
             নির্ভরযোগ্য প্ল্যাটফর্ম।
@@ -22,28 +27,11 @@ export default async function Footer() {
         <div>
           <h3 className="text-lg text-white mb-3">যোগাযোগ</h3>
           <div className="space-y-2 text-sm">
-            <p className="flex items-center gap-2">
-              <PhoneCall size={16} /> {data?.phoneNumber1}
-            </p>
-            <p className="flex items-center gap-2">
-              <MessageCircleMore size={16} /> WhatsApp: {data?.phoneNumber1}
-            </p>
-            <p className="flex items-center gap-2">
-              <Mail size={16} /> support@bdmart24.com
-            </p>
-            <p className="flex items-center gap-2">
-              <MapPin size={16} /> Bangladesh
-            </p>
-            <p className="flex items-center gap-2">
-              Facebook
-              <Link
-                href={data?.facebook || "#"}
-                target="_blank"
-                className="hover:text-white transition"
-              >
-                ShopX
-              </Link>
-            </p>
+            {contact.phoneNumber && <a href={`tel:${contact.phoneNumber.replace(/[^+\d]/g, "")}`} className="flex items-center gap-2 transition hover:text-white"><PhoneCall size={16} /> {contact.phoneNumber}</a>}
+            {contact.whatsappNumber && <a href={`https://wa.me/${whatsappDigits}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white"><MessageCircleMore size={16} /> WhatsApp: {contact.whatsappNumber}</a>}
+            {contact.email && <a href={`mailto:${contact.email}`} className="flex items-center gap-2 transition hover:text-white"><Mail size={16} /> {contact.email}</a>}
+            {contact.facebookPage && <a href={contact.facebookPage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white"><Facebook size={16} /> Facebook</a>}
+            {contact.messenger && <a href={contact.messenger} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white"><Send size={16} /> Messenger</a>}
           </div>
         </div>
 
@@ -69,6 +57,11 @@ export default async function Footer() {
             <li>
               <Link href="/privacy" className="hover:text-white transition">
                 প্রাইভেসি পলিসি
+              </Link>
+            </li>
+            <li>
+              <Link href="/return-policy" className="hover:text-white transition">
+                রিটার্ন পলিসি
               </Link>
             </li>
           </ul>
@@ -100,7 +93,7 @@ export default async function Footer() {
         </div>
 
         <p className="text-xs text-slate-500">
-          © {new Date().getFullYear()} BDMart24 — সর্বস্বত্ব সংরক্ষিত
+          © {new Date().getFullYear()} {identity.name} — সর্বস্বত্ব সংরক্ষিত
         </p>
       </div>
     </footer>

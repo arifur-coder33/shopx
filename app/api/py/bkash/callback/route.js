@@ -12,7 +12,7 @@ export async function GET(request) {
   const params = new URL(request.url).searchParams;
   const paymentID = params.get("paymentID");
   const status = params.get("status");
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl = new URL(request.url).origin;
   const payment = paymentID
     ? await prisma.payment.findFirst({
         where: { externalEventId: paymentID },

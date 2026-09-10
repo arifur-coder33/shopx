@@ -1,5 +1,6 @@
 import { getProductsForFeed } from "@/backend/lib/feed/getProductsForFeed";
 import { socialFormatProducts } from "@/backend/lib/feed/socialFormatProducts";
+import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 
 function escapeXml(str = "") {
   return String(str)
@@ -10,9 +11,16 @@ function escapeXml(str = "") {
     .replace(/'/g, "&apos;");
 }
 
-export async function GET() {
-  const products = await getProductsForFeed();
-  const items = socialFormatProducts(products);
+export async function GET(request) {
+  const [products, identity] = await Promise.all([
+    getProductsForFeed(),
+    getPublicSiteIdentity(),
+  ]);
+  const siteUrl = new URL(request.url).origin;
+  const items = socialFormatProducts(products, {
+    siteUrl,
+    brand: identity.name,
+  });
 
   const xmlItems = items
     .map((p) => {
@@ -60,8 +68,8 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
   <channel>
-    <title>${escapeXml(process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop")}</title>
-    <link>${process.env.NEXT_PUBLIC_SITE_URL}</link>
+    <title>${escapeXml(identity.name)}</title>
+    <link>${escapeXml(siteUrl)}</link>
     <description>Google Merchant Centre Product Feed</description>
     ${xmlItems}
   </channel>

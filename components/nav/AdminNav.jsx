@@ -10,7 +10,7 @@ import { AlignJustify, User2Icon } from "lucide-react";
 import Link from "next/link";
 
 // Note: Removed 'async' as this is now a client component
-export default function AdminNavBar({ toggleSidebar }) {
+export default function AdminNavBar({ toggleSidebar, siteSetting }) {
   return (
     <header className="sticky top-0 z-30 w-full bg-slate-900/80 dark:bg-slate-950/80 backdrop-blur-sm shadow-sm shadow-slate-700">
       <div className="mx-auto flex flex-row justify-between items-center max-w-7xl h-16 px-4">
@@ -25,7 +25,7 @@ export default function AdminNavBar({ toggleSidebar }) {
           </button>
           <div className="text-3xl font-bold">
             <Link href={"/admin"}>
-              <Logo />
+              <Logo data={siteSetting} />
             </Link>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { fireFacebookCAPI } from "../utils/SocialServerEvent/fireFacebookCAPI";
 import { fireGoogleServer } from "../utils/SocialServerEvent/fireGoogleServer";
 import { fireTikTokServer } from "../utils/SocialServerEvent/fireTikTokServer";
+import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
 export async function firePurchaseServer({ orderNo, orderId }) {
   try {
@@ -76,10 +77,11 @@ export async function firePurchaseServer({ orderNo, orderId }) {
       },
     };
 
+    const trackingSettings = await getServerSocialTrackingSettings();
     await Promise.all([
-      fireFacebookCAPI(payload),
-      fireGoogleServer(payload),
-      fireTikTokServer(payload),
+      fireFacebookCAPI(payload, trackingSettings),
+      fireGoogleServer(payload, trackingSettings),
+      fireTikTokServer(payload, trackingSettings),
     ]).catch(console.error);
 
     return true;

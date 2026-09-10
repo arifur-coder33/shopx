@@ -160,6 +160,7 @@ model Product {
   thumbnailId          String?            @db.ObjectId
   thumbnail            Media?             @relation(fields: [thumbnailId], references: [id])
   videoUrl             String? // Optional video URL for the product
+  videos               ProductVideo[]
   gallery              ProductGallery[]
   seoKeyWord           String?
   seoDescription       String?
@@ -179,6 +180,19 @@ model Product {
   updatedAt            DateTime           @updatedAt // Auto-updated timestamp
 
   @@index([searchText])
+}
+
+model ProductVideo {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  header    String
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, sortOrder])
 }
 
 model ProductGallery {
@@ -395,6 +409,23 @@ model CourierProvider {
   @@index([moneyAccountId])
 }
 
+// One database-backed configuration row controls browser pixels and
+// server-side conversion APIs. Access tokens/secrets are stored together in
+// encryptedSecrets; they are never returned with public storefront settings.
+model SocialTrackingSetting {
+  id                       String   @id @map("_id")
+  facebookPixelId          String?
+  googleTagId              String?
+  googleAnalyticsId        String?
+  tiktokPixelId            String?
+  encryptedSecrets         String?
+  secretsUpdatedAt         DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  createdBy                String?
+  updatedBy                String?
+}
+
 model OrderTimeline {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
@@ -554,7 +585,10 @@ model SiteSetting {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   name         String?
   slogan       String?
+  seoTitle     String?
+  seoDescription String?
   logo         String?
+  favicon      String?
   phoneNumber1 String?
   phoneNumber2 String?
   adress1      String?
@@ -562,9 +596,38 @@ model SiteSetting {
   googleMap    String?
   email        String?
   fbLink       String?
+  messengerLink String?
+  whatsappNumber String?
   youTubeLink  String?
+  primaryColor    String?
+  secondaryColor  String?
+  accentColor     String?
+  lightBackground String?
+  lightSurface    String?
+  lightText       String?
+  darkBackground  String?
+  darkSurface     String?
+  darkText        String?
+  baseFontSize    Int?
+  borderRadius    Int?
   createdAt    DateTime @default(now()) // Timestamp for order placement
   updatedAt    DateTime @updatedAt // Auto-updated timestamp
+}
+
+model ContentPage {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug            String   @unique
+  title           String
+  content         String
+  metaTitle       String?
+  metaDescription String?
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+  updatedBy       String?
+
+  @@index([isPublished, slug])
 }
 
 model Notice {

@@ -18,6 +18,8 @@ export default function ProductClientShell({
     imageGallery,
     title,
     variations,
+    videoUrl,
+    videos,
   } = data;
 
   const variationsImage = useMemo(
@@ -36,7 +38,8 @@ export default function ProductClientShell({
           gallery={gallery || imageGallery}
           variationsImage={variationsImage}
           title={title}
-          videoUrl={null}
+          videoUrl={videoUrl}
+          videos={videos}
           activeImageId={activeImageId}
         />
       </div>

@@ -14,7 +14,9 @@ export default function ProductInfoClient({
   setActiveImageId,
 }) {
   const { variations, hasVariations } = data;
-  const [selectedVariation, setSelectedVariation] = useState(null);
+  const [selectedVariation, setSelectedVariation] = useState(() =>
+    variations.find((variation) => variation.sku === data.initialVariationSku) || null,
+  );
 
   const onVariationChangeHandler = useCallback(
     (variation) => {

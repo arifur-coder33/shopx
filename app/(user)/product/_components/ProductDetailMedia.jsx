@@ -35,8 +35,18 @@ function getVideoSource(rawUrl) {
   }
 }
 
-export default function ProductDetailMedia({ title, videoUrl, gallery = [] }) {
-  const video = getVideoSource(videoUrl);
+export default function ProductDetailMedia({ title, videoUrl, videos = [], gallery = [] }) {
+  const videoItems = (videos.length
+    ? videos
+    : videoUrl
+      ? [{ header: "পণ্যের ভিডিও", url: videoUrl }]
+      : [])
+    .map((item, index) => ({
+      ...item,
+      header: item.header || `পণ্যের ভিডিও ${index + 1}`,
+      source: getVideoSource(item.url),
+    }))
+    .filter((item) => item.source);
   const photos = Array.from(
     new Map(
       gallery
@@ -45,20 +55,21 @@ export default function ProductDetailMedia({ title, videoUrl, gallery = [] }) {
     ).values(),
   );
 
-  if (!video && photos.length === 0) return null;
+  if (videoItems.length === 0 && photos.length === 0) return null;
 
   return (
     <section className="mx-auto mt-6 max-w-5xl space-y-6" aria-label="পণ্যের ভিডিও ও ছবি">
-      {video && (
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <h2 className="border-b border-border px-4 py-3 text-xl font-bold sm:text-2xl">
-            পণ্যের ভিডিও
-          </h2>
+      {videoItems.map((video, index) => (
+        <div key={video.id || video.url} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+          <div className="border-b border-border px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">ভিডিও {index + 1}</p>
+            <h2 className="text-xl font-bold sm:text-2xl">{video.header}</h2>
+          </div>
           <div className="aspect-video w-full bg-black">
-            {video.type === "file" ? (
+            {video.source.type === "file" ? (
               <video
                 className="h-full w-full"
-                src={video.src}
+                src={video.source.src}
                 controls
                 preload="none"
                 playsInline
@@ -68,8 +79,8 @@ export default function ProductDetailMedia({ title, videoUrl, gallery = [] }) {
             ) : (
               <iframe
                 className="h-full w-full border-0"
-                src={video.src}
-                title={`${title} ভিডিও`}
+                src={video.source.src}
+                title={`${title} — ${video.header}`}
                 loading="lazy"
                 allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -78,7 +89,7 @@ export default function ProductDetailMedia({ title, videoUrl, gallery = [] }) {
             )}
           </div>
         </div>
-      )}
+      ))}
 
       {photos.length > 0 && (
         <div>

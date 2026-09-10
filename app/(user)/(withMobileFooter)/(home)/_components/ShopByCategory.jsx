@@ -8,10 +8,10 @@ export default function ShopByCategory({ categories }) {
     <section className="mt-5 sm:mt-7" aria-labelledby="shop-by-category-title">
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            সহজে খুঁজুন
-          </p>
-          <h2 id="shop-by-category-title" className="text-xl font-bold sm:text-2xl">
+          <h2
+            id="shop-by-category-title"
+            className="text-xl font-bold sm:text-2xl"
+          >
             ক্যাটাগরি অনুযায়ী কিনুন
           </h2>
         </div>

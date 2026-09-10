@@ -6,8 +6,8 @@ import "react-quill-new/dist/quill.snow.css";
 import styles from "./CustomEditor.module.css";
 // Dynamically import ReactQuill with SSR disabled
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
-export default function CustomEditor({ defaultValue, label, name }) {
-  const [editorValue, setEditorValue] = useState(defaultValue);
+export default function CustomEditor({ defaultValue, label, name, readOnly = false }) {
+  const [editorValue, setEditorValue] = useState(defaultValue || "");
   const modules = {
     toolbar: [
       ["bold", "italic", "underline", "strike"], // toggled buttons
@@ -47,12 +47,13 @@ export default function CustomEditor({ defaultValue, label, name }) {
       <label htmlFor={name} className="block  text-sm font-medium">
         {label}
       </label>
-      <input type="hidden" name={name} defaultValue={editorValue} />
+      <input type="hidden" name={name} value={editorValue} readOnly />
       <ReactQuill
         id={name}
         theme="snow"
         className="dark:text-slate-950 custom-quill"
-        defaultValue={editorValue}
+        value={editorValue}
+        readOnly={readOnly}
         onChange={setEditorValue} // Updates state when the editor content changes
         modules={modules}
       />

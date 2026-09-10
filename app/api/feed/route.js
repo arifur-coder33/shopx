@@ -1,24 +1,29 @@
 import prisma from "@/lib/prisma";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { htmlToText } from "html-to-text";
+import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 
 
 export async function GET(req) {
-  const products = await prisma.product.findMany({
-    where: { isActive: true }, // Only include active products
-  });
+  const [products, identity] = await Promise.all([
+    prisma.product.findMany({
+      where: { isActive: true }, // Only include active products
+    }),
+    getPublicSiteIdentity(),
+  ]);
+  const siteUrl = new URL(req.url).origin;
 
     
   const rows = products.map((product) => ({
     id: product.id,
     title: product.title,
     description: htmlToText(product.description) || "",
-    link: `${process?.env?.NEXT_PUBLIC_SITE_URL}/${product.slug}`,
+    link: `${siteUrl}/product/${encodeURIComponent(product.slug)}`,
     image_link: cloudinaryMainImage(product?.mainImage, 800, 800),
     availability: "in_stock",
     price: `${product.regularPrice} BDT`,
     sale_price: product.discountPrice ? `${product.discountPrice} BDT` : "",
-    brand: "bdmart24", // Replace with your brand name
+    brand: identity.name,
     condition: "new", // All products marked as new
     custom_label_0: product.isFeatured ? "featured" : "standard",
   }));

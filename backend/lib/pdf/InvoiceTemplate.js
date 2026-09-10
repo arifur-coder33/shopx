@@ -2,11 +2,11 @@
 
 // export async function getInvoiceTemplate(orderData) {
 //   // ১. QR কোড জেনারেট (Data URL)
-//   const invoiceLink = `${process.env.NEXT_PUBLIC_SITE_URL}/invoice/${orderData.orderNo}`;
+//   const invoiceLink is built from the current request origin.
 //   const qrCodeDataUrl = await QRCode.toDataURL(invoiceLink);
 
 //   // লোগো URL (পূর্ণাঙ্গ URL হতে হবে অথবা Base64)
-//   const logoUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/android-chrome-192x192.png`;
+//   const logo URL is built from the current request origin.
 
 //   // তারিখ ফরম্যাট
 //   const dateOptions = { year: "numeric", month: "long", day: "numeric" };
@@ -182,10 +182,12 @@
 import fs from "fs";
 import path from "path";
 import QRCode from "qrcode";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export async function getInvoiceTemplate(orderData) {
+  const siteUrl = await getSiteUrl();
   // ১. QR কোড জেনারেট (Data URL)
-  const invoiceLink = `${process.env.NEXT_PUBLIC_SITE_URL}/invoice/${orderData.orderNo}`;
+  const invoiceLink = `${siteUrl}/invoice/${orderData.orderNo}`;
   const qrCodeDataUrl = await QRCode.toDataURL(invoiceLink);
 
   // ২. লোকাল ফন্ট লোড করে Base64 এ কনভার্ট করা (দ্রুত লোডিংয়ের জন্য)
@@ -219,7 +221,7 @@ export async function getInvoiceTemplate(orderData) {
     }
   } catch (err) {
     // ফলব্যাক যদি লোকাল লোগো না পাওয়া যায়
-    logoSrc = `${process.env.NEXT_PUBLIC_SITE_URL}/android-chrome-192x192.png`;
+    logoSrc = `${siteUrl}/android-chrome-192x192.png`;
   }
 
   // ৪. তারিখ ফরম্যাট
@@ -443,7 +445,7 @@ export async function getInvoiceTemplate(orderData) {
             </div>
             
             <div class="bottom-text">
-                Thank you for doing business with us. <br/>${process.env.NEXT_PUBLIC_SITE_URL}
+                Thank you for doing business with us. <br/>${siteUrl}
 
             </div>
         </div>

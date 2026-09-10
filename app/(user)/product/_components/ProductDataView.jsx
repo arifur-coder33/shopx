@@ -32,6 +32,7 @@ export default function ProductDataView({
         <ProductDetailMedia
           title={title}
           videoUrl={data.videoUrl}
+          videos={data.videos}
           gallery={[
             data.thumbnail,
             ...(data.gallery || []),

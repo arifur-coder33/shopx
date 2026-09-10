@@ -1,9 +1,9 @@
 import { sendTelegramMessage } from "./Telegram";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 
 export async function notifyNewOrder(result) {
-  // Base URL (use env variable in production)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = await getSiteUrl();
 
   // Encode the phone number safely for URL
   const encodedPhone = encodeURIComponent(result?.phoneNumber || "");

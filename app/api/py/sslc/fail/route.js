@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 async function handleFail(req) {
+  const siteUrl = new URL(req.url).origin;
   const formData =
     req.method === "POST"
       ? await req.formData()
@@ -32,7 +33,7 @@ async function handleFail(req) {
     });
   }
 
-  const failedUrl = new URL("/payment/failed", process.env.NEXT_PUBLIC_SITE_URL);
+  const failedUrl = new URL("/payment/failed", siteUrl);
   const orderNo = payment?.order?.orderNo || formData.get("value_a");
   const phoneNumber = payment?.order?.phoneNumber || formData.get("value_b");
   const orderId = payment?.orderId || formData.get("value_d");

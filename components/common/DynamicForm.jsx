@@ -28,6 +28,7 @@ const SearchableDropdown = dynamic(
   { ssr: false },
 );
 const TagInput = dynamic(() => import("../input/TagInput"));
+const ProductVideosInput = dynamic(() => import("../input/ProductVideosInput"));
 
 export default function DynamicForm({
   category,
@@ -223,6 +224,15 @@ export default function DynamicForm({
                   name={field.name}
                   defaultValue={data?.[field.name]}
                   multipleSelect={field.multiple}
+                />
+              );
+            case "videos":
+              return (
+                <ProductVideosInput
+                  key={field.name}
+                  name={field.name}
+                  label={field.label}
+                  defaultValue={data?.[field.name]}
                 />
               );
             case "image":

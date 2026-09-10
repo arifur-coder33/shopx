@@ -1,311 +1,159 @@
-// export const revalidate = 60;
-
+import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 import {
   getStorefrontProductBySlug,
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
-
-import {
-  cloudinaryMainImage,
-  DEFAULT_BLUR_DATA_URL,
-} from "@/utils/cloudinaryUrl";
-import { convertImageToOG_cloudinary } from "@/utils/replaceImageurl";
-import { htmlToText } from "html-to-text";
-import Script from "next/script";
+import { buildProductSeo } from "@/backend/utils/productSeo";
 import Breadcrumb from "@/components/common/Breadcrumb";
+import JsonLd from "@/components/seo/JsonLd";
+import { getSiteUrl } from "@/lib/siteUrl";
+import { DEFAULT_BLUR_DATA_URL } from "@/utils/cloudinaryUrl";
+import { notFound } from "next/navigation";
 import ProductDataView from "../_components/ProductDataView";
+
 export const revalidate = 60;
 export const dynamicParams = true;
+
+const compact = (value, length) => {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.length > length ? `${text.slice(0, length - 1).trim()}…` : text;
+};
+
+const productContext = async (slug) => {
+  const [result, identity, siteUrl] = await Promise.all([
+    getStorefrontProductBySlug(slug),
+    getPublicSiteIdentity(),
+    getSiteUrl(),
+  ]);
+  if (!result?.success || !result.data) {
+    return { result, identity, siteUrl, seo: null };
+  }
+  return {
+    result,
+    identity,
+    siteUrl,
+    seo: buildProductSeo({
+      product: result.data,
+      siteUrl,
+      siteName: identity.name,
+    }),
+  };
+};
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
+  const { result, identity, siteUrl, seo } = await productContext(slug);
 
-  const product = await getStorefrontProductBySlug(slug);
-  const data = product?.data;
-
-  if (!data) {
+  if (!result?.success || !seo) {
     return {
-      title: `Product not found - ${process.env.NEXT_PUBLIC_NEXT_SHOP_NAME}`,
-      description: "The product you are looking for could not be found.",
-      openGraph: {
-        title: "Product not found",
-        description: "The product you are looking for could not be found.",
-        url: `${process.env.NEXT_PUBLIC_SITE_URL}/products/${slug}`,
-        type: "website",
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: "Product not found",
-        description: "The product you are looking for could not be found.",
-      },
-      robots: "noindex, nofollow",
+      title: "পণ্য পাওয়া যায়নি",
+      description: "আপনি যে পণ্যটি খুঁজছেন সেটি পাওয়া যায়নি।",
+      alternates: { canonical: `${siteUrl}/product/${encodeURIComponent(slug)}` },
+      robots: { index: false, follow: false },
     };
   }
 
-  const {
-    title,
-    description,
-    seoDescription,
-    seoKeyWord,
-    mainImage,
-    category,
-    regularPrice,
-    discountPrice,
-    id,
-    thumbnail,
-  } = data;
-  const primaryImage = thumbnail?.name || mainImage;
-  const imageUrl =
-    cloudinaryMainImage(primaryImage, 800, 800) ||
-    `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
-
-  const ogImageUrl =
-    convertImageToOG_cloudinary(
-      cloudinaryMainImage(primaryImage, 1200, 630),
-      "t_og-image-width-convert",
-    ) || `${process.env.NEXT_PUBLIC_SITE_URL}/images/site_logo_og.png`;
-
-  const price = new Intl.NumberFormat("en-BD", {
-    style: "currency",
-    currency: "BDT",
-  }).format(Number(discountPrice));
-
-  const availability = "in stock"; // Ensure this field is included and valid
-  const brandName = data.brand || process.env.NEXT_PUBLIC_NEXT_SHOP_NAME;
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
+  const product = result.data;
+  const priceLabel = seo.lowestPrice
+    ? `৳${new Intl.NumberFormat("bn-BD", { maximumFractionDigits: 2 }).format(seo.lowestPrice)}`
+    : "";
+  const title = compact(
+    [product.title, priceLabel, product.category?.name].filter(Boolean).join(" - "),
+    65,
+  );
+  const description = compact(seo.description, 160);
+  const keywords = Array.from(
+    new Set(
+      [
+        product.title,
+        product.category?.name,
+        ...String(product.seoKeyWord || "").split(","),
+      ]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean),
+    ),
+  );
 
   return {
-    title: `${title} - মাত্র ${price} টাকায়`,
-    description:
-      seoDescription ||
-      description ||
-      `${title} is a top-quality product from ${category?.name}. Order now at the best price!.`,
-    keywords: [
-      seoKeyWord,
-      title,
-      category?.name,
-      "Buy online",
-      "Affordable price",
-      "Best quality products",
-    ],
-
-    openGraph: {
-      title: `${title} - মাত্র ${price} টাকায়`,
-      description: seoDescription || htmlToText(description),
-      url,
-      images: [
-        {
-          url: ogImageUrl, // 1200x630 for OG image
-          // width: 800,
-          // height: 800,
-          alt: title,
-        },
-      ],
-      product: {
-        brand: brandName,
-        availability: "in stock",
-        condition: "new",
-        retailer_item_id: id || "1111", // Ensure 'id' is being passed correctly here
-        item_group_id: category?.name,
-        price: {
-          amount: price,
-          currency: "BDT",
-        },
+    title,
+    description,
+    keywords,
+    alternates: { canonical: seo.url },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
       },
     },
-    additionalMetaTags: [
-      {
-        property: "product:price:amount",
-        content: discountPrice,
-      },
-      {
-        property: "product:price:currency",
-        content: "BDT",
-      },
-    ],
+    openGraph: {
+      title,
+      description,
+      url: seo.url,
+      siteName: identity.name,
+      type: "website",
+      locale: "bn_BD",
+      images: seo.images.slice(0, 4).map((url, index) => ({
+        url,
+        alt: index === 0 ? product.title : `${product.title} - ছবি ${index + 1}`,
+      })),
+    },
     twitter: {
       card: "summary_large_image",
-      title: `${title} - Buy Online at ${price} TK`,
-      description:
-        seoDescription ||
-        description ||
-        `${title} is a premium product available for purchase.`,
-      images: [
-        {
-          url: ogImageUrl, // 1200x630 for OG image
-          alt: title,
-        },
-      ],
-    },
-    robots: "index, follow",
-    alternates: {
-      canonical: url,
+      title,
+      description,
+      images: [seo.images[0]],
     },
     other: {
-      "product:price:amount": price,
-      "product:price:currency": "BDT",
-      "product:availability": "in stock",
-      "product:brand": brandName,
-      "product:category": category?.name || "General",
-      "product:sku": id || "N/A",
-    },
-    jsonLd: {
-      "@context": "https://schema.org",
-      "@type": "Product",
-      productID: id,
-      name: title,
-      description: htmlToText(description) || `${title}`,
-      url,
-      image: [imageUrl],
-      brand: {
-        "@type": "Brand",
-        name: brandName,
-      },
-      sku: id || "N/A",
-      offers: [
-        {
-          "@type": "Offer",
-          price: price,
-          priceCurrency: "BDT",
-          availability: `https://schema.org/${availability}`,
-          itemCondition: "https://schema.org/NewCondition",
-          url,
-        },
-      ],
-      additionalProperty: [
-        {
-          "@type": "PropertyValue",
-          propertyID: "item_group_id",
-          value: category?.name || "General",
-        },
-      ],
+      ...(seo.lowestPrice && {
+        "product:price:amount": String(seo.lowestPrice),
+        "product:price:currency": "BDT",
+      }),
+      "product:availability": seo.availability,
+      "product:brand": identity.name,
+      ...(product.category?.name && { "product:category": product.category.name }),
     },
   };
 }
 
 export async function generateStaticParams() {
   const { data: products = [] } = await getStorefrontProductSlugs();
-
-  return products.map((product) => ({
-    slug: product.slug,
-  }));
+  return products.map((product) => ({ slug: product.slug }));
 }
 
-export default async function ProductPage({ params }) {
-  const getParams = await params;
-  const { slug } = getParams;
-  const { success, data } = await getStorefrontProductBySlug(slug);
-  if (!success) {
-    return <div>Product could not be loaded.</div>;
-  }
+export default async function ProductPage({ params, searchParams }) {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const { result, seo } = await productContext(slug);
+  if (!result?.success || !seo) notFound();
 
-  // const getProduct = unstable_cache(
-  //   async () => {
-  //     const data = await getProductBySlug(slug);
-  //     return data?.data;
-  //   },
-  //   [slug],
-  //   { revalidate: 60, tags: [`product-${slug}`] }
-  // );
-
-  const {
-    id,
-    title,
-    regularPrice,
-    imageGallery,
-    discountPrice,
-    description,
-    mainImage,
-    thumbnail,
-    gallery,
-    variations,
-    category,
-  } = data || {};
-  const name = category?.name || "General";
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL}/product/${slug}`;
-  const imageUrl =
-    cloudinaryMainImage(thumbnail?.name || mainImage, 800, 800) ||
-    `${process.env.NEXT_PUBLIC_SITE_URL}/default-product-image.png`;
-  const blurDataURL = DEFAULT_BLUR_DATA_URL;
-  //for facebook product schema listing
-  const schema = {
-    "@context": "http://schema.org",
-    "@type": "Product",
-    name: title,
-    description: htmlToText(description),
-    image: imageUrl,
-    url: url,
-    sku: id,
-    brand: "bdmart24",
-    offers: {
-      "@type": "Offer",
-      price: discountPrice || regularPrice,
-      priceCurrency: "BDT",
-      availability: "http://schema.org/InStock",
-    },
+  const selectedSku = String(query?.sku || "").trim();
+  const hasSelectedSku = result.data.variations.some(
+    (variation) => variation.sku === selectedSku,
+  );
+  const data = {
+    ...result.data,
+    initialVariationSku: hasSelectedSku ? selectedSku : null,
   };
-  /// facebook event track
-  const schemaEvent = {
-    content_name: title,
-    content_ids: [id],
-    content_type: "product",
-    content_category: name,
-    value: discountPrice,
-    currency: "BDT",
-  };
-
-  /// google product Listing
-  const schemaGoogle = {
-    "@context": "https://schema.org/",
-    "@type": "Product",
-    name: title,
-    description: htmlToText(description),
-    image: imageUrl,
-    url: discountPrice,
-    sku: id,
-    brand: {
-      "@type": "Brand",
-      name: "BDMART24",
-    },
-
-    offers: {
-      "@type": "Offer",
-      priceCurrency: "BDT",
-      price: discountPrice,
-      itemCondition: "https://schema.org/NewCondition",
-      availability: "https://schema.org/InStock",
-    },
-  };
-
-  // --- Add this line to generate the blur placeholder on the server ---
 
   return (
     <div className="mb-16">
+      <JsonLd data={seo.structuredData} />
       <Breadcrumb
         items={[
-          ...(category?.name
-            ? [
-                {
-                  label: category.name,
-                  href: `/category/${category.fullPath || category.slug}`,
-                },
-              ]
+          ...(data.category?.name
+            ? [{
+                label: data.category.name,
+                href: `/category/${data.category.fullPath || data.category.slug}`,
+              }]
             : []),
-          { label: title },
+          { label: data.title },
         ]}
       />
-      <ProductDataView data={data} blurDataURL={blurDataURL} />
-
-      <Script
-        id="jsonld"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-      />
-
-      <Script
-        id="jsonldforGoogle"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGoogle) }}
-      />
+      <ProductDataView data={data} blurDataURL={DEFAULT_BLUR_DATA_URL} />
     </div>
   );
 }

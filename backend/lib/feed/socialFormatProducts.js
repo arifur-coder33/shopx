@@ -58,7 +58,7 @@ function getCustomLabels(product, variation) {
 }
 
 // ── Main Format Function ──────────────────────────────────────
-export function socialFormatProducts(products) {
+export function socialFormatProducts(products, { siteUrl, brand } = {}) {
   const items = [];
 
   for (const product of products) {
@@ -117,10 +117,13 @@ export function socialFormatProducts(products) {
         additional_image_link: additionalImages.join(","),
 
         // ── Links ─────────────────────────────────────────────
-        link: `${process.env.NEXT_PUBLIC_SITE_URL}/product/${product.slug}?sku=${v.sku}`,
+        link: new URL(
+          `/product/${encodeURIComponent(product.slug)}?sku=${encodeURIComponent(v.sku)}`,
+          `${siteUrl}/`,
+        ).toString(),
 
         // ── Attributes ────────────────────────────────────────
-        brand: process.env.NEXT_SHOP_NAME || "",
+        brand: brand || "",
         category: product.category?.name || "",
         google_product_category: product.google_Category_id || "",
         product_type:

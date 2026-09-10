@@ -3,6 +3,7 @@ import { fireFacebookCAPI } from "@/backend/utils/SocialServerEvent/fireFacebook
 import { fireGoogleServer } from "@/backend/utils/SocialServerEvent/fireGoogleServer";
 import { fireTikTokServer } from "@/backend/utils/SocialServerEvent/fireTikTokServer";
 import { headers } from "next/headers";
+import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
 export async function POST(req) {
   try {
@@ -45,20 +46,12 @@ export async function POST(req) {
     };
 
     // console.log("route", payload);
+    const trackingSettings = await getServerSocialTrackingSettings();
     await Promise.all([
-      fireFacebookCAPI(payload),
-      fireGoogleServer(payload),
-      fireTikTokServer(payload),
+      fireFacebookCAPI(payload, trackingSettings),
+      fireGoogleServer(payload, trackingSettings),
+      fireTikTokServer(payload, trackingSettings),
     ]);
-
-    // await fetch(
-    //   `https://graph.facebook.com/v18.0/${process.env.FB_PIXEL_ID}/events`,
-    //   {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify(payload),
-    //   },
-    // );
 
     return Response.json({ success: true });
   } catch (error) {

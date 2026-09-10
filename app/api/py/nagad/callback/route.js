@@ -21,7 +21,7 @@ const resultUrl = (path, siteUrl, order, transactionId) => {
 
 export async function GET(request) {
   const params = new URL(request.url).searchParams;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl = new URL(request.url).origin;
   const paymentId = params.get("paymentId");
   const paymentReferenceId = params.get("payment_ref_id");
   const providerOrderId = params.get("order_id");

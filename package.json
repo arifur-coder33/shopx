@@ -10,8 +10,7 @@
     "db:provider-backfill": "node prisma/backfill-provider-accounts.js",
     "test:accounting": "node prisma/verify-provider-accounting.js",
     "test:providers": "node prisma/verify-provider-configuration.js",
-    "postinstall": "prisma generate",
-    "postbuild": "next-sitemap"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.2",

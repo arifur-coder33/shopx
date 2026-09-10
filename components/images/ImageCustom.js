@@ -1,7 +1,5 @@
-"use client";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
 
 export default function Imagecustom({
   src, // Image ID
@@ -18,31 +16,6 @@ export default function Imagecustom({
   sizes,
   quality,
 }) {
-  const [isInView, setIsInView] = useState(!!priority);
-  const placeholderRef = useRef(null);
-
-  useEffect(() => {
-    if (priority || isInView) {
-      if (!isInView) setIsInView(true);
-      return;
-    }
-    if (!placeholderRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.unobserve(entry.target);
-        }
-      },
-      { rootMargin: "0px 0px 100px 0px" },
-    );
-    const currentRef = placeholderRef.current;
-    observer.observe(currentRef);
-    return () => {
-      if (currentRef) observer.unobserve(currentRef);
-    };
-  }, [priority, isInView]);
-
   // If using `fill`, use `urlWidthHint` for the URL.
   // If not using `fill`, use the standard `w` prop.
   const widthForUrl = fill ? urlWidthHint : w;
@@ -58,7 +31,7 @@ export default function Imagecustom({
     sizes,
   };
 
-  let imageStyle = {};
+  let imageStyle = typeof style === "object" && style ? { ...style } : {};
   let imageDimensionProps = {};
 
   if (fill) {
@@ -70,27 +43,19 @@ export default function Imagecustom({
     imageStyle.objectFit = objectFit;
   }
 
-  const finalImageClassName = `rounded-md ${imageClassName || ""}`;
-
-  if (priority || isInView) {
-    return (
-      <Image
-        {...commonImageProps}
-        {...imageDimensionProps}
-        style={imageStyle}
-        className={finalImageClassName}
-        loading={priority ? "eager" : "lazy"}
-        alt=""
-        unoptimized={true}
-      />
-    );
-  }
+  const finalImageClassName = `rounded-md ${wrapperClassName || ""} ${
+    typeof style === "string" ? style : ""
+  } ${imageClassName || ""}`;
 
   return (
-    <div
-      ref={placeholderRef}
-      style={{ width: "100%", height: "100%" }}
-      className={`image-placeholder rounded-md bg-surface-muted ${wrapperClassName || ""}`}
-    ></div>
+    <Image
+      {...commonImageProps}
+      {...imageDimensionProps}
+      style={imageStyle}
+      className={finalImageClassName}
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
+      unoptimized
+    />
   );
 }

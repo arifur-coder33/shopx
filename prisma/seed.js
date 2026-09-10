@@ -107,6 +107,76 @@ async function seedFinanceProviders() {
   }
 }
 
+async function seedSocialTrackingSettings() {
+  const existing = await prisma.socialTrackingSetting.findUnique({
+    where: { id: "SOCIAL_TRACKING" },
+  });
+  if (existing) return;
+
+  const secrets = {
+    facebookAccessToken: process.env.FB_ACCESS_TOKEN || "",
+    facebookTestEventCode: process.env.FB_TEST_EVENT_CODE || "",
+    googleAnalyticsSecret: process.env.GOOGLE_ANALYTICS_SECRET || "",
+    tiktokAccessToken: process.env.TT_ACCESS_TOKEN || "",
+  };
+  const populatedSecrets = Object.fromEntries(
+    Object.entries(secrets).filter(([, value]) => value),
+  );
+  let encryptedSecrets = null;
+  if (Object.keys(populatedSecrets).length) {
+    const { encryptProviderCredentials } = await import(
+      "../backend/services/providerCredentialService.js"
+    );
+    encryptedSecrets = encryptProviderCredentials(populatedSecrets);
+  }
+
+  await prisma.socialTrackingSetting.create({
+    data: {
+      id: "SOCIAL_TRACKING",
+      facebookPixelId:
+        process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID ||
+        process.env.FB_PIXEL_ID ||
+        null,
+      googleTagId: process.env.NEXT_PUBLIC_GOOGLE_TAG_ID || null,
+      googleAnalyticsId:
+        process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || null,
+      tiktokPixelId: process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID || null,
+      encryptedSecrets,
+      ...(encryptedSecrets && { secretsUpdatedAt: new Date() }),
+      createdBy: "seed",
+      updatedBy: "seed",
+    },
+  });
+}
+
+async function seedContentPages() {
+  const pages = [
+    {
+      slug: "contact",
+      title: "যোগাযোগ করুন",
+      content: "<p>আমাদের সঙ্গে যোগাযোগের তথ্য এখানে লিখুন।</p>",
+    },
+    {
+      slug: "return-policy",
+      title: "রিটার্ন পলিসি",
+      content: "<p>আপনার প্রতিষ্ঠানের রিটার্ন ও রিফান্ড নীতিমালা এখানে লিখুন।</p>",
+    },
+    {
+      slug: "privacy",
+      title: "প্রাইভেসি পলিসি",
+      content: "<p>গ্রাহকের তথ্য সংগ্রহ, ব্যবহার ও সুরক্ষার নীতিমালা এখানে লিখুন।</p>",
+    },
+  ];
+
+  for (const page of pages) {
+    await prisma.contentPage.upsert({
+      where: { slug: page.slug },
+      update: {},
+      create: { ...page, isPublished: true, createdBy: "seed", updatedBy: "seed" },
+    });
+  }
+}
+
 async function main() {
   console.log("🌱 Running MASTER RBAC seed...");
 
@@ -148,6 +218,9 @@ async function main() {
     "delivery",
     "accounting",
     "provider",
+    "socialTracking",
+    "siteSetting",
+    "contentPage",
   ];
 
   for (const key of resources) {
@@ -231,6 +304,8 @@ async function main() {
      6️⃣ MONEY ACCOUNTS + PROVIDERS
   ====================== */
   await seedFinanceProviders();
+  await seedSocialTrackingSettings();
+  await seedContentPages();
 
   console.log("✅ MASTER seed completed successfully");
 }

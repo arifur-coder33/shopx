@@ -12,32 +12,36 @@ export default function Drawer({
   };
 
   return (
-    <div className="">
+    <div aria-hidden={!isOpen}>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-red-500 dark:bg-slate-950  dark:bg-opacity-50 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-[1px] transition-opacity duration-300 ease-out ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={toggleDrawer}
-      ></div>
+      />
 
       {/* Drawer Content */}
 
       <div
-        className={`fixed right-0 top-4 w-80   h-screen  z-50 transform transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "translate-x-96"
+        className={`fixed inset-y-0 right-0 z-50 h-dvh w-80 max-w-[calc(100vw-1rem)] transform-gpu transition-transform duration-300 ease-out will-change-transform ${
+          isOpen ? "translate-x-0" : "translate-x-full"
         }`}
+        role="dialog"
+        aria-modal="true"
       >
         <div
-          className={`   h-[calc(100vh_-_20px)]  bg-slate-100   dark:bg-slate-900 shadow-lg rounded-md dark:shadow-white`}
+          className="h-full overflow-hidden bg-surface shadow-2xl"
         >
           <button
+            type="button"
+            aria-label="বন্ধ করুন"
             onClick={toggleDrawer}
-            className="absolute -top-2 -left-2 bg-red-500 hover:bg-red-600 text-2xl w-8 h-8 rounded-full focus:outline-none text-white"
+            className="absolute left-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-danger text-xl text-white transition-opacity hover:opacity-90 focus:outline-none"
           >
             ✗
           </button>
-          <div className="p-2 h-full">
+          <div className="h-full overflow-y-auto p-2 pt-14">
             {/* <h2 className="text-xl font-bold border-b-2 text-slate-900 dark:text-slate-200 tracking-wider"><KalapanaFont>{title}</KalapanaFont></h2> */}
 
             {/* Add your drawer content here */}

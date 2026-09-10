@@ -1,5 +1,7 @@
 "use server";
 
+import { getSiteUrl } from "@/lib/siteUrl";
+
 /**
  * SSLCommerz hosted payment adapter.
  * Client credentials are supplied by the encrypted provider configuration;
@@ -21,8 +23,7 @@ export async function initiateSSLcommerzPayment({
     throw new Error("SSLCommerz credentials are not configured on the server.");
   }
   const transactionId = `TXN_${payment.id}_${Date.now()}`;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!siteUrl) throw new Error("Site URL is not configured.");
+  const siteUrl = await getSiteUrl();
   const data = {
     store_id: storeId,
     store_passwd: storePassword,

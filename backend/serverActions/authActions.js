@@ -12,6 +12,7 @@ import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
 import { getAuthData } from "../utils/hasPermission";
 import { createOTPToken, verifyOTPToken } from "../utils/otp";
+import { getSiteUrl } from "@/lib/siteUrl";
 export async function GetUserList(params) {
   return getListData({
     prisma,
@@ -310,7 +311,7 @@ export async function sendResetEmail({ formData }) {
     expiresIn: "15m",
   });
 
-  const link = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${token}`;
+  const link = `${await getSiteUrl()}/reset-password?token=${encodeURIComponent(token)}`;
 
   const html = `
     <h2>Password Reset</h2>

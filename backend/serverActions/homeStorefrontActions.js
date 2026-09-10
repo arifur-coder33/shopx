@@ -83,6 +83,7 @@ export async function getHomeStorefrontData() {
           name: true,
           slug: true,
           fullPath: true,
+          parentCategoryId: true,
           thumbnail: { select: { name: true } },
         },
         orderBy: { name: "asc" },

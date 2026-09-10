@@ -53,3 +53,6 @@ export default function AuthLayout({ children }) {
     </>
   );
 }
+export const metadata = {
+  robots: { index: false, follow: false, nocache: true },
+};

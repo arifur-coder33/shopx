@@ -1,9 +1,16 @@
 import { getProductsForFeed } from "@/backend/lib/feed/getProductsForFeed";
 import { socialFormatProducts } from "@/backend/lib/feed/socialFormatProducts";
+import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 
-export async function GET() {
-  const products = await getProductsForFeed();
-  const items = socialFormatProducts(products);
+export async function GET(request) {
+  const [products, identity] = await Promise.all([
+    getProductsForFeed(),
+    getPublicSiteIdentity(),
+  ]);
+  const items = socialFormatProducts(products, {
+    siteUrl: new URL(request.url).origin,
+    brand: identity.name,
+  });
 
   const csvHeaders = [
     "sku_id",

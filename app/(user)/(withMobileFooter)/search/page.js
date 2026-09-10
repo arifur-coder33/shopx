@@ -1,6 +1,11 @@
 import { searchProducts } from "@/backend/serverActions/productActions";
 import ProductCard from "@/components/products/ProductCard";
 
+export const metadata = {
+  title: "পণ্য খুঁজুন",
+  robots: { index: false, follow: true },
+};
+
 export default async function SearchPage({ searchParams }) {
   const rawQuery = searchParams.q || "";
 

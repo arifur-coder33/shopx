@@ -1,7 +1,14 @@
 import { FB_MAP } from "@/lib/SocialEventTracking/facebook";
 import { hash } from "@/lib/SocialEventTracking/hash";
+import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
-export async function fireFacebookCAPI(data) {
+export async function fireFacebookCAPI(data, configuredSettings) {
+  const settings =
+    configuredSettings || (await getServerSocialTrackingSettings());
+  const pixelId = settings.facebookPixelId;
+  if (!pixelId || !settings.facebookAccessToken) {
+    return { skipped: true, reason: "Facebook CAPI is not configured." };
+  }
   // 🔧 normalize helpers
   const normalizeEmail = (email) => email?.trim().toLowerCase();
 
@@ -57,19 +64,18 @@ export async function fireFacebookCAPI(data) {
       }),
     },
   };
-  console.log("fbdata", fbdata);
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v18.0/${process.env.FB_PIXEL_ID}/events`,
+      `https://graph.facebook.com/v18.0/${pixelId}/events`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           data: [fbdata],
-          access_token: process.env.FB_ACCESS_TOKEN,
+          access_token: settings.facebookAccessToken,
           test_event_code:
             process.env.NODE_ENV === "development"
-              ? process.env.FB_TEST_EVENT_CODE
+              ? settings.facebookTestEventCode || undefined
               : undefined,
         }),
       },
@@ -82,7 +88,9 @@ export async function fireFacebookCAPI(data) {
     if (!res.ok) {
       // console.error("FB CAPI Error:", json);
     }
+    return { success: res.ok, data: json };
   } catch (err) {
     // console.error("FB CAPI Fetch Failed:", err);
+    return { success: false };
   }
 }

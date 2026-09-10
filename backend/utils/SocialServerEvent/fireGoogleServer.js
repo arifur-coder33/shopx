@@ -1,6 +1,12 @@
 import { GOOGLE_MAP } from "@/lib/SocialEventTracking/google";
+import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
-export async function fireGoogleServer(data) {
+export async function fireGoogleServer(data, configuredSettings) {
+  const settings =
+    configuredSettings || (await getServerSocialTrackingSettings());
+  if (!settings.googleAnalyticsId || !settings.googleAnalyticsSecret) {
+    return { skipped: true, reason: "Google server tracking is not configured." };
+  }
   const client_id = data.user.gclid || `${Date.now()}.${Math.random()}`;
 
   const payload = {
@@ -30,13 +36,13 @@ export async function fireGoogleServer(data) {
       },
     ],
   };
-  console.log("google payload", payload);
-  await fetch(
-    `https://www.google-analytics.com/mp/collect?measurement_id=${process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID}&api_secret=${process.env.GOOGLE_ANALYTICS_SECRET}`,
+  const response = await fetch(
+    `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(settings.googleAnalyticsId)}&api_secret=${encodeURIComponent(settings.googleAnalyticsSecret)}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
   );
+  return { success: response.ok };
 }

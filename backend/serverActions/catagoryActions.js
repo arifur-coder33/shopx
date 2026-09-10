@@ -80,6 +80,7 @@ export async function getCategoryById(id) {
       select: {
         id: true,
         name: true,
+        description: true,
         slug: true,
 
         thumbnail: {
@@ -690,6 +691,7 @@ export async function getCategoryPageData(slug) {
       select: {
         id: true,
         name: true,
+        description: true,
         slug: true,
         fullPath: true,
         parentCategoryId: true,
@@ -822,6 +824,7 @@ export async function getCategoryPageData(slug) {
       category: {
         id: targetCategory.id,
         name: targetCategory.name,
+        description: targetCategory.description,
         slug: targetCategory.slug,
         fullPath: targetCategory.fullPath,
       },

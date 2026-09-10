@@ -321,7 +321,7 @@ export async function generateInvoicePDF({ actionType, orderData }) {
   // ====================================================================
 
   // ইনভয়েসের লিংক তৈরি (উদাহরণস্বরূপ)
-  const invoiceLink = `${process.env.NEXT_PUBLIC_SITE_URL}/${orderData.orderNo}`;
+  const invoiceLink = `${window.location.origin}/${orderData.orderNo}`;
 
   // QR Code জেনারেট করা
   try {

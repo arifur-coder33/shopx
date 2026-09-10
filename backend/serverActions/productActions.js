@@ -12,6 +12,10 @@ import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { hasPermission } from "../utils/hasPermission";
 import { normalizeText } from "../utils/search";
+import {
+  normalizeProductVideos,
+  parseProductVideosInput,
+} from "../utils/productVideos";
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
     return [];
@@ -104,7 +108,6 @@ export async function createProductActions(formData) {
     } else if (Array.isArray(data.variations)) {
       parsedProductVariations = data.variations;
     }
-
     // --- Prisma Transaction ---
     const result = await prisma.$transaction(async (tx) => {
       // --- Slug Generation ---
@@ -323,6 +326,7 @@ export async function createProductAction(formData) {
     } else if (Array.isArray(data.variations)) {
       parsedProductVariations = data.variations;
     }
+    const productVideos = parseProductVideosInput(data.videos, data.videoUrl);
 
     // --- Prisma Transaction ---
     const result = await prisma.$transaction(async (tx) => {
@@ -357,6 +361,7 @@ export async function createProductAction(formData) {
       const {
         gallery,
         variations,
+        videos,
         regularPrice,
         discountPrice,
         stock,
@@ -405,7 +410,9 @@ export async function createProductAction(formData) {
         ),
         allowOutOfStockOrder: Boolean(data?.allowOutOfStockOrder === "on" || data?.allowOutOfStockOrder === true),
 
-        videoUrl: data?.videoUrl || null,
+        // Keep the first URL in the legacy column while all titled videos live
+        // in ProductVideo. This keeps older integrations backward-compatible.
+        videoUrl: productVideos[0]?.url || null,
         gender: data?.gender || null,
         ageGroup: data?.ageGroup || null,
 
@@ -418,6 +425,12 @@ export async function createProductAction(formData) {
       const product = await tx.product.create({
         data: preparedData,
       });
+
+      if (productVideos.length) {
+        await tx.productVideo.createMany({
+          data: productVideos.map((video) => ({ ...video, productId: product.id })),
+        });
+      }
 
       // 🔹 Insert product gallery separately
       if (mediaIds.length > 0) {
@@ -538,6 +551,7 @@ export async function getProductById(id) {
             media: { select: { id: true, name: true } },
           },
         },
+        videos: { orderBy: { sortOrder: "asc" } },
         // [UPDATED] New include structure for variations
         variations: {
           include: {
@@ -582,6 +596,7 @@ export async function getProductById(id) {
         ? { id: product.thumbnail.id, name: product.thumbnail.name }
         : null,
       gallery: transformedGallery,
+      videos: normalizeProductVideos(product.videos, product.videoUrl),
       variations: transformedVariations,
     };
 
@@ -604,6 +619,7 @@ export const getProducts = async () => {
             media: { select: { id: true, name: true } },
           },
         },
+        videos: { orderBy: { sortOrder: "asc" } },
         // [UPDATED] New include structure for variations
         variations: {
           include: {
@@ -1076,6 +1092,7 @@ const getProductBySlugCached = cache(async (slug) => {
             },
           },
         },
+        videos: { orderBy: { sortOrder: "asc" } },
         variations: {
           include: {
             stocks: { select: { available: true } },
@@ -1100,6 +1117,7 @@ const getProductBySlugCached = cache(async (slug) => {
       ...data,
 
       gallery: data.gallery.map((g) => g.media),
+      videos: normalizeProductVideos(data.videos, data.videoUrl),
       variations: data.variations.map((variation) => ({ ...variation, stock: variation.stocks.reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0) })),
     };
 
@@ -1151,6 +1169,7 @@ export async function updateProductActions({ id: productId, formData }) {
       }
     }
     const hasSubmittedVariations = submittedVariationsData.length > 0;
+    const productVideos = parseProductVideosInput(data.videos, data.videoUrl);
 
     // --- Robust Number Parsing Helper ---
     const parseOptionalNumber = (value, defaultValue = null) => {
@@ -1178,7 +1197,7 @@ export async function updateProductActions({ id: productId, formData }) {
       const productUpdateData = {
         title: data.title,
         slug: newSlug,
-        videoUrl: data.videoUrl || null,
+        videoUrl: productVideos[0]?.url || null,
         description: data.description || null,
         categoryId: data.category || null,
         canonicalUrl: data.canonicalUrl || null,
@@ -1206,6 +1225,16 @@ export async function updateProductActions({ id: productId, formData }) {
         where: { id: productId },
         data: productUpdateData,
       });
+
+      await tx.productVideo.deleteMany({ where: { productId: updatedProduct.id } });
+      if (productVideos.length) {
+        await tx.productVideo.createMany({
+          data: productVideos.map((video) => ({
+            ...video,
+            productId: updatedProduct.id,
+          })),
+        });
+      }
 
       // Step 5: Update Gallery (Wipe and Replace)
       await tx.productGallery.deleteMany({
@@ -1543,6 +1572,7 @@ export async function updateProductAction({ id: productId, formData }) {
       }
     }
     const hasSubmittedVariations = submittedVariationsData.length > 0;
+    const productVideos = parseProductVideosInput(data.videos, data.videoUrl);
 
     const parseOptionalNumber = (value, defaultValue = null) => {
       if (value === undefined || value === null || String(value).trim() === "")
@@ -1583,7 +1613,7 @@ export async function updateProductAction({ id: productId, formData }) {
         thumbnail: data.thumbnail
           ? { connect: { id: data?.thumbnail } }
           : existingProduct.thumbnailId,
-        videoUrl: data.videoUrl || null,
+        videoUrl: productVideos[0]?.url || null,
         seoKeyWord: data.seoKeyWord || null,
         seoDescription: data.seoDescription || null,
 
@@ -1599,6 +1629,18 @@ export async function updateProductAction({ id: productId, formData }) {
         where: { id: productId },
         data: productUpdateData,
       });
+
+      await tx.productVideo.deleteMany({
+        where: { productId: updatedProduct.id },
+      });
+      if (productVideos.length) {
+        await tx.productVideo.createMany({
+          data: productVideos.map((video) => ({
+            ...video,
+            productId: updatedProduct.id,
+          })),
+        });
+      }
 
       await tx.productGallery.deleteMany({
         where: { productId: updatedProduct.id },

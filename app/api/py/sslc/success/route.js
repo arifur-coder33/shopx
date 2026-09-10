@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 async function handleSSL(req) {
   let formData;
   let resolvedOrder;
+  const siteUrl = new URL(req.url).origin;
 
   if (req.method === "POST") {
     formData = await req.formData();
@@ -24,7 +25,7 @@ async function handleSSL(req) {
 
   if (!val_id) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/payment/failed`,
+      `${siteUrl}/payment/failed`,
       303,
     );
   }
@@ -83,7 +84,7 @@ async function handleSSL(req) {
     firePurchaseServer({ orderNo: payment.order.orderNo }).catch(() => undefined);
     const successUrl = new URL(
       "/payment/success",
-      process.env.NEXT_PUBLIC_SITE_URL,
+      siteUrl,
     );
     if (tran_id) successUrl.searchParams.set("tran_id", tran_id);
     successUrl.searchParams.set("o", payment.order.orderNo);
@@ -93,7 +94,7 @@ async function handleSSL(req) {
     console.error("SSLCommerz success callback failed:", error?.message || error);
     const failedUrl = new URL(
       "/payment/failed",
-      process.env.NEXT_PUBLIC_SITE_URL,
+      siteUrl,
     );
     const orderNo = resolvedOrder?.orderNo || callbackOrderNo;
     const phoneNumber = resolvedOrder?.phoneNumber;

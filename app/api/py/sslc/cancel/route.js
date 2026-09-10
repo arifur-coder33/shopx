@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 async function handleCancel(req) {
   let formData;
+  const siteUrl = new URL(req.url).origin;
 
   if (req.method === "POST") {
     formData = await req.formData();
@@ -35,7 +36,7 @@ async function handleCancel(req) {
     });
   }
 
-  const cancelUrl = new URL("/payment/cancel", process.env.NEXT_PUBLIC_SITE_URL);
+  const cancelUrl = new URL("/payment/cancel", siteUrl);
   const orderNo = payment?.order?.orderNo || formData.get("value_a");
   const phoneNumber = payment?.order?.phoneNumber || formData.get("value_b");
   if (orderNo) cancelUrl.searchParams.set("o", orderNo);

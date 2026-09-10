@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { cache } from "react";
+import { normalizeProductVideos } from "@/backend/utils/productVideos";
 
 export const getStorefrontProductBySlug = cache(async (slug) => {
   try {
@@ -9,6 +10,17 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
         category: { select: { name: true, slug: true, fullPath: true } },
         thumbnail: { select: { name: true, id: true } },
         gallery: { select: { media: { select: { id: true, name: true } } } },
+        videos: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            header: true,
+            url: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         variations: {
           include: {
             stocks: { select: { available: true } },
@@ -34,6 +46,7 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
       data: {
         ...data,
         gallery: data.gallery.map((item) => item.media),
+        videos: normalizeProductVideos(data.videos, data.videoUrl),
         variations: data.variations.map((variation) => ({
           ...variation,
           stock: variation.stocks.reduce(

@@ -1,8 +1,14 @@
 import { TT_MAP } from "@/lib/SocialEventTracking/tiktok";
+import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
-export async function fireTikTokServer(data) {
+export async function fireTikTokServer(data, configuredSettings) {
+  const settings =
+    configuredSettings || (await getServerSocialTrackingSettings());
+  if (!settings.tiktokPixelId || !settings.tiktokAccessToken) {
+    return { skipped: true, reason: "TikTok server tracking is not configured." };
+  }
   const payload = {
-    pixel_code: process.env.TT_PIXEL_ID,
+    pixel_code: settings.tiktokPixelId,
 
     event: TT_MAP[data.event] || data.event,
 
@@ -32,14 +38,13 @@ export async function fireTikTokServer(data) {
     },
   };
 
-  console.log("tt payload", payload.properties.contents);
   const res = await fetch(
     "https://business-api.tiktok.com/open_api/v1.3/event/track/",
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Access-Token": process.env.TT_ACCESS_TOKEN,
+        "Access-Token": settings.tiktokAccessToken,
       },
       body: JSON.stringify(payload),
     },
@@ -50,4 +55,5 @@ export async function fireTikTokServer(data) {
   if (!res.ok) {
     // console.error("TikTok CAPI Error:", json);
   }
+  return { success: res.ok, data: json };
 }
