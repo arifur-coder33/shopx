@@ -54,6 +54,9 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
         .map((photo) => [photo.id || photo.name, photo]),
     ).values(),
   );
+  const poster = photos[0]?.name
+    ? cloudinaryDetailImage(photos[0].name, 1200)
+    : undefined;
 
   if (videoItems.length === 0 && photos.length === 0) return null;
 
@@ -73,6 +76,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
                 controls
                 preload="none"
                 playsInline
+                poster={poster}
               >
                 আপনার ব্রাউজার ভিডিওটি চালাতে পারছে না।
               </video>
@@ -107,7 +111,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
               >
                 <Image
                   src={cloudinaryDetailImage(photo.name, 1200)}
-                  alt={`${title} - ছবি ${index + 1}`}
+                  alt={photo.seoAlt || `${title} - বিস্তারিত ছবি ${index + 1}`}
                   fill
                   sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 50vw, 600px"
                   className="object-contain"

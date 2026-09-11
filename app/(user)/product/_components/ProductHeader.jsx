@@ -16,14 +16,81 @@ async function ProductEmiAvailability() {
 
 export default function ProductHeader({ data, imageProps }) {
   const { title } = data;
+  const variations = (data.variations || []).map((variation) => ({
+    id: variation.id,
+    sku: variation.sku,
+    weight: variation.weight,
+    regularPrice: variation.regularPrice,
+    discountPrice: variation.discountPrice,
+    stock: variation.stock,
+    thumbnailId: variation.thumbnailId,
+    thumbnail: variation.thumbnail
+      ? { id: variation.thumbnail.id, name: variation.thumbnail.name }
+      : null,
+    combinations: (variation.combinations || []).map((combination) => ({
+      variationName: {
+        id: combination.variationName?.id,
+        name: combination.variationName?.name,
+      },
+      variationValue: {
+        id: combination.variationValue?.id,
+        value: combination.variationValue?.value,
+      },
+    })),
+  }));
+  const regularPrices = variations
+    .map((variation) => Number(variation.regularPrice))
+    .filter((price) => Number.isFinite(price) && price > 0);
+  const salePrices = variations
+    .map((variation) => Number(variation.discountPrice))
+    .filter((price) => Number.isFinite(price) && price > 0);
+  const regularPrice = regularPrices.length ? Math.min(...regularPrices) : 0;
+  const discountPrice = salePrices.length ? Math.min(...salePrices) : 0;
+  const clientData = {
+    id: data.id,
+    title,
+    slug: data.slug,
+    weight: data.weight,
+    hasVariations: Boolean(data.hasVariations),
+    allowOutOfStockOrder: Boolean(data.allowOutOfStockOrder),
+    stock: variations[0]?.stock || 0,
+    category: data.category?.name
+      ? { name: data.category.name }
+      : data.category || "Uncategorized",
+    thumbnail: data.thumbnail
+      ? { id: data.thumbnail.id, name: data.thumbnail.name }
+      : null,
+    gallery: (data.gallery || []).map((image) => ({
+      id: image.id,
+      name: image.name,
+    })),
+    videos: (data.videos || []).map((video) => ({
+      id: video.id,
+      header: video.header,
+      url: video.url,
+    })),
+    videoUrl: data.videoUrl,
+    variations,
+  };
+  const wishlistProduct = {
+    id: data.id,
+    slug: data.slug,
+    title,
+    regularPrice,
+    discountPrice:
+      discountPrice > 0 && (!regularPrice || discountPrice < regularPrice)
+        ? discountPrice
+        : 0,
+    thumbnail: clientData.thumbnail,
+    hasVariations: clientData.hasVariations,
+  };
 
   return (
     <>
       <ProductClientShell
         imageProps={imageProps}
-        data={data}
+        data={clientData}
         titleComponent={
-          // The static h1 is created here on the server
           <div className="flex items-start gap-3 border-b border-border pb-3">
             <h1
               key={title}
@@ -31,7 +98,7 @@ export default function ProductHeader({ data, imageProps }) {
             >
               {title}
             </h1>
-            <WishlistButton product={data} />
+            <WishlistButton product={wishlistProduct} />
           </div>
         }
         bottomComponent={

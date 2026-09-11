@@ -63,10 +63,10 @@ export default function ProductImageGallery({
     };
     addMedia(mainImage, "image", title);
     gallery.forEach((img, i) =>
-      addMedia(img, "image", `${title} - image ${i + 2}`),
+      addMedia(img, "image", img.seoAlt || `${title} - বিস্তারিত ছবি ${i + 2}`),
     );
     variationsImage.forEach((img) =>
-      addMedia(img, "image", `${title} - variation`),
+      addMedia(img, "image", img.seoAlt || `${title} - ভ্যারিয়েশন`),
     );
     videos.forEach((video, index) =>
       addMedia(
@@ -232,7 +232,19 @@ export default function ProductImageGallery({
           onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
           onClick={openModal}
         >
-          <div className={styles.transitionContainer}>
+          <div
+            className={styles.transitionContainer}
+            style={
+              !isVideoActive && imageSrc
+                ? {
+                    backgroundImage: `url(${cloudinaryMainImage(imageSrc, 230, 230)})`,
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "contain",
+                  }
+                : undefined
+            }
+          >
             {isVideoActive && !isModalOpen ? (
               loadVideoPlayer ? (
                 <VideoPlayer
@@ -244,7 +256,7 @@ export default function ProductImageGallery({
                 <div className={styles.videoThumbnail}>
                   <Image
                     src={cloudinaryMainImage(mainImage.name, 600, 600)}
-                    alt="Video thumbnail"
+                    alt={`${activeMedia.alt} - ভিডিও থাম্বনেইল`}
                     fill
                     style={{ objectFit: "cover" }}
                   />
@@ -267,7 +279,7 @@ export default function ProductImageGallery({
               <Image
                 src={cloudinaryMainImage(imageSrc, 600, 600)}
                 fill
-                alt={imageProps.alt}
+                alt={activeMedia.alt || imageProps.alt}
                 priority={activeIndex === 0}
                 fetchPriority={activeIndex === 0 ? "high" : undefined}
                 sizes="(max-width:768px)100vw,40vw"
@@ -314,7 +326,7 @@ export default function ProductImageGallery({
                   <div className={styles.videoThumbnail}>
                     <Image
                       src={cloudinaryMainImage(mainImage.name, 60, 60)}
-                      alt="Video thumbnail"
+                      alt={`${media.alt} - ভিডিও থাম্বনেইল`}
                       width={60}
                       height={60}
                       className={styles.thumbnailImage}

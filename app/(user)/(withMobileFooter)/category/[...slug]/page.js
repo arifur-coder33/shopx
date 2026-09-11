@@ -9,6 +9,8 @@ import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService"
 import { getSiteUrl } from "@/lib/siteUrl";
 import { notFound } from "next/navigation";
 export const revalidate = 60;
+export const dynamic = "force-static";
+export const dynamicParams = true;
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const currentSlug = slug?.at(-1);

@@ -4,7 +4,7 @@
 import KalapanaFont from "@/components/KalapanaFont";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import BuyNowSection from "./BuyNowSection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
@@ -14,9 +14,20 @@ export default function ProductInfoClient({
   setActiveImageId,
 }) {
   const { variations, hasVariations } = data;
-  const [selectedVariation, setSelectedVariation] = useState(() =>
-    variations.find((variation) => variation.sku === data.initialVariationSku) || null,
-  );
+  const [selectedVariation, setSelectedVariation] = useState(null);
+
+  // Keep the route statically generated while still supporting the SEO variant
+  // URLs (`?sku=...`). Reading the query after hydration avoids a server request
+  // dependency and preserves identical server/client initial markup.
+  useEffect(() => {
+    const sku = new URLSearchParams(window.location.search).get("sku");
+    if (!sku) return;
+    const variation = (variations || []).find((item) => item.sku === sku);
+    if (variation) {
+      setSelectedVariation(variation);
+      setActiveImageId(variation?.thumbnail?.id || variation?.thumbnailId);
+    }
+  }, [setActiveImageId, variations]);
 
   const onVariationChangeHandler = useCallback(
     (variation) => {

@@ -7,9 +7,10 @@ import { useEffect } from "react";
 
 export default function ViewProductEvent({ product }) {
   const { data: session } = useSession();
+  const variation = product?.variations?.[0];
   const price =
-    product?.variations[0].discountPrice ||
-    product?.variations[0].regularPrice ||
+    variation?.discountPrice ||
+    variation?.regularPrice ||
     0;
   useEffect(() => {
     trackEvent({
@@ -18,7 +19,7 @@ export default function ViewProductEvent({ product }) {
       src: `/product/${product?.slug}`,
       items: [
         {
-          id: product?.variations[0].sku,
+          id: variation?.sku || product?.id,
           quantity: 1,
           price: price,
           productName: product?.title,

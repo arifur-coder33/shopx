@@ -5,6 +5,7 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import { Suspense } from "react";
 
 export const revalidate = 60;
+export const dynamic = "force-static";
 export async function generateMetadata() {
   const siteUrl = await getSiteUrl();
   const {

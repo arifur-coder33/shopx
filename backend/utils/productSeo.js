@@ -68,6 +68,21 @@ const variationProperty = (name) => {
   return null;
 };
 
+const variationField = (name) => {
+  const property = variationProperty(name);
+  return property?.split("/").pop() || null;
+};
+
+const variationAttributes = (variation) =>
+  Object.fromEntries(
+    (variation?.combinations || [])
+      .map((item) => [
+        variationField(item?.variationName?.name),
+        clean(item?.variationValue?.value),
+      ])
+      .filter(([field, value]) => field && value),
+  );
+
 const videoSource = (rawUrl) => {
   try {
     const url = new URL(rawUrl);
@@ -90,6 +105,36 @@ const videoSource = (rawUrl) => {
   }
 };
 
+const isoDate = (value) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date(0).toISOString() : date.toISOString();
+};
+
+export function productSeoVideos(product, siteUrl) {
+  const images = productSeoImages(product, siteUrl);
+  const description =
+    productPlainText(product?.seoDescription || product?.description) ||
+    `${product?.title || "পণ্য"} সম্পর্কে বিস্তারিত ভিডিও।`;
+
+  return (product?.videos || [])
+    .map((video, index) => {
+      const source = videoSource(video.url);
+      if (!source) return null;
+      return {
+        title: clean(video.header) || `${product.title} ভিডিও ${index + 1}`,
+        thumbnail_loc: images[0],
+        description: `${clean(video.header) || product.title} — ${description}`.slice(0, 300),
+        ...(source.contentUrl && { content_loc: source.contentUrl }),
+        ...(source.embedUrl && { player_loc: source.embedUrl }),
+        publication_date: isoDate(
+          video.createdAt || product.updatedAt || product.createdAt,
+        ),
+        family_friendly: "yes",
+      };
+    })
+    .filter(Boolean);
+}
+
 export function buildProductSeo({ product, siteUrl, siteName }) {
   const url = `${siteUrl}/product/${encodeURIComponent(product.slug)}`;
   const description =
@@ -103,13 +148,12 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
   const highestPrice = variations.length
     ? Math.max(...variations.map((variation) => variation.price))
     : null;
-  const brand = { "@type": "Brand", name: siteName };
   const seller = { "@type": "Organization", name: siteName, url: `${siteUrl}/` };
   const productId = clean(product.productCode || product.id);
 
   const offerFor = (variation) => ({
     "@type": "Offer",
-    url: `${url}?sku=${encodeURIComponent(variation.sku)}`,
+    url: `${url}?sku=${encodeURIComponent(String(variation.sku || ""))}`,
     priceCurrency: "BDT",
     price: variation.price,
     itemCondition: "https://schema.org/NewCondition",
@@ -127,9 +171,9 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
         url,
         productGroupID: productId,
         image: images,
-        brand,
         ...(product.category?.name && { category: product.category.name }),
-        variesBy: Array.from(
+        ...(() => {
+          const variesBy = Array.from(
           new Set(
             variations.flatMap((variation) =>
               variation.combinations
@@ -137,7 +181,9 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
                 .filter(Boolean),
             ),
           ),
-        ),
+          );
+          return variesBy.length ? { variesBy } : {};
+        })(),
         hasVariant: variations.map((variation) => ({
           "@type": "Product",
           name: variation.label
@@ -145,9 +191,13 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
             : `${product.title} - ${variation.sku}`,
           sku: variation.sku,
           image: variation.thumbnail?.name
-            ? [cloudinaryDetailImage(variation.thumbnail.name, 1200), ...images]
+            ? Array.from(new Set([
+                cloudinaryDetailImage(variation.thumbnail.name, 1200),
+                ...images,
+              ]))
             : images,
-          url: `${url}?sku=${encodeURIComponent(variation.sku)}`,
+          url: `${url}?sku=${encodeURIComponent(String(variation.sku || ""))}`,
+          ...variationAttributes(variation),
           offers: offerFor(variation),
         })),
       }
@@ -159,7 +209,6 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
         url,
         image: images,
         sku: variations[0]?.sku || productId,
-        brand,
         ...(product.category?.name && { category: product.category.name }),
         ...(variations[0] && { offers: offerFor(variations[0]) }),
       };
@@ -179,22 +228,17 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
     { name: product.title, url },
   ];
 
-  const videos = (product.videos || [])
-    .map((video, index) => {
-      const source = videoSource(video.url);
-      if (!source) return null;
-      return {
+  const videos = productSeoVideos(product, siteUrl).map((video, index) => ({
         "@type": "VideoObject",
         "@id": `${url}#video-${index + 1}`,
-        name: clean(video.header) || `${product.title} ভিডিও ${index + 1}`,
-        description: `${clean(video.header) || product.title} — ${description}`.slice(0, 300),
-        thumbnailUrl: [images[0]],
-        uploadDate: new Date(video.createdAt || product.updatedAt || product.createdAt).toISOString(),
-        ...source,
+        name: video.title,
+        description: video.description,
+        thumbnailUrl: [video.thumbnail_loc],
+        uploadDate: video.publication_date,
+        ...(video.content_loc && { contentUrl: video.content_loc }),
+        ...(video.player_loc && { embedUrl: video.player_loc }),
         mainEntityOfPage: url,
-      };
-    })
-    .filter(Boolean);
+      }));
 
   return {
     url,

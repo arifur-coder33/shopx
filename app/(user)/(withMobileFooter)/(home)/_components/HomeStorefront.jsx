@@ -28,9 +28,8 @@ export default async function HomeStorefront() {
     .filter((category) => !category.parentCategoryId)
     .slice(0, 12);
   const sameAs = [contact.facebookPage, contact.messenger].filter(Boolean);
-  const categoryItems = (topCategories.length
-    ? topCategories
-    : result.categories.slice(0, 12)
+  const categoryItems = (
+    topCategories.length ? topCategories : result.categories.slice(0, 12)
   ).map((category, index) => ({
     "@type": "ListItem",
     position: index + 1,
@@ -73,13 +72,15 @@ export default async function HomeStorefront() {
         ...(sameAs.length && { sameAs }),
       },
       ...(categoryItems.length
-        ? [{
-            "@type": "ItemList",
-            "@id": `${siteUrl}/#top-categories`,
-            name: "Top categories",
-            numberOfItems: categoryItems.length,
-            itemListElement: categoryItems,
-          }]
+        ? [
+            {
+              "@type": "ItemList",
+              "@id": `${siteUrl}/#top-categories`,
+              name: "Top categories",
+              numberOfItems: categoryItems.length,
+              itemListElement: categoryItems,
+            },
+          ]
         : []),
     ],
   };
@@ -87,12 +88,7 @@ export default async function HomeStorefront() {
   return (
     <>
       <JsonLd data={structuredData} />
-      <section className="mt-4 rounded-2xl border border-border bg-surface px-4 py-4 shadow-sm sm:px-6">
-        <h1 className="text-2xl font-black text-text sm:text-3xl">{identity.name}</h1>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-text-muted sm:text-base">
-          {identity.seoDescription}
-        </p>
-      </section>
+
       <ShopByCategory categories={result.categories} />
 
       {result.featured.products.length > 0 && (
@@ -119,7 +115,10 @@ export default async function HomeStorefront() {
 
       {result.regular.products.length > 0 && (
         <section className="mt-7" aria-labelledby="all-products-title">
-          <h2 id="all-products-title" className="mb-3 text-xl font-bold sm:text-2xl">
+          <h2
+            id="all-products-title"
+            className="mb-3 text-xl font-bold sm:text-2xl"
+          >
             সকল পণ্য
           </h2>
           <InfiniteProductGrid

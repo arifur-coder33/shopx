@@ -12,6 +12,7 @@ import { notFound } from "next/navigation";
 import ProductDataView from "../_components/ProductDataView";
 
 export const revalidate = 60;
+export const dynamic = "force-static";
 export const dynamicParams = true;
 
 const compact = (value, length) => {
@@ -75,7 +76,7 @@ export async function generateMetadata({ params }) {
   );
 
   return {
-    title,
+    title: { absolute: compact(`${title} | ${identity.name}`, 65) },
     description,
     keywords,
     alternates: { canonical: seo.url },
@@ -114,7 +115,6 @@ export async function generateMetadata({ params }) {
         "product:price:currency": "BDT",
       }),
       "product:availability": seo.availability,
-      "product:brand": identity.name,
       ...(product.category?.name && { "product:category": product.category.name }),
     },
   };
@@ -125,19 +125,11 @@ export async function generateStaticParams() {
   return products.map((product) => ({ slug: product.slug }));
 }
 
-export default async function ProductPage({ params, searchParams }) {
-  const [{ slug }, query] = await Promise.all([params, searchParams]);
+export default async function ProductPage({ params }) {
+  const { slug } = await params;
   const { result, seo } = await productContext(slug);
   if (!result?.success || !seo) notFound();
-
-  const selectedSku = String(query?.sku || "").trim();
-  const hasSelectedSku = result.data.variations.some(
-    (variation) => variation.sku === selectedSku,
-  );
-  const data = {
-    ...result.data,
-    initialVariationSku: hasSelectedSku ? selectedSku : null,
-  };
+  const data = result.data;
 
   return (
     <div className="mb-16">

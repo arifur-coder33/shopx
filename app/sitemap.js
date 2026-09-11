@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/siteUrl";
+import { productSeoImages, productSeoVideos } from "@/backend/utils/productSeo";
 
 export const revalidate = 3600;
 
@@ -27,7 +28,21 @@ export default async function sitemap() {
     const [products, categories, contentPages] = await Promise.all([
       prisma.product.findMany({
         where: { isActive: true },
-        select: { slug: true, updatedAt: true },
+        select: {
+          slug: true,
+          title: true,
+          description: true,
+          seoDescription: true,
+          createdAt: true,
+          updatedAt: true,
+          thumbnail: { select: { name: true } },
+          gallery: { select: { media: { select: { name: true } } } },
+          variations: { select: { thumbnail: { select: { name: true } } } },
+          videos: {
+            orderBy: { sortOrder: "asc" },
+            select: { header: true, url: true, createdAt: true },
+          },
+        },
         orderBy: { updatedAt: "desc" },
       }),
       prisma.category.findMany({
@@ -48,12 +63,20 @@ export default async function sitemap() {
         changeFrequency: "weekly",
         priority: category.fullPath?.includes("/") ? 0.7 : 0.9,
       })),
-      ...products.map((product) => ({
-        url: absolute(`/product/${encodeURIComponent(product.slug)}`),
-        lastModified: product.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.8,
-      })),
+      ...products.map((product) => {
+        const normalizedProduct = {
+          ...product,
+          gallery: product.gallery.map((item) => item.media),
+        };
+        return {
+          url: absolute(`/product/${encodeURIComponent(product.slug)}`),
+          lastModified: product.updatedAt,
+          changeFrequency: "weekly",
+          priority: 0.8,
+          images: productSeoImages(normalizedProduct, siteUrl),
+          videos: productSeoVideos(normalizedProduct, siteUrl),
+        };
+      }),
       ...contentPages.map((page) => ({
         url: absolute(`/${encodeURIComponent(page.slug)}`),
         lastModified: page.updatedAt,

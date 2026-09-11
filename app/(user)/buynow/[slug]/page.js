@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
 import Breadcrumb from "@/components/common/Breadcrumb";
 export const revalidate = 60;
+export const dynamic = "force-static";
 export const dynamicParams = true;
 
 export async function generateStaticParams() {

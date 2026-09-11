@@ -24,9 +24,21 @@ export default function ProductClientShell({
 
   const variationsImage = useMemo(
     () =>
-      variations?.map((variation) => variation?.thumbnail).filter(Boolean) ||
+      variations
+        ?.map((variation) => {
+          if (!variation?.thumbnail) return null;
+          const label = (variation.combinations || [])
+            .map((item) => item?.variationValue?.value)
+            .filter(Boolean)
+            .join(" / ");
+          return {
+            ...variation.thumbnail,
+            seoAlt: label ? `${title} - ${label}` : `${title} - ${variation.sku}`,
+          };
+        })
+        .filter(Boolean) ||
       [],
-    [variations],
+    [title, variations],
   );
   const [activeImageId, setActiveImageId] = useState();
   return (
