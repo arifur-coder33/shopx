@@ -1,8 +1,8 @@
-import HomeStorefront from "./_components/HomeStorefront";
-import HeroSlider from "./_components/HeroSlider";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { Suspense } from "react";
+import HeroSlider from "./_components/HeroSlider";
+import HomeStorefront from "./_components/HomeStorefront";
 
 export const revalidate = 60;
 export const dynamic = "force-static";
@@ -18,15 +18,14 @@ export async function generateMetadata() {
   return {
     title: { absolute: seoTitle },
     description: seoDescription,
-    keywords:
-      `${siteName}, shopping in Bangladesh, online shopping in Bangladesh, মেশিনারি পণ্য, ফ্যাশন পণ্য, ইলেকট্রনিক্স, গ্যাজেট, অনলাইন শপ, ডিসকাউন্ট, machinery products, fashion items, electronics, gadgets, online store`,
+    keywords: `${siteName}, shopping in Bangladesh, online shopping in Bangladesh, মেশিনারি পণ্য, ফ্যাশন পণ্য, ইলেকট্রনিক্স, গ্যাজেট, অনলাইন শপ, ডিসকাউন্ট, machinery products, fashion items, electronics, gadgets, online store`,
     openGraph: {
       title: seoTitle,
       description: seoDescription,
       url: siteUrl,
       type: "website",
       ...(logoUrl && {
-        images: [{ url: logoUrl, width: 512, height: 512, alt: seoTitle }],
+        images: [{ url: logoUrl, width: 1200, height: 630, alt: seoTitle }],
       }),
     },
     twitter: {
