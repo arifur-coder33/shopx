@@ -3,7 +3,6 @@ import { ThemeScript } from "@/components/common/ThemeScript";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import Providers from "@/components/common/Providers";
-import NavigationEffects from "@/components/navigation/NavigationEffects";
 import {
   createSiteAppearanceCss,
   getPublicSiteAppearance,
@@ -81,8 +80,6 @@ export default async function RootLayout({ children }) {
       */}
       <body className="font-sans antialiased theam">
         <NextTopLoader showSpinner={false} color={appearance.primaryColor} />
-        <NavigationEffects />
-
         <Providers>{children}</Providers>
       </body>
     </html>

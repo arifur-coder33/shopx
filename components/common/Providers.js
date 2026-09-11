@@ -19,7 +19,11 @@ const ToastContainer = dynamic(
 
 export default function Providers({ children }) {
   return (
-    <SessionProvider>
+    <SessionProvider
+      refetchInterval={0}
+      refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
+    >
       <CartProvider>
         {/* <ThemeProvider attribute="class" defaultTheme="system" enableSystem> */}
         <ModalProvider>
