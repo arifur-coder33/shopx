@@ -33,13 +33,13 @@ export default function Providers({ children }) {
           {children}
           <ToastContainer
             position="top-right"
-            autoClose={3000}
+            autoClose={4000}
             hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
+            newestOnTop
+            closeOnClick={false}
             rtl={false}
-            pauseOnFocusLoss
-            draggable
+            pauseOnFocusLoss={false}
+            draggable={false}
             pauseOnHover
             theme="light" // or "dark" or "colored"
           />

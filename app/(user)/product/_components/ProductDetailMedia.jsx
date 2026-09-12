@@ -1,5 +1,6 @@
 import { cloudinaryDetailImage } from "@/utils/cloudinaryUrl";
 import Image from "next/image";
+import DeferredVideo from "./DeferredVideo";
 
 function getVideoSource(rawUrl) {
   if (!rawUrl) return null;
@@ -69,28 +70,11 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
             <h2 className="text-xl font-bold sm:text-2xl">{video.header}</h2>
           </div>
           <div className="aspect-video w-full bg-black">
-            {video.source.type === "file" ? (
-              <video
-                className="h-full w-full"
-                src={video.source.src}
-                controls
-                preload="none"
-                playsInline
-                poster={poster}
-              >
-                আপনার ব্রাউজার ভিডিওটি চালাতে পারছে না।
-              </video>
-            ) : (
-              <iframe
-                className="h-full w-full border-0"
-                src={video.source.src}
-                title={`${title} — ${video.header}`}
-                loading="lazy"
-                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
-            )}
+            <DeferredVideo
+              source={video.source}
+              title={`${title} — ${video.header}`}
+              poster={poster}
+            />
           </div>
         </div>
       ))}

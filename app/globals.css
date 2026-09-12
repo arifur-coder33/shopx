@@ -136,6 +136,27 @@
   fill: currentColor;
 }
 
+/* Keep storefront notifications visible above drawers and fixed mobile bars. */
+.Toastify__toast-container {
+  z-index: 100000;
+}
+
+@media (max-width: 480px) {
+  .Toastify__toast-container--top-right {
+    top: max(0.75rem, env(safe-area-inset-top));
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    padding: 0;
+  }
+
+  .Toastify__toast {
+    min-height: 3.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--brand-radius);
+  }
+}
+
 @utility blur { filter: blur(7px); opacity: 0.8; transition: filter 100ms ease-out, opacity 100ms ease-out; }
 @utility remove-blur { filter: blur(0); opacity: 1; transition: filter 100ms ease-in, opacity 100ms ease-in; }
 @utility blink-border { border: 2px solid var(--brand-danger) !important; animation: blink-border 1s ease-in-out; }

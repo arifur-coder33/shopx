@@ -6,8 +6,9 @@ import OrderPaymentRecovery from "@/components/payments/OrderPaymentRecovery";
 import { AlertTriangle, Home, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-export default function PaymentCancelled() {
+import { Suspense, useEffect, useState } from "react";
+
+function PaymentCancelledContent() {
   const searchParams = useSearchParams();
 
   const orderNo = searchParams.get("o");
@@ -136,5 +137,21 @@ export default function PaymentCancelled() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function PaymentCancelledFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <LoadingSpinner />
+    </div>
+  );
+}
+
+export default function PaymentCancelled() {
+  return (
+    <Suspense fallback={<PaymentCancelledFallback />}>
+      <PaymentCancelledContent />
+    </Suspense>
   );
 }

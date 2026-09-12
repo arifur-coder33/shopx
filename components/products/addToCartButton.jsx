@@ -75,6 +75,11 @@ export default function AddToCartButton(props) {
       return;
     }
     addToCart(productData, productQty);
+    import("react-toastify").then(({ toast }) => {
+      toast.success("পণ্যটি ব্যাগে যোগ হয়েছে", {
+        toastId: `product-cart-${productData.id}-${productData.variation?.id || "default"}`,
+      });
+    });
 
     trackEvent({
       event: EVENTS.ADD_TO_CART,

@@ -1,4 +1,5 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
+import { Plus, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import ImageCustomServer from "../images/ImageCustomServer";
 import WishlistButton from "../wishlist/WishlistButton";
@@ -36,9 +37,7 @@ export default function ProductCard({ product, priority = false }) {
           product={product}
           className="absolute right-2 top-2 z-10"
         />
-        <Link
-          href={`/product/${encodeURIComponent(product?.slug)}`}
-        >
+        <Link href={`/product/${encodeURIComponent(product?.slug)}`}>
           <div className="relative aspect-square w-full">
             <ImageCustomServer
               src={product?.mainImage || thumbnail?.name}
@@ -53,7 +52,9 @@ export default function ProductCard({ product, priority = false }) {
             />
           </div>
           <div className="p-1.5 sm:p-2">
-            <h3 className="line-clamp-2 min-h-12 text-sm leading-6 sm:text-base">{title}</h3>
+            <h3 className="line-clamp-2 min-h-12 text-sm leading-6 sm:text-base">
+              {title}
+            </h3>
             <div className="cursor-auto">
               <span className="text-base font-bold text-brand sm:text-xl">
                 {replaceNumbers(
@@ -82,16 +83,29 @@ export default function ProductCard({ product, priority = false }) {
             Select Options
           </Link>
         ) : (
-          <div className="mt-auto grid grid-cols-2 gap-1.5">
+          <div className="mt-auto grid grid-cols-4 gap-1.5">
             <button
               type="button"
               data-product-card-cart={product.slug}
-              className="min-h-11 rounded-brand border border-primary px-1 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft disabled:cursor-wait disabled:opacity-60 sm:text-base"
+              aria-label={`${title} ব্যাগে রাখুন`}
+              className="group flex min-h-11 items-center justify-center rounded-brand border border-primary px-1 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft disabled:cursor-wait disabled:opacity-60 sm:text-base"
             >
-              ব্যাগে রাখুন
+              <span
+                className="relative group-data-[loading=true]:hidden"
+                aria-hidden="true"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                <Plus
+                  className="absolute -right-1 -top-2 h-3.5 w-3.5 rounded-full bg-primary text-white"
+                  strokeWidth={3}
+                />
+              </span>
+              <span className="hidden group-data-[loading=true]:inline">
+                <ShoppingCart className="h-5 w-5" />
+              </span>
             </button>
             <Link
-              className="min-h-11 rounded-brand bg-brand px-1 py-2 text-center text-sm font-semibold sm:text-base"
+              className="col-span-3 min-h-11 rounded-brand bg-brand px-1 py-2 text-center text-sm font-semibold sm:text-base"
               href={`/buynow/${encodeURIComponent(product?.slug)}`}
               data-checkout-product={checkoutTracking}
             >

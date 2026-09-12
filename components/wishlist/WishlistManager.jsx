@@ -57,9 +57,11 @@ export default function WishlistManager() {
         if (cartButton.disabled) return;
 
         const slug = cartButton.dataset.productCardCart;
-        const originalText = cartButton.textContent;
+        const originalLabel = cartButton.getAttribute("aria-label");
         cartButton.disabled = true;
-        cartButton.textContent = "যোগ হচ্ছে…";
+        cartButton.dataset.loading = "true";
+        cartButton.setAttribute("aria-busy", "true");
+        cartButton.setAttribute("aria-label", "পণ্য ব্যাগে যোগ হচ্ছে");
 
         try {
           // Full stock data is requested only after a user clicks Add to Cart.
@@ -77,7 +79,9 @@ export default function WishlistManager() {
           toast.error(error?.message || "পণ্যটি এখন ব্যাগে যোগ করা যাচ্ছে না");
         } finally {
           cartButton.disabled = false;
-          cartButton.textContent = originalText;
+          delete cartButton.dataset.loading;
+          cartButton.removeAttribute("aria-busy");
+          if (originalLabel) cartButton.setAttribute("aria-label", originalLabel);
         }
         return;
       }
