@@ -87,6 +87,7 @@ export default function ProductImageGallery({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [imageSrc, setImageSrc] = useState(imageProps.initialSrc);
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
   const [loadVideoPlayer, setLoadVideoPlayer] = useState(false);
 
   const selectMedia = useCallback(
@@ -136,6 +137,45 @@ export default function ProductImageGallery({
   const isMobile = useMediaQuery("(max-width: 768px)");
   const activeMedia = allMedia[activeIndex] || {};
   const isVideoActive = activeMedia.type === "video";
+  const [zoomImageReady, setZoomImageReady] = useState(false);
+
+  useEffect(() => {
+    setZoomImageReady(false);
+    if (
+      !mainImageLoaded ||
+      isMobile ||
+      isVideoActive ||
+      !activeMedia.name
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let idleId;
+    let timeoutId;
+    let zoomPreloader;
+
+    const preloadZoomImage = () => {
+      zoomPreloader = new window.Image();
+      zoomPreloader.onload = () => {
+        if (!cancelled) setZoomImageReady(true);
+      };
+      zoomPreloader.src = cloudinaryMainImage(activeMedia.name, 1800, 1800);
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(preloadZoomImage, { timeout: 1200 });
+    } else {
+      timeoutId = window.setTimeout(preloadZoomImage, 350);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      if (zoomPreloader) zoomPreloader.onload = null;
+    };
+  }, [activeMedia.name, isMobile, isVideoActive, mainImageLoaded]);
 
   // const handleThumbnailClick = (index) => {
   //   if (allMedia[index].type === "video") {
@@ -280,6 +320,7 @@ export default function ProductImageGallery({
                 src={cloudinaryMainImage(imageSrc, 600, 600)}
                 fill
                 alt={activeMedia.alt || imageProps.alt}
+                onLoad={() => setMainImageLoaded(true)}
                 priority={activeIndex === 0}
                 fetchPriority={activeIndex === 0 ? "high" : undefined}
                 sizes="(max-width:768px)100vw,40vw"
@@ -352,8 +393,8 @@ export default function ProductImageGallery({
         style={{
           backgroundImage: `url(${cloudinaryMainImage(
             activeMedia.name,
-            1800,
-            1800,
+            zoomImageReady ? 1800 : 600,
+            zoomImageReady ? 1800 : 600,
           )})`,
           backgroundSize: `${ZOOM_LEVEL * 100}%`,
           // --- START: THE FIX ---

@@ -15,7 +15,7 @@ export default function ProductDescription({ description }) {
   return (
     <section className="mx-auto mt-8 max-w-5xl rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
       <div className="mb-4 border-b border-border pb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary-hover">
           বিস্তারিত তথ্য
         </p>
         <h2 className="text-xl font-bold sm:text-2xl">পণ্যের বিবরণ</h2>

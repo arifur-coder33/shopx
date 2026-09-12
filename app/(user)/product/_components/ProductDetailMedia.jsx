@@ -66,7 +66,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
       {videoItems.map((video, index) => (
         <div key={video.id || video.url} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
           <div className="border-b border-border px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">ভিডিও {index + 1}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary-hover">ভিডিও {index + 1}</p>
             <h2 className="text-xl font-bold sm:text-2xl">{video.header}</h2>
           </div>
           <div className="aspect-video w-full bg-black">
@@ -82,7 +82,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
       {photos.length > 0 && (
         <div>
           <div className="mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary-hover">
               বিস্তারিত দেখুন
             </p>
             <h2 className="text-xl font-bold sm:text-2xl">পণ্যের ছবিসমূহ</h2>

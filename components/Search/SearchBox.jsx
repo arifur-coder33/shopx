@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import Imagecustom from "../images/ImageCustom";
 
 export default function SearchBox() {
+  const resultsId = "product-search-results";
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -98,6 +99,9 @@ export default function SearchBox() {
           onKeyDown={(event) => event.key === "Enter" && handleSearch()}
           placeholder="কী খুঁজছেন?"
           aria-label="পণ্য খুঁজুন"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls={resultsId}
           aria-expanded={open && Boolean(query.trim())}
           className="h-full min-h-0 min-w-0 flex-1 border-0 bg-transparent px-3 text-sm text-text outline-none placeholder:text-text-muted focus:ring-0 sm:text-base"
         />
@@ -114,14 +118,19 @@ export default function SearchBox() {
         <button
           type="button"
           onClick={handleSearch}
-          className="hidden h-full shrink-0 items-center bg-primary px-5 font-semibold text-white transition hover:bg-primary-hover sm:flex"
+          className="hidden h-full shrink-0 items-center bg-primary-hover px-5 font-semibold text-white transition hover:brightness-90 sm:flex"
         >
           খুঁজুন
         </button>
       </div>
 
       {open && query.trim() && (
-        <div className="absolute left-0 top-full z-50 mt-2 max-h-[min(28rem,70dvh)] w-full overflow-y-auto rounded-brand border border-border bg-surface p-1.5 text-text shadow-2xl">
+        <div
+          id={resultsId}
+          role="listbox"
+          aria-label="পণ্য খোঁজার ফলাফল"
+          className="absolute left-0 top-full z-50 mt-2 max-h-[min(28rem,70dvh)] w-full overflow-y-auto rounded-brand border border-border bg-surface p-1.5 text-text shadow-2xl"
+        >
           {loading && (
             <div className="flex items-center gap-3 px-3 py-4 text-sm text-text-muted">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
@@ -140,6 +149,8 @@ export default function SearchBox() {
               onClick={clearSearch}
               key={item.id}
               href={`/product/${item.slug}`}
+              role="option"
+              aria-selected="false"
               className="flex min-h-16 items-center gap-3 rounded-brand px-2 py-2 transition hover:bg-primary-soft"
             >
               {item.thumbnail ? (
