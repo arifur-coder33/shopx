@@ -1,47 +1,45 @@
-import { useState } from "react";
 import FloatingInput from "../input/FloatingInput";
 import PhoneInput from "../input/PhoneInput";
-import SearchableDropdown from "../input/SearchableDropdown";
-const loadDivisionList = async () => {
-  const location = await import("@/utils/data/bangladesh-all-thanas.json");
+// const loadDivisionList = async () => {
+//   const location = await import("@/utils/data/bangladesh-all-thanas.json");
 
-  return {
-    data: location.default.map((division) => ({
-      id: division.division_en,
-      name: division.division_bn,
-      searchText: `${division.division_bn} ${division.division_en}`,
-      districts: division.districts,
-    })),
-  };
-};
+//   return {
+//     data: location.default.map((division) => ({
+//       id: division.division_en,
+//       name: division.division_bn,
+//       searchText: `${division.division_bn} ${division.division_en}`,
+//       districts: division.districts,
+//     })),
+//   };
+// };
 
 export default function DeliveryAddress({ setDeliveryArea }) {
-  const [division, setDivision] = useState(null);
-  const [district, setDistrict] = useState(null);
-  const [thana, setThana] = useState(null);
+  // const [division, setDivision] = useState(null);
+  // const [district, setDistrict] = useState(null);
+  // const [thana, setThana] = useState(null);
 
-  const handleDivisionChange = (selectedDivision) => {
-    setDivision(selectedDivision);
-    setDistrict(null);
-    setThana(null);
-  };
+  // const handleDivisionChange = (selectedDivision) => {
+  //   setDivision(selectedDivision);
+  //   setDistrict(null);
+  //   setThana(null);
+  // };
 
-  const handleDistrictChange = (selectedDistrict) => {
-    setDeliveryArea(
-      selectedDistrict?.id.toLowerCase() === "dhaka"
-        ? "inside-dhaka"
-        : "outside-dhaka",
-    );
-    setDistrict(selectedDistrict);
-    setThana(null);
-  };
+  // const handleDistrictChange = (selectedDistrict) => {
+  //   setDeliveryArea(
+  //     selectedDistrict?.id.toLowerCase() === "dhaka"
+  //       ? "inside-dhaka"
+  //       : "outside-dhaka",
+  //   );
+  //   setDistrict(selectedDistrict);
+  //   setThana(null);
+  // };
 
-  const handleThanaChange = (selectedThana) => {
-    setThana(selectedThana);
-  };
+  // const handleThanaChange = (selectedThana) => {
+  //   setThana(selectedThana);
+  // };
 
   return (
-    <address className="grid grid-cols-2 md:grid-cols-2 gap-3 pt-3 ">
+    <address className="grid grid-cols-2 md:grid-cols-2 gap-3 pt-3 mb-2">
       <FloatingInput
         defaultValue=""
         type={"text"}
@@ -56,7 +54,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
 
       <PhoneInput
         defaultValue=""
-        label="আপনার ফোন নাম্বারঃ (১১ ডিজিট)"
+        label="আপনার ফোন নাম্বারঃ"
         name="phoneNumber"
         inputType="text"
         inputMode="numeric"
@@ -68,7 +66,7 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         largeMobile
       />
 
-      <SearchableDropdown
+      {/* <SearchableDropdown
         defaultId={division}
         label={"আপনার বিভাগঃ *"}
         name="division"
@@ -113,8 +111,30 @@ export default function DeliveryAddress({ setDeliveryArea }) {
               }))
             : []
         }
+      /> */}
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"আপনার জেলাঃ *"}
+        name="district"
+        inputType={"text"}
+        autoComplete="address-level2"
+        colSpan={"1"}
+        required={true}
+        largeMobile
       />
 
+      <FloatingInput
+        defaultValue=""
+        type={"text"}
+        label={"আপনার থানা *"}
+        name="thana"
+        inputType={"text"}
+        autoComplete=""
+        colSpan={"1"}
+        required={true}
+        largeMobile
+      />
       <FloatingInput
         defaultValue=""
         type={"text"}

@@ -3,14 +3,15 @@ import { Truck } from "lucide-react";
 import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
-import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
 import { createOrder } from "@/backend/serverActions/orderActions";
+import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import LoadingSpinner from "../common/LoadingSpinner";
+import DeliveryAreaSelector from "./DeliveryAreaSelector";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 export default function OrderForm({
   setDeliveryArea,
@@ -69,6 +70,7 @@ export default function OrderForm({
     setError(null);
     setSuccess(null);
     const form = e.target; // Reference to the form element
+
     const formData = new FormData(form); // Collect form data
     // if (buyNow) {
     //   products[0].quantity = Number(formData.get("quantity"));
@@ -109,7 +111,9 @@ export default function OrderForm({
       if (paymentSelection.paymentMethod !== "COD") {
         setLoadingStep("success");
         setLoadingStep("redirecting");
-        const initiated = await initiateConfiguredPayment(response.data.paymentId);
+        const initiated = await initiateConfiguredPayment(
+          response.data.paymentId,
+        );
         if (!initiated.success || !initiated.url) {
           setError(initiated.message || "Payment could not be initiated.");
           setLoadingStep(null);
@@ -178,7 +182,7 @@ export default function OrderForm({
             </div>
             <>
               <DeliveryAddress setDeliveryArea={setDeliveryArea} />
-              {/* <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} /> */}
+              <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} />
             </>
           </div>
         </div>

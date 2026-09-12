@@ -17,11 +17,15 @@ export default function PhoneInput({
 }) {
   const uniqueId = `input-${name}`;
   const [error, setError] = useState("");
-
   const handlePhoneValidation = (e) => {
     if (name !== "phoneNumber") return;
 
-    const value = e.target.value.replace(/\D/g, "");
+    let value = e.target.value.replace(/\D/g, "");
+
+    if (value.length > 13) {
+      value = value.slice(0, 13);
+    }
+
     e.target.value = value;
 
     if (value.length === 0) {
@@ -29,13 +33,19 @@ export default function PhoneInput({
       return;
     }
 
-    if (!/^01[3-9]\d{8}$/.test(value)) {
-      setError("সঠিক বাংলাদেশি মোবাইল নম্বর দিন (যেমন: 01712345678)");
+    const validBDNumber =
+      /^01[3-9]\d{8}$/.test(value) || /^8801[3-9]\d{8}$/.test(value);
+
+    if (!validBDNumber) {
+      setError(
+        "সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01712345678 অথবা 8801712345678)",
+      );
+      e.target.setCustomValidity("Invalid phone number");
     } else {
       setError("");
+      e.target.setCustomValidity("");
     }
   };
-
   return (
     <div className={`relative  col-span-${colSpan}`}>
       <input
@@ -43,7 +53,7 @@ export default function PhoneInput({
         type={inputType}
         id={uniqueId}
         name={name}
-        maxLength={max}
+        maxLength={name === "phoneNumber" ? 13 : max}
         minLength={min}
         placeholder=""
         onChange={handlePhoneValidation}

@@ -1,9 +1,9 @@
 "use server";
-import prisma from "@/lib/prisma";
-import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
 import { postCodCollection } from "@/backend/services/paymentPostingService";
+import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
+import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { getIP } from "../utils/getIp";
@@ -250,9 +250,17 @@ export async function createOrder(formData) {
     const data = Object.fromEntries(formData.entries());
     const orderItems = JSON.parse(data?.products);
     const paymentMethod = String(data.paymentMethod || "").toUpperCase();
-    if (!data?.customerName || !data?.phoneNumber || !data?.division || !data?.district || !data?.thana || !data?.deliveryAddress || !Array.isArray(orderItems) || !orderItems.length) {
+    if (
+      !data?.customerName ||
+      !data?.phoneNumber ||
+      !data?.district ||
+      !data?.thana ||
+      !data?.deliveryAddress ||
+      !Array.isArray(orderItems) ||
+      !orderItems.length
+    ) {
       throw new Error(
-        "আপনার নাম, মোবাইল নাম্বার, বিভাগ, জেলা, থানা এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
+        "আপনার নাম, মোবাইল নাম্বার, জেলা, থানা এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
       );
     }
     if (!["COD", "ONLINE", "EMI"].includes(paymentMethod)) {
@@ -271,16 +279,44 @@ export async function createOrder(formData) {
         discountPrice: true,
         weight: true,
         stocks: { select: { available: true } },
-        product: { select: { id: true, title: true, productCode: true, allowOutOfStockOrder: true } },
+        product: {
+          select: {
+            id: true,
+            title: true,
+            productCode: true,
+            allowOutOfStockOrder: true,
+          },
+        },
       },
     });
-    const variationMap = Object.fromEntries(variations.map((v) => [v.id, { ...v, available: v.stocks.reduce((sum, stock) => sum + Math.max(0, stock.available || 0), 0) }]));
-    const requestedByVariation = orderItems.reduce((map, item) => map.set(item.variation.id, (map.get(item.variation.id) || 0) + Number(item.quantity)), new Map());
+    const variationMap = Object.fromEntries(
+      variations.map((v) => [
+        v.id,
+        {
+          ...v,
+          available: v.stocks.reduce(
+            (sum, stock) => sum + Math.max(0, stock.available || 0),
+            0,
+          ),
+        },
+      ]),
+    );
+    const requestedByVariation = orderItems.reduce(
+      (map, item) =>
+        map.set(
+          item.variation.id,
+          (map.get(item.variation.id) || 0) + Number(item.quantity),
+        ),
+      new Map(),
+    );
     for (const [variationId, requested] of requestedByVariation) {
       const variation = variationMap[variationId];
       if (!variation)
         throw new Error("Selected product variation was not found.");
-      if (!variation.product?.allowOutOfStockOrder && variation.available < requested) {
+      if (
+        !variation.product?.allowOutOfStockOrder &&
+        variation.available < requested
+      ) {
         const item = orderItems.find((row) => row.variation.id === variationId);
         throw new Error(
           `${item.title} স্টক শেষ। মাত্র ${variation.available}টি বাকি আছে।`,
@@ -290,33 +326,47 @@ export async function createOrder(formData) {
     const serverOrderPrice = orderItems.reduce((total, item) => {
       const variation = variationMap[item.variation.id];
       const unitPrice = variation.discountPrice ?? variation.regularPrice;
-      if (!Number.isFinite(Number(unitPrice))) throw new Error(`Price is unavailable for ${variation.product.title}.`);
+      if (!Number.isFinite(Number(unitPrice)))
+        throw new Error(`Price is unavailable for ${variation.product.title}.`);
       return total + Number(item.quantity) * Number(unitPrice);
     }, 0);
     const serverOrderWeight = orderItems.reduce((total, item) => {
       const variation = variationMap[item.variation.id];
-      return total + Math.max(0, Number(variation.weight) || 0) * Number(item.quantity);
+      return (
+        total +
+        Math.max(0, Number(variation.weight) || 0) * Number(item.quantity)
+      );
     }, 0);
-    const deliveryArea = data.deliveryArea === "inside-dhaka" ? "inside-dhaka" : "outside-dhaka";
+    const deliveryArea =
+      data.deliveryArea === "inside-dhaka" ? "inside-dhaka" : "outside-dhaka";
 
     const result = await prisma.$transaction(async (tx) => {
       const deliveryRates = await getCheckoutDeliveryRates(tx);
-      const deliveryCharge = calculateDeliveryCharge(deliveryArea, serverOrderWeight, deliveryRates);
+      const deliveryCharge = calculateDeliveryCharge(
+        deliveryArea,
+        serverOrderWeight,
+        deliveryRates,
+      );
       const totalAmount = serverOrderPrice + deliveryCharge;
-      const provider = paymentMethod !== "COD"
-        ? await tx.paymentGateway.findUnique({
-            where: { id: data.paymentGatewayId },
-            include: { moneyAccount: true },
-          })
-        : null;
+      const provider =
+        paymentMethod !== "COD"
+          ? await tx.paymentGateway.findUnique({
+              where: { id: data.paymentGatewayId },
+              include: { moneyAccount: true },
+            })
+          : null;
       const providerConfiguration = provider
         ? getProviderRuntimeConfiguration("gateway", provider)
         : null;
       if (paymentMethod !== "COD" && !providerConfiguration?.ready) {
-        throw new Error("The selected provider is unavailable or not fully configured.");
+        throw new Error(
+          "The selected provider is unavailable or not fully configured.",
+        );
       }
       if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") {
-        throw new Error("Installment payment is available only through SSLCommerz.");
+        throw new Error(
+          "Installment payment is available only through SSLCommerz.",
+        );
       }
       if (paymentMethod === "COD") {
         const codGateway = await tx.paymentGateway.findFirst({
@@ -364,9 +414,9 @@ export async function createOrder(formData) {
         },
       });
       await tx.orderItem.createMany({
-          data: orderItems.map((item, i) => {
-            const variation = variationMap[item.variation.id];
-            return {
+        data: orderItems.map((item, i) => {
+          const variation = variationMap[item.variation.id];
+          return {
             orderNo: newOrderNumber,
             orderItemNo: i + 1,
             productName: variation.product.title,
@@ -563,7 +613,13 @@ export async function getOrderById(orderId) {
         shipping: { include: { courierProvider: true } },
         selectedPaymentGateway: true,
         selectedCourierProvider: true,
-        payments: { include: { paymentGateway: true, courierProvider: true, moneyAccount: true } },
+        payments: {
+          include: {
+            paymentGateway: true,
+            courierProvider: true,
+            moneyAccount: true,
+          },
+        },
       },
     });
     console.log("Fetched order by ID:", data);
@@ -992,7 +1048,8 @@ export async function cancelUnpaidCustomerOrder({
   reason,
 }) {
   try {
-    if (!orderNo || !phoneNumber) throw new Error("Order information is required.");
+    if (!orderNo || !phoneNumber)
+      throw new Error("Order information is required.");
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({
         where: { orderNo, phoneNumber },
@@ -1016,7 +1073,9 @@ export async function cancelUnpaidCustomerOrder({
         order.shipping?.cn ||
         order.deliveries.length
       ) {
-        throw new Error("This order can no longer be cancelled by the customer.");
+        throw new Error(
+          "This order can no longer be cancelled by the customer.",
+        );
       }
       await tx.payment.updateMany({
         where: { orderId: order.id, status: "PENDING" },
@@ -1028,7 +1087,9 @@ export async function cancelUnpaidCustomerOrder({
           status: "CANCELLED",
           paymentStatus: "CANCELLED",
           cancelReasonType: "CUSTOMER_CANCELLED",
-          cancelReason: String(reason || "Cancelled by customer before confirmation").slice(0, 500),
+          cancelReason: String(
+            reason || "Cancelled by customer before confirmation",
+          ).slice(0, 500),
         },
       });
       await tx.orderTimeline.create({
@@ -1037,7 +1098,9 @@ export async function cancelUnpaidCustomerOrder({
           orderNo: order.orderNo,
           status: "CANCELLED",
           title: "Order Cancelled",
-          message: String(reason || "Customer cancelled before order confirmation").slice(0, 500),
+          message: String(
+            reason || "Customer cancelled before order confirmation",
+          ).slice(0, 500),
           createdBy: "customer",
         },
       });
