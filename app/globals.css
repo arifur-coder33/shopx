@@ -161,6 +161,10 @@
 @utility blink-border { border: 2px solid var(--brand-danger) !important; animation: blink-border 1s ease-in-out; }
 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes storefront-page-enter {
+  from { opacity: 0.94; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @keyframes product-reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes hero-zoom { from { opacity: 0.5; transform: scale(1.06); } to { opacity: 1; transform: scale(1); } }
 @keyframes hero-slide-left { from { opacity: 0.65; transform: translateX(8%); } to { opacity: 1; transform: translateX(0); } }
@@ -175,6 +179,7 @@
 .hero-motion-slide-left { animation: hero-slide-left 550ms ease-out both; }
 .hero-motion-slide-right { animation: hero-slide-right 550ms ease-out both; }
 .home-product-reveal { animation: product-reveal 320ms ease-out both; }
+.storefront-page-enter { animation: storefront-page-enter 160ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

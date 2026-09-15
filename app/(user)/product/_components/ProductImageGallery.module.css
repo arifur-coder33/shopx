@@ -19,6 +19,51 @@
   border-radius: 0.375rem;
 }
 
+.transitionContainer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--brand-surface-muted, #f3f4f6);
+}
+
+.imagePlaceholder {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    110deg,
+    var(--brand-surface-muted, #f3f4f6) 25%,
+    var(--brand-surface, #ffffff) 43%,
+    var(--brand-surface-muted, #f3f4f6) 61%
+  );
+  background-size: 220% 100%;
+  animation: image-placeholder-shimmer 1.25s ease-in-out infinite;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 180ms ease-out, visibility 180ms ease-out;
+  pointer-events: none;
+}
+
+.imagePlaceholderHidden {
+  opacity: 0;
+  visibility: hidden;
+  animation: none;
+}
+
+.mainProductImage {
+  z-index: 1;
+}
+
+@keyframes image-placeholder-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 /* --- Zoom Lens on Main Image --- */
 
 /* --- Desktop Zoom Panel --- */

@@ -285,6 +285,14 @@ export default function ProductImageGallery({
                 : undefined
             }
           >
+            {!isVideoActive && (
+              <div
+                aria-hidden="true"
+                className={`${styles.imagePlaceholder} ${
+                  mainImageLoaded ? styles.imagePlaceholderHidden : ""
+                }`}
+              />
+            )}
             {isVideoActive && !isModalOpen ? (
               loadVideoPlayer ? (
                 <VideoPlayer
@@ -324,7 +332,7 @@ export default function ProductImageGallery({
                 priority={activeIndex === 0}
                 fetchPriority={activeIndex === 0 ? "high" : undefined}
                 sizes="(max-width:768px)100vw,40vw"
-                className="rounded-md object-contain"
+                className={`${styles.mainProductImage} rounded-md object-contain`}
                 unoptimized
               />
             )}
