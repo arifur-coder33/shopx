@@ -1,4 +1,5 @@
 import { generateCode } from "./generateCode";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 export const ACCOUNT_CODES = {
   CASH: "1000",
@@ -65,8 +66,9 @@ export async function ensureAccount(tx, code, accountName, accountType) {
 }
 
 export async function postJournal(tx, { entryDate = new Date(), description, referenceType, referenceId, createdBy, lines }) {
+  const storeId = await requireCurrentStoreId();
   if (referenceId) {
-    const existing = await tx.journalEntry.findFirst({ where: { referenceType, referenceId, status: "POSTED" } });
+    const existing = await tx.journalEntry.findFirst({ where: { storeId, referenceType, referenceId, status: "POSTED" } });
     if (existing) return existing;
   }
   const debit = lines.reduce((sum, line) => sum + Number(line.debit || 0), 0);
@@ -77,7 +79,7 @@ export async function postJournal(tx, { entryDate = new Date(), description, ref
   const entryNo = await generateCode(tx, { name: "JOURNAL_ENTRY", prefix: "JV-", padding: 8 });
   return tx.journalEntry.create({
     data: {
-      entryNo, entryDate, description, referenceType, referenceId: referenceId || null,
+      storeId, entryNo, entryDate, description, referenceType, referenceId: referenceId || null,
       createdBy, updatedBy: createdBy,
       lines: { create: lines.map((line, index) => ({ accountId: accountRows[index].id, debit: Number(line.debit || 0), credit: Number(line.credit || 0), memo: line.memo || null })) },
     },

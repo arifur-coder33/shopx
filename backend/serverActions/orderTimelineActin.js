@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 export async function addOrderTimeline({
   orderId,
@@ -12,9 +13,15 @@ export async function addOrderTimeline({
   createdAt,
 }) {
   try {
+    const storeId = await requireCurrentStoreId();
     if (!orderId) {
       throw new Error("OrderId required");
     }
+    const order = await prisma.order.findUnique({
+      where: { id: orderId, storeId },
+      select: { id: true },
+    });
+    if (!order) throw new Error("Order was not found for this Store.");
 
     const timeline = await prisma.orderTimeline.create({
       data: {
@@ -55,6 +62,7 @@ export async function addOrderTimeline({
 export async function getOrderTimeline(orderId, orderNo, phoneNumber) {
   console.log("phone", phoneNumber);
   try {
+    const storeId = await requireCurrentStoreId();
     let finalOrderId = orderId;
 
     // orderId না থাকলে orderNo + phoneNumber দিয়ে Order খুঁজবে
@@ -67,6 +75,7 @@ export async function getOrderTimeline(orderId, orderNo, phoneNumber) {
 
       const order = await prisma.order.findFirst({
         where: {
+          storeId,
           orderNo,
           phoneNumber,
         },
@@ -88,6 +97,7 @@ export async function getOrderTimeline(orderId, orderNo, phoneNumber) {
     const timeline = await prisma.orderTimeline.findMany({
       where: {
         orderId: finalOrderId,
+        order: { storeId },
       },
       orderBy: {
         createdAt: "desc",
@@ -105,12 +115,13 @@ export async function getOrderTimeline(orderId, orderNo, phoneNumber) {
 }
 export async function getOrderTimelineStatus({ orderId, status }) {
   try {
+    const storeId = await requireCurrentStoreId();
     if (!orderId) {
       throw new Error("OrderId required");
     }
 
     const timeline = await prisma.orderTimeline.findMany({
-      where: { orderId, status },
+      where: { orderId, status, order: { storeId } },
       orderBy: { createdAt: "desc" },
     });
 

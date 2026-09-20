@@ -5,8 +5,8 @@ import {
   encryptSocialSecrets,
   getSocialTrackingRecord,
   SOCIAL_SECRET_FIELDS,
-  SOCIAL_TRACKING_SETTING_ID,
 } from "@/backend/services/socialTrackingService";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 import { actionError, requireProcurementPermission } from "@/backend/utils/procurement";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -77,6 +77,7 @@ export async function revealSocialTrackingSecret(fieldKey) {
 export async function saveSocialTrackingConfiguration(formData) {
   try {
     const userId = await requireProcurementPermission("socialTracking", "update");
+    const storeId = await requireCurrentStoreId();
     const values = Object.fromEntries(formData.entries());
     const existing = await getSocialTrackingRecord();
     const previousSecrets = existing?.encryptedSecrets
@@ -104,7 +105,7 @@ export async function saveSocialTrackingConfiguration(formData) {
         : existing.encryptedSecrets;
 
     await prisma.socialTrackingSetting.upsert({
-      where: { id: SOCIAL_TRACKING_SETTING_ID },
+      where: { storeId },
       update: {
         ...publicData,
         encryptedSecrets,
@@ -112,7 +113,8 @@ export async function saveSocialTrackingConfiguration(formData) {
         updatedBy: userId,
       },
       create: {
-        id: SOCIAL_TRACKING_SETTING_ID,
+        id: `SOCIAL_TRACKING:${storeId}`,
+        storeId,
         ...publicData,
         encryptedSecrets,
         ...(encryptedSecrets && { secretsUpdatedAt: new Date() }),
@@ -121,7 +123,7 @@ export async function saveSocialTrackingConfiguration(formData) {
       },
     });
 
-    revalidateTag("social-tracking");
+    revalidateTag(`social-tracking:${storeId}`);
     revalidatePath("/", "layout");
     revalidatePath("/admin/settings/social-tracking");
     return { success: true, message: "Social tracking settings updated." };

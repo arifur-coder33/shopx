@@ -1,37 +1,66 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { cache } from "react";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
-import { newSlug } from "../utils/generateSlug";
+import { generateSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
+import { requireCurrentStoreId } from "../services/storeContextService";
+
+async function assertCategoryReferences(storeId, data) {
+  const mediaIds = [...new Set([data.thumbnail, data.banner].filter(Boolean))];
+  const variationRows = data.variations ? JSON.parse(data.variations) : [];
+  const variationIds = [
+    ...new Set(variationRows.map((row) => row?.variation?.id).filter(Boolean)),
+  ];
+  const [mediaCount, parent, variationCount] = await Promise.all([
+    mediaIds.length
+      ? prisma.media.count({ where: { storeId, id: { in: mediaIds } } })
+      : 0,
+    data.parentCategory
+      ? prisma.category.findUnique({
+          where: { id: data.parentCategory, storeId },
+          select: { id: true },
+        })
+      : null,
+    variationIds.length
+      ? prisma.variationName.count({ where: { storeId, id: { in: variationIds } } })
+      : 0,
+  ]);
+  if (mediaCount !== mediaIds.length) {
+    throw new Error("A selected category image belongs to another Store.");
+  }
+  if (data.parentCategory && !parent) {
+    throw new Error("The selected parent category belongs to another Store.");
+  }
+  if (variationCount !== variationIds.length) {
+    throw new Error("A selected variation belongs to another Store.");
+  }
+}
 
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
 
   try {
-    const slug = await newSlug(data?.slug || data?.name);
+    const storeId = await requireCurrentStoreId();
+    await assertCategoryReferences(storeId, data);
+    const slug = generateSlug(data?.slug || data?.name);
 
     const preparedData = {
+      storeId,
       name: data?.name,
       description: data?.description,
       slug: slug,
-      ...(data?.thumbnail
-        ? { thumbnail: { connect: { id: data?.thumbnail } } }
-        : {}), // <-- only connect if thumbnail exists
-
-      ...(data?.banner ? { banner: { connect: { id: data?.banner } } } : {}), // <-- only connect if banner exists
-
-      ...(data?.parentCategory
-        ? { parentCategory: { connect: { id: data?.parentCategory } } }
-        : {}), // <-- only connect if parentCategory exists
+      ...(data?.thumbnail ? { thumbnailId: data.thumbnail } : {}),
+      ...(data?.banner ? { bannerId: data.banner } : {}),
+      ...(data?.parentCategory ? { parentCategoryId: data.parentCategory } : {}),
     };
     if (!data?.name) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
     const checkSlug = await prisma.category.findUnique({
-      where: { slug: slug },
+      where: { storeId_slug: { storeId, slug } },
     });
 
     if (checkSlug) {
@@ -40,32 +69,29 @@ export async function createCategoryAction(formData) {
 
     // }
 
-    const category = await prisma.category.create({
-      data: preparedData,
-    });
-
-    const fullPath = await buildCategoryPath(category.id);
-    await prisma.category.update({
-      where: { id: category.id },
-      data: { fullPath },
-    });
-    if (data?.variations) {
-      const parseVariation = JSON.parse(data?.variations);
-
-      for (const variationItem of parseVariation) {
-        const variationId = variationItem?.variation?.id;
-        const value = variationItem?.value.trim();
-
-        await prisma.VariationValue.create({
-          data: {
-            variation: { connect: { id: variationId } },
-            category: { connect: { id: category.id } },
-            value: value,
-          },
-        });
+    const category = await prisma.$transaction(async (tx) => {
+      const created = await tx.category.create({ data: preparedData });
+      const fullPath = await buildCategoryPath(created.id, storeId, tx);
+      await tx.category.update({
+        where: { id: created.id, storeId },
+        data: { fullPath },
+      });
+      if (data?.variations) {
+        const parseVariation = JSON.parse(data.variations);
+        for (const variationItem of parseVariation) {
+          await tx.variationValue.create({
+            data: {
+              variationId: variationItem?.variation?.id,
+              categoryId: created.id,
+              value: variationItem?.value?.trim(),
+            },
+          });
+        }
       }
-    }
+      return created;
+    }, { timeout: 30000 });
 
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidatePath("/admin/category");
     return { success: true, data: category }; // Return success with user data
   } catch (error) {
@@ -75,8 +101,9 @@ export async function createCategoryAction(formData) {
 
 export async function getCategoryById(id) {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = await prisma.category.findUnique({
-      where: { id: id },
+      where: { id: id, storeId },
       select: {
         id: true,
         name: true,
@@ -115,33 +142,40 @@ export async function getCategoryById(id) {
     return { success: false, error: error.message }; // Return structured error
   }
 }
-async function updateChildrenFullPath(parentId) {
+async function updateChildrenFullPath(parentId, storeId) {
   const children = await prisma.category.findMany({
-    where: { parentCategoryId: parentId },
+    where: { storeId, parentCategoryId: parentId },
     select: { id: true },
   });
 
   for (const child of children) {
-    const fullPath = await buildCategoryPath(child.id);
+    const fullPath = await buildCategoryPath(child.id, storeId);
     await prisma.category.update({
-      where: { id: child.id },
+      where: { id: child.id, storeId },
       data: { fullPath },
     });
 
     // এই child-এরও children থাকতে পারে
-    await updateChildrenFullPath(child.id);
+    await updateChildrenFullPath(child.id, storeId);
   }
 }
 export async function updateCategoryAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
 
   try {
+    const storeId = await requireCurrentStoreId();
+    const current = await prisma.category.findUnique({
+      where: { id, storeId },
+      select: { id: true },
+    });
+    if (!current) throw new Error("Category was not found for this Store.");
+    await assertCategoryReferences(storeId, data);
     if (!data?.name) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
-    const slug = await newSlug(data?.slug || data?.name);
+    const slug = generateSlug(data?.slug || data?.name);
     const checkSlug = await prisma.category.findFirst({
-      where: { slug: slug, NOT: { id: id } },
+      where: { storeId, slug, NOT: { id } },
     });
 
     if (checkSlug) {
@@ -154,31 +188,26 @@ export async function updateCategoryAction({ formData, id }) {
       name: data?.name,
       description: data?.description,
       slug: slug,
-      ...(data?.thumbnail
-        ? { thumbnail: { connect: { id: data?.thumbnail } } }
-        : {}), // <-- only connect if thumbnail exists
-
-      ...(data?.banner ? { banner: { connect: { id: data?.banner } } } : {}), // <-- only connect if banner exists
-
-      ...(data?.parentCategory
-        ? { parentCategory: { connect: { id: data?.parentCategory } } }
-        : {}), // <-- only connect if parentCategory exists
+      ...(data?.thumbnail ? { thumbnailId: data.thumbnail } : {}),
+      ...(data?.banner ? { bannerId: data.banner } : {}),
+      ...(data?.parentCategory ? { parentCategoryId: data.parentCategory } : {}),
     };
 
     const updateData = await prisma.category.update({
       where: {
         id: id,
+        storeId,
       },
       data: preparedData,
     });
 
-    const fullPath = await buildCategoryPath(id);
+    const fullPath = await buildCategoryPath(id, storeId);
     await prisma.category.update({
-      where: { id },
+      where: { id, storeId },
       data: { fullPath },
     });
 
-    await updateChildrenFullPath(id);
+    await updateChildrenFullPath(id, storeId);
 
     // existing variationValue
     const existingVariationValue = await prisma.variationValue.findMany({
@@ -248,6 +277,7 @@ export async function updateCategoryAction({ formData, id }) {
         });
       }
     }
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidatePath("/admin/product/add");
     return { success: true, data: updateData }; // Return success with user data
   } catch (error) {
@@ -257,8 +287,9 @@ export async function updateCategoryAction({ formData, id }) {
 
 export async function deleteCategoryAction(id) {
   try {
+    const storeId = await requireCurrentStoreId();
     const checkCategory = await prisma.category.findUnique({
-      where: { id },
+      where: { id, storeId },
       include: {
         subCategories: true,
         products: { select: { id: true } }, // ✅ product আছে কিনা check করো
@@ -287,9 +318,10 @@ export async function deleteCategoryAction(id) {
 
     // 2. Category delete করো
     await prisma.category.delete({
-      where: { id },
+      where: { id, storeId },
     });
 
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidatePath("/admin/category");
     return { success: true, data: "সফলভাবে delete হয়েছে।" };
   } catch (error) {
@@ -298,7 +330,9 @@ export async function deleteCategoryAction(id) {
 }
 export async function getCategory() {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = await prisma.category.findMany({
+      where: { storeId },
       select: {
         parentCategoryId: true,
         id: true,
@@ -431,8 +465,10 @@ export async function getCategory() {
 
 export async function getAllCategoryWithproduct() {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = await prisma.category.findMany({
       where: {
+        storeId,
         products: { some: { isActive: true } },
       },
       select: {
@@ -549,6 +585,7 @@ export async function getAllCategoryWithproduct() {
 
 export async function getAllCategoriesList(params) {
   try {
+    const storeId = await requireCurrentStoreId();
     const {
       limit = 10,
       cursor,
@@ -559,7 +596,7 @@ export async function getAllCategoriesList(params) {
       name,
     } = params;
 
-    const whereClause = {};
+    const whereClause = { storeId };
 
     if (name) {
       whereClause.name = { contains: name, mode: "insensitive" };
@@ -603,9 +640,10 @@ export async function getAllCategoriesList(params) {
 
 export async function getcategoryCount(params) {
   try {
+    const storeId = await requireCurrentStoreId();
     const { name } = params;
 
-    const whereClause = {};
+    const whereClause = { storeId };
 
     if (name) {
       whereClause.name = { contains: name, mode: "insensitive" };
@@ -640,24 +678,30 @@ export async function getcategoryCount(params) {
 //   return buildTree(null); // start from root categories
 // }
 
-const getNavigationCategories = cache(() =>
-  prisma.category.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      parentCategoryId: true,
-    },
-  }),
+const getNavigationCategories = cache((storeId) =>
+  unstable_cache(
+    () => prisma.category.findMany({
+      where: { storeId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        parentCategoryId: true,
+      },
+    }),
+    ["navigation-categories", storeId],
+    { revalidate: 60, tags: [`storefront-catalog:${storeId}`] },
+  )(),
 );
 
 export async function getCategoryTree() {
   let allCategories;
 
   try {
+    const storeId = await requireCurrentStoreId();
     // NavBar and MobileFooter both request this tree during one render.
-    // React cache keeps that to one database query without serving stale data.
-    allCategories = await getNavigationCategories();
+    // React deduplicates this request; the Store-keyed data cache lasts up to 60s.
+    allCategories = await getNavigationCategories(storeId);
   } catch (error) {
     // Category navigation is non-critical. Keep the storefront available when
     // MongoDB is temporarily unreachable and let the next request retry.
@@ -684,10 +728,10 @@ export async function getCategoryTree() {
 
   return roots;
 }
-export async function getCategoryPageData(slug) {
-  try {
+async function queryCategoryPageData(storeId, slug) {
     // 1️⃣ all categories (for tree + recursion)
     const categories = await prisma.category.findMany({
+      where: { storeId },
       select: {
         id: true,
         name: true,
@@ -750,6 +794,7 @@ export async function getCategoryPageData(slug) {
     // 4️⃣ get products (ONLY LIGHT DATA)
     const products = await prisma.product.findMany({
       where: {
+        storeId,
         isActive: true,
         categoryId: {
           in: categoryIds,
@@ -830,6 +875,16 @@ export async function getCategoryPageData(slug) {
       },
       breadcrumbs,
     };
+}
+
+export async function getCategoryPageData(slug) {
+  try {
+    const storeId = await requireCurrentStoreId();
+    return await unstable_cache(
+      () => queryCategoryPageData(storeId, slug),
+      ["category-page", storeId, slug],
+      { revalidate: 60, tags: [`storefront-catalog:${storeId}`] },
+    )();
   } catch (error) {
     return {
       success: false,

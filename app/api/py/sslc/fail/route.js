@@ -1,8 +1,9 @@
-import { markPaymentFailed } from "@/backend/serverActions/paymentAction";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 async function handleFail(req) {
+  const storeId = await requireCurrentStoreId();
   const siteUrl = new URL(req.url).origin;
   const formData =
     req.method === "POST"
@@ -13,25 +14,18 @@ async function handleFail(req) {
   const transactionId = formData.get("tran_id");
   const payment = paymentId
     ? await prisma.payment.findUnique({
-        where: { id: paymentId },
+        where: { id: paymentId, storeId },
         include: { order: true },
       })
     : transactionId
       ? await prisma.payment.findFirst({
-          where: { transactionId },
+          where: { storeId, transactionId },
           include: { order: true },
         })
       : null;
 
-  if (payment) {
-    await markPaymentFailed({
-      paymentId: payment.id,
-      orderId: payment.orderId,
-      orderNo: payment.order.orderNo,
-      gatewayResponse: Object.fromEntries(formData.entries()),
-      reason: "SSLCommerz payment failed",
-    });
-  }
+  // Browser-return parameters alone cannot prove provider failure. Keep the
+  // attempt pending so a verified success or a customer retry can settle it.
 
   const failedUrl = new URL("/payment/failed", siteUrl);
   const orderNo = payment?.order?.orderNo || formData.get("value_a");

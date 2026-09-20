@@ -1,9 +1,6 @@
 "use server";
 
-import {
-  postCustomerPayment,
-  postProviderFee,
-} from "@/backend/services/paymentPostingService";
+import { postProviderFee } from "@/backend/services/paymentPostingService";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -13,6 +10,7 @@ import {
   toDate,
   toNumber,
 } from "../utils/procurement";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 export async function createPayment({
   orderId,
@@ -22,9 +20,11 @@ export async function createPayment({
   paymentMethod,
   amount,
 }) {
+  await requireProcurementPermission("payment", "create", "order");
+  const storeId = await requireCurrentStoreId();
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
       select: {
         orderPrice: true,
         deliveryCharge: true,
@@ -46,12 +46,12 @@ export async function createPayment({
     }
     const provider = paymentGatewayId
       ? await tx.paymentGateway.findUnique({
-          where: { id: paymentGatewayId },
+          where: { id: paymentGatewayId, storeId },
           include: { moneyAccount: true },
         })
       : courierProviderId
         ? await tx.courierProvider.findUnique({
-            where: { id: courierProviderId },
+            where: { id: courierProviderId, storeId },
             include: { moneyAccount: true },
           })
         : null;
@@ -64,8 +64,12 @@ export async function createPayment({
     if ((paymentGatewayId || courierProviderId) && !providerConfiguration?.ready) {
       throw new Error("The selected payment provider is unavailable.");
     }
+    if (provider?.moneyAccount && provider.moneyAccount.storeId !== storeId) {
+      throw new Error("The selected payment account belongs to another Store.");
+    }
     return tx.payment.create({
       data: {
+        storeId,
         orderId,
         gateway: provider?.code || gateway || "MANUAL",
         paymentGatewayId: paymentGatewayId || null,
@@ -76,73 +80,6 @@ export async function createPayment({
       },
     });
   });
-}
-
-export async function markPaymentSuccess(input) {
-  return postCustomerPayment({
-    paymentId: input.paymentId,
-    amount: input.amount,
-    storeAmount: input.storeAmount,
-    transactionId: input.transactionId,
-    bankTransactionId: input.bankTransactionId,
-    externalEventId: input.externalEventId || input.transactionId,
-    cardType: input.cardType,
-    cardNo: input.cardNo,
-    gatewayResponse: input.gatewayResponse,
-    paidAt: input.paidAt || new Date(),
-    createdBy: "payment-provider",
-  });
-}
-
-async function markUnsuccessful({ paymentId, orderId, orderNo, gatewayResponse, reason }, status) {
-  return prisma.$transaction(async (tx) => {
-    const payment = await tx.payment.findUnique({ where: { id: paymentId } });
-    if (!payment) throw new Error("Payment not found.");
-    if (payment.status === "PAID" || payment.status === status) return payment;
-    const updated = await tx.payment.update({
-      where: { id: paymentId },
-      data: { status, gatewayResponse },
-    });
-    const order = await tx.order.findUnique({
-      where: { id: orderId || payment.orderId },
-      select: { id: true, orderNo: true, status: true, paidAmount: true },
-    });
-    if (order) {
-      if ((order.paidAmount || 0) <= 0) {
-        const anotherPendingAttempt = await tx.payment.findFirst({
-          where: {
-            orderId: order.id,
-            id: { not: payment.id },
-            status: "PENDING",
-          },
-          select: { id: true },
-        });
-        await tx.order.update({
-          where: { id: order.id },
-          data: { paymentStatus: anotherPendingAttempt ? "PENDING" : status },
-        });
-      }
-      await tx.orderTimeline.create({
-        data: {
-          orderId: order.id,
-          orderNo: orderNo || order.orderNo,
-          title: status === "FAILED" ? "Payment Failed" : "Payment Cancelled",
-          status: order.status,
-          message: reason || `Online payment ${status.toLowerCase()}.`,
-          createdBy: "payment-provider",
-        },
-      });
-    }
-    return updated;
-  });
-}
-
-export async function markPaymentFailed(input) {
-  return markUnsuccessful(input, "FAILED");
-}
-
-export async function markPaymentCancelled(input) {
-  return markUnsuccessful(input, "CANCELLED");
 }
 
 export async function recordProviderFee(formData) {

@@ -268,9 +268,6 @@ export default function SocialTrackingForm({ initialSettings }) {
                         disabled={disabled}
                         placeholder={`Enter ${field.label}`}
                       />
-                      <code className="mt-1.5 block text-xs text-text-muted">
-                        {field.env}
-                      </code>
                     </div>
                   ),
                 )}

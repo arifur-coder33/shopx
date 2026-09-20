@@ -9,12 +9,14 @@ import {
 import { createPathaoOrder, getPathaoOrderInfo } from "../lib/pathao";
 import { updateOrderStatusAction } from "./orderActions";
 import { actionError, requireProcurementPermission } from "../utils/procurement";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 export async function getAvailableCourierProvidersForOrder() {
   try {
     await requireProcurementPermission("order", "view");
+    const storeId = await requireCurrentStoreId();
     const providers = await prisma.courierProvider.findMany({
-      where: { isActive: true },
+      where: { storeId, isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -26,7 +28,7 @@ export async function getAvailableCourierProvidersForOrder() {
         encryptedCredentials: true,
         nonSecretConfig: true,
         moneyAccount: { select: { id: true, isActive: true } },
-        pickupPoints: { select: { id: true, name: true, address: true, storeId: true } },
+        pickupPoints: { where: { storeId }, select: { id: true, name: true, address: true, externalStoreId: true } },
       },
     });
     const data = providers
@@ -39,7 +41,7 @@ export async function getAvailableCourierProvidersForOrder() {
         name,
         code,
         adapterKey,
-        pickupPoints,
+        pickupPoints: pickupPoints.map((point) => ({ ...point, storeId: point.externalStoreId })),
       }));
     return { success: true, data };
   } catch (error) {
@@ -51,10 +53,11 @@ export async function createCourierDeliveryAction({ formData }) {
   // Simulate API call to create a courier delivery
   try {
     await requireProcurementPermission("order", "update");
+    const storeId = await requireCurrentStoreId();
     let data = Object.fromEntries(formData.entries());
 
     const order = await prisma.order.findUnique({
-      where: { orderNo: data.invoice },
+      where: { storeId_orderNo: { storeId, orderNo: data.invoice } },
       select: { id: true, status: true, shipping: { select: { id: true } } },
     });
 
@@ -71,7 +74,7 @@ export async function createCourierDeliveryAction({ formData }) {
       throw new Error("Only a pending or processing order can be sent to a courier.");
     }
     const provider = await prisma.courierProvider.findUnique({
-      where: { id: data.courierProviderId },
+      where: { id: data.courierProviderId, storeId },
       include: { moneyAccount: true },
     });
     const providerConfiguration = getProviderRuntimeConfiguration(
@@ -87,18 +90,19 @@ export async function createCourierDeliveryAction({ formData }) {
           where: {
             id: data.pickupPointId,
             courierProviderId: provider.id,
+            storeId,
           },
-          select: { id: true, name: true, address: true, storeId: true },
+          select: { id: true, name: true, address: true, externalStoreId: true },
         })
       : null;
     if (data.pickupPointId && !pickupPoint) {
       throw new Error("The selected pickup point does not belong to this courier.");
     }
-    if (courierName === "PATHAO" && !pickupPoint?.storeId) {
+    if (courierName === "PATHAO" && !pickupPoint?.externalStoreId) {
       throw new Error("Create and select a Pathao pickup point before booking.");
     }
 
-    const pathaoStoreId = pickupPoint?.storeId ? Number(pickupPoint.storeId) : null;
+    const pathaoStoreId = pickupPoint?.externalStoreId ? Number(pickupPoint.externalStoreId) : null;
     if (
       courierName === "PATHAO" &&
       (!Number.isInteger(pathaoStoreId) || pathaoStoreId <= 0)
@@ -191,6 +195,7 @@ export async function createCourierDeliveryAction({ formData }) {
     }
     const shippingdata = await prisma.shipping.create({
       data: {
+        storeId,
         orderId: order.id,
         orderNo: data.invoice,
         cn: orderResponseData.cn,
@@ -213,19 +218,20 @@ export async function cancelCourierDeliveryAction(courierId, orderId) {
   // Simulate API call to cancel a courier delivery
   try {
     await requireProcurementPermission("order", "update");
+    const storeId = await requireCurrentStoreId();
     if (!courierId || !orderId) {
       throw new Error(
         "Courier ID and Order ID are required to cancel delivery.",
       );
     }
     const checkShipping = await prisma.shipping.findUnique({
-      where: { id: courierId },
+      where: { id: courierId, storeId, orderId },
     });
     if (!checkShipping) {
       throw new Error("No shipping found with the provided courier ID.");
     }
     await prisma.shipping.delete({
-      where: { id: courierId },
+      where: { id: courierId, storeId, orderId },
     });
     await updateOrderStatusAction(orderId, "PROCESSING");
     return { success: true, data: { status: "PROCESSING" } };
@@ -242,10 +248,11 @@ export async function getCourierDeliveryStatusAction({
   // Simulate API call to get courier delivery status
   try {
     await requireProcurementPermission("order", "view");
+    const storeId = await requireCurrentStoreId();
     if (!courierId || !courierProviderId) {
       throw new Error("Courier and consignment ID are required.");
     }
-    const provider = await prisma.courierProvider.findUnique({ where: { id: courierProviderId } });
+    const provider = await prisma.courierProvider.findUnique({ where: { id: courierProviderId, storeId } });
     if (!provider) throw new Error("Courier provider was not found.");
     const providerConfiguration = getProviderRuntimeConfiguration(
       "courier",
@@ -264,7 +271,7 @@ export async function getCourierDeliveryStatusAction({
         .replace(/[^a-z0-9]+/g, "_");
       if (normalizedStatus !== "delivered") return;
       const shipping = await prisma.shipping.findFirst({
-        where: { cn: String(courierId), courierProviderId: provider.id },
+        where: { storeId, cn: String(courierId), courierProviderId: provider.id },
         select: { orderId: true },
       });
       if (shipping) {

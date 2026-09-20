@@ -6,6 +6,7 @@ import { requireProcurementPermission } from "@/backend/utils/procurement";
 import { CONTENT_PAGE_DEFINITIONS, CONTENT_PAGE_SLUGS } from "@/lib/contentPageDefinitions";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 const clean = (value) => String(value || "").trim();
 
@@ -33,12 +34,14 @@ const optionalContactText = (value, label, max = 80) => {
 export async function getContentPagesForAdmin() {
   try {
     await requireProcurementPermission("contentPage", "view");
+    const storeId = await requireCurrentStoreId();
     const rows = await prisma.contentPage.findMany({
-      where: { slug: { in: [...CONTENT_PAGE_SLUGS] } },
+      where: { storeId, slug: { in: [...CONTENT_PAGE_SLUGS] } },
       orderBy: { slug: "asc" },
     });
     const bySlug = new Map(rows.map((page) => [page.slug, page]));
-    const siteSetting = await prisma.siteSetting.findFirst({
+    const siteSetting = await prisma.siteSetting.findUnique({
+      where: { storeId },
       select: {
         fbLink: true,
         messengerLink: true,
@@ -68,6 +71,7 @@ export async function getContentPagesForAdmin() {
 export async function updateContentPage(formData) {
   try {
     const userId = await requireProcurementPermission("contentPage", "update");
+    const storeId = await requireCurrentStoreId();
     const values = Object.fromEntries(formData.entries());
     const slug = clean(values.slug);
     if (!CONTENT_PAGE_SLUGS.has(slug)) throw new Error("Invalid content page.");
@@ -105,24 +109,24 @@ export async function updateContentPage(formData) {
 
     await prisma.$transaction(async (tx) => {
       await tx.contentPage.upsert({
-        where: { slug },
+        where: { storeId_slug: { storeId, slug } },
         update: pageData,
-        create: { slug, ...pageData, createdBy: userId },
+        create: { storeId, slug, ...pageData, createdBy: userId },
       });
       if (contactData) {
-        const setting = await tx.siteSetting.findFirst({ select: { id: true } });
+        const setting = await tx.siteSetting.findUnique({ where: { storeId }, select: { id: true } });
         if (setting) {
-          await tx.siteSetting.update({ where: { id: setting.id }, data: contactData });
+          await tx.siteSetting.update({ where: { id: setting.id, storeId }, data: contactData });
         } else {
-          await tx.siteSetting.create({ data: contactData });
+          await tx.siteSetting.create({ data: { ...contactData, storeId } });
         }
       }
     });
 
-    revalidateTag("content-pages");
+    revalidateTag(`content-pages:${storeId}`);
     if (slug === "contact") {
-      revalidateTag("contact-details");
-      revalidateTag("site-setting");
+      revalidateTag(`contact-details:${storeId}`);
+      revalidateTag(`site-setting:${storeId}`);
       revalidatePath("/", "layout");
     }
     revalidatePath(`/${slug}`);

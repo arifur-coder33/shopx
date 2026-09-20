@@ -3,11 +3,13 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 export async function createVariationAction(formData) {
   const data = Object.fromEntries(formData.entries());
 
   try {
+    const storeId = await requireCurrentStoreId();
     const preparedData = {
       ...data,
     };
@@ -15,7 +17,7 @@ export async function createVariationAction(formData) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
     const checkSlug = await prisma.variationName.findUnique({
-      where: { name: data?.name },
+      where: { storeId_name: { storeId, name: data?.name } },
     });
 
     if (checkSlug) {
@@ -25,7 +27,7 @@ export async function createVariationAction(formData) {
     // }
 
     const details = await prisma.variationName.create({
-      data: preparedData,
+      data: { ...preparedData, storeId },
     });
 
     revalidatePath("/admin/variation");
@@ -39,7 +41,8 @@ export async function createVariationAction(formData) {
 
 export async function getVariations() {
   try {
-    const data = await prisma.variationName.findMany();
+    const storeId = await requireCurrentStoreId();
+    const data = await prisma.variationName.findMany({ where: { storeId } });
 
     return { success: true, data }; // Return success with user data
   } catch (error) {
@@ -51,6 +54,7 @@ export async function updateVariationAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
 
   try {
+    const storeId = await requireCurrentStoreId();
     const preparedData = {
       ...data,
     };
@@ -58,14 +62,14 @@ export async function updateVariationAction({ formData, id }) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
     const checkData = await prisma.variationName.findUnique({
-      where: { id },
+      where: { id, storeId },
     });
 
     if (!checkData) {
       throw new Error("Invalide id");
     }
     const saveData = await prisma.variationName.update({
-      where: { id },
+      where: { id, storeId },
       data: preparedData,
     });
     // }
@@ -80,8 +84,9 @@ export async function updateVariationAction({ formData, id }) {
 
 export async function deleteVariationAction(id) {
   try {
+    const storeId = await requireCurrentStoreId();
     const deleteItem = await prisma?.variationName?.delete({
-      where: { id },
+      where: { id, storeId },
     });
     revalidatePath("/admin/variation");
     return { success: true, data: "Successfuully deleted" }; // Return success with user data
@@ -93,8 +98,14 @@ export async function deleteVariationAction(id) {
 
 export async function getVariationByCategoryId(id) {
   try {
+    const storeId = await requireCurrentStoreId();
+    const category = await prisma.category.findUnique({
+      where: { id, storeId },
+      select: { id: true },
+    });
+    if (!category) throw new Error("Category was not found for this Store.");
     const data = await prisma.variationValue.findMany({
-      where: { categoryId: id },
+      where: { categoryId: id, variation: { storeId } },
       include: {
         variation: {
           select: { id: true, name: true }, // Include the related variation data
@@ -129,8 +140,9 @@ export async function getVariationByCategoryId(id) {
 }
 export async function getVariationById(id) {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = await prisma.variationName.findUnique({
-      where: { id },
+      where: { id, storeId },
     });
     return { success: true, data }; // Return success with user data
   } catch (error) {
@@ -140,6 +152,7 @@ export async function getVariationById(id) {
 
 export async function getAllVariationList(params) {
   try {
+    const storeId = await requireCurrentStoreId();
     const {
       limit = 10,
       cursor,
@@ -151,7 +164,7 @@ export async function getAllVariationList(params) {
       name,
     } = params;
 
-    const whereClause = {};
+    const whereClause = { storeId };
 
     if (name) {
       whereClause.name = { contains: name, mode: "insensitive" };
@@ -195,9 +208,10 @@ export async function getAllVariationList(params) {
 
 export async function getVariationsCount(params) {
   try {
+    const storeId = await requireCurrentStoreId();
     const { name } = params;
 
-    const whereClause = {};
+    const whereClause = { storeId };
 
     if (name) {
       whereClause.name = { contains: name, mode: "insensitive" };

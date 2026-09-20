@@ -8,6 +8,196 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum StoreStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum StoreDomainType {
+  SUBDOMAIN
+  CUSTOM
+}
+
+enum StoreDomainStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Store {
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String          @unique
+  status    StoreStatus     @default(ACTIVE)
+  domains   StoreDomain[]
+  members   StoreMember[]
+  roles     StoreRole[]
+  customers StoreCustomer[]
+  categories Category[]
+  variationNames VariationName[]
+  productCodeCounters ProductCodeCounter[]
+  media Media[]
+  products Product[]
+  orders Order[]
+  counters Counter[]
+  orderCounters OrderCounter[]
+  shippings Shipping[]
+  paymentGateways PaymentGateway[]
+  courierProviders CourierProvider[]
+  socialTrackingSettings SocialTrackingSetting[]
+  payments Payment[]
+  refunds Refund[]
+  moneyAccounts MoneyAccount[]
+  courierPickupPoints CourierPickupPoint[]
+  siteSettings SiteSetting[]
+  contentPages ContentPage[]
+  notices Notice[]
+  banners banner[]
+  heroSlides HeroSlide[]
+  suppliers Supplier[]
+  purchaseOrders PurchaseOrder[]
+  warehouses Warehouse[]
+  goodsReceipts GoodsReceipt[]
+  deliveries Delivery[]
+  inventoryTransactions InventoryTransaction[]
+  stocks Stock[]
+  expenseCategories ExpenseCategory[]
+  expenses Expense[]
+  supplierPayments SupplierPayment[]
+  moneyTransactions MoneyTransaction[]
+  shareholders Shareholder[]
+  journalEntries JournalEntry[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model StoreDomain {
+  id         String            @id @default(auto()) @map("_id") @db.ObjectId
+  storeId    String            @db.ObjectId
+  store      Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  domain     String            @unique
+  type       StoreDomainType
+  isPrimary  Boolean           @default(false)
+  isVerified Boolean           @default(false)
+  status     StoreDomainStatus @default(ACTIVE)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([storeId, status])
+  @@index([storeId, isPrimary])
+}
+
+enum IdentityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model PlatformMember {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  email           String
+  normalizedEmail String         @unique
+  phone           String?
+  passwordHash    String
+  roleId          String         @db.ObjectId
+  role            PlatformRole   @relation(fields: [roleId], references: [id])
+  status          IdentityStatus @default(ACTIVE)
+  tokenVersion    Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([roleId, status])
+}
+
+model PlatformRole {
+  id          String                   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  code        String                   @unique
+  description String?
+  status      IdentityStatus           @default(ACTIVE)
+  members     PlatformMember[]
+  permissions PlatformRolePermission[]
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+}
+
+model PlatformRolePermission {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  roleId    String       @db.ObjectId
+  role      PlatformRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  resource  String
+  action    String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([roleId, resource, action])
+}
+
+model StoreMember {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  storeId         String         @db.ObjectId
+  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name            String
+  email           String
+  normalizedEmail String
+  phone           String?
+  passwordHash    String
+  roleId          String         @db.ObjectId
+  role            StoreRole      @relation(fields: [roleId], references: [id])
+  status          IdentityStatus @default(ACTIVE)
+  tokenVersion    Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([storeId, normalizedEmail])
+  @@index([storeId])
+  @@index([roleId, status])
+}
+
+model StoreRole {
+  id          String                @id @default(auto()) @map("_id") @db.ObjectId
+  storeId     String                @db.ObjectId
+  store       Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  code        String
+  description String?
+  status      IdentityStatus        @default(ACTIVE)
+  members     StoreMember[]
+  permissions StoreRolePermission[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([storeId, code])
+  @@index([storeId, status])
+}
+
+model StoreRolePermission {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  roleId    String    @db.ObjectId
+  role      StoreRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  resource  String
+  action    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([roleId, resource, action])
+}
+
+model StoreCustomer {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  storeId         String         @db.ObjectId
+  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name            String
+  email           String
+  normalizedEmail String
+  phone           String?
+  status          IdentityStatus @default(ACTIVE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([storeId, normalizedEmail])
+  @@index([storeId])
+}
+
 // User model with extended features
 model User {
   id     String  @id @default(auto()) @map("_id") @db.ObjectId
@@ -71,8 +261,10 @@ model RolePermission {
 // Category model for organizing products
 model Category {
   id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  storeId       String     @db.ObjectId
+  store         Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name          String // Category name
-  slug          String     @unique // Unique slug for URL identification
+  slug          String // Unique slug inside a Store
   description   String? // Optional category description
   // Banner image for the category
   thumbnailId   String?    @db.ObjectId
@@ -95,19 +287,24 @@ model Category {
   createdAt      DateTime         @default(now()) // Timestamp for category creation
   updatedAt      DateTime         @updatedAt // Auto-updated timestamp
 
-  @@index([fullPath])
+  @@unique([storeId, slug])
+  @@index([storeId, fullPath])
 }
 
 // Variation Model (Size, Color, etc.)
 model VariationName {
   id           String           @id @default(auto()) @map("_id") @db.ObjectId
-  name         String           @unique
+  storeId      String           @db.ObjectId
+  store        Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name         String
   categoryId   String?          @db.ObjectId
   category     Category?        @relation(fields: [categoryId], references: [id])
   values       VariationValue[] // Example: "Size", "Color"
   combinations Combination[]
   createdAt    DateTime?        @default(now()) // Timestamp for category creation
   updatedAt    DateTime?        @updatedAt // Auto-updated timestamp
+
+  @@unique([storeId, name])
 }
 
 // Variation Value Model (Specific options like XL, Red, etc.)
@@ -127,11 +324,17 @@ model VariationValue {
 
 model ProductCodeCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
+  storeId         String @db.ObjectId
+  store           Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
   lastProductCode Int
+
+  @@unique([storeId])
 }
 
 model Media {
   id                        String             @id @default(auto()) @map("_id") @db.ObjectId
+  storeId                   String             @db.ObjectId
+  store                     Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
   url                       String
   name                      String
   host                      String
@@ -145,13 +348,17 @@ model Media {
   heroSlides                HeroSlide[]
   supplierDocuments         SupplierDocument[] // Explicit Many-to-Many Relation
   createdAt                 DateTime           @default(now())
+
+  @@index([storeId, createdAt])
 }
 
 model Product {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  productCode  String?   @unique
+  storeId      String    @db.ObjectId
+  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productCode  String?
   title        String // Product title
-  slug         String    @unique // Unique slug for URL identification
+  slug         String // Unique slug inside a Store
   description  String? // Optional detailed description
   categoryId   String?   @db.ObjectId // Foreign key for Category
   category     Category? @relation(fields: [categoryId], references: [id]) // Relation to Category
@@ -179,7 +386,9 @@ model Product {
   createdAt            DateTime           @default(now()) // Timestamp for product creation
   updatedAt            DateTime           @updatedAt // Auto-updated timestamp
 
-  @@index([searchText])
+  @@unique([storeId, slug])
+  @@index([storeId, productCode])
+  @@index([storeId, searchText])
 }
 
 model ProductVideo {
@@ -244,7 +453,9 @@ model Combination {
 
 model Order {
   id                        String           @id @default(auto()) @map("_id") @db.ObjectId
-  orderNo                   String           @unique
+  storeId                   String           @db.ObjectId
+  store                     Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderNo                   String
   orderItems                OrderItem[]
   userId                    String?          @db.ObjectId // Foreign key for User
   user                      User?            @relation(fields: [userId], references: [id]) // Relation to User
@@ -288,6 +499,8 @@ model Order {
   createdAt                 DateTime         @default(now()) // Timestamp for order placement
   updatedAt                 DateTime         @updatedAt // Auto-updated timestamp
 
+  @@unique([storeId, orderNo])
+  @@index([storeId, createdAt])
   @@index([selectedPaymentGatewayId])
   @@index([selectedCourierProviderId])
 }
@@ -319,14 +532,21 @@ model OrderItem {
 
 model OrderCounter {
   id              String @id @default(auto()) @map("_id") @db.ObjectId
-  idNo            Int    @unique
+  storeId         String @db.ObjectId
+  store           Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  idNo            Int
   lastOrderNumber Int
+
+  @@unique([storeId, idNo])
 }
 
 model Counter {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  name String @unique // SUPPLIER, PRODUCT, PURCHASE_ORDER
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  name String // SUPPLIER, PRODUCT, PURCHASE_ORDER
 
   prefix String?
 
@@ -336,10 +556,14 @@ model Counter {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([storeId, name])
 }
 
 model Shipping {
   id                     String           @id @default(auto()) @map("_id") @db.ObjectId
+  storeId                String           @db.ObjectId
+  store                  Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   orderId                String           @unique @db.ObjectId
   order                  Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderNo                String?
@@ -356,13 +580,16 @@ model Shipping {
   createdAt              DateTime         @default(now()) // Timestamp for order placement
   updatedAt              DateTime         @updatedAt // Auto-updated timestamp
 
+  @@index([storeId, cn])
   @@index([courierProviderId])
 }
 
 model PaymentGateway {
   id                   String        @id @default(auto()) @map("_id") @db.ObjectId
+  storeId              String        @db.ObjectId
+  store                Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name                 String
-  code                 String        @unique
+  code                 String
   adapterKey           String        @default("MANUAL")
   isActive             Boolean       @default(false)
   sortOrder            Int           @default(0)
@@ -379,14 +606,17 @@ model PaymentGateway {
   createdBy            String?
   updatedBy            String?
 
-  @@index([isActive, sortOrder])
+  @@unique([storeId, code])
+  @@index([storeId, isActive, sortOrder])
   @@index([moneyAccountId])
 }
 
 model CourierProvider {
   id                   String               @id @default(auto()) @map("_id") @db.ObjectId
+  storeId              String               @db.ObjectId
+  store                Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name                 String
-  code                 String               @unique
+  code                 String
   adapterKey           String               @default("MANUAL")
   isActive             Boolean              @default(false)
   sortOrder            Int                  @default(0)
@@ -405,7 +635,8 @@ model CourierProvider {
   createdBy            String?
   updatedBy            String?
 
-  @@index([isActive, sortOrder])
+  @@unique([storeId, code])
+  @@index([storeId, isActive, sortOrder])
   @@index([moneyAccountId])
 }
 
@@ -414,6 +645,8 @@ model CourierProvider {
 // encryptedSecrets; they are never returned with public storefront settings.
 model SocialTrackingSetting {
   id                       String   @id @map("_id")
+  storeId                  String   @db.ObjectId
+  store                    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   facebookPixelId          String?
   googleTagId              String?
   googleAnalyticsId        String?
@@ -424,6 +657,8 @@ model SocialTrackingSetting {
   updatedAt                DateTime @updatedAt
   createdBy                String?
   updatedBy                String?
+
+  @@unique([storeId])
 }
 
 model OrderTimeline {
@@ -455,6 +690,9 @@ enum PaymentMethod {
 
 model Payment {
   id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   orderId String @db.ObjectId
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -495,6 +733,8 @@ model Payment {
   ledgers           Ledger[]
   moneyTransactions MoneyTransaction[]
 
+  @@index([storeId, createdAt])
+  @@index([storeId, transactionId])
   @@index([paymentGatewayId])
   @@index([courierProviderId])
   @@index([moneyAccountId])
@@ -512,6 +752,9 @@ enum RefundStatus {
 
 model Refund {
   id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   orderId String @db.ObjectId
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -537,6 +780,7 @@ model Refund {
 
   moneyTransactions MoneyTransaction[]
 
+  @@index([storeId, createdAt])
   @@index([moneyAccountId])
   @@index([externalReference])
 }
@@ -567,9 +811,11 @@ model Ledger {
 
 model CourierPickupPoint {
   id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  storeId           String           @db.ObjectId
+  store             Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name              String
   address           String
-  storeId           String?
+  externalStoreId   String?
   courierName       String?
   courierProviderId String?          @db.ObjectId
   courierProvider   CourierProvider? @relation(fields: [courierProviderId], references: [id])
@@ -578,11 +824,14 @@ model CourierPickupPoint {
   createdAt         DateTime         @default(now()) // Timestamp for order placement
   updatedAt         DateTime         @updatedAt // Auto-updated timestamp
 
-  @@index([courierProviderId])
+  @@unique([storeId, courierProviderId, externalStoreId])
+  @@index([storeId, courierProviderId])
 }
 
 model SiteSetting {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  storeId      String   @db.ObjectId
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name         String?
   slogan       String?
   seoTitle     String?
@@ -612,11 +861,15 @@ model SiteSetting {
   borderRadius    Int?
   createdAt    DateTime @default(now()) // Timestamp for order placement
   updatedAt    DateTime @updatedAt // Auto-updated timestamp
+
+  @@unique([storeId])
 }
 
 model ContentPage {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  slug            String   @unique
+  storeId         String   @db.ObjectId
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  slug            String
   title           String
   content         String
   metaTitle       String?
@@ -627,31 +880,42 @@ model ContentPage {
   createdBy       String?
   updatedBy       String?
 
-  @@index([isPublished, slug])
+  @@unique([storeId, slug])
+  @@index([storeId, isPublished, slug])
 }
 
 model Notice {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  storeId   String    @db.ObjectId
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   notice    String?
   start     DateTime?
   end       DateTime?
   createdAt DateTime  @default(now()) // Timestamp for order placement
   updatedAt DateTime  @updatedAt // Auto-updated timestamp
+
+  @@index([storeId, start, end])
 }
 
 model banner {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  storeId     String   @db.ObjectId
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   thumbnailId String?  @db.ObjectId
   thumbnail   Media?   @relation(fields: [thumbnailId], references: [id])
   name        String?
   createdAt   DateTime @default(now()) // Timestamp for order placement
   updatedAt   DateTime @updatedAt
+
+  @@index([storeId, createdAt])
 }
 
 // Home slider is separate from the legacy single banner so the old banner can
 // remain available without being rendered on the storefront.
 model HeroSlide {
   id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  storeId   String           @db.ObjectId
+  store     Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   title     String?
   link      String?
   sortOrder Int              @default(0)
@@ -662,7 +926,7 @@ model HeroSlide {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
-  @@index([isActive, sortOrder])
+  @@index([storeId, isActive, sortOrder])
 }
 
 enum HeroSlideMotion {
@@ -773,7 +1037,10 @@ model VerificationToken {
 model Supplier {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  supplierCode String? @unique
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  supplierCode String?
 
   companyName String
   contactName String?
@@ -800,7 +1067,8 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([companyName])
+  @@index([storeId, supplierCode])
+  @@index([storeId, companyName])
   @@index([phone])
   @@index([isActive])
 }
@@ -825,7 +1093,10 @@ enum SupplierStatus {
 model PurchaseOrder {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  poNo String @unique
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  poNo String
 
   supplierId String   @db.ObjectId
   supplier   Supplier @relation(fields: [supplierId], references: [id])
@@ -860,7 +1131,8 @@ model PurchaseOrder {
   createdBy String?
   updatedBy String?
 
-  @@index([supplierId, status])
+  @@unique([storeId, poNo])
+  @@index([storeId, supplierId, status])
   @@index([createdAt])
 }
 
@@ -895,7 +1167,10 @@ model PurchaseItem {
 model Warehouse {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  code String @unique
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  code String
 
   name String
 
@@ -917,12 +1192,18 @@ model Warehouse {
   updatedAt DateTime @updatedAt
   createdBy String?
   updatedBy String?
+
+  @@unique([storeId, code])
+  @@index([storeId, isDefault])
 }
 
 model GoodsReceipt {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  grnNo String @unique
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  grnNo String
 
   purchaseOrderId String @db.ObjectId
 
@@ -942,7 +1223,8 @@ model GoodsReceipt {
   createdBy String?
   updatedBy String?
 
-  @@index([purchaseOrderId])
+  @@unique([storeId, grnNo])
+  @@index([storeId, purchaseOrderId])
   @@index([warehouseId, createdAt])
 }
 
@@ -957,7 +1239,7 @@ model GoodsReceiptItem {
 
   variation ProductVariation @relation(fields: [variationId], references: [id])
 
-  batchNumber String? @unique
+  batchNumber String?
 
   supplierLotNumber String?
 
@@ -973,7 +1255,9 @@ model GoodsReceiptItem {
 
 model Delivery {
   id          String         @id @default(auto()) @map("_id") @db.ObjectId
-  deliveryNo  String         @unique
+  storeId     String         @db.ObjectId
+  store       Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  deliveryNo  String
   orderId     String         @db.ObjectId
   order       Order          @relation(fields: [orderId], references: [id])
   warehouseId String         @db.ObjectId
@@ -987,7 +1271,8 @@ model Delivery {
   createdBy   String?
   updatedBy   String?
 
-  @@index([orderId, createdAt])
+  @@unique([storeId, deliveryNo])
+  @@index([storeId, orderId, createdAt])
   @@index([warehouseId, createdAt])
 }
 
@@ -1011,6 +1296,9 @@ model DeliveryItem {
 model InventoryTransaction {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   variationId String           @db.ObjectId
   variation   ProductVariation @relation(fields: [variationId], references: [id])
 
@@ -1032,12 +1320,15 @@ model InventoryTransaction {
   createdAt DateTime @default(now())
   createdBy String?
 
-  @@index([warehouseId, variationId, createdAt])
+  @@index([storeId, warehouseId, variationId, createdAt])
   @@index([referenceType, referenceId])
 }
 
 model Stock {
   id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   warehouseId String    @db.ObjectId
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
@@ -1055,21 +1346,29 @@ model Stock {
   createdBy String?
   updatedBy String?
 
-  @@unique([warehouseId, variationId])
+  @@unique([storeId, warehouseId, variationId])
 }
 
 model ExpenseCategory {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  name String @unique
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name    String
 
   expenses  Expense[]
   createdBy String?
   updatedBy String?
+
+  @@unique([storeId, name])
+  @@index([storeId])
 }
 
 model Expense {
   id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   categoryId String          @db.ObjectId
   category   ExpenseCategory @relation(fields: [categoryId], references: [id])
@@ -1090,12 +1389,16 @@ model Expense {
   createdBy String?
   updatedBy String?
 
-  @@index([categoryId, expenseDate])
-  @@index([moneyAccountId, expenseDate])
+  @@index([storeId, expenseDate])
+  @@index([storeId, categoryId, expenseDate])
+  @@index([storeId, moneyAccountId, expenseDate])
 }
 
 model SupplierPayment {
   id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  storeId String @db.ObjectId
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   supplierId String @db.ObjectId
 
@@ -1121,9 +1424,10 @@ model SupplierPayment {
   createdBy String?
   updatedBy String?
 
-  @@index([supplierId, paidAt])
-  @@index([purchaseOrderId])
-  @@index([moneyAccountId, paidAt])
+  @@index([storeId, paidAt])
+  @@index([storeId, supplierId, paidAt])
+  @@index([storeId, purchaseOrderId])
+  @@index([storeId, moneyAccountId, paidAt])
 }
 
 model FinancialAccount {
@@ -1141,6 +1445,8 @@ model FinancialAccount {
 
 model MoneyAccount {
   id                   String             @id @default(auto()) @map("_id") @db.ObjectId
+  storeId              String             @db.ObjectId
+  store                Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name                 String
   type                 MoneyAccountType
   accountNumber        String?
@@ -1159,7 +1465,7 @@ model MoneyAccount {
   createdBy            String?
   updatedBy            String?
 
-  @@index([type, isActive])
+  @@index([storeId, type, isActive])
 }
 
 enum MoneyAccountType {
@@ -1172,7 +1478,9 @@ enum MoneyAccountType {
 
 model MoneyTransaction {
   id                String               @id @default(auto()) @map("_id") @db.ObjectId
-  transactionNo     String               @unique
+  storeId           String               @db.ObjectId
+  store              Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  transactionNo     String
   type              MoneyTransactionType
   amount            Float
   fromAccountId     String?              @db.ObjectId
@@ -1196,8 +1504,10 @@ model MoneyTransaction {
   createdAt         DateTime             @default(now())
   createdBy         String?
 
-  @@index([fromAccountId, transactionDate])
-  @@index([toAccountId, transactionDate])
+  @@unique([storeId, transactionNo])
+  @@index([storeId, transactionDate])
+  @@index([storeId, fromAccountId, transactionDate])
+  @@index([storeId, toAccountId, transactionDate])
   @@index([shareholderId, transactionDate])
   @@index([supplierPaymentId])
   @@index([expenseId])
@@ -1208,6 +1518,8 @@ model MoneyTransaction {
 
 model Shareholder {
   id              String             @id @default(auto()) @map("_id") @db.ObjectId
+  storeId         String             @db.ObjectId
+  store           Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name            String
   phone           String?
   email           String?
@@ -1220,7 +1532,7 @@ model Shareholder {
   createdBy       String?
   updatedBy       String?
 
-  @@index([isActive, name])
+  @@index([storeId, isActive, name])
 }
 
 enum MoneyTransactionType {
@@ -1271,7 +1583,9 @@ enum AccountingPeriodStatus {
 
 model JournalEntry {
   id            String              @id @default(auto()) @map("_id") @db.ObjectId
-  entryNo       String              @unique
+  storeId       String              @db.ObjectId
+  store         Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  entryNo       String
   entryDate     DateTime
   description   String
   referenceType AccountingReference
@@ -1283,8 +1597,9 @@ model JournalEntry {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
-  @@index([entryDate])
-  @@index([referenceType, referenceId])
+  @@unique([storeId, entryNo])
+  @@index([storeId, entryDate])
+  @@index([storeId, referenceType, referenceId])
 }
 
 model JournalLine {

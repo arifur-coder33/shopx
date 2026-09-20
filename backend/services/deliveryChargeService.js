@@ -1,10 +1,12 @@
 import prisma from "@/lib/prisma";
 import { DEFAULT_DELIVERY_RATES, nonNegativeRate } from "@/lib/deliveryCharge";
 import { getProviderRuntimeConfiguration } from "./providerCredentialService";
+import { requireCurrentStoreId } from "./storeContextService";
 
 export async function getCheckoutDeliveryRates(database = prisma) {
+  const storeId = await requireCurrentStoreId();
   const provider = await database.courierProvider.findFirst({
-    where: { isActive: true },
+    where: { storeId, isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
       name: true,

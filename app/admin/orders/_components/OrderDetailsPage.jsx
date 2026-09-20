@@ -184,6 +184,7 @@ export default function OrderDetailsPage({ order, children }) {
         <OrderFooter
           status={status}
           setStatus={setStatus}
+          payments={order.payments}
           courier={courier}
           setCourier={setCourier}
           onCreateCourier={handleCourierUpdate}

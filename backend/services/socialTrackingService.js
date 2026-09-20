@@ -4,8 +4,7 @@ import {
 } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
-
-export const SOCIAL_TRACKING_SETTING_ID = "SOCIAL_TRACKING";
+import { requireCurrentStoreId } from "./storeContextService";
 
 export const SOCIAL_SECRET_FIELDS = [
   "facebookAccessToken",
@@ -30,9 +29,9 @@ const toPublicSettings = (record) => ({
   tiktokPixelId: clean(record?.tiktokPixelId),
 });
 
-async function queryPublicSettings() {
+async function queryPublicSettings(storeId) {
   const record = await prisma.socialTrackingSetting.findUnique({
-    where: { id: SOCIAL_TRACKING_SETTING_ID },
+    where: { storeId },
     select: {
       facebookPixelId: true,
       googleTagId: true,
@@ -43,21 +42,24 @@ async function queryPublicSettings() {
   return record ? toPublicSettings(record) : { ...EMPTY_PUBLIC_SETTINGS };
 }
 
-const readCachedPublicSettings = unstable_cache(
-  queryPublicSettings,
-  ["social-tracking-public-settings"],
-  { revalidate: 300, tags: ["social-tracking"] },
-);
+const readCachedPublicSettings = (storeId) =>
+  unstable_cache(
+    () => queryPublicSettings(storeId),
+    ["social-tracking-public-settings", storeId],
+    { revalidate: 300, tags: [`social-tracking:${storeId}`] },
+  )();
 
 // Only non-secret IDs are cached and passed to storefront components.
 export async function getPublicSocialTrackingSettings() {
-  if (process.env.NODE_ENV === "development") return queryPublicSettings();
-  return readCachedPublicSettings();
+  const storeId = await requireCurrentStoreId();
+  if (process.env.NODE_ENV === "development") return queryPublicSettings(storeId);
+  return readCachedPublicSettings(storeId);
 }
 
 export async function getSocialTrackingRecord() {
+  const storeId = await requireCurrentStoreId();
   return prisma.socialTrackingSetting.findUnique({
-    where: { id: SOCIAL_TRACKING_SETTING_ID },
+    where: { storeId },
   });
 }
 

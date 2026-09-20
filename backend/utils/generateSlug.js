@@ -11,10 +11,10 @@ export function generateSlug(text) {
     .replace(/^-+|-+$/g, ""); // Remove leading or trailing dashes
 }
 
-export async function newSlug(text) {
+export async function newSlug(text, storeId) {
   let SLUG = generateSlug(text);
   const checkSlug = await prisma.product.findUnique({
-    where: { slug: SLUG },
+    where: { storeId_slug: { storeId, slug: SLUG } },
   });
 
   if (checkSlug) {
@@ -24,8 +24,8 @@ export async function newSlug(text) {
   return SLUG;
 }
 
-export async function generateUniqueSlug(tx, baseSlug, productId = null) {
-  let where = { slug: baseSlug };
+export async function generateUniqueSlug(tx, storeId, baseSlug, productId = null) {
+  let where = { storeId, slug: baseSlug };
   if (productId) {
     where.NOT = { id: productId };
   }

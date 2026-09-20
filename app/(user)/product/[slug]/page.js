@@ -1,7 +1,6 @@
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 import {
-  getStorefrontProductBySlug,
-  getStorefrontProductSlugs,
+  getStorefrontProductForPage,
 } from "@/backend/services/storefrontProductService";
 import { buildProductSeo } from "@/backend/utils/productSeo";
 import Breadcrumb from "@/components/common/Breadcrumb";
@@ -12,7 +11,7 @@ import { notFound } from "next/navigation";
 import ProductDataView from "../_components/ProductDataView";
 
 export const revalidate = 60;
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 const compact = (value, length) => {
@@ -22,7 +21,7 @@ const compact = (value, length) => {
 
 const productContext = async (slug) => {
   const [result, identity, siteUrl] = await Promise.all([
-    getStorefrontProductBySlug(slug),
+    getStorefrontProductForPage(slug),
     getPublicSiteIdentity(),
     getSiteUrl(),
   ]);
@@ -118,11 +117,6 @@ export async function generateMetadata({ params }) {
       ...(product.category?.name && { "product:category": product.category.name }),
     },
   };
-}
-
-export async function generateStaticParams() {
-  const { data: products = [] } = await getStorefrontProductSlugs();
-  return products.map((product) => ({ slug: product.slug }));
 }
 
 export default async function ProductPage({ params }) {

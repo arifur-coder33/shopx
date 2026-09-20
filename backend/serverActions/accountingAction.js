@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { actionError, requireProcurementPermission } from "../utils/procurement";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 const dateRange = (startDate, endDate) => ({
   ...(startDate && { gte: new Date(`${startDate}T00:00:00`) }),
@@ -10,16 +11,17 @@ const dateRange = (startDate, endDate) => ({
 
 export async function getAccountingDashboard(params = {}) {
   try {
-    await requireProcurementPermission("accounting", "view");
+    await requireProcurementPermission("financialReport", "view", "accounting");
+    const storeId = await requireCurrentStoreId();
     const today = new Date();
     const startDate = params.startDate || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
     const endDate = params.endDate || today.toISOString().slice(0, 10);
     const range = dateRange(startDate, endDate);
     const [accounts, allBalances, periodBalances, recentEntries] = await Promise.all([
       prisma.financialAccount.findMany({ where: { isActive: true }, orderBy: { code: "asc" } }),
-      prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED" } }, _sum: { debit: true, credit: true } }),
-      prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED", entryDate: range } }, _sum: { debit: true, credit: true } }),
-      prisma.journalEntry.findMany({ where: { status: "POSTED" }, take: 8, orderBy: { entryDate: "desc" }, include: { lines: { include: { account: true } } } }),
+      prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { storeId, status: "POSTED" } }, _sum: { debit: true, credit: true } }),
+      prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { storeId, status: "POSTED", entryDate: range } }, _sum: { debit: true, credit: true } }),
+      prisma.journalEntry.findMany({ where: { storeId, status: "POSTED" }, take: 8, orderBy: { entryDate: "desc" }, include: { lines: { include: { account: true } } } }),
     ]);
     const accountMap = new Map(accounts.map((account) => [account.id, account]));
     const signed = (row) => {
@@ -35,10 +37,11 @@ export async function getAccountingDashboard(params = {}) {
 
 export async function getJournalEntries(params = {}) {
   try {
-    await requireProcurementPermission("accounting", "view");
+    await requireProcurementPermission("financialReport", "view", "accounting");
+    const storeId = await requireCurrentStoreId();
     const page = Math.max(1, Number(params.page) || 1), limit = Math.min(100, Math.max(5, Number(params.limit) || 10));
     const range = dateRange(params.startDate, params.endDate);
-    const where = { status: "POSTED", ...((params.startDate || params.endDate) && { entryDate: range }), ...(params.entryNo && { entryNo: { contains: String(params.entryNo), mode: "insensitive" } }), ...(params.description && { description: { contains: String(params.description), mode: "insensitive" } }), ...(params.referenceId && { referenceId: { contains: String(params.referenceId), mode: "insensitive" } }), ...(params.referenceType && params.referenceType !== "ALL" && { referenceType: params.referenceType }) };
+    const where = { storeId, status: "POSTED", ...((params.startDate || params.endDate) && { entryDate: range }), ...(params.entryNo && { entryNo: { contains: String(params.entryNo), mode: "insensitive" } }), ...(params.description && { description: { contains: String(params.description), mode: "insensitive" } }), ...(params.referenceId && { referenceId: { contains: String(params.referenceId), mode: "insensitive" } }), ...(params.referenceType && params.referenceType !== "ALL" && { referenceType: params.referenceType }) };
     const [data, total] = await Promise.all([
       prisma.journalEntry.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { entryDate: "desc" }, include: { lines: { include: { account: true } } } }),
       prisma.journalEntry.count({ where }),

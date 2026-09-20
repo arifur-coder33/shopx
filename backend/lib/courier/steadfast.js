@@ -65,6 +65,7 @@ export const getSteadfastDeliveryStatus = async (
     const response = await fetch(`${getBaseUrl(providerConfiguration)}${endpoint}`, {
       method: "GET",
       headers: getHeaders(providerConfiguration),
+      cache: "no-store",
     });
 
     const data = await response.json();

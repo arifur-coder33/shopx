@@ -1,6 +1,6 @@
 "use server";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
-import { postCodCollection } from "@/backend/services/paymentPostingService";
+import { postCodCollection, postPaymentRefundInTransaction } from "@/backend/services/paymentPostingService";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import prisma from "@/lib/prisma";
@@ -12,6 +12,8 @@ import { getListData } from "../utils/getListData";
 import { getUserId } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
 import { firePurchaseServer } from "./SocialPurchaseEventAction";
+import { requireCurrentStoreId } from "../services/storeContextService";
+import { requireProcurementPermission } from "../utils/procurement";
 const statusMap = {
   all: null, // no filter
   running: [
@@ -25,6 +27,55 @@ const statusMap = {
   delivered: ["DELIVERED", "RETURNING", "RETURNED"],
   refunded: ["REFUNDING", "REFUNDED"],
 };
+
+async function restoreCheckoutStock(tx, storeId, order) {
+  const debits = await tx.inventoryTransaction.findMany({
+    where: { storeId, referenceType: "SALE", referenceId: order.id, type: "OUT", createdBy: "checkout" },
+    select: { warehouseId: true, variationId: true, quantity: true },
+  });
+  if (!debits.length) return;
+  if (!["PENDING", "PROCESSING"].includes(order.status)) {
+    throw new Error("Stock cannot be restored through cancellation after fulfilment has started.");
+  }
+  if (await tx.delivery.count({ where: { storeId, orderId: order.id } })) {
+    throw new Error("A prepared delivery cannot be cancelled through this stock-release path.");
+  }
+  const alreadyRestored = await tx.inventoryTransaction.findFirst({
+    where: {
+      storeId, referenceType: "RETURN", referenceId: order.id,
+      type: "RETURN_IN", createdBy: "checkout-cancel",
+    },
+    select: { id: true },
+  });
+  if (alreadyRestored) throw new Error("Checkout stock was already restored for this order.");
+  for (const debit of debits) {
+    const quantity = -debit.quantity;
+    const restored = await tx.stock.updateMany({
+      where: { storeId, warehouseId: debit.warehouseId, variationId: debit.variationId },
+      data: {
+        quantity: { increment: quantity },
+        available: { increment: quantity },
+        updatedBy: "checkout-cancel",
+      },
+    });
+    if (restored.count !== 1) throw new Error("The original stock allocation could not be restored.");
+    const stock = await tx.stock.findUnique({
+      where: { storeId_warehouseId_variationId: {
+        storeId, warehouseId: debit.warehouseId, variationId: debit.variationId,
+      } },
+      select: { quantity: true },
+    });
+    await tx.inventoryTransaction.create({
+      data: {
+        storeId, warehouseId: debit.warehouseId,
+        variationId: debit.variationId, type: "RETURN_IN", quantity,
+        balanceAfter: stock.quantity, referenceType: "RETURN",
+        referenceId: order.id, remarks: `Cancelled checkout order ${order.orderNo}`,
+        createdBy: "checkout-cancel",
+      },
+    });
+  }
+}
 // export async function createOrder(formData) {
 //   const h = await headers();
 //   const ip = getIP(h);
@@ -247,6 +298,7 @@ export async function createOrder(formData) {
   const [h, userId] = await Promise.all([headers(), getUserId()]);
   const ip = getIP(h);
   try {
+    const storeId = await requireCurrentStoreId();
     const data = Object.fromEntries(formData.entries());
     const orderItems = JSON.parse(data?.products);
     const paymentMethod = String(data.paymentMethod || "").toUpperCase();
@@ -269,16 +321,39 @@ export async function createOrder(formData) {
     if (paymentMethod !== "COD" && !data.paymentGatewayId) {
       throw new Error("Select an online payment gateway.");
     }
+    if (!/^01\d{9}$/.test(String(data.phoneNumber).trim()) ||
+        !String(data.customerName).trim() ||
+        !String(data.district).trim() ||
+        !String(data.thana).trim() ||
+        !String(data.deliveryAddress).trim() ||
+        (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email).trim())) ||
+        !["inside-dhaka", "outside-dhaka"].includes(data.deliveryArea)) {
+      throw new Error("Enter a valid name, phone, address, email and delivery area.");
+    }
+    for (const item of orderItems) {
+      const quantity = Number(item?.quantity);
+      if (!/^[a-f\d]{24}$/i.test(String(item?.variation?.id || "")) ||
+          !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 1000) {
+        throw new Error("Select a valid product variation and quantity (1–1000).");
+      }
+    }
     const variationIds = orderItems.map((item) => item.variation.id);
     const variations = await prisma.productVariation.findMany({
-      where: { id: { in: variationIds } },
+      where: { id: { in: variationIds }, product: { storeId, isActive: true, status: "ACTIVE" } },
       select: {
         id: true,
         sku: true,
         regularPrice: true,
         discountPrice: true,
         weight: true,
-        stocks: { select: { available: true } },
+        combinations: {
+          select: {
+            id: true,
+            variationName: { select: { name: true } },
+            variationValue: { select: { value: true } },
+          },
+        },
+        stocks: { where: { storeId }, select: { available: true } },
         product: {
           select: {
             id: true,
@@ -313,6 +388,15 @@ export async function createOrder(formData) {
       const variation = variationMap[variationId];
       if (!variation)
         throw new Error("Selected product variation was not found.");
+      for (const item of orderItems.filter((row) => row.variation.id === variationId)) {
+        if (item.id && item.id !== variation.product.id) {
+          throw new Error("Selected variation does not belong to the product.");
+        }
+        if (item.variation.combinationId &&
+            !variation.combinations.some((combination) => combination.id === item.variation.combinationId)) {
+          throw new Error("Selected combination does not belong to the variation.");
+        }
+      }
       if (
         !variation.product?.allowOutOfStockOrder &&
         variation.available < requested
@@ -326,7 +410,7 @@ export async function createOrder(formData) {
     const serverOrderPrice = orderItems.reduce((total, item) => {
       const variation = variationMap[item.variation.id];
       const unitPrice = variation.discountPrice ?? variation.regularPrice;
-      if (!Number.isFinite(Number(unitPrice)))
+      if (!Number.isFinite(Number(unitPrice)) || Number(unitPrice) <= 0)
         throw new Error(`Price is unavailable for ${variation.product.title}.`);
       return total + Number(item.quantity) * Number(unitPrice);
     }, 0);
@@ -351,7 +435,7 @@ export async function createOrder(formData) {
       const provider =
         paymentMethod !== "COD"
           ? await tx.paymentGateway.findUnique({
-              where: { id: data.paymentGatewayId },
+              where: { id: data.paymentGatewayId, storeId },
               include: { moneyAccount: true },
             })
           : null;
@@ -370,21 +454,22 @@ export async function createOrder(formData) {
       }
       if (paymentMethod === "COD") {
         const codGateway = await tx.paymentGateway.findFirst({
-          where: { adapterKey: "COD", isActive: true },
+          where: { storeId, adapterKey: "COD", isActive: true },
         });
         if (!getProviderRuntimeConfiguration("gateway", codGateway).ready) {
           throw new Error("Cash on Delivery is currently disabled.");
         }
       }
       const counter = await tx.orderCounter.upsert({
-        where: { idNo: 11 },
+        where: { storeId_idNo: { storeId, idNo: 11 } },
         update: { lastOrderNumber: { increment: 1 } },
-        create: { idNo: 11, lastOrderNumber: 240000020 },
+        create: { storeId, idNo: 11, lastOrderNumber: 240000020 },
         select: { lastOrderNumber: true },
       });
       const newOrderNumber = counter.lastOrderNumber.toString();
       const order = await tx.order.create({
         data: {
+          storeId,
           orderNo: newOrderNumber,
           userId: userId || null,
           customerName: data.customerName,
@@ -413,6 +498,63 @@ export async function createOrder(formData) {
           ipAddress: ip,
         },
       });
+      // Checkout consumes sellable stock before the order can commit. The
+      // conditional update is the concurrency guard; the earlier stock read
+      // is only for a helpful validation message.
+      const requiredStock = [...requestedByVariation].filter(
+        ([variationId]) => !variationMap[variationId].product.allowOutOfStockOrder,
+      );
+      if (requiredStock.length) {
+        const stockRows = await tx.stock.findMany({
+          where: {
+            storeId,
+            variationId: { in: requiredStock.map(([variationId]) => variationId) },
+            available: { gt: 0 },
+          },
+          orderBy: [{ warehouseId: "asc" }, { id: "asc" }],
+        });
+        // Delivery documents use one warehouse. Consume all required items
+        // from one warehouse so later delivery can use the same allocation.
+        const warehouseIds = [...new Set(stockRows.map((row) => row.warehouseId))];
+        const warehouseId = warehouseIds.find((id) =>
+          requiredStock.every(([variationId, quantity]) =>
+            stockRows.some((row) =>
+              row.warehouseId === id && row.variationId === variationId &&
+              row.available >= quantity && row.quantity >= quantity,
+            ),
+          ),
+        );
+        if (!warehouseId) throw new Error("Requested stock is no longer available. Please refresh and try again.");
+        for (const [variationId, quantity] of requiredStock) {
+          const stock = stockRows.find((row) =>
+            row.warehouseId === warehouseId && row.variationId === variationId,
+          );
+          const debited = await tx.stock.updateMany({
+            where: {
+              id: stock.id, storeId, warehouseId, variationId,
+              available: { gte: quantity }, quantity: { gte: quantity },
+            },
+            data: {
+              quantity: { decrement: quantity },
+              available: { decrement: quantity },
+              updatedBy: "checkout",
+            },
+          });
+          if (debited.count !== 1) throw new Error("Requested stock changed. Please refresh and try again.");
+          const updatedStock = await tx.stock.findUnique({
+            where: { id: stock.id, storeId }, select: { quantity: true },
+          });
+          await tx.inventoryTransaction.create({
+            data: {
+              storeId, warehouseId, variationId, type: "OUT",
+              quantity: -quantity, balanceAfter: updatedStock.quantity,
+              referenceType: "SALE", referenceId: order.id,
+              remarks: `Checkout stock for order ${order.orderNo}`,
+              createdBy: "checkout",
+            },
+          });
+        }
+      }
       await tx.orderItem.createMany({
         data: orderItems.map((item, i) => {
           const variation = variationMap[item.variation.id];
@@ -429,17 +571,16 @@ export async function createOrder(formData) {
             variationId: variation.id,
             orderId: order.id,
             combinationId: item.variation.combinationId || undefined,
-            combinations: JSON.stringify(
-              item.variation.combinations?.map((c) => ({
-                name: c.variationName.name,
-                value: c.variationValue.value,
-              })) || [],
-            ),
+            combinations: JSON.stringify(variation.combinations.map((c) => ({
+              name: c.variationName?.name,
+              value: c.variationValue?.value,
+            }))),
           };
         }),
       });
       const payment = await tx.payment.create({
         data: {
+          storeId,
           orderId: order.id,
           gateway: paymentMethod !== "COD" ? provider.code : "COD",
           paymentMethod,
@@ -469,10 +610,19 @@ export async function createOrder(formData) {
     revalidateTag("orders");
     return { success: true, data: result };
   } catch (error) {
-    return { success: false, error: error.message };
+    const internalError = /^PrismaClient/.test(error?.name || "") ||
+      /write conflict|transaction.*aborted/i.test(error?.message || "");
+    return {
+      success: false,
+      error: internalError
+        ? "Order could not be placed because stock changed. Please try again."
+        : error.message,
+    };
   }
 }
 export async function getAllOrder(params) {
+  await requireProcurementPermission("order", "view");
+  const storeId = await requireCurrentStoreId();
   return getListData({
     prisma,
     model: "order",
@@ -491,10 +641,13 @@ export async function getAllOrder(params) {
       },
     },
     dateField: "createdAt",
+    baseWhere: { storeId },
   });
 }
 
 export async function getOrderCount(params) {
+  await requireProcurementPermission("order", "view");
+  const storeId = await requireCurrentStoreId();
   return getListCount({
     prisma,
     model: "order",
@@ -513,6 +666,7 @@ export async function getOrderCount(params) {
       },
     },
     dateField: "createdAt",
+    baseWhere: { storeId },
   });
 }
 
@@ -550,8 +704,9 @@ export async function getOrderCount(params) {
 //   }
 // }
 export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
-  console.log("start load", orderNo, phoneNumber);
   try {
+    const storeId = await requireCurrentStoreId();
+    if (!phoneNumber) throw new Error("Order phone number is required.");
     let finalOrderId = orderId;
 
     // orderId না থাকলে orderNo + phoneNumber দিয়ে Order খুঁজবে
@@ -564,6 +719,7 @@ export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
 
       const order = await prisma.order.findFirst({
         where: {
+          storeId,
           orderNo,
           phoneNumber,
         },
@@ -582,7 +738,7 @@ export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
       finalOrderId = order.id;
     }
     const data = await prisma.order.findUnique({
-      where: { id: finalOrderId },
+      where: { id: finalOrderId, storeId, phoneNumber },
       include: {
         orderItems: {
           include: {
@@ -591,7 +747,6 @@ export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
         },
       },
     });
-    console.log("data", data);
     return { success: true, data }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -600,8 +755,10 @@ export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
 
 export async function getOrderById(orderId) {
   try {
+    await requireProcurementPermission("order", "view");
+    const storeId = await requireCurrentStoreId();
     const data = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
 
       include: {
         orderItems: {
@@ -622,7 +779,6 @@ export async function getOrderById(orderId) {
         },
       },
     });
-    console.log("Fetched order by ID:", data);
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
@@ -631,9 +787,12 @@ export async function getOrderById(orderId) {
 
 export async function getOrders({ userId, status, page = 1, limit = 10 }) {
   try {
+    const currentUserId = await getUserId();
+    if (!currentUserId || (userId && userId !== currentUserId)) throw new Error("Unauthorized order access.");
+    const storeId = await requireCurrentStoreId();
     const skip = (page - 1) * limit;
 
-    let where = { userId };
+    let where = { storeId, userId: currentUserId };
 
     if (status && status !== "all") {
       const dbStatuses = statusMap[status.toLowerCase()];
@@ -674,10 +833,13 @@ export async function getOrders({ userId, status, page = 1, limit = 10 }) {
 }
 export async function deleteOrderById(orderId) {
   try {
+    await requireProcurementPermission("order", "delete");
+    const storeId = await requireCurrentStoreId();
     // Delete the order by its ID
     const deletedOrder = await prisma.order.delete({
       where: {
         id: orderId,
+        storeId,
       },
     });
     revalidatePath("/admin/order");
@@ -692,16 +854,17 @@ export async function deleteOrderById(orderId) {
       success: false,
       message: error.message || "Failed to delete order",
     };
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function updateOrderStatusAction(orderId, status, note) {
   try {
+    await requireProcurementPermission("order", "update");
+    if (status === "REFUNDED") throw new Error("Complete the financial refund instead of changing the Order status directly.");
+    const storeId = await requireCurrentStoreId();
     // 🔎 get order first (for orderNo + old status)
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
       select: {
         status: true,
         orderNo: true,
@@ -755,7 +918,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
 
     // ✅ update order status
     await prisma.order.update({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
       data: {
         status,
       },
@@ -818,17 +981,19 @@ export async function updateOrderExtraDiscountAction({
   adminDiscount,
 }) {
   try {
+    await requireProcurementPermission("order", "update");
+    const storeId = await requireCurrentStoreId();
     if (!orderId) {
       throw new Error("Order ID is required");
     }
     const checkOrder = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
     });
     if (!checkOrder) {
       throw new Error("Order not found");
     }
     const result = await prisma.order.update({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
       data: {
         adminNote: adminNote,
         adminDiscount: Number(adminDiscount),
@@ -854,10 +1019,12 @@ export async function cancelOrderById({
   cancelReasonType,
 }) {
   try {
+    await requireProcurementPermission("order", "update");
+    const storeId = await requireCurrentStoreId();
     await prisma.$transaction(async (tx) => {
       // 1️⃣ Order + items load
       const order = await tx.order.findUnique({
-        where: { id: orderId },
+        where: { id: orderId, storeId },
         include: {
           orderItems: {
             select: {
@@ -877,10 +1044,9 @@ export async function cancelOrderById({
         throw new Error("Order already CANCELLED/returned");
       }
 
-      // Stock is maintained in the warehouse Stock model and is consumed on delivery.
-      // Cancelling an unfulfilled order therefore does not alter inventory.
+      await restoreCheckoutStock(tx, storeId, order);
       await tx.order.update({
-        where: { id: orderId },
+        where: { id: orderId, storeId },
         data: {
           cancelReason: cancelReason || "",
           cancelReasonType: cancelReasonType || "",
@@ -888,14 +1054,13 @@ export async function cancelOrderById({
         },
       });
 
-      await addOrderTimeline({
-        orderId,
-        orderNo: order.orderNo,
-        status: "CANCELLED",
-        title: cancelReasonType,
-        message: cancelReason,
-
-        createdBy: "system",
+      await tx.orderTimeline.create({
+        data: {
+          orderId, orderNo: order.orderNo, status: "CANCELLED",
+          title: cancelReasonType || "Order Cancelled",
+          message: cancelReason || "Order cancelled by administrator",
+          createdBy: "system",
+        },
       });
     });
 
@@ -909,72 +1074,82 @@ export async function cancelOrderById({
   }
 }
 
-export async function processRefundAction({ orderId, method, trxId, note }) {
+export async function processRefundAction({ orderId, trxId, note }) {
   try {
-    if (!orderId) throw new Error("Order ID required");
+    // Keep legacy User RBAC. A present StoreMember never falls back to it.
+    const createdBy = await requireProcurementPermission("order", "update");
+    const storeId = await requireCurrentStoreId();
+    if (!orderId) throw new Error("Order ID required.");
+    const externalReference = `LEGACY_ORDER_REFUND:${orderId}`;
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId, storeId } });
+      if (!order) throw new Error("Order not found.");
+      const existing = await tx.refund.findFirst({
+        where: { storeId, orderId, externalReference, status: "COMPLETED" },
+        include: { moneyTransactions: { where: { storeId, type: "REFUND" }, select: { id: true } } },
+      });
+      if (existing?.moneyTransactions.length && order.status === "REFUNDED") {
+        const [journal, ledger] = await Promise.all([
+          tx.journalEntry.findFirst({
+            where: { storeId, referenceType: "REFUND", referenceId: existing.id, status: "POSTED" },
+            select: { id: true },
+          }),
+          tx.ledger.findFirst({
+            where: { orderId, paymentId: existing.paymentId, type: "REFUND", reference: externalReference },
+            select: { id: true },
+          }),
+        ]);
+        if (journal && ledger) return { refund: existing, duplicate: true };
+      }
+      if (order.status === "REFUNDED") throw new Error("Order is already marked refunded without a matching financial posting.");
+      if (!["RETURNED", "REFUNDING"].includes(order.status)) throw new Error("Refund not allowed in this status.");
 
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-    });
+      const payments = await tx.payment.findMany({
+        where: { storeId, orderId, status: { in: ["PAID", "PARTIALLY_REFUNDED"] } },
+        select: { id: true, amount: true, moneyAccountId: true },
+      });
+      if (payments.length !== 1) {
+        throw new Error("This refund requires exactly one posted payment. Use the per-payment financial refund workflow for multiple payments.");
+      }
+      if (!payments[0].moneyAccountId) throw new Error("The original payment has no money account.");
+      // Preserve the prior merchandise-only amount; delivery charge is excluded.
+      const targetAmount = Math.round((order.orderPrice - (order.adminDiscount || 0)) * 100) / 100;
+      const previous = await tx.refund.findMany({
+        where: { storeId, orderId, status: "COMPLETED" },
+        include: { moneyTransactions: { where: { storeId, type: "REFUND" }, select: { id: true } } },
+      });
+      if (previous.some((refund) => !refund.moneyTransactions.length || refund.paymentId !== payments[0].id)) {
+        throw new Error("Existing refund history needs review before completing another refund.");
+      }
+      const alreadyPosted = previous.reduce((sum, refund) => sum + refund.amount, 0);
+      const amount = Math.round((targetAmount - alreadyPosted) * 100) / 100;
+      if (amount <= 0 || amount > payments[0].amount - alreadyPosted + 0.001) {
+        throw new Error("The merchandise refund amount exceeds the remaining posted payment.");
+      }
+      return postPaymentRefundInTransaction(tx, {
+        storeId, orderId, paymentId: payments[0].id, amount,
+        reason: "Returned merchandise refund",
+        adminNote: [trxId && `External reference: ${String(trxId).trim()}`, note && String(note).trim()].filter(Boolean).join(" · ") || null,
+        externalReference, createdBy, completeReturnedOrder: true,
+      });
+    }, { timeout: 30000 });
 
-    if (!order) throw new Error("Order not found");
-    if (order.status === "REFUNDED") throw new Error("Already refunded");
-    if (!["RETURNED", "REFUNDING"].includes(order.status))
-      throw new Error("Refund not allowed in this status");
-
-    const refundAmount = order.orderPrice - (order.adminDiscount || 0);
-
-    const refun = await prisma.$transaction([
-      // 1️⃣ Update order status
-      prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: "REFUNDED", // ✅ শুধু status update
-        },
-      }),
-
-      // 2️⃣ Create refund record
-      prisma.refund.create({
-        data: {
-          orderId,
-          amount: refundAmount,
-          method,
-          trxId,
-          note,
-          status: "COMPLETED",
-        },
-      }),
-
-      // 3️⃣ Timeline add
-      prisma.orderTimeline.create({
-        data: {
-          orderId,
-          orderNo: order.orderNo,
-          status: "REFUNDED",
-          title: "Refund processed",
-          message: `Refund via ${method} (${trxId || "no trx"})`,
-          createdBy: "admin",
-        },
-      }),
-    ]);
-
-    console.log("Refund transaction result:", refun);
-
-    // 🔄 Revalidate paths
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${orderId}`);
-
-    return { success: true, message: "Refund completed successfully" };
+    revalidatePath("/admin/accounts");
+    return { success: true, message: result.duplicate ? "Refund was already completed." : "Refund completed successfully", data: result };
   } catch (error) {
-    console.error("Error processing refund:", error);
     return { success: false, message: error.message || "Refund failed" };
   }
 }
 
 export async function getOrderCountsbyUserId(userId) {
+  const currentUserId = await getUserId();
+  if (!currentUserId || userId !== currentUserId) throw new Error("Unauthorized order access.");
+  const storeId = await requireCurrentStoreId();
   const allOrders = await prisma.order.groupBy({
     by: ["status"],
-    where: { userId },
+    where: { storeId, userId },
     _count: { status: true },
   });
 
@@ -1009,6 +1184,7 @@ export async function getOrderCountsbyUserId(userId) {
 
 export async function getOrderIdByOrderNoPhoneNo({ orderNo, phoneNumber }) {
   try {
+    const storeId = await requireCurrentStoreId();
     if (!orderNo || !phoneNumber) {
       throw new Error(
         "Either orderId or both orderNo and phoneNumber are required",
@@ -1017,6 +1193,7 @@ export async function getOrderIdByOrderNoPhoneNo({ orderNo, phoneNumber }) {
 
     const order = await prisma.order.findFirst({
       where: {
+        storeId,
         orderNo,
         phoneNumber,
       },
@@ -1048,11 +1225,12 @@ export async function cancelUnpaidCustomerOrder({
   reason,
 }) {
   try {
+    const storeId = await requireCurrentStoreId();
     if (!orderNo || !phoneNumber)
       throw new Error("Order information is required.");
     await prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({
-        where: { orderNo, phoneNumber },
+        where: { storeId, orderNo, phoneNumber },
         include: {
           shipping: true,
           payments: { select: { status: true } },
@@ -1077,12 +1255,13 @@ export async function cancelUnpaidCustomerOrder({
           "This order can no longer be cancelled by the customer.",
         );
       }
+      await restoreCheckoutStock(tx, storeId, order);
       await tx.payment.updateMany({
-        where: { orderId: order.id, status: "PENDING" },
+        where: { storeId, orderId: order.id, status: "PENDING" },
         data: { status: "CANCELLED" },
       });
       await tx.order.update({
-        where: { id: order.id },
+        where: { id: order.id, storeId },
         data: {
           status: "CANCELLED",
           paymentStatus: "CANCELLED",

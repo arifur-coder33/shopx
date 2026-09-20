@@ -1,6 +1,6 @@
-// src/components/common/ThemeScript.js
-// src/components/common/ThemeScript.js
-// This component injects a script that runs before the page hydrates.
+import Script from "next/script";
+
+// Set the saved theme before hydration without rendering a raw React script tag.
 export const ThemeScript = () => {
   const script = `
     (function() {
@@ -12,5 +12,11 @@ export const ThemeScript = () => {
     })();
   `;
 
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+  return (
+    <Script
+      id="theme-init"
+      strategy="beforeInteractive"
+      dangerouslySetInnerHTML={{ __html: script }}
+    />
+  );
 };

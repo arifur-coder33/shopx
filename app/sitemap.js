@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { productSeoImages, productSeoVideos } from "@/backend/utils/productSeo";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 export const revalidate = 3600;
 
@@ -15,6 +16,7 @@ const categoryUrl = (category, siteUrl) =>
   ).toString();
 
 export default async function sitemap() {
+  const storeId = await requireCurrentStoreId();
   const siteUrl = await getSiteUrl();
   const absolute = (path) => new URL(path, `${siteUrl}/`).toString();
   const home = {
@@ -27,7 +29,7 @@ export default async function sitemap() {
   try {
     const [products, categories, contentPages] = await Promise.all([
       prisma.product.findMany({
-        where: { isActive: true },
+        where: { storeId, isActive: true },
         select: {
           slug: true,
           title: true,
@@ -46,11 +48,12 @@ export default async function sitemap() {
         orderBy: { updatedAt: "desc" },
       }),
       prisma.category.findMany({
+        where: { storeId },
         select: { slug: true, fullPath: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
       }),
       prisma.contentPage.findMany({
-        where: { isPublished: true },
+        where: { storeId, isPublished: true },
         select: { slug: true, updatedAt: true },
       }),
     ]);

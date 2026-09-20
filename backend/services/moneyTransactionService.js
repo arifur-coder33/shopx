@@ -1,4 +1,5 @@
 import { generateCode } from "../utils/generateCode";
+import { requireCurrentStoreId } from "./storeContextService";
 
 const positiveAmount = (value) => {
   const amount = Number(value);
@@ -28,6 +29,7 @@ export async function postMoneyTransaction(
     createdBy,
   },
 ) {
+  const storeId = await requireCurrentStoreId();
   const amount = positiveAmount(rawAmount);
   if (!fromAccountId && !toAccountId) {
     throw new Error("A source or destination money account is required.");
@@ -38,7 +40,7 @@ export async function postMoneyTransaction(
 
   if (idempotencyKey) {
     const existing = await tx.moneyTransaction.findFirst({
-      where: { idempotencyKey },
+      where: { storeId, idempotencyKey },
       include: { fromAccount: true, toAccount: true },
     });
     if (existing) return { transaction: existing, duplicate: true };
@@ -46,7 +48,7 @@ export async function postMoneyTransaction(
 
   const ids = [...new Set([fromAccountId, toAccountId].filter(Boolean))];
   const accounts = await tx.moneyAccount.findMany({
-    where: { id: { in: ids }, isActive: true },
+    where: { storeId, id: { in: ids }, isActive: true },
   });
   if (accounts.length !== ids.length) {
     throw new Error("One or more money accounts are inactive or unavailable.");
@@ -56,7 +58,7 @@ export async function postMoneyTransaction(
 
   if (fromAccount) {
     const debited = await tx.moneyAccount.updateMany({
-      where: { id: fromAccount.id, isActive: true, balance: { gte: amount } },
+      where: { id: fromAccount.id, storeId, isActive: true, balance: { gte: amount } },
       data: { balance: { decrement: amount }, updatedBy: createdBy },
     });
     if (debited.count !== 1) {
@@ -65,7 +67,7 @@ export async function postMoneyTransaction(
   }
   if (toAccount) {
     await tx.moneyAccount.update({
-      where: { id: toAccount.id },
+      where: { id: toAccount.id, storeId },
       data: { balance: { increment: amount }, updatedBy: createdBy },
     });
   }
@@ -79,6 +81,7 @@ export async function postMoneyTransaction(
     }));
   const transaction = await tx.moneyTransaction.create({
     data: {
+      storeId,
       transactionNo: resolvedTransactionNo,
       type,
       amount,

@@ -159,8 +159,22 @@ const DEFINITIONS = {
           label: "Secret key",
           secret: true,
         },
+        {
+          key: "webhookAuthToken",
+          label: "Webhook Bearer Auth Token",
+          secret: true,
+          required: false,
+        },
       ],
       config: [
+        {
+          key: "webhookEnabled",
+          label: "Receive authenticated webhooks",
+          type: "boolean",
+          defaultValue: "false",
+          trueLabel: "Enabled",
+          falseLabel: "Disabled",
+        },
         {
           key: "supportsCod",
           label: "COD collection available",

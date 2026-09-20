@@ -38,15 +38,12 @@ function Separator() {
 
 export default function Breadcrumb({ items = [], className = "" }) {
   const breadcrumbs = [
-    { label: "হোম", href: "/", home: true },
+    { label: "Home", href: "/", home: true },
     ...items.filter((item) => item?.label),
   ];
 
   return (
-    <nav
-      aria-label="Breadcrumb"
-      className={`min-w-0 py-2 ${className}`}
-    >
+    <nav aria-label="Breadcrumb" className={`min-w-0 py-2 ${className}`}>
       <ol className="flex min-w-0 items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {breadcrumbs.map((item, index) => {
           const current = index === breadcrumbs.length - 1;
@@ -67,7 +64,7 @@ export default function Breadcrumb({ items = [], className = "" }) {
                 </span>
               ) : (
                 <Link
-                  href={item.href}
+                  href={encodeURIComponent(item.href)}
                   prefetch={false}
                   className="inline-flex items-center gap-1.5 text-text-muted transition-colors hover:text-primary"
                 >

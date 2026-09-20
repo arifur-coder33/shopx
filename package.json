@@ -10,6 +10,16 @@
     "db:provider-backfill": "node prisma/backfill-provider-accounts.js",
     "test:accounting": "node prisma/verify-provider-accounting.js",
     "test:providers": "node prisma/verify-provider-configuration.js",
+    "test:store-context": "node prisma/verify-store-context.js",
+    "test:identity-foundation": "node prisma/verify-identity-foundation.js",
+    "test:identity-auth": "node prisma/verify-identity-authentication.js",
+    "test:identity-sessions": "node prisma/verify-identity-sessions.js",
+    "test:identity-authorization": "node prisma/verify-identity-authorization.js",
+    "test:identity-management": "node prisma/verify-identity-management.js",
+    "test:store-provisioning": "node prisma/verify-store-provisioning.js",
+    "db:store-ownership:backfill": "node prisma/backfill-store-ownership.js",
+    "db:store-ownership:verify": "node prisma/backfill-store-ownership.js --verify-only",
+    "test:store-data-isolation": "node prisma/verify-store-data-isolation.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

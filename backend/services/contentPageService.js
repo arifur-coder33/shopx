@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { CONTENT_PAGE_SLUGS } from "@/lib/contentPageDefinitions";
 import { unstable_cache } from "next/cache";
+import { requireCurrentStoreId } from "./storeContextService";
 
 // Content is authored by privileged administrators, but it is still cleaned
 // before storage/rendering so scripts, event handlers and executable URLs can
@@ -16,10 +17,10 @@ export function sanitizeContentPageHtml(value) {
     .trim();
 }
 
-async function queryPublicContentPage(slug) {
+async function queryPublicContentPage(storeId, slug) {
   if (!CONTENT_PAGE_SLUGS.has(slug)) return null;
   const page = await prisma.contentPage.findUnique({
-    where: { slug },
+    where: { storeId_slug: { storeId, slug } },
     select: {
       slug: true,
       title: true,
@@ -34,14 +35,16 @@ async function queryPublicContentPage(slug) {
   return { ...page, content: sanitizeContentPageHtml(page.content) };
 }
 
-const readCachedContentPage = unstable_cache(
-  queryPublicContentPage,
-  ["public-content-page"],
-  { revalidate: 300, tags: ["content-pages"] },
-);
+const readCachedContentPage = (storeId, slug) =>
+  unstable_cache(
+    () => queryPublicContentPage(storeId, slug),
+    ["public-content-page", storeId, slug],
+    { revalidate: 300, tags: [`content-pages:${storeId}`] },
+  )();
 
 export async function getPublicContentPage(slug) {
+  const storeId = await requireCurrentStoreId();
   return process.env.NODE_ENV === "development"
-    ? queryPublicContentPage(slug)
-    : readCachedContentPage(slug);
+    ? queryPublicContentPage(storeId, slug)
+    : readCachedContentPage(storeId, slug);
 }

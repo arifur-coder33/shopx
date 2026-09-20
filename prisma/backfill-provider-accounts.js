@@ -20,6 +20,14 @@ const legacyTypes = {
 const normalized = (value) => String(value || "").replace(/[^a-z0-9]/gi, "").toUpperCase();
 
 async function main() {
+  const store = await prisma.store.findUnique({
+    where: { slug: "default" },
+    select: { id: true },
+  });
+  if (!store) {
+    throw new Error("Default Store is missing. Run the controlled Store ownership backfill first.");
+  }
+  const storeId = store.id;
   const report = {
     mode: apply ? "APPLY" : "DRY_RUN",
     accountTypeChanges: [],
@@ -30,14 +38,15 @@ async function main() {
     warnings: [],
   };
   const accounts = await prisma.moneyAccount.findMany({
-    select: { id: true, name: true, type: true, balance: true },
+    where: { storeId },
+    select: { id: true, storeId: true, name: true, type: true, balance: true },
   });
   const originalType = new Map(accounts.map((account) => [account.id, account.type]));
   for (const account of accounts) {
     const nextType = legacyTypes[account.type];
     if (nextType && nextType !== account.type) {
       report.accountTypeChanges.push({ id: account.id, name: account.name, from: account.type, to: nextType });
-      if (apply) await prisma.moneyAccount.update({ where: { id: account.id }, data: { type: nextType } });
+      if (apply) await prisma.moneyAccount.update({ where: { id: account.id, storeId }, data: { type: nextType } });
       account.type = nextType;
     }
   }
@@ -69,7 +78,7 @@ async function main() {
       const model = definition.kind === "gateway" ? prisma.paymentGateway : prisma.courierProvider;
       const isActive = false;
       await model.upsert({
-        where: { code: definition.code },
+        where: { storeId_code: { storeId, code: definition.code } },
         update: {
           name: definition.name,
           adapterKey: definition.adapterKey,
@@ -77,6 +86,7 @@ async function main() {
           isActive,
         },
         create: {
+          storeId,
           name: definition.name,
           code: definition.code,
           adapterKey: definition.adapterKey,
@@ -88,11 +98,12 @@ async function main() {
   }
 
   const [gatewayRows, courierRows] = apply
-    ? await Promise.all([prisma.paymentGateway.findMany(), prisma.courierProvider.findMany()])
+    ? await Promise.all([prisma.paymentGateway.findMany({ where: { storeId } }), prisma.courierProvider.findMany({ where: { storeId } })])
     : [providers.filter((row) => row.kind === "gateway"), providers.filter((row) => row.kind === "courier")];
   const gatewayMap = new Map(gatewayRows.map((row) => [row.code, row]));
   const courierMap = new Map(courierRows.map((row) => [row.code, row]));
   const payments = await prisma.payment.findMany({
+    where: { storeId },
     select: { id: true, gateway: true, status: true, moneyAccountId: true, paymentGatewayId: true, courierProviderId: true },
   });
   for (const payment of payments) {
@@ -110,19 +121,19 @@ async function main() {
       ...(payment.status === "PAID" && !payment.moneyAccountId && account && { moneyAccountId: account.id }),
     };
     report.paymentMappings += 1;
-    if (apply) await prisma.payment.update({ where: { id: payment.id }, data });
+    if (apply) await prisma.payment.update({ where: { id: payment.id, storeId }, data });
     if (payment.status === "PAID" && !payment.moneyAccountId && !account) {
       report.unmappedPaidPayments.push({ paymentId: payment.id, gateway: payment.gateway });
     }
   }
 
-  const shippings = await prisma.shipping.findMany({ select: { id: true, courierName: true, courierProviderId: true } });
+  const shippings = await prisma.shipping.findMany({ where: { storeId }, select: { id: true, courierName: true, courierProviderId: true } });
   for (const shipping of shippings) {
     if (shipping.courierProviderId) continue;
     const courier = courierMap.get(normalized(shipping.courierName));
     if (!courier) continue;
     report.shippingMappings += 1;
-    if (apply) await prisma.shipping.update({ where: { id: shipping.id }, data: { courierProviderId: courier.id } });
+    if (apply) await prisma.shipping.update({ where: { id: shipping.id, storeId }, data: { courierProviderId: courier.id } });
   }
 
   console.log(JSON.stringify(report, null, 2));

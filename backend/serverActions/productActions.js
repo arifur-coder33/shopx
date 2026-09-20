@@ -16,6 +16,68 @@ import {
   normalizeProductVideos,
   parseProductVideosInput,
 } from "../utils/productVideos";
+import { requireCurrentStoreId } from "../services/storeContextService";
+
+async function hasVariationDependencies(tx, storeId, variationId) {
+  const [stocks, movements, receipts, purchases, orders] = await Promise.all([
+    tx.stock.count({ where: { storeId, variationId } }),
+    tx.inventoryTransaction.count({ where: { storeId, variationId } }),
+    tx.goodsReceiptItem.count({ where: { variationId, goodsReceipt: { is: { storeId } } } }),
+    tx.purchaseItem.count({ where: { variationId, purchaseOrder: { storeId } } }),
+    tx.orderItem.count({ where: { variationId, order: { storeId } } }),
+  ]);
+  return stocks + movements + receipts + purchases + orders > 0;
+}
+
+async function assertProductReferences(database, storeId, data, variations = []) {
+  const galleryIds = String(data.gallery || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const mediaIds = new Set([data.thumbnail, ...galleryIds].filter(Boolean));
+  const variationNameIds = new Set();
+  const variationValueIds = new Set();
+  for (const variation of variations) {
+    if (variation.image) mediaIds.add(variation.image?.id || variation.image);
+    for (const item of variation.combination || variation.combinations || []) {
+      if (item.variation?.id || item.variationName?.id) {
+        variationNameIds.add(item.variation?.id || item.variationName?.id);
+      }
+      if (item.value?.id || item.variationValue?.id) {
+        variationValueIds.add(item.value?.id || item.variationValue?.id);
+      }
+    }
+  }
+  const [category, mediaCount, nameCount, valueCount] = await Promise.all([
+    data.category
+      ? database.category.findUnique({
+          where: { id: data.category, storeId },
+          select: { id: true },
+        })
+      : null,
+    mediaIds.size
+      ? database.media.count({ where: { storeId, id: { in: [...mediaIds] } } })
+      : 0,
+    variationNameIds.size
+      ? database.variationName.count({
+          where: { storeId, id: { in: [...variationNameIds] } },
+        })
+      : 0,
+    variationValueIds.size
+      ? database.variationValue.count({
+          where: {
+            id: { in: [...variationValueIds] },
+            variation: { storeId },
+          },
+        })
+      : 0,
+  ]);
+  if (data.category && !category) throw new Error("Selected category belongs to another Store.");
+  if (mediaCount !== mediaIds.size) throw new Error("Selected media belongs to another Store.");
+  if (nameCount !== variationNameIds.size || valueCount !== variationValueIds.size) {
+    throw new Error("Selected variation belongs to another Store.");
+  }
+}
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
     return [];
@@ -76,6 +138,7 @@ function transformVariations(productVariations) {
 
 export async function createProductActions(formData) {
   try {
+    const storeId = await requireCurrentStoreId();
     let data = Object.fromEntries(formData.entries());
 
     // --- Basic Validation ---
@@ -108,24 +171,25 @@ export async function createProductActions(formData) {
     } else if (Array.isArray(data.variations)) {
       parsedProductVariations = data.variations;
     }
+    await assertProductReferences(prisma, storeId, data, parsedProductVariations);
     // --- Prisma Transaction ---
     const result = await prisma.$transaction(async (tx) => {
       // --- Slug Generation ---
       const baseSlug = await generateSlug(data?.slug || data?.title);
-      const slug = await generateUniqueSlug(tx, baseSlug);
+      const slug = await generateUniqueSlug(tx, storeId, baseSlug);
 
       // --- Product Code Generation ---
-      let productCodeCounter = await tx.productCodeCounter.findFirst();
+      let productCodeCounter = await tx.productCodeCounter.findUnique({ where: { storeId } });
       if (!productCodeCounter) {
-        productCodeCounter = await tx.ProductCodeCounter.create({
-          data: { lastProductCode: 1000 },
+        productCodeCounter = await tx.productCodeCounter.create({
+          data: { storeId, lastProductCode: 1000 },
         });
       }
       const newProductCode = (
         productCodeCounter.lastProductCode + 1
       ).toString();
-      await tx.ProductCodeCounter.update({
-        where: { id: productCodeCounter.id },
+      await tx.productCodeCounter.update({
+        where: { id: productCodeCounter.id, storeId },
         data: { lastProductCode: productCodeCounter.lastProductCode + 1 },
       });
 
@@ -157,6 +221,7 @@ export async function createProductActions(formData) {
       const mainProductRegularPrice = Number(data.regularPrice);
 
       const preparedData = {
+        storeId,
         ...filteredData,
         productCode: newProductCode,
         isActive: Boolean(data?.isActive === "on" || data?.isActive === true),
@@ -286,6 +351,7 @@ export async function createProductActions(formData) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidateTag(`product-${result.slug}`);
     console.log("Product created with variations:", result);
     return { success: true, data: result };
@@ -301,6 +367,7 @@ export async function createProductActions(formData) {
 
 export async function createProductAction(formData) {
   try {
+    const storeId = await requireCurrentStoreId();
     let data = Object.fromEntries(formData.entries());
 
     // --- Basic Validation ---
@@ -327,25 +394,26 @@ export async function createProductAction(formData) {
       parsedProductVariations = data.variations;
     }
     const productVideos = parseProductVideosInput(data.videos, data.videoUrl);
+    await assertProductReferences(prisma, storeId, data, parsedProductVariations);
 
     // --- Prisma Transaction ---
     const result = await prisma.$transaction(async (tx) => {
       // --- Slug Generation ---
       const baseSlug = await generateSlug(data?.slug || data?.title);
-      const slug = await generateUniqueSlug(tx, baseSlug);
+      const slug = await generateUniqueSlug(tx, storeId, baseSlug);
 
       // --- Product Code Generation ---
-      let productCodeCounter = await tx.productCodeCounter.findFirst();
+      let productCodeCounter = await tx.productCodeCounter.findUnique({ where: { storeId } });
       if (!productCodeCounter) {
-        productCodeCounter = await tx.ProductCodeCounter.create({
-          data: { lastProductCode: 1000 },
+        productCodeCounter = await tx.productCodeCounter.create({
+          data: { storeId, lastProductCode: 1000 },
         });
       }
       const newProductCode = (
         productCodeCounter.lastProductCode + 1
       ).toString();
-      await tx.ProductCodeCounter.update({
-        where: { id: productCodeCounter.id },
+      await tx.productCodeCounter.update({
+        where: { id: productCodeCounter.id, storeId },
         data: { lastProductCode: productCodeCounter.lastProductCode + 1 },
       });
 
@@ -383,7 +451,7 @@ export async function createProductAction(formData) {
 
       // --- Prepare Main Product Data [MODIFIED] ---
       // Price, stock are now removed from the main product create call
-      const categoryPath = buildCategoryPath(data.category);
+      const categoryPath = await buildCategoryPath(data.category, storeId);
       const searchText = buildSearchText({
         title: data.title,
         description: data.description,
@@ -391,15 +459,14 @@ export async function createProductAction(formData) {
         seoKeyWord: data.seoKeyWord,
       });
       const preparedData = {
+        storeId,
         productCode: newProductCode,
         title: data.title,
         slug: slug,
         description: data?.description || null,
-        category: data?.category
-          ? { connect: { id: data.category } }
-          : undefined,
+        categoryId: data?.category || null,
         canonicalUrl: data?.canonicalUrl || null,
-        thumbnail: { connect: { id: data.thumbnail } },
+        thumbnailId: data.thumbnail,
 
         // This flag is key for your UI to know whether to show variation options
         hasVariations: parsedProductVariations.length > 0,
@@ -526,6 +593,7 @@ export async function createProductAction(formData) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidateTag(`product-${result.slug}`);
     console.log("Product created successfully:", result);
     return { success: true, data: result };
@@ -539,8 +607,9 @@ export async function createProductAction(formData) {
 }
 export async function getProductById(id) {
   try {
+    const storeId = await requireCurrentStoreId();
     const product = await prisma.product.findUnique({
-      where: { id: id },
+      where: { id: id, storeId },
       include: {
         category: true,
         thumbnail: {
@@ -555,7 +624,7 @@ export async function getProductById(id) {
         // [UPDATED] New include structure for variations
         variations: {
           include: {
-            stocks: { select: { available: true } },
+            stocks: { where: { storeId }, select: { available: true } },
             thumbnail: { select: { id: true, name: true } },
             // Include the combinations for each variation
             combinations: {
@@ -608,7 +677,9 @@ export async function getProductById(id) {
 
 export const getProducts = async () => {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = await prisma.product.findMany({
+      where: { storeId },
       include: {
         category: true,
         thumbnail: {
@@ -623,7 +694,7 @@ export const getProducts = async () => {
         // [UPDATED] New include structure for variations
         variations: {
           include: {
-            stocks: { select: { available: true } },
+            stocks: { where: { storeId }, select: { available: true } },
             thumbnail: { select: { id: true, name: true } },
             // Include the combinations for each variation
             combinations: {
@@ -658,8 +729,9 @@ export const getProducts = async () => {
 // not every relation, image and variation returned by getProducts().
 export const getActiveProductSlugs = async () => {
   try {
+    const storeId = await requireCurrentStoreId();
     const products = await prisma.product.findMany({
-      where: { isActive: true },
+      where: { storeId, isActive: true },
       select: { slug: true },
     });
 
@@ -675,6 +747,7 @@ export const getActiveProductSlugs = async () => {
 
 export async function getAllProduct(params) {
   try {
+    const storeId = await requireCurrentStoreId();
     const {
       limit,
       cursor,
@@ -689,7 +762,7 @@ export async function getAllProduct(params) {
       sku, // For filtering by variation SKU
     } = params;
 
-    const whereClause = {};
+    const whereClause = { storeId };
 
     if (title) {
       // Normalize the search query for better matching
@@ -751,15 +824,15 @@ export async function getAllProduct(params) {
 
       if (stockStatus === "IN STOCK") {
         whereClause.variations.some = {
-          stocks: { some: { available: { gt: 0 } } },
+          stocks: { some: { storeId, available: { gt: 0 } } },
         };
       } else if (stockStatus == "OUT STOCK") {
         whereClause.variations.none = {
-          stocks: { some: { available: { gt: 0 } } },
+          stocks: { some: { storeId, available: { gt: 0 } } },
         };
       } else if (stockStatus == "LESS STOCK") {
         whereClause.variations.some = {
-          stocks: { some: { available: { gt: 0, lte: 5 } } },
+          stocks: { some: { storeId, available: { gt: 0, lte: 5 } } },
         };
       }
     }
@@ -781,7 +854,7 @@ export async function getAllProduct(params) {
             thumbnail: { select: { id: true, name: true } },
             discountPrice: true,
             regularPrice: true,
-            stocks: { select: { available: true } },
+            stocks: { where: { storeId }, select: { available: true } },
             sku: true,
             combinations: {
               select: {
@@ -855,6 +928,7 @@ export async function getAllProduct(params) {
 }
 export async function getProductCount(params) {
   try {
+    const storeId = await requireCurrentStoreId();
     const {
       orderNo,
       sku,
@@ -867,7 +941,7 @@ export async function getProductCount(params) {
       stock: stockStatus,
     } = params;
 
-    const whereClause = {};
+    const whereClause = { storeId };
 
     if (status) whereClause.status = status;
     if (name) {
@@ -947,15 +1021,15 @@ export async function getProductCount(params) {
 
       if (stockStatus === "IN STOCK") {
         whereClause.variations.some = {
-          stocks: { some: { available: { gt: 0 } } },
+          stocks: { some: { storeId, available: { gt: 0 } } },
         };
       } else if (stockStatus == "OUT STOCK") {
         whereClause.variations.none = {
-          stocks: { some: { available: { gt: 0 } } },
+          stocks: { some: { storeId, available: { gt: 0 } } },
         };
       } else if (stockStatus == "LESS STOCK") {
         whereClause.variations.some = {
-          stocks: { some: { available: { gt: 0, lte: 5 } } },
+          stocks: { some: { storeId, available: { gt: 0, lte: 5 } } },
         };
       }
     }
@@ -972,9 +1046,11 @@ export async function getProductCount(params) {
 }
 export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
   try {
+    const storeId = await requireCurrentStoreId();
     const offset = (page - 1) * limit;
 
     const productsFromDb = await prisma.product.findMany({
+      where: { storeId },
       skip: offset,
       take: limit,
       include: {
@@ -990,7 +1066,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
         // [UPDATED] New include structure for variations
         variations: {
           include: {
-            stocks: { select: { available: true } },
+            stocks: { where: { storeId }, select: { available: true } },
             thumbnail: { select: { id: true, name: true } },
             // Include the combinations for each variation
             combinations: {
@@ -1040,7 +1116,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
       };
     });
 
-    const totalCount = await prisma.product.count();
+    const totalCount = await prisma.product.count({ where: { storeId } });
 
     return {
       success: true,
@@ -1058,7 +1134,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
   }
 };
 
-const getProductBySlugCached = cache(async (slug) => {
+const getProductBySlugCached = cache(async (storeId, slug) => {
   // const headersList = headers();
 
   // const cookieHeader =
@@ -1067,7 +1143,7 @@ const getProductBySlugCached = cache(async (slug) => {
 
   try {
     const data = await prisma.product.findUnique({
-      where: { slug },
+      where: { storeId_slug: { storeId, slug } },
       include: {
         category: {
           select: {
@@ -1095,7 +1171,7 @@ const getProductBySlugCached = cache(async (slug) => {
         videos: { orderBy: { sortOrder: "asc" } },
         variations: {
           include: {
-            stocks: { select: { available: true } },
+            stocks: { where: { storeId }, select: { available: true } },
             thumbnail: { select: { name: true, id: true } },
             // Include the combinations for each variation
             combinations: {
@@ -1127,8 +1203,10 @@ const getProductBySlugCached = cache(async (slug) => {
   }
 });
 
-export const getProductBySlug = async (slug) =>
-  getProductBySlugCached(slug);
+export const getProductBySlug = async (slug) => {
+  const storeId = await requireCurrentStoreId();
+  return getProductBySlugCached(storeId, slug);
+};
 // const cachedGetProductBySlug = cache(
 //   (slug) => getProductBySlug_uncached(slug),
 //   ["get-product-by-slug"],
@@ -1151,6 +1229,7 @@ export async function updateProductActions({ id: productId, formData }) {
   }
 
   try {
+    const storeId = await requireCurrentStoreId();
     const data = Object.fromEntries(formData.entries());
     console.log("udate data", data);
 
@@ -1169,6 +1248,7 @@ export async function updateProductActions({ id: productId, formData }) {
       }
     }
     const hasSubmittedVariations = submittedVariationsData.length > 0;
+    await assertProductReferences(prisma, storeId, data, submittedVariationsData);
     const productVideos = parseProductVideosInput(data.videos, data.videoUrl);
 
     // --- Robust Number Parsing Helper ---
@@ -1182,7 +1262,7 @@ export async function updateProductActions({ id: productId, formData }) {
     const result = await prisma.$transaction(async (tx) => {
       // Step 1: Fetch Existing Product
       const existingProduct = await tx.product.findUnique({
-        where: { id: productId },
+        where: { id: productId, storeId },
       });
       if (!existingProduct) throw new Error("Product not found for update.");
 
@@ -1190,7 +1270,7 @@ export async function updateProductActions({ id: productId, formData }) {
       let newSlug = existingProduct.slug;
       if (data.title && data.title !== existingProduct.title) {
         const baseSlug = await generateSlug(data.slug || data.title);
-        newSlug = await generateUniqueSlug(tx, baseSlug, productId);
+        newSlug = await generateUniqueSlug(tx, storeId, baseSlug, productId);
       }
 
       // Step 3: Explicitly build the update payload. This is the robust pattern.
@@ -1222,7 +1302,7 @@ export async function updateProductActions({ id: productId, formData }) {
 
       // Step 4: Update the Main Product Record
       const updatedProduct = await tx.product.update({
-        where: { id: productId },
+        where: { id: productId, storeId },
         data: productUpdateData,
       });
 
@@ -1337,6 +1417,7 @@ export async function updateProductActions({ id: productId, formData }) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidateTag(`product-${result.slug}`);
 
     return { success: true, data: result };
@@ -1362,11 +1443,13 @@ export async function updateProductActions({ id: productId, formData }) {
 }
 
 export async function updateProductActionOld({ id: productId, formData }) {
+  await hasPermission("product", "update");
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
   }
 
   try {
+    const storeId = await requireCurrentStoreId();
     const data = Object.fromEntries(formData.entries());
 
     // --- Basic Validation ---
@@ -1388,6 +1471,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
       }
     }
     const hasSubmittedVariations = submittedVariationsData.length > 0;
+    await assertProductReferences(prisma, storeId, data, submittedVariationsData);
 
     // --- Robust Number Parsing Helper ---
     const parseOptionalNumber = (value, defaultValue = null) => {
@@ -1400,7 +1484,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
     const result = await prisma.$transaction(async (tx) => {
       // Step 1: Fetch Existing Product
       const existingProduct = await tx.product.findUnique({
-        where: { id: productId },
+        where: { id: productId, storeId },
       });
       if (!existingProduct) throw new Error("Product not found for update.");
 
@@ -1408,7 +1492,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
       let newSlug = existingProduct.slug;
       if (data.title && data.title !== existingProduct.title) {
         const baseSlug = await generateSlug(data.slug || data.title);
-        newSlug = await generateUniqueSlug(tx, baseSlug, productId);
+        newSlug = await generateUniqueSlug(tx, storeId, baseSlug, productId);
       }
 
       // Step 3: Prepare the update payload for the main Product model [MODIFIED]
@@ -1432,7 +1516,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
 
       // Step 4: Update the Main Product Record
       const updatedProduct = await tx.product.update({
-        where: { id: productId },
+        where: { id: productId, storeId },
         data: productUpdateData,
       });
 
@@ -1457,6 +1541,12 @@ export async function updateProductActionOld({ id: productId, formData }) {
 
       // Step 6: Update Variations (Wipe and Replace strategy) [MODIFIED]
       // First, delete all existing variations for this product.
+      const variationsToReplace = await tx.productVariation.findMany({ where: { productId: updatedProduct.id }, select: { id: true } });
+      for (const variation of variationsToReplace) {
+        if (await hasVariationDependencies(tx, storeId, variation.id)) {
+          throw new Error("This legacy update cannot replace variations with stock or dependent documents.");
+        }
+      }
       await tx.productVariation.deleteMany({
         where: { productId: updatedProduct.id },
       });
@@ -1530,6 +1620,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidateTag(`product-${result.slug}`);
     console.log("Product updated successfully:", result);
     return { success: true, data: result };
@@ -1544,7 +1635,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
   }
 }
 export async function updateProductAction({ id: productId, formData }) {
-  await hasPermission("user", "product");
+  await hasPermission("product", "update");
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
   }
@@ -1552,6 +1643,7 @@ export async function updateProductAction({ id: productId, formData }) {
   const variationDeletionErrors = []; // Declared outside transaction for catch block access
 
   try {
+    const storeId = await requireCurrentStoreId();
     const data = Object.fromEntries(formData.entries());
     console.log("update data", data);
 
@@ -1573,6 +1665,7 @@ export async function updateProductAction({ id: productId, formData }) {
     }
     const hasSubmittedVariations = submittedVariationsData.length > 0;
     const productVideos = parseProductVideosInput(data.videos, data.videoUrl);
+    await assertProductReferences(prisma, storeId, data, submittedVariationsData);
 
     const parseOptionalNumber = (value, defaultValue = null) => {
       if (value === undefined || value === null || String(value).trim() === "")
@@ -1583,16 +1676,16 @@ export async function updateProductAction({ id: productId, formData }) {
 
     const result = await prisma.$transaction(async (tx) => {
       const existingProduct = await tx.product.findUnique({
-        where: { id: productId },
+        where: { id: productId, storeId },
       });
       if (!existingProduct) throw new Error("Product not found for update.");
 
       let newSlug = existingProduct.slug;
       if (data.title && data.title !== existingProduct.title) {
         const baseSlug = await generateSlug(data.slug || data.title);
-        newSlug = await generateUniqueSlug(tx, baseSlug, productId);
+        newSlug = await generateUniqueSlug(tx, storeId, baseSlug, productId);
       }
-      const categoryPath = await buildCategoryPath(data.category);
+      const categoryPath = await buildCategoryPath(data.category, storeId);
 
       const searchText = await buildSearchText({
         title: data.title,
@@ -1626,7 +1719,7 @@ export async function updateProductAction({ id: productId, formData }) {
       };
 
       const updatedProduct = await tx.product.update({
-        where: { id: productId },
+        where: { id: productId, storeId },
         data: productUpdateData,
       });
 
@@ -1769,17 +1862,14 @@ export async function updateProductAction({ id: productId, formData }) {
         }
 
         for (const [matcherId, variantToDelete] of existingVariationMap) {
-          const ordersCount = await tx.orderItem.count({
-            where: { variationId: variantToDelete.id },
-          });
-
-          if (ordersCount > 0) {
+          const hasDependencies = await hasVariationDependencies(tx, storeId, variantToDelete.id);
+          if (hasDependencies) {
             // Add to the errors array, but do not throw, as product update is otherwise successful
             variationDeletionErrors.push(
-              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`,
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has stock or dependent documents.`,
             );
             console.log(
-              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s)`,
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has stock or dependent documents`,
             );
           } else {
             // Delete associated combinations first
@@ -1844,13 +1934,10 @@ export async function updateProductAction({ id: productId, formData }) {
             continue;
           }
 
-          const ordersCount = await tx.orderItem.count({
-            where: { variationId: variantToDelete.id },
-          });
-
-          if (ordersCount > 0) {
+          const hasDependencies = await hasVariationDependencies(tx, storeId, variantToDelete.id);
+          if (hasDependencies) {
             variationDeletionErrors.push(
-              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has ${ordersCount} associated order(s).`,
+              `Cannot delete variation with SKU "${variantToDelete.sku}" because it has stock or dependent documents.`,
             );
           } else {
             await tx.productVariationCombination.deleteMany({
@@ -1871,6 +1958,7 @@ export async function updateProductAction({ id: productId, formData }) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidateTag(`product-${result.slug}`);
 
     let successMessage = "Product updated successfully.";
@@ -1878,12 +1966,12 @@ export async function updateProductAction({ id: productId, formData }) {
     console.log("PvariationDeletionErrors:", variationDeletionErrors.length);
     if (variationDeletionErrors.length > 0) {
       warnMsg =
-        "Product updated successfully. However, some variations could not be deleted due to existing orders: " +
+        "Product updated successfully. However, some variations could not be deleted due to stock or dependent documents: " +
         variationDeletionErrors.join("; ");
 
       console.log(
         (successMessage +=
-          " However, some variations could not be deleted due to existing orders: " +
+          " However, some variations could not be deleted due to stock or dependent documents: " +
           variationDeletionErrors.join("; ")),
       );
     }
@@ -1907,16 +1995,26 @@ export async function updateProductAction({ id: productId, formData }) {
   }
 }
 export async function deleteProductById(productId) {
+  await hasPermission("product", "delete");
   if (!productId) {
     return { success: false, message: "Product ID is required for deletion." };
   }
 
   try {
+    const storeId = await requireCurrentStoreId();
     // With cascading deletes, Prisma handles the deletion of related
     // ProductGallery, ProductVariation, and Combination records automatically.
-    const deletedProduct = await prisma.product.delete({
-      where: { id: productId },
-      select: { slug: true }, // Select slug for revalidation
+    const deletedProduct = await prisma.$transaction(async (tx) => {
+      const variations = await tx.productVariation.findMany({ where: { productId, product: { storeId } }, select: { id: true } });
+      for (const variation of variations) {
+        if (await hasVariationDependencies(tx, storeId, variation.id)) {
+          throw new Error("Product cannot be deleted while stock or dependent documents exist.");
+        }
+      }
+      return tx.product.delete({
+        where: { id: productId, storeId },
+        select: { slug: true },
+      });
     });
 
     // --- Revalidation ---
@@ -1925,6 +2023,7 @@ export async function deleteProductById(productId) {
     revalidatePath(`/product/${deletedProduct.slug}`);
     revalidateTag(`product-${deletedProduct.slug}`);
     revalidateTag("products");
+    revalidateTag(`storefront-catalog:${storeId}`);
 
     return { success: true, message: "Product deleted successfully." };
   } catch (error) {
@@ -1946,14 +2045,16 @@ export async function deleteProductById(productId) {
 export const updateProductStatus = async ({ id, value }) => {
   console.log(id, value);
   try {
+    const storeId = await requireCurrentStoreId();
     const data = await prisma.product.update({
-      where: { id },
+      where: { id, storeId },
       data: { isActive: value },
     });
 
     revalidatePath("/");
     revalidatePath("/admin/product");
     revalidateTag("products");
+    revalidateTag(`storefront-catalog:${storeId}`);
     revalidateTag(`product-${id}`);
 
     return { success: true, data };
@@ -1963,6 +2064,7 @@ export const updateProductStatus = async ({ id, value }) => {
 };
 
 export const searchProducts = async (rawQuery) => {
+  const storeId = await requireCurrentStoreId();
   const q = normalizeText(rawQuery);
 
   const variations = [q, q.slice(0, -1), q.slice(0, -2)];
@@ -1970,6 +2072,7 @@ export const searchProducts = async (rawQuery) => {
 
   const products = await prisma.product.findMany({
     where: {
+      storeId,
       isActive: true,
       OR: variations.map((v) => ({
         searchText: { contains: v },

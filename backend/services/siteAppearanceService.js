@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { unstable_cache } from "next/cache";
-import { cache } from "react";
+import { requireCurrentStoreId } from "./storeContextService";
 
 export const SITE_APPEARANCE_DEFAULTS = Object.freeze({
   primaryColor: "#ea580c",
@@ -65,26 +65,32 @@ export function normalizeSiteIdentity(setting) {
   };
 }
 
-const querySiteSetting = cache(() => prisma.siteSetting.findFirst());
+const querySiteSetting = (storeId) =>
+  prisma.siteSetting.findUnique({ where: { storeId } });
 
-export const getCachedSiteSettingRecord = unstable_cache(
-  querySiteSetting,
-  ["site-setting"],
-  { revalidate: 300, tags: ["site-setting"] },
-);
+export async function getCachedSiteSettingRecord() {
+  const storeId = await requireCurrentStoreId();
+  return unstable_cache(
+    () => querySiteSetting(storeId),
+    ["site-setting", storeId],
+    { revalidate: 300, tags: [`site-setting:${storeId}`] },
+  )();
+}
 
 export async function getPublicSiteAppearance() {
+  const storeId = await requireCurrentStoreId();
   const setting =
     process.env.NODE_ENV === "development"
-      ? await querySiteSetting()
+      ? await querySiteSetting(storeId)
       : await getCachedSiteSettingRecord();
   return normalizeSiteAppearance(setting);
 }
 
 export async function getPublicSiteIdentity() {
+  const storeId = await requireCurrentStoreId();
   const setting =
     process.env.NODE_ENV === "development"
-      ? await querySiteSetting()
+      ? await querySiteSetting(storeId)
       : await getCachedSiteSettingRecord();
   return normalizeSiteIdentity(setting);
 }

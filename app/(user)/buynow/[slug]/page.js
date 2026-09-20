@@ -1,6 +1,5 @@
 import {
   getStorefrontProductBySlug,
-  getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
 import { getCheckoutProviders } from "@/backend/serverActions/providerConfigurationAction";
@@ -9,16 +8,8 @@ import { Suspense } from "react";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
 import Breadcrumb from "@/components/common/Breadcrumb";
 export const revalidate = 60;
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const { data: products = [] } = await getStorefrontProductSlugs();
-
-  return products.map((product) => ({
-    slug: product.slug,
-  }));
-}
 
 export default async function BuyNowPage({ params }) {
   const { slug } = await params;

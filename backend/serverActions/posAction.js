@@ -6,6 +6,7 @@ import { getProviderRuntimeConfiguration } from "@/backend/services/providerCred
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { generateCode } from "../utils/generateCode";
+import { requireCurrentStoreId } from "../services/storeContextService";
 import { actionError, requireProcurementPermission } from "../utils/procurement";
 
 const clean = (value) => String(value || "").trim();
@@ -37,6 +38,7 @@ function dhakaDateRange(range, customStart, customEnd) {
 export async function getPosSales(params = {}) {
   try {
     await requireProcurementPermission("pos", "view");
+    const storeId = await requireCurrentStoreId();
     const range = ["TODAY", "YESTERDAY", "THIS_WEEK", "THIS_MONTH", "CUSTOM"].includes(params.range) ? params.range : "TODAY";
     const createdAt = dhakaDateRange(range, clean(params.startDate), clean(params.endDate));
     const warehouseId = clean(params.warehouseId);
@@ -45,6 +47,7 @@ export async function getPosSales(params = {}) {
     if (!warehouseId) throw new Error("Select a warehouse before viewing POS sales.");
     const warehouseMarker = `POS_WAREHOUSE:${warehouseId}`;
     const where = {
+      storeId,
       createdAt,
       payments: { some: { gateway: "POS", status: "PAID" } },
       OR: [
@@ -83,7 +86,8 @@ export async function getPosSales(params = {}) {
       }),
       prisma.order.count({ where }),
       prisma.order.aggregate({ where, _sum: { paidAmount: true } }),
-      prisma.siteSetting.findFirst({
+      prisma.siteSetting.findUnique({
+        where: { storeId },
         select: { name: true, slogan: true, phoneNumber1: true, phoneNumber2: true, adress1: true, adress2: true, email: true },
       }),
     ]);
@@ -103,12 +107,14 @@ export async function getPosSales(params = {}) {
 export async function searchPosProducts({ warehouseId, query = "", page = 1 }) {
   try {
     await requireProcurementPermission("pos", "create");
+    const storeId = await requireCurrentStoreId();
     const selectedWarehouseId = clean(warehouseId);
     const search = clean(query);
     const currentPage = Math.max(1, Number(page) || 1);
     const limit = 12;
     if (!selectedWarehouseId) throw new Error("Select a warehouse first.");
     const where = {
+      storeId,
       warehouseId: selectedWarehouseId,
       available: { gt: 0 },
       ...(search && {
@@ -158,12 +164,14 @@ export async function searchPosProducts({ warehouseId, query = "", page = 1 }) {
 export async function getPosPageData(params = {}) {
   try {
     await requireProcurementPermission("pos", params.tab === "sales" ? "view" : "create");
+    const storeId = await requireCurrentStoreId();
     const warehouseId = clean(params.warehouseId);
     const productName = clean(params.productName);
     const sku = clean(params.sku);
     const page = Math.max(1, Number(params.page) || 1);
     const limit = 12;
     const warehouses = await prisma.warehouse.findMany({
+      where: { storeId },
       orderBy: [{ isDefault: "desc" }, { name: "asc" }],
       select: { id: true, code: true, name: true, address: true, isDefault: true },
     });
@@ -177,6 +185,7 @@ export async function getPosPageData(params = {}) {
       return { success: true, data: { warehouses, stocks: [], accounts: [], couriers: [], siteSetting: null }, pagination: { page: 1, total: 0, totalPages: 1 }, filters: params };
     }
     const where = {
+      storeId,
       warehouseId,
       available: { gt: 0 },
       ...((sku || productName) && {
@@ -210,6 +219,7 @@ export async function getPosPageData(params = {}) {
       prisma.stock.count({ where }),
       prisma.moneyAccount.findMany({
         where: {
+          storeId,
           isActive: true,
           type: { in: ["CASH", "BANK", "MOBILE_FINANCIAL"] },
         },
@@ -217,11 +227,12 @@ export async function getPosPageData(params = {}) {
         select: { id: true, name: true, type: true, balance: true },
       }),
       prisma.courierProvider.findMany({
-        where: { isActive: true },
+        where: { storeId, isActive: true },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        include: { moneyAccount: true, pickupPoints: true },
+        include: { moneyAccount: true, pickupPoints: { where: { storeId } } },
       }),
-      prisma.siteSetting.findFirst({
+      prisma.siteSetting.findUnique({
+        where: { storeId },
         select: { name: true, slogan: true, phoneNumber1: true, phoneNumber2: true, adress1: true, adress2: true, email: true },
       }),
     ]);
@@ -231,7 +242,7 @@ export async function getPosPageData(params = {}) {
         id: provider.id,
         name: provider.name,
         adapterKey: provider.adapterKey,
-        pickupPoints: provider.pickupPoints.map((point) => ({ id: point.id, name: point.name, address: point.address, storeId: point.storeId })),
+        pickupPoints: provider.pickupPoints.map((point) => ({ id: point.id, name: point.name, address: point.address, storeId: point.externalStoreId })),
       }));
     return {
       success: true,
@@ -247,18 +258,21 @@ export async function getPosPageData(params = {}) {
 export async function createPosSale(formData) {
   try {
     const userId = await requireProcurementPermission("pos", "create");
+    const storeId = await requireCurrentStoreId();
     const values = Object.fromEntries(formData.entries());
     const warehouseId = clean(values.warehouseId);
     const moneyAccountId = clean(values.moneyAccountId);
     const fulfillment = values.fulfillment === "COURIER" ? "COURIER" : "CUSTOMER_PICKUP";
     const requested = JSON.parse(values.items || "[]");
+    if (!Array.isArray(requested) || !requested.length) throw new Error("Sale items are required.");
     const quantities = new Map();
     for (const item of requested) {
-      const variationId = clean(item.variationId);
-      const quantity = Number(item.quantity);
-      if (variationId && Number.isInteger(quantity) && quantity > 0) {
-        quantities.set(variationId, (quantities.get(variationId) || 0) + quantity);
-      }
+      const variationId = clean(item?.variationId);
+      const quantity = Number(item?.quantity);
+      if (!variationId || !Number.isSafeInteger(quantity) || quantity <= 0) throw new Error("Sale quantities must be positive whole numbers.");
+      const totalQuantity = (quantities.get(variationId) || 0) + quantity;
+      if (!Number.isSafeInteger(totalQuantity)) throw new Error("Sale quantity is too large.");
+      quantities.set(variationId, totalQuantity);
     }
     if (!warehouseId || !moneyAccountId || !quantities.size) {
       throw new Error("Warehouse, payment account, and sale items are required.");
@@ -268,16 +282,28 @@ export async function createPosSale(formData) {
     }
 
     const sale = await prisma.$transaction(async (tx) => {
-      const [warehouse, account, stocks] = await Promise.all([
-        tx.warehouse.findUnique({ where: { id: warehouseId } }),
-        tx.moneyAccount.findUnique({ where: { id: moneyAccountId } }),
+      const courierProviderId = clean(values.courierProviderId);
+      const pickupPointId = clean(values.pickupPointId);
+      const [warehouse, account, stocks, courier, pickupPoint] = await Promise.all([
+        tx.warehouse.findUnique({ where: { id: warehouseId, storeId } }),
+        tx.moneyAccount.findUnique({ where: { id: moneyAccountId, storeId } }),
         tx.stock.findMany({
-          where: { warehouseId, variationId: { in: [...quantities.keys()] } },
+          where: { storeId, warehouseId, variationId: { in: [...quantities.keys()] }, variation: { product: { storeId } } },
           include: { variation: { include: { product: true } } },
         }),
+        fulfillment === "COURIER"
+          ? tx.courierProvider.findUnique({ where: { id: courierProviderId, storeId } })
+          : null,
+        fulfillment === "COURIER" && pickupPointId
+          ? tx.courierPickupPoint.findUnique({ where: { id: pickupPointId, storeId } })
+          : null,
       ]);
       if (!warehouse) throw new Error("Warehouse was not found.");
       if (!account?.isActive) throw new Error("Payment account is unavailable.");
+      if (fulfillment === "COURIER" && !courier?.isActive) throw new Error("Courier provider is unavailable.");
+      if (pickupPointId && (!pickupPoint || pickupPoint.courierProviderId !== courier.id)) {
+        throw new Error("Pickup point does not belong to the selected courier.");
+      }
       if (stocks.length !== quantities.size) throw new Error("One or more products are unavailable in this warehouse.");
 
       let subtotal = 0;
@@ -299,15 +325,16 @@ export async function createPosSale(formData) {
       if (discount > subtotal || total <= 0) throw new Error("Sale total must be greater than zero.");
 
       const counter = await tx.orderCounter.upsert({
-        where: { idNo: 11 },
+        where: { storeId_idNo: { storeId, idNo: 11 } },
         update: { lastOrderNumber: { increment: 1 } },
-        create: { idNo: 11, lastOrderNumber: 240000020 },
+        create: { storeId, idNo: 11, lastOrderNumber: 240000020 },
         select: { lastOrderNumber: true },
       });
       const orderNo = counter.lastOrderNumber.toString();
       const paymentMethod = account.type === "BANK" ? "BANK" : "CASH";
       const order = await tx.order.create({
         data: {
+          storeId,
           orderNo,
           customerName: clean(values.customerName) || "Walk-in customer",
           phoneNumber: clean(values.phoneNumber) || "N/A",
@@ -324,7 +351,7 @@ export async function createPosSale(formData) {
           paidAmount: 0,
           dueAmount: total,
           status: fulfillment === "CUSTOMER_PICKUP" ? "DELIVERED" : "PROCESSING",
-          selectedCourierProviderId: fulfillment === "COURIER" ? clean(values.courierProviderId) : null,
+          selectedCourierProviderId: fulfillment === "COURIER" ? courier.id : null,
           adminNote: `POS_WAREHOUSE:${warehouse.id}`,
           note: clean(values.note) || `POS · ${fulfillment === "CUSTOMER_PICKUP" ? "Customer pickup" : "Courier"}`,
           ttclid: "",
@@ -345,23 +372,24 @@ export async function createPosSale(formData) {
         })),
       });
       const payment = await tx.payment.create({
-        data: { orderId: order.id, gateway: "POS", paymentMethod, moneyAccountId: account.id, amount: total, status: "PENDING" },
+        data: { storeId, orderId: order.id, gateway: "POS", paymentMethod, moneyAccountId: account.id, amount: total, status: "PENDING" },
       });
 
       if (fulfillment === "CUSTOMER_PICKUP") {
         const deliveryNo = await generateCode(tx, { name: "DELIVERY", prefix: "DEL-", padding: 7 });
         await tx.delivery.create({
-          data: { deliveryNo, orderId: order.id, warehouseId, status: "DELIVERED", deliveredAt: new Date(), note: "POS customer pickup", createdBy: userId, updatedBy: userId },
+          data: { storeId, deliveryNo, orderId: order.id, warehouseId, status: "DELIVERED", deliveredAt: new Date(), note: "POS customer pickup", createdBy: userId, updatedBy: userId },
         });
         for (const stock of stocks) {
           const quantity = quantities.get(stock.variationId);
           const debited = await tx.stock.updateMany({
-            where: { id: stock.id, available: { gte: quantity } },
+            where: { id: stock.id, storeId, quantity: { gte: quantity }, available: { gte: quantity } },
             data: { quantity: { decrement: quantity }, available: { decrement: quantity }, updatedBy: userId },
           });
           if (debited.count !== 1) throw new Error(`Stock changed while selling ${stock.variation.sku}. Try again.`);
+          const updatedStock = await tx.stock.findUnique({ where: { id: stock.id, storeId }, select: { quantity: true } });
           await tx.inventoryTransaction.create({
-            data: { warehouseId, variationId: stock.variationId, type: "OUT", quantity: -quantity, balanceAfter: stock.quantity - quantity, referenceType: "SALE", referenceId: order.id, remarks: `POS customer pickup ${orderNo}`, createdBy: userId },
+            data: { storeId, warehouseId, variationId: stock.variationId, type: "OUT", quantity: -quantity, balanceAfter: updatedStock.quantity, referenceType: "SALE", referenceId: order.id, remarks: `POS customer pickup ${orderNo}`, createdBy: userId },
           });
         }
       }
@@ -370,6 +398,7 @@ export async function createPosSale(formData) {
         data: { orderId: order.id, orderNo, status: order.status, title: "POS Sale", message: fulfillment === "CUSTOMER_PICKUP" ? `Paid and collected from ${warehouse.name}.` : "Paid at POS and sent for courier booking.", createdBy: userId },
       });
       await postCustomerPaymentInTransaction(tx, {
+        storeId,
         paymentId: payment.id,
         amount: total,
         moneyAccountIdOverride: account.id,
@@ -410,7 +439,7 @@ export async function createPosSale(formData) {
           }),
         },
       };
-    });
+    }, { timeout: 30000 });
 
     let courierWarning = null;
     if (fulfillment === "COURIER") {

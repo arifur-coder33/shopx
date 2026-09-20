@@ -205,16 +205,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
-export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
+export default function OrderFooter({ orderId, status, setStatus, payments = [], createdAt }) {
   const [reason, setReason] = useState("");
   const [reasonType, setReasonType] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const [refundData, setRefundData] = useState({
-    method: "bkash",
     trxId: "",
     note: "",
   });
+  const refundablePayments = payments.filter((payment) =>
+    ["PAID", "PARTIALLY_REFUNDED"].includes(payment.status),
+  );
+  const refundAccount = refundablePayments.length === 1 ? refundablePayments[0].moneyAccount : null;
 
   // ✅ 30 days return check
   const isReturnAvailable = async () => {
@@ -374,36 +377,30 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
         {/* ===== REFUND INPUT ===== */}
         {status === "REFUNDING" && (
           <>
-            <select
-              onChange={(e) =>
-                setRefundData({ ...refundData, method: e.target.value })
-              }
-              className="border px-2 py-1"
-            >
-              <option value="bkash">bKash</option>
-              <option value="nagad">Nagad</option>
-              <option value="bank">Bank</option>
-              <option value="cash">Cash</option>
-            </select>
+            <span className="text-sm text-slate-700">
+              {refundAccount
+                ? `Refund from original account: ${refundAccount.name}`
+                : "A single posted payment with an account is required. Use the per-payment refund workflow otherwise."}
+            </span>
 
             <input
-              placeholder="Transaction ID"
+              placeholder="External refund reference (optional)"
               onChange={(e) =>
                 setRefundData({ ...refundData, trxId: e.target.value })
               }
               className="border px-2 py-1"
             />
             <input
-              placeholder="refud note"
+              placeholder="Refund note (optional)"
               onChange={(e) =>
                 setRefundData({ ...refundData, note: e.target.value })
               }
               className="border px-2 py-1"
             />
             <button
-              disabled={loading || !refundData.trxId}
+              disabled={loading || !refundAccount}
               onClick={handleRefund}
-              className={`px-4 py-2 bg-green-700 text-white rounded ${!refundData.trxId ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`px-4 py-2 bg-green-700 text-white rounded ${!refundAccount ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               Confirm Refund
             </button>

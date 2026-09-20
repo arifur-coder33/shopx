@@ -3,10 +3,11 @@ import {
   markPaymentCancelled,
   markPaymentFailed,
   markPaymentSuccess,
-} from "@/backend/serverActions/paymentAction";
+} from "@/backend/services/paymentStatusService";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 const sameAmount = (left, right) =>
   Math.abs(Number(left) - Number(right)) < 0.01;
@@ -20,6 +21,7 @@ const resultUrl = (path, siteUrl, order, transactionId) => {
 };
 
 export async function GET(request) {
+  const storeId = await requireCurrentStoreId();
   const params = new URL(request.url).searchParams;
   const siteUrl = new URL(request.url).origin;
   const paymentId = params.get("paymentId");
@@ -27,17 +29,17 @@ export async function GET(request) {
   const providerOrderId = params.get("order_id");
   const payment = paymentId
     ? await prisma.payment.findUnique({
-        where: { id: paymentId },
+        where: { id: paymentId, storeId },
         include: { order: true, paymentGateway: true },
       })
     : paymentReferenceId
       ? await prisma.payment.findFirst({
-          where: { externalEventId: paymentReferenceId },
+          where: { storeId, externalEventId: paymentReferenceId },
           include: { order: true, paymentGateway: true },
         })
       : providerOrderId
         ? await prisma.payment.findFirst({
-            where: { transactionId: providerOrderId },
+            where: { storeId, transactionId: providerOrderId },
             include: { order: true, paymentGateway: true },
           })
         : null;

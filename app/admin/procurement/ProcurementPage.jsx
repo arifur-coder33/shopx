@@ -1,6 +1,5 @@
-import { auth } from "@/auth";
+import { getAdminAccess, hasStoreMemberCookie } from "@/backend/services/adminStoreAccess.server";
 import { getProcurementSectionData } from "@/backend/serverActions/procurementQueryAction";
-import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import ProcurementManager from "./ProcurementManager";
 
 export const procurementResources = {
@@ -15,11 +14,14 @@ export const procurementResources = {
 };
 
 export default async function ProcurementPage({ section = "purchases", filters = {} }) {
-  const session = await auth();
-  const permissions = session?.user?.permissions || [];
-  const allowedTabs = Object.entries(procurementResources)
-    .filter(([, resource]) => hasUIPermission(permissions, resource, "view"))
-    .map(([tab]) => tab);
+  const storeMember = await hasStoreMemberCookie();
+  const entries = await Promise.all(Object.entries(procurementResources).map(async ([tab, resource]) => {
+    if (storeMember && !["payments", "expenses"].includes(tab)) return null;
+    const permission = tab === "payments" ? "SUPPLIER_PAYMENT" : "EXPENSE";
+    const access = await getAdminAccess(permission, "VIEW", resource);
+    return access.allowed ? tab : null;
+  }));
+  const allowedTabs = entries.filter(Boolean);
   if (!allowedTabs.length) {
     return <div className="card">You do not have permission to view purchasing or inventory.</div>;
   }

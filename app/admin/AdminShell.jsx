@@ -8,7 +8,7 @@ import { SWRConfig } from "swr";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
-export default function AdminShell({ children, siteSetting }) {
+export default function AdminShell({ children, siteSetting, identity, storeMenuSlugs }) {
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -29,7 +29,7 @@ export default function AdminShell({ children, siteSetting }) {
   return (
     <SWRConfig value={{ revalidateOnFocus: false }}>
       <SessionProvider>
-        <AdminNavBar toggleSidebar={toggleSidebar} siteSetting={siteSetting} />
+        <AdminNavBar toggleSidebar={toggleSidebar} siteSetting={siteSetting} identity={identity} />
         <div className="mx-auto w-full max-w-[100rem]">
           <div className="relative flex">
             <AdminSideNav
@@ -37,6 +37,8 @@ export default function AdminShell({ children, siteSetting }) {
               isOpen={isMobile ? isSidebarOpen : !isSidebarCollapsed}
               setIsOpen={setIsSidebarOpen}
               isCollapsed={isSidebarCollapsed}
+              identity={identity}
+              storeMenuSlugs={storeMenuSlugs}
             />
             <main
               className={cn(

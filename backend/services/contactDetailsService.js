@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
+import { requireCurrentStoreId } from "./storeContextService";
 
 const clean = (value) => String(value || "").trim();
 
@@ -13,8 +14,9 @@ export function normalizeContactDetails(setting) {
   };
 }
 
-async function queryContactDetails() {
-  const setting = await prisma.siteSetting.findFirst({
+async function queryContactDetails(storeId) {
+  const setting = await prisma.siteSetting.findUnique({
+    where: { storeId },
     select: {
       fbLink: true,
       messengerLink: true,
@@ -26,14 +28,19 @@ async function queryContactDetails() {
   return normalizeContactDetails(setting);
 }
 
-const getCachedContactDetails = unstable_cache(
-  queryContactDetails,
-  ["public-contact-details"],
-  { revalidate: 300, tags: ["contact-details", "site-setting"] },
-);
+const getCachedContactDetails = (storeId) =>
+  unstable_cache(
+    () => queryContactDetails(storeId),
+    ["public-contact-details", storeId],
+    {
+      revalidate: 300,
+      tags: [`contact-details:${storeId}`, `site-setting:${storeId}`],
+    },
+  )();
 
-export function getPublicContactDetails() {
+export async function getPublicContactDetails() {
+  const storeId = await requireCurrentStoreId();
   return process.env.NODE_ENV === "development"
-    ? queryContactDetails()
-    : getCachedContactDetails();
+    ? queryContactDetails(storeId)
+    : getCachedContactDetails(storeId);
 }

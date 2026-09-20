@@ -2,12 +2,14 @@ import prisma from "@/lib/prisma";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { htmlToText } from "html-to-text";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 
 export async function GET(req) {
+  const storeId = await requireCurrentStoreId();
   const [products, identity] = await Promise.all([
     prisma.product.findMany({
-      where: { isActive: true }, // Only include active products
+      where: { storeId, isActive: true }, // Only include active products
     }),
     getPublicSiteIdentity(),
   ]);

@@ -1,19 +1,19 @@
-import { auth } from "@/auth";
+import { getAdminAccess } from "@/backend/services/adminStoreAccess.server";
 import { getPosPageData, getPosSales } from "@/backend/serverActions/posAction";
-import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { redirect } from "next/navigation";
 import PosManager from "./PosManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function PosPage({ searchParams }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login?callbackUrl=/admin/pos");
   const filters = (await searchParams) || {};
-  const permissions = session.user.permissions || [];
-  const canCreate = hasUIPermission(permissions, "pos", "create");
-  const canView = hasUIPermission(permissions, "pos", "view");
-  const canViewOrders = hasUIPermission(permissions, "order", "view");
+  const [createAccess, viewAccess, orderAccess] = await Promise.all([
+    getAdminAccess("POS", "CREATE", "pos"),
+    getAdminAccess("POS", "VIEW", "pos"),
+    getAdminAccess("ORDER", "VIEW", "order"),
+  ]);
+  const canCreate = createAccess.allowed;
+  const canView = viewAccess.allowed;
+  const canViewOrders = orderAccess.allowed;
   const allowed = filters.tab === "sales" ? canView : canCreate;
   if (!allowed) {
     return <div className="card">Unauthorized</div>;

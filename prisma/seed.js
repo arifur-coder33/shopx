@@ -1,9 +1,22 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const { seedIdentityFoundation } = require("./seed-identity-foundation.js");
 
 const prisma = new PrismaClient();
 
-async function seedFinanceProviders() {
+async function seedStoreFoundation() {
+  const { getDeploymentMode } = await import(
+    "../backend/services/deploymentModeService.js"
+  );
+  const { ensureDefaultStandaloneStore } = await import(
+    "../backend/services/storeContextService.js"
+  );
+
+  if (getDeploymentMode() !== "STANDALONE") return null;
+  return ensureDefaultStandaloneStore(prisma);
+}
+
+async function seedFinanceProviders(storeId) {
   const {
     getProviderAccountType,
     getProviderRuntimeConfiguration,
@@ -11,11 +24,12 @@ async function seedFinanceProviders() {
   } = await import("../backend/services/providerCredentialService.js");
 
   let defaultCash = await prisma.moneyAccount.findFirst({
-    where: { accountNumber: "DEFAULT_CASH" },
+    where: { storeId, accountNumber: "DEFAULT_CASH" },
   });
   if (!defaultCash) {
     defaultCash = await prisma.moneyAccount.create({
       data: {
+        storeId,
         name: "Cash",
         type: "CASH",
         accountNumber: "DEFAULT_CASH",
@@ -31,12 +45,13 @@ async function seedFinanceProviders() {
       prisma[kind === "gateway" ? "paymentGateway" : "courierProvider"];
     for (const definition of getProviderSeedDefinitions(kind)) {
       const existing = await model.findUnique({
-        where: { code: definition.code },
+        where: { storeId_code: { storeId, code: definition.code } },
       });
       let provider = existing
         ? await model.update({
             where: { id: existing.id },
             data: {
+              storeId,
               adapterKey: definition.adapterKey,
               sortOrder: definition.sortOrder,
               ...(!definition.defaultActive &&
@@ -46,6 +61,7 @@ async function seedFinanceProviders() {
           })
         : await model.create({
             data: {
+              storeId,
               name: definition.name,
               code: definition.code,
               adapterKey: definition.adapterKey,
@@ -59,8 +75,8 @@ async function seedFinanceProviders() {
 
       const runtime = getProviderRuntimeConfiguration(kind, provider);
       const mappedAccount = provider.moneyAccountId
-        ? await prisma.moneyAccount.findUnique({
-            where: { id: provider.moneyAccountId },
+          ? await prisma.moneyAccount.findUnique({
+            where: { id: provider.moneyAccountId, storeId },
           })
         : null;
       if (
@@ -71,11 +87,12 @@ async function seedFinanceProviders() {
         const accountNumber = `PROVIDER:${kind.toUpperCase()}:${provider.code}`;
         const accountType = getProviderAccountType(kind, provider.adapterKey);
         let account = await prisma.moneyAccount.findFirst({
-          where: { accountNumber },
+          where: { storeId, accountNumber },
         });
         if (!account) {
           account = await prisma.moneyAccount.findFirst({
             where: {
+              storeId,
               name: { equals: provider.name, mode: "insensitive" },
               type: accountType,
             },
@@ -84,6 +101,7 @@ async function seedFinanceProviders() {
         if (!account) {
           account = await prisma.moneyAccount.create({
             data: {
+              storeId,
               name: provider.name,
               type: accountType,
               accountNumber,
@@ -94,12 +112,12 @@ async function seedFinanceProviders() {
           });
         } else if (!account.isActive) {
           account = await prisma.moneyAccount.update({
-            where: { id: account.id },
+            where: { id: account.id, storeId },
             data: { isActive: true, updatedBy: "seed" },
           });
         }
         provider = await model.update({
-          where: { id: provider.id },
+          where: { id: provider.id, storeId },
           data: { moneyAccountId: account.id, updatedBy: "seed" },
         });
       }
@@ -107,9 +125,9 @@ async function seedFinanceProviders() {
   }
 }
 
-async function seedSocialTrackingSettings() {
+async function seedSocialTrackingSettings(storeId) {
   const existing = await prisma.socialTrackingSetting.findUnique({
-    where: { id: "SOCIAL_TRACKING" },
+    where: { storeId },
   });
   if (existing) return;
 
@@ -132,7 +150,8 @@ async function seedSocialTrackingSettings() {
 
   await prisma.socialTrackingSetting.create({
     data: {
-      id: "SOCIAL_TRACKING",
+      id: `SOCIAL_TRACKING:${storeId}`,
+      storeId,
       facebookPixelId:
         process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID ||
         process.env.FB_PIXEL_ID ||
@@ -149,7 +168,7 @@ async function seedSocialTrackingSettings() {
   });
 }
 
-async function seedContentPages() {
+async function seedContentPages(storeId) {
   const pages = [
     {
       slug: "contact",
@@ -170,15 +189,18 @@ async function seedContentPages() {
 
   for (const page of pages) {
     await prisma.contentPage.upsert({
-      where: { slug: page.slug },
+      where: { storeId_slug: { storeId, slug: page.slug } },
       update: {},
-      create: { ...page, isPublished: true, createdBy: "seed", updatedBy: "seed" },
+      create: { storeId, ...page, isPublished: true, createdBy: "seed", updatedBy: "seed" },
     });
   }
 }
 
 async function main() {
   console.log("🌱 Running MASTER RBAC seed...");
+
+  const defaultStore = await seedStoreFoundation();
+  await seedIdentityFoundation(prisma);
 
   /* ======================
      1️⃣ ROLES
@@ -303,9 +325,11 @@ async function main() {
   /* ======================
      6️⃣ MONEY ACCOUNTS + PROVIDERS
   ====================== */
-  await seedFinanceProviders();
-  await seedSocialTrackingSettings();
-  await seedContentPages();
+  if (defaultStore) {
+    await seedFinanceProviders(defaultStore.id);
+    await seedSocialTrackingSettings(defaultStore.id);
+    await seedContentPages(defaultStore.id);
+  }
 
   console.log("✅ MASTER seed completed successfully");
 }

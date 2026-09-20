@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 
 import { generateCode } from "../utils/generateCode";
 import { getListCount } from "../utils/getListCount";
+import { requireCurrentStoreId } from "../services/storeContextService";
 export async function getAllSuppliers(params) {
+  const storeId = await requireCurrentStoreId();
   return getListData({
     prisma,
     model: "supplier",
@@ -25,10 +27,12 @@ export async function getAllSuppliers(params) {
     //   },
     // },
     dateField: "createdAt",
+    baseWhere: { storeId },
   });
 }
 
 export async function getSupplierCount(params) {
+  const storeId = await requireCurrentStoreId();
   return getListCount({
     prisma,
     model: "supplier",
@@ -48,13 +52,15 @@ export async function getSupplierCount(params) {
     //   },
     // },
     dateField: "createdAt",
+    baseWhere: { storeId },
   });
 }
 
 export async function getSupplierById(id) {
   try {
+    const storeId = await requireCurrentStoreId();
     const supplier = await prisma.supplier.findUnique({
-      where: { id },
+      where: { id, storeId },
       include: {
         documents: {
           include: {
@@ -89,10 +95,12 @@ export async function getSupplierById(id) {
 
 export async function createSupplier(formData) {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = Object.fromEntries(formData.entries());
 
     const existingSupplier = await prisma.supplier.findFirst({
       where: {
+        storeId,
         OR: [{ companyName: data.companyName }],
       },
     });
@@ -134,10 +142,17 @@ export async function createSupplier(formData) {
           .map((id) => id.trim())
           .filter((id) => id)
       : [];
+    const documentCount = documentIds.length
+      ? await prisma.media.count({ where: { storeId, id: { in: documentIds } } })
+      : 0;
+    if (documentCount !== documentIds.length) {
+      throw new Error("A selected supplier document belongs to another Store.");
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const newSupplier = await tx.supplier.create({
         data: {
+          storeId,
           ...newSupplierData,
         },
       });
@@ -169,9 +184,10 @@ export async function createSupplier(formData) {
 
 export async function updateSupplier({ id, formData }) {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = Object.fromEntries(formData.entries());
     const existingSupplier = await prisma.supplier.findUnique({
-      where: { id },
+      where: { id, storeId },
     });
     if (!existingSupplier) {
       return {
@@ -196,7 +212,7 @@ export async function updateSupplier({ id, formData }) {
       openingBalance: data.openingBalance ? parseFloat(data.openingBalance) : 0,
     };
     const updatedSupplier = await prisma.supplier.update({
-      where: { id },
+      where: { id, storeId },
       data: {
         ...newSupplierData,
       },
@@ -220,8 +236,9 @@ export async function updateSupplier({ id, formData }) {
 
 export async function deleteSupplier(id) {
   try {
+    const storeId = await requireCurrentStoreId();
     const purchaseCount = await prisma.purchaseOrder.count({
-      where: { supplierId: id },
+      where: { storeId, supplierId: id },
     });
     if (purchaseCount > 0) {
       return {
@@ -229,7 +246,7 @@ export async function deleteSupplier(id) {
         message: "Supplier has purchase orders and cannot be deleted.",
       };
     }
-    await prisma.supplier.delete({ where: { id } });
+    await prisma.supplier.delete({ where: { id, storeId } });
     revalidatePath("/admin/suppliers");
     return { success: true, message: "Supplier deleted successfully." };
   } catch (error) {

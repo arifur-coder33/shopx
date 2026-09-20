@@ -100,7 +100,7 @@ export async function createResourceAction(formData) {
 
     // }
 
-    const details = await prisma.variationName.create({
+    const details = await prisma.resource.create({
       data: preparedData,
     });
 

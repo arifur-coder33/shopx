@@ -5,11 +5,15 @@ import { fireFacebookCAPI } from "../utils/SocialServerEvent/fireFacebookCAPI";
 import { fireGoogleServer } from "../utils/SocialServerEvent/fireGoogleServer";
 import { fireTikTokServer } from "../utils/SocialServerEvent/fireTikTokServer";
 import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 export async function firePurchaseServer({ orderNo, orderId }) {
   try {
+    const storeId = await requireCurrentStoreId();
     const order = await prisma.order.findUnique({
-      where: orderNo ? { orderNo } : { id: orderId },
+      where: orderNo
+        ? { storeId_orderNo: { storeId, orderNo } }
+        : { id: orderId, storeId },
 
       select: {
         id: true,

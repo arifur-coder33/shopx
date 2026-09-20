@@ -6,6 +6,7 @@ import {
   postJournal,
 } from "../utils/accounting";
 import { postMoneyTransaction } from "./moneyTransactionService";
+import { requireCurrentStoreId } from "./storeContextService";
 
 const money = (value) => Math.round(Number(value) * 100) / 100;
 const sameMoney = (left, right) => Math.abs(money(left) - money(right)) < 0.01;
@@ -23,9 +24,9 @@ const providerForPayment = (payment) =>
     ? payment.courierProvider
     : payment.paymentGateway;
 
-async function paymentCreditLine(tx, orderId, amount) {
+async function paymentCreditLine(tx, storeId, orderId, amount) {
   const saleWasRecognized = await tx.journalEntry.findFirst({
-    where: { referenceType: "SALE", referenceId: orderId, status: "POSTED" },
+    where: { storeId, referenceType: "SALE", referenceId: orderId, status: "POSTED" },
     select: { id: true },
   });
   return saleWasRecognized
@@ -33,17 +34,18 @@ async function paymentCreditLine(tx, orderId, amount) {
     : { accountCode: ACCOUNT_CODES.SALES, credit: amount };
 }
 
-async function updateOrderPaymentTotals(tx, order) {
+async function updateOrderPaymentTotals(tx, order, storeId) {
   const [paid, refunded] = await Promise.all([
     tx.payment.aggregate({
       where: {
         orderId: order.id,
+        storeId,
         status: { in: ["PAID", "PARTIALLY_REFUNDED", "REFUNDED"] },
       },
       _sum: { amount: true },
     }),
     tx.refund.aggregate({
-      where: { orderId: order.id, status: "COMPLETED" },
+      where: { storeId, orderId: order.id, status: "COMPLETED" },
       _sum: { amount: true },
     }),
   ]);
@@ -58,7 +60,7 @@ async function updateOrderPaymentTotals(tx, order) {
   );
   const dueAmount = Math.max(0, money(total - grossPaid));
   await tx.order.update({
-    where: { id: order.id },
+    where: { id: order.id, storeId },
     data: {
       paidAmount: netPaid,
       dueAmount,
@@ -94,10 +96,11 @@ export async function postCustomerPaymentInTransaction(
     providerNameOverride,
     paidAt = new Date(),
     createdBy = "system",
+    storeId,
   },
 ) {
   const payment = await tx.payment.findUnique({
-    where: { id: paymentId },
+    where: { id: paymentId, storeId },
     include: {
       order: true,
       paymentGateway: true,
@@ -106,9 +109,19 @@ export async function postCustomerPaymentInTransaction(
     },
   });
   if (!payment) throw new Error("Payment not found.");
+  if (payment.order.storeId !== storeId) throw new Error("Payment Order belongs to another Store.");
+  if (payment.paymentGateway && payment.paymentGateway.storeId !== storeId) {
+    throw new Error("Payment gateway belongs to another Store.");
+  }
+  if (payment.courierProvider && payment.courierProvider.storeId !== storeId) {
+    throw new Error("Courier provider belongs to another Store.");
+  }
+  if (payment.moneyAccount && payment.moneyAccount.storeId !== storeId) {
+    throw new Error("Money account belongs to another Store.");
+  }
 
   const existingMovement = await tx.moneyTransaction.findFirst({
-    where: { paymentId: payment.id, type: "CUSTOMER_PAYMENT" },
+    where: { storeId, paymentId: payment.id, type: "CUSTOMER_PAYMENT" },
   });
   if (existingMovement) {
     return { payment, transaction: existingMovement, duplicate: true };
@@ -138,7 +151,10 @@ export async function postCustomerPaymentInTransaction(
   }
   const account =
     payment.moneyAccount ||
-    (await tx.moneyAccount.findUnique({ where: { id: moneyAccountId } }));
+    (await tx.moneyAccount.findUnique({ where: { id: moneyAccountId, storeId } }));
+  if (account && account.storeId !== storeId) {
+    throw new Error("The mapped money account belongs to another Store.");
+  }
   if (!account?.isActive) throw new Error("The mapped money account is inactive.");
 
   const result = await postMoneyTransaction(tx, {
@@ -158,7 +174,7 @@ export async function postCustomerPaymentInTransaction(
   }
 
   const updatedPayment = await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, storeId },
     data: {
       status: "PAID",
       gateway: provider.code,
@@ -192,7 +208,7 @@ export async function postCustomerPaymentInTransaction(
     });
   }
 
-  await updateOrderPaymentTotals(tx, payment.order);
+  await updateOrderPaymentTotals(tx, payment.order, storeId);
   await postJournal(tx, {
     entryDate: paidAt,
     description: `${provider.name} payment for order ${payment.order.orderNo}`,
@@ -206,7 +222,7 @@ export async function postCustomerPaymentInTransaction(
         accountType: "ASSET",
         debit: postingAmount,
       },
-      await paymentCreditLine(tx, payment.orderId, postingAmount),
+      await paymentCreditLine(tx, storeId, payment.orderId, postingAmount),
     ],
   });
   await tx.orderTimeline.create({
@@ -226,14 +242,20 @@ export async function postCustomerPaymentInTransaction(
 }
 
 export async function postCustomerPayment(input) {
+  const storeId = await requireCurrentStoreId();
   try {
-    return await prisma.$transaction((tx) =>
-      postCustomerPaymentInTransaction(tx, input),
+    return await prisma.$transaction(
+      (tx) => postCustomerPaymentInTransaction(tx, { ...input, storeId }),
+      { timeout: 30000 },
     );
   } catch (error) {
     if (error?.code === "P2002") {
       const transaction = await prisma.moneyTransaction.findFirst({
-        where: { paymentId: input.paymentId, type: "CUSTOMER_PAYMENT" },
+        where: {
+          paymentId: input.paymentId,
+          type: "CUSTOMER_PAYMENT",
+          payment: { storeId },
+        },
       });
       if (transaction) return { transaction, duplicate: true };
     }
@@ -250,15 +272,25 @@ export async function postCodCollection({
   externalEventId,
   collectedAt = new Date(),
   createdBy = "system",
+  serializeOrder = false,
 }) {
+  const storeId = await requireCurrentStoreId();
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
       include: { shipping: true, selectedCourierProvider: true },
     });
     if (!order) throw new Error("Order not found.");
     if (order.paymentMethod !== "COD") {
       throw new Error("Only COD orders can be posted as courier collections.");
+    }
+    if (serializeOrder) {
+      // Concurrent copies of one webhook must contend on the same Order
+      // before either can create a new COD Payment.
+      await tx.order.update({
+        where: { id: order.id, storeId },
+        data: { updatedAt: new Date() },
+      });
     }
     const resolvedCourierId =
       courierProviderId ||
@@ -266,7 +298,7 @@ export async function postCodCollection({
       order.selectedCourierProviderId;
     const courier = resolvedCourierId
       ? await tx.courierProvider.findUnique({
-          where: { id: resolvedCourierId },
+          where: { id: resolvedCourierId, storeId },
         })
       : null;
     if (resolvedCourierId && !courier?.moneyAccountId) {
@@ -279,19 +311,20 @@ export async function postCodCollection({
       );
     }
     const collectionAccount = await tx.moneyAccount.findUnique({
-      where: { id: collectionAccountId },
+      where: { id: collectionAccountId, storeId },
     });
     if (!collectionAccount?.isActive) {
       throw new Error("The collection Money Account is unavailable.");
     }
     const collectionAmount = money(amount ?? order.dueAmount);
     let payment = await tx.payment.findFirst({
-      where: { orderId: order.id, paymentMethod: "COD" },
+      where: { storeId, orderId: order.id, paymentMethod: "COD" },
       orderBy: { createdAt: "desc" },
     });
     if (!payment) {
       payment = await tx.payment.create({
         data: {
+          storeId,
           orderId: order.id,
           gateway: courier?.code || "MANUAL_DELIVERY",
           paymentMethod: "COD",
@@ -302,12 +335,13 @@ export async function postCodCollection({
       });
     } else if (courier && !payment.courierProviderId) {
       payment = await tx.payment.update({
-        where: { id: payment.id },
+        where: { id: payment.id, storeId },
         data: { courierProviderId: courier.id, gateway: courier.code },
       });
     }
     const posted = await postCustomerPaymentInTransaction(tx, {
       paymentId: payment.id,
+      storeId,
       amount: collectionAmount,
       transactionId: reference,
       externalEventId,
@@ -319,7 +353,7 @@ export async function postCodCollection({
     });
     if (order.shipping && !posted.duplicate) {
       await tx.shipping.update({
-        where: { id: order.shipping.id },
+        where: { id: order.shipping.id, storeId },
         data: {
           ...(courier && { courierProviderId: courier.id }),
           codCollectedAt: collectedAt,
@@ -329,7 +363,7 @@ export async function postCodCollection({
       });
     }
     return posted;
-  });
+  }, { timeout: 30000 });
 }
 
 export async function postProviderFee({
@@ -340,16 +374,18 @@ export async function postProviderFee({
   feeDate = new Date(),
   createdBy,
 }) {
+  const storeId = await requireCurrentStoreId();
   return prisma.$transaction(async (tx) => {
     const amount = money(rawAmount);
     const account = await tx.moneyAccount.findUnique({
-      where: { id: moneyAccountId },
+      where: { id: moneyAccountId, storeId },
     });
     if (!account?.isActive) throw new Error("Money account is unavailable.");
     const category = await tx.expenseCategory.upsert({
-      where: { name: "Payment and courier fees" },
+      where: { storeId_name: { storeId, name: "Payment and courier fees" } },
       update: {},
       create: {
+        storeId,
         name: "Payment and courier fees",
         createdBy,
         updatedBy: createdBy,
@@ -357,6 +393,7 @@ export async function postProviderFee({
     });
     const expense = await tx.expense.create({
       data: {
+        storeId,
         categoryId: category.id,
         moneyAccountId: account.id,
         amount,
@@ -399,7 +436,7 @@ export async function postProviderFee({
   });
 }
 
-export async function postPaymentRefund({
+export async function postPaymentRefundInTransaction(tx, {
   orderId,
   paymentId,
   amount: rawAmount,
@@ -408,28 +445,41 @@ export async function postPaymentRefund({
   externalReference,
   refundedAt = new Date(),
   createdBy,
+  storeId,
+  completeReturnedOrder = false,
 }) {
-  return prisma.$transaction(async (tx) => {
     if (externalReference) {
       const existing = await tx.refund.findFirst({
-        where: { externalReference, status: "COMPLETED" },
+        where: { storeId, externalReference, status: "COMPLETED" },
       });
-      if (existing) return { refund: existing, duplicate: true };
+      if (existing) {
+        if (existing.orderId !== orderId || existing.paymentId !== paymentId || !sameMoney(existing.amount, rawAmount)) {
+          throw new Error("Refund reference is already used for another refund.");
+        }
+        return { refund: existing, duplicate: true };
+      }
     }
     const payment = await tx.payment.findUnique({
-      where: { id: paymentId },
+      where: { id: paymentId, storeId },
       include: { order: true, moneyAccount: true },
     });
     if (!payment || payment.orderId !== orderId) throw new Error("Payment not found.");
+    if (payment.order.storeId !== storeId) throw new Error("Order belongs to another Store.");
+    if (completeReturnedOrder && !["RETURNED", "REFUNDING"].includes(payment.order.status)) {
+      throw new Error("Order is not ready for a completed return refund.");
+    }
     if (!["PAID", "PARTIALLY_REFUNDED"].includes(payment.status)) {
       throw new Error("Only a posted payment can be refunded.");
     }
     if (!payment.moneyAccount?.isActive) {
       throw new Error("The original payment account is unavailable.");
     }
+    if (payment.moneyAccount.storeId !== storeId) {
+      throw new Error("The original payment account belongs to another Store.");
+    }
     const amount = money(rawAmount);
     const previous = await tx.refund.aggregate({
-      where: { paymentId, status: "COMPLETED" },
+      where: { storeId, paymentId, status: "COMPLETED" },
       _sum: { amount: true },
     });
     const refunded = money(previous._sum.amount || 0);
@@ -439,6 +489,7 @@ export async function postPaymentRefund({
     const fullRefund = sameMoney(refunded + amount, payment.amount);
     const refund = await tx.refund.create({
       data: {
+        storeId,
         orderId,
         paymentId,
         moneyAccountId: payment.moneyAccount.id,
@@ -479,10 +530,13 @@ export async function postPaymentRefund({
       },
     });
     await tx.payment.update({
-      where: { id: paymentId },
+      where: { id: paymentId, storeId },
       data: { status: fullRefund ? "REFUNDED" : "PARTIALLY_REFUNDED" },
     });
-    await updateOrderPaymentTotals(tx, payment.order);
+    await updateOrderPaymentTotals(tx, payment.order, storeId);
+    if (completeReturnedOrder) {
+      await tx.order.update({ where: { id: orderId, storeId }, data: { status: "REFUNDED" } });
+    }
     await postJournal(tx, {
       entryDate: refundedAt,
       description: `Refund for order ${payment.order.orderNo}`,
@@ -503,12 +557,23 @@ export async function postPaymentRefund({
       data: {
         orderId,
         orderNo: payment.order.orderNo,
-        status: payment.order.status,
+        status: completeReturnedOrder ? "REFUNDED" : payment.order.status,
         title: "Refund Completed",
         message: `Refunded ৳${amount} from ${payment.moneyAccount.name}`,
         createdBy: createdBy || "system",
       },
     });
     return { refund, transaction: movement.transaction, duplicate: false };
-  });
+}
+
+export async function postPaymentRefund({
+  orderId, paymentId, amount, reason, adminNote, externalReference, refundedAt, createdBy,
+}) {
+  const storeId = await requireCurrentStoreId();
+  return prisma.$transaction(
+    (tx) => postPaymentRefundInTransaction(tx, {
+      orderId, paymentId, amount, reason, adminNote, externalReference, refundedAt, createdBy, storeId,
+    }),
+    { timeout: 30000 },
+  );
 }

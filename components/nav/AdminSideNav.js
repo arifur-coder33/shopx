@@ -3,6 +3,7 @@
 "use client";
 
 import Logout from "@/components/auth/Logout";
+import { signOutStoreAdmin } from "@/backend/serverActions/storeAdminSessionAction";
 import { adminMenuItems } from "@/lib/adminMenuItems";
 import { filterMenuByPermission } from "@/lib/filterMenuByPermission";
 import { User } from "lucide-react";
@@ -17,10 +18,14 @@ export default function AdminSideNav({
   isOpen,
   setIsOpen,
   isCollapsed,
+  identity,
+  storeMenuSlugs,
 }) {
   const { data: session } = useSession();
   const permissions = session?.user?.permissions || [];
-  const filteredMenu = filterMenuByPermission(adminMenuItems, permissions);
+  const filteredMenu = identity === "STORE_MEMBER"
+    ? adminMenuItems.map((item) => item.subMenu ? { ...item, subMenu: item.subMenu.filter((child) => storeMenuSlugs?.includes(child.slug)) } : null).filter((item) => item?.subMenu.length)
+    : filterMenuByPermission(adminMenuItems, permissions);
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -49,7 +54,7 @@ export default function AdminSideNav({
       <div className="flex-shrink-0 p-2">
         <div className="border-t border-slate-700 pt-2 flex flex-col gap-1">
           {/* Profile Link */}
-          <Link
+          {identity !== "STORE_MEMBER" && <Link
             href="/admin/profile"
             title={isCollapsed ? session?.user?.name || "Profile" : ""}
             className={cn(
@@ -68,7 +73,7 @@ export default function AdminSideNav({
             >
               {!isCollapsed && (session?.user?.name || "Profile")}
             </span>
-          </Link>
+          </Link>}
           {/* Logout Wrapper */}
           <div
             title={isCollapsed ? "Logout" : ""}
@@ -80,7 +85,7 @@ export default function AdminSideNav({
             style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
           >
             {/* 3. Simplified Logout component classes to avoid redundant styling */}
-            <Logout className="flex-shrink-0" />
+            {identity === "STORE_MEMBER" ? <form action={signOutStoreAdmin}><button type="submit">Sign out</button></form> : <Logout className="flex-shrink-0" />}
             <span
               className={cn(
                 "transition-opacity pointer-events-none",

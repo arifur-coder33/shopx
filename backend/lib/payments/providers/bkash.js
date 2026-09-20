@@ -1,6 +1,11 @@
 "use server";
 
 import { getSiteUrl } from "@/lib/siteUrl";
+import { createHash } from "node:crypto";
+import { getDeploymentMode } from "@/backend/services/deploymentModeService";
+import { getCurrentStoreContext } from "@/backend/services/storeContextService";
+import { normalizeHostname } from "@/backend/utils/hostname";
+import { headers as requestHeaders } from "next/headers";
 
 /**
  * bKash hosted checkout adapter.
@@ -24,7 +29,9 @@ const headers = (token, appKey) => ({
 const parseResponse = async (response, fallback) => {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || (data.statusCode && data.statusCode !== "0000")) {
-    throw new Error(data.statusMessage || data.message || fallback);
+    // Provider-supplied messages can contain account or token details. They
+    // must not flow through public server-action responses or callback logs.
+    throw new Error(fallback);
   }
   return data;
 };
@@ -43,7 +50,7 @@ export async function getBkashToken(providerConfiguration) {
   const values = configurationValues(providerConfiguration);
   // A token belongs to one merchant/environment pair. Keep it server-side and
   // reuse it until shortly before expiry, as required by the bKash flow.
-  const cacheKey = `${values.baseUrl}:${values.username}:${values.appKey}`;
+  const cacheKey = createHash("sha256").update(JSON.stringify(values)).digest("hex");
   const cached = tokenCache.get(cacheKey);
   if (cached?.expiresAt > Date.now() + 60_000) return cached.token;
 
@@ -76,7 +83,19 @@ export async function getBkashToken(providerConfiguration) {
 export async function createBkashPayment({ payment, providerConfiguration }) {
   const token = await getBkashToken(providerConfiguration);
   const { appKey, baseUrl } = configurationValues(providerConfiguration);
-  const callbackURL = `${await getSiteUrl()}/api/py/bkash/callback`;
+  let callbackOrigin = getSiteUrl();
+  if (getDeploymentMode() === "SAAS") {
+    const context = await getCurrentStoreContext();
+    const requestHost = (await requestHeaders()).get("host");
+    const hostname = normalizeHostname(requestHost);
+    if (context.type !== "STORE" || context.store.id !== payment.storeId || !hostname) {
+      throw new Error("A verified Store hostname is required for bKash callbacks.");
+    }
+    const isLocal = hostname === "localhost" || hostname.endsWith(".localhost");
+    const localPort = isLocal ? new URL(`http://${requestHost}`).port : "";
+    callbackOrigin = `${isLocal ? "http" : "https"}://${hostname}${localPort ? `:${localPort}` : ""}`;
+  }
+  const callbackURL = `${callbackOrigin}/api/py/bkash/callback`;
   const response = await fetch(`${baseUrl}/tokenized/checkout/create`, {
     method: "POST",
     headers: headers(token, appKey),

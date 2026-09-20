@@ -6,6 +6,21 @@ const secret = process.env.AUTH_SECRET;
 export default async function proxy(req) {
   const url = req.nextUrl.clone();
 
+  // Store credentials are separate from the legacy User token. Only the
+  // finance/POS admin surfaces migrated to StoreMember may use this boundary.
+  const storeCookieName = `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}authjs.store.session-token`;
+  const hasStoreCredential = req.cookies.has(storeCookieName);
+  if (url.pathname.startsWith("/admin") && hasStoreCredential) {
+    const migrated = url.pathname === "/admin" || /^\/admin\/pos(\/|$)/.test(url.pathname) ||
+      /^\/admin\/accounts(\/|$)/.test(url.pathname) ||
+      url.pathname === "/admin/procurement" ||
+      /^\/admin\/procurement\/(expenses|payments)(\/|$)/.test(url.pathname);
+    if (!migrated) return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // The route's server-side Store permission check also verifies the live
+    // member, role, and trusted hostname. A cookie alone grants no data access.
+    return NextResponse.next();
+  }
+
   const token = await getToken({
     req,
     secret,

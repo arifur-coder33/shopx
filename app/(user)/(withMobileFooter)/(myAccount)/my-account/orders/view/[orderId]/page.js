@@ -7,16 +7,18 @@ import { auth } from "@/auth";
 import { fetchSingleData } from "@/backend/serverActions/fetchDataActon";
 import InvoiceButton from "@/components/PDF/getInvoice";
 import OrderPaymentRecovery from "@/components/payments/OrderPaymentRecovery";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 export default async function UerOrderViewPage({ params }) {
   const { orderId } = await params;
   const session = await auth();
   const userId = session?.user?.id;
+  const storeId = await requireCurrentStoreId();
   // const fatchData = await getOrderById(orderId, userId);
 
   const fatchData = await fetchSingleData({
     model: "order",
-    where: { id: orderId, userId },
+    where: { id: orderId, userId, storeId },
     select: {
       id: true,
       createdAt: true,

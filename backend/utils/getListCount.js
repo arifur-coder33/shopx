@@ -7,9 +7,10 @@ export async function getListCount({
   searchableFields = [],
   relationSearch = {},
   dateField = "createdAt",
+  baseWhere = {},
 }) {
   const { startDate, endDate, ...filters } = params;
-  const where = {};
+  const where = { ...baseWhere };
 
   searchableFields.forEach(({ field, type = "string", exactMatch = false }) => {
     const value = filters[field];

@@ -1,10 +1,16 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 export async function getNotice() {
   try {
-    const data = await prisma.notice.findFirst();
+    const storeId = await requireCurrentStoreId();
+    const data = await unstable_cache(
+      () => prisma.notice.findFirst({ where: { storeId } }),
+      ["storefront-notice", storeId],
+      { revalidate: 60, tags: [`storefront-notice:${storeId}`] },
+    )();
     return { success: true, data: data };
   } catch (error) {
     return { success: false, message: error.message };
@@ -12,6 +18,7 @@ export async function getNotice() {
 }
 
 export async function updateNotice(formData) {
+  const storeId = await requireCurrentStoreId();
   let data = Object.fromEntries(formData.entries());
   const formattedStart = data?.start
     ? new Date(data?.start).toISOString()
@@ -25,21 +32,23 @@ export async function updateNotice(formData) {
 
   // Handle  image
 
-  const checkExistingData = await prisma.notice.findFirst();
+  const checkExistingData = await prisma.notice.findFirst({ where: { storeId } });
 
   if (!checkExistingData) {
     const result = await prisma.notice.create({
-      data: preparedData,
+      data: { ...preparedData, storeId },
     });
+    revalidateTag(`storefront-notice:${storeId}`);
     revalidatePath("/");
     revalidatePath("/admin/notice");
     return { success: true, result };
   }
   if (checkExistingData) {
     const result = await prisma.notice.update({
-      where: { id: checkExistingData?.id },
+      where: { id: checkExistingData?.id, storeId },
       data: preparedData,
     });
+    revalidateTag(`storefront-notice:${storeId}`);
     revalidatePath("/admin/notice");
     revalidatePath("/");
     return { success: true, result };

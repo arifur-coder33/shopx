@@ -7,6 +7,7 @@ import {
 } from "../utils/accounting";
 import { generateCode } from "../utils/generateCode";
 import { postMoneyTransaction } from "../services/moneyTransactionService";
+import { requireCurrentStoreId } from "../services/storeContextService";
 import {
   actionError,
   refreshProcurement,
@@ -21,6 +22,7 @@ export async function createSupplierPayment(formData) {
       "supplierPayment",
       "create",
     );
+    const storeId = await requireCurrentStoreId();
     const values = Object.fromEntries(formData.entries());
     const amount = toNumber(values.amount);
     if (
@@ -36,7 +38,7 @@ export async function createSupplierPayment(formData) {
       };
     const result = await prisma.$transaction(async (tx) => {
       const po = await tx.purchaseOrder.findUnique({
-        where: { id: values.purchaseOrderId },
+        where: { id: values.purchaseOrderId, storeId },
       });
       if (!po || po.supplierId !== values.supplierId)
         throw new Error("Purchase order does not belong to this supplier.");
@@ -45,7 +47,7 @@ export async function createSupplierPayment(formData) {
       if (amount > po.dueAmount)
         throw new Error("Payment exceeds purchase order due amount.");
       const account = await tx.moneyAccount.findUnique({
-        where: { id: values.moneyAccountId },
+        where: { id: values.moneyAccountId, storeId },
       });
       if (!account?.isActive)
         throw new Error("The selected money account is unavailable.");
@@ -57,7 +59,7 @@ export async function createSupplierPayment(formData) {
           padding: 7,
         }));
       await tx.purchaseOrder.update({
-        where: { id: po.id },
+        where: { id: po.id, storeId },
         data: {
           paidAmount: { increment: amount },
           dueAmount: { decrement: amount },
@@ -66,6 +68,7 @@ export async function createSupplierPayment(formData) {
       });
       const payment = await tx.supplierPayment.create({
         data: {
+          storeId,
           supplierId: values.supplierId,
           purchaseOrderId: po.id,
           moneyAccountId: account.id,
@@ -111,7 +114,7 @@ export async function createSupplierPayment(formData) {
         ],
       });
       return payment;
-    });
+    }, { timeout: 30000 });
     refreshProcurement();
     return {
       success: true,

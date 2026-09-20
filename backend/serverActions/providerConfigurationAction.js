@@ -9,6 +9,10 @@ import {
   prepareProviderCredentialUpdate,
 } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
+import { getDeploymentMode } from "@/backend/services/deploymentModeService";
+import { normalizeHostname } from "@/backend/utils/hostname";
+import { getSiteUrl } from "@/lib/siteUrl";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import {
   actionError,
@@ -35,12 +39,28 @@ const configFor = (kind) => {
   return config;
 };
 
-const refresh = (path) => {
+async function getSteadfastWebhookUrl(storeId) {
+  if (getDeploymentMode() === "STANDALONE") {
+    return new URL("/api/webhooks/steadfast", getSiteUrl()).toString();
+  }
+  const domains = await prisma.storeDomain.findMany({
+    where: { storeId, status: "ACTIVE", isVerified: true },
+    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+    select: { domain: true },
+  });
+  const platformHost = normalizeHostname(process.env.PLATFORM_DOMAIN);
+  const domain = domains
+    .map((item) => normalizeHostname(item.domain))
+    .find((hostname) => hostname && hostname !== platformHost);
+  return domain ? `https://${domain}/api/webhooks/steadfast` : null;
+}
+
+const refresh = (path, storeId) => {
   revalidatePath(path);
   revalidatePath("/admin/accounts");
   revalidatePath("/checkout");
   revalidatePath("/admin/orders");
-  revalidateTag("checkout-providers");
+  revalidateTag(`checkout-providers:${storeId}`);
 };
 
 const publicProvider = (kind, provider) => {
@@ -65,17 +85,17 @@ const publicProvider = (kind, provider) => {
 
 async function ensureProviderMoneyAccount(
   tx,
-  { kind, provider, userId },
+  { kind, provider, userId, storeId },
 ) {
   const model = tx[configFor(kind).model];
   const requestedId = provider.moneyAccountId;
   if (requestedId) {
     const account = await tx.moneyAccount.findUnique({
-      where: { id: requestedId },
+      where: { id: requestedId, storeId },
     });
     if (account && !account.isActive) {
       return tx.moneyAccount.update({
-        where: { id: account.id },
+        where: { id: account.id, storeId },
         data: { isActive: true, updatedBy: userId },
       });
     }
@@ -85,12 +105,13 @@ async function ensureProviderMoneyAccount(
   const accountType = getProviderAccountType(kind, provider.adapterKey);
   const stableAccountNumber = `PROVIDER:${kind.toUpperCase()}:${provider.code}`;
   let account = await tx.moneyAccount.findFirst({
-    where: { accountNumber: stableAccountNumber },
+    where: { storeId, accountNumber: stableAccountNumber },
   });
 
   if (!account) {
     const exactMatches = await tx.moneyAccount.findMany({
       where: {
+        storeId,
         name: { equals: provider.name, mode: "insensitive" },
         type: accountType,
       },
@@ -104,6 +125,7 @@ async function ensureProviderMoneyAccount(
   if (!account) {
     account = await tx.moneyAccount.create({
       data: {
+        storeId,
         name: provider.name,
         type: accountType,
         accountNumber: stableAccountNumber,
@@ -114,21 +136,21 @@ async function ensureProviderMoneyAccount(
     });
   } else if (!account.isActive) {
     account = await tx.moneyAccount.update({
-      where: { id: account.id },
+      where: { id: account.id, storeId },
       data: { isActive: true, updatedBy: userId },
     });
   }
 
   await model.update({
-    where: { id: provider.id },
+    where: { id: provider.id, storeId },
     data: { moneyAccountId: account.id, updatedBy: userId },
   });
   return account;
 }
 
-async function queryCheckoutProviders() {
+async function queryCheckoutProviders(storeId) {
   const gateways = await prisma.paymentGateway.findMany({
-    where: { isActive: true },
+    where: { storeId, isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { moneyAccount: true },
   });
@@ -148,21 +170,23 @@ async function queryCheckoutProviders() {
   };
 }
 
-const readCheckoutProviders = unstable_cache(
-  queryCheckoutProviders,
-  ["checkout-providers"],
-  { revalidate: 60, tags: ["checkout-providers"] },
-);
+const readCheckoutProviders = (storeId) =>
+  unstable_cache(
+    () => queryCheckoutProviders(storeId),
+    ["checkout-providers", storeId],
+    { revalidate: 60, tags: [`checkout-providers:${storeId}`] },
+  )();
 
 export async function getCheckoutProviders() {
   try {
+    const storeId = await requireCurrentStoreId();
     // Next's development filesystem cache can retain a cancelled in-flight
     // render across HMR. Direct reads keep dev navigation reliable; production
     // continues to use the tagged cache below.
     if (process.env.NODE_ENV === "development") {
-      return await queryCheckoutProviders();
+      return await queryCheckoutProviders(storeId);
     }
-    return await readCheckoutProviders();
+    return await readCheckoutProviders(storeId);
   } catch {
     return { codEnabled: false, gateways: [] };
   }
@@ -172,12 +196,14 @@ export async function getProviderConfiguration(kind, params = {}) {
   try {
     const config = configFor(kind);
     await requireProcurementPermission(config.resource, "view");
+    const storeId = await requireCurrentStoreId();
     const page = Math.max(1, Number(params.page) || 1);
     const limit = Math.min(50, Math.max(5, Number(params.limit) || 10));
     const status = String(params.status || "ALL");
     const adapterDefinitions = getPublicAdapterDefinitions(kind);
     const supportedAdapters = adapterDefinitions.map((adapter) => adapter.key);
     const where = {
+      storeId,
       adapterKey: { in: supportedAdapters },
       ...(params.name && {
         name: { contains: String(params.name), mode: "insensitive" },
@@ -192,7 +218,7 @@ export async function getProviderConfiguration(kind, params = {}) {
       ...(status === "INACTIVE" && { isActive: false }),
     };
     const model = prisma[config.model];
-    const [providers, total] = await Promise.all([
+    const [providers, total, steadfastWebhookUrl] = await Promise.all([
       model.findMany({
         where,
         skip: (page - 1) * limit,
@@ -204,6 +230,7 @@ export async function getProviderConfiguration(kind, params = {}) {
         },
       }),
       model.count({ where }),
+      kind === "courier" ? getSteadfastWebhookUrl(storeId) : null,
     ]);
     return {
       success: true,
@@ -214,6 +241,7 @@ export async function getProviderConfiguration(kind, params = {}) {
         credentialEncryptionReady: Boolean(
           process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY?.length >= 32,
         ),
+        steadfastWebhookUrl,
       },
       filters: params,
       pagination: {
@@ -230,10 +258,14 @@ export async function getProviderConfiguration(kind, params = {}) {
 
 export async function revealProviderCredential(kind, providerId, fieldKey) {
   try {
+    if (kind === "courier" && fieldKey === "webhookAuthToken") {
+      return { success: false, message: "Webhook Auth Tokens cannot be revealed after saving." };
+    }
     const config = configFor(kind);
     await requireProcurementPermission(config.resource, "update");
+    const storeId = await requireCurrentStoreId();
     const provider = await prisma[config.model].findUnique({
-      where: { id: providerId },
+      where: { id: providerId, storeId },
       select: { adapterKey: true, encryptedCredentials: true },
     });
     if (!provider) {
@@ -268,6 +300,7 @@ export async function saveProviderConfiguration(kind, formData) {
     const config = configFor(kind);
     const values = Object.fromEntries(formData.entries());
     const userId = await requireProcurementPermission(config.resource, "update");
+    const storeId = await requireCurrentStoreId();
     if (!values.id) {
       return {
         success: false,
@@ -275,7 +308,7 @@ export async function saveProviderConfiguration(kind, formData) {
       };
     }
     const model = prisma[config.model];
-    const existing = await model.findUnique({ where: { id: values.id } });
+    const existing = await model.findUnique({ where: { id: values.id, storeId } });
     if (!existing) {
       return { success: false, message: "Provider not found." };
     }
@@ -316,6 +349,21 @@ export async function saveProviderConfiguration(kind, formData) {
       nonSecretConfig,
     };
     const readiness = getProviderRuntimeConfiguration(kind, candidate);
+    if (
+      kind === "courier" &&
+      adapterKey === "STEADFAST" &&
+      String(nonSecretConfig.webhookEnabled) === "true"
+    ) {
+      if (!isActive) {
+        return { success: false, message: "Enable Steadfast before enabling its webhook." };
+      }
+      if (!readiness.credentials.webhookAuthToken || readiness.credentials.webhookAuthToken.length < 24) {
+        return { success: false, message: "A webhook Bearer Auth Token of at least 24 characters is required." };
+      }
+      if (!(await getSteadfastWebhookUrl(storeId))) {
+        return { success: false, message: "Verify a Store domain before enabling the Steadfast webhook." };
+      }
+    }
     if (isActive && !readiness.integrationAvailable) {
       return {
         success: false,
@@ -348,7 +396,7 @@ export async function saveProviderConfiguration(kind, formData) {
         updatedBy: userId,
       };
       let saved = await txModel.update({
-        where: { id: existing.id },
+        where: { id: existing.id, storeId },
         data: baseData,
       });
 
@@ -357,9 +405,10 @@ export async function saveProviderConfiguration(kind, formData) {
           kind,
           provider: saved,
           userId,
+          storeId,
         });
         saved = await txModel.update({
-          where: { id: saved.id },
+          where: { id: saved.id, storeId },
           data: {
             isActive: true,
             moneyAccountId: account.id,
@@ -368,14 +417,14 @@ export async function saveProviderConfiguration(kind, formData) {
         });
       } else if (isActive) {
         saved = await txModel.update({
-          where: { id: saved.id },
+          where: { id: saved.id, storeId },
           data: { isActive: true, updatedBy: userId },
         });
       }
       return saved;
     });
 
-    refresh(config.path);
+    refresh(config.path, storeId);
     return {
       success: true,
       message: `${kind === "gateway" ? "Payment gateway" : "Courier"} updated${isActive ? " and enabled" : ""}.`,

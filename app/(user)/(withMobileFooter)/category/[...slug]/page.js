@@ -1,4 +1,3 @@
-// export const dynamic = "force-static"; //
 import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
 import ProductCard from "@/components/products/ProductCard";
 import ProductList from "@/components/products/productList";
@@ -8,18 +7,25 @@ import JsonLd from "@/components/seo/JsonLd";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { notFound } from "next/navigation";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
+import { unstable_cache } from "next/cache";
 export const revalidate = 60;
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const currentSlug = slug?.at(-1);
+  const storeId = await requireCurrentStoreId();
   const [category, identity] = await Promise.all([
     currentSlug
-      ? prisma.category.findUnique({
-          where: { slug: currentSlug },
-          select: { name: true, description: true, fullPath: true, slug: true },
-        })
+      ? unstable_cache(
+          () => prisma.category.findUnique({
+            where: { storeId_slug: { storeId, slug: currentSlug } },
+            select: { name: true, description: true, fullPath: true, slug: true },
+          }),
+          ["category-metadata", storeId, currentSlug],
+          { revalidate: 60, tags: [`storefront-catalog:${storeId}`] },
+        )()
       : null,
     getPublicSiteIdentity(),
   ]);
@@ -43,35 +49,6 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export async function generateStaticParams() {
-  const categories = await prisma.category.findMany({
-    select: {
-      id: true,
-      slug: true,
-      parentCategoryId: true,
-    },
-  });
-
-  const buildPaths = (parentId = null, path = []) => {
-    const children = categories.filter((c) => c.parentCategoryId === parentId);
-
-    let result = [];
-
-    for (const child of children) {
-      const newPath = [...path, child.slug];
-
-      result.push({
-        slug: newPath,
-      });
-
-      result.push(...buildPaths(child.id, newPath));
-    }
-
-    return result;
-  };
-
-  return buildPaths();
-}
 export default async function CategoryWithProductPage({ params }) {
   const getParams = await params;
   const { slug } = getParams;

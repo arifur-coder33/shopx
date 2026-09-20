@@ -4,9 +4,11 @@ import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { cloudinaryUpload } from "../utils/cloudinary";
 import { newSlug } from "../utils/generateSlug";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 export async function uploadImagesAction(formData) {
   try {
+    const storeId = await requireCurrentStoreId();
     let imageGalleryUploads = [];
     const imageGalleryFiles = formData.getAll("imageGallery");
     const validFiles = imageGalleryFiles.filter((file) => file.size > 0);
@@ -25,7 +27,7 @@ export async function uploadImagesAction(formData) {
               console.error("No file found");
               return null;
             }
-            const imageSlug = await newSlug(slug);
+            const imageSlug = await newSlug(slug, storeId);
             // Ensure file is valid and properly passed to Cloudinary
             console.log("upload data", {
               image: file,
@@ -62,10 +64,10 @@ export async function uploadImagesAction(formData) {
     console.log(imageGalleryUploads);
     if (imageGalleryUploads.length > 0) {
       await prisma.media.createMany({
-        data: imageGalleryUploads,
+        data: imageGalleryUploads.map((image) => ({ ...image, storeId })),
       });
       revalidatePath("/admin/media");
-      revalidateTag("media"); // ✅ Instead of revalidatePath()
+      revalidateTag(`media:${storeId}`); // ✅ Instead of revalidatePath()
       return { success: true, data: imageGalleryUploads };
     } else {
       return {
@@ -84,14 +86,17 @@ export async function uploadImagesAction(formData) {
 }
 
 export async function getAllMedia(params) {
-  const data = await prisma.media.findMany();
+  const storeId = await requireCurrentStoreId();
+  const data = await prisma.media.findMany({ where: { storeId } });
 
   return { success: true, data };
 }
 
 export async function getAllMediaByIds(params) {
+  const storeId = await requireCurrentStoreId();
   const data = await prisma.media.findMany({
     where: {
+      storeId,
       id: {
         in: params, // Assuming params.ids is an array of media IDs
       },

@@ -1,13 +1,15 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 // A deliberately small action for quick-add buttons. Keeping it separate from
 // the admin product action bundle prevents every storefront page compiling it.
 export async function getStorefrontCartItem(slug) {
   try {
+    const storeId = await requireCurrentStoreId();
     const product = await prisma.product.findUnique({
-      where: { slug },
+      where: { storeId_slug: { storeId, slug } },
       select: {
         id: true,
         title: true,

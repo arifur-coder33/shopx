@@ -1,6 +1,10 @@
 "use server";
 
 import { getSiteUrl } from "@/lib/siteUrl";
+import { getDeploymentMode } from "@/backend/services/deploymentModeService";
+import { getCurrentStoreContext } from "@/backend/services/storeContextService";
+import { normalizeHostname } from "@/backend/utils/hostname";
+import { headers } from "next/headers";
 
 /**
  * SSLCommerz hosted payment adapter.
@@ -23,7 +27,18 @@ export async function initiateSSLcommerzPayment({
     throw new Error("SSLCommerz credentials are not configured on the server.");
   }
   const transactionId = `TXN_${payment.id}_${Date.now()}`;
-  const siteUrl = await getSiteUrl();
+  let siteUrl = getSiteUrl();
+  if (getDeploymentMode() === "SAAS") {
+    const context = await getCurrentStoreContext();
+    const requestHost = (await headers()).get("host");
+    const hostname = normalizeHostname(requestHost);
+    if (context.type !== "STORE" || context.store.id !== payment.storeId || !hostname) {
+      throw new Error("A verified Store hostname is required for SSLCommerz callbacks.");
+    }
+    const isLocal = hostname === "localhost" || hostname.endsWith(".localhost");
+    const localPort = isLocal ? new URL(`http://${requestHost}`).port : "";
+    siteUrl = `${isLocal ? "http" : "https"}://${hostname}${localPort ? `:${localPort}` : ""}`;
+  }
   const data = {
     store_id: storeId,
     store_passwd: storePassword,

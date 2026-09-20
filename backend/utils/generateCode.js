@@ -1,17 +1,20 @@
 // backend/utils/generateCode.js
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 export async function generateCode(
   tx,
-  { name, prefix = "", padding = 6, start = 1, step = 1 },
+  { name, prefix = "", padding = 6, start = 1, step = 1, storeId },
 ) {
+  const trustedStoreId = storeId || (await requireCurrentStoreId());
   let counter = await tx.counter.findUnique({
-    where: { name },
+    where: { storeId_name: { storeId: trustedStoreId, name } },
   });
 
   // Counter না থাকলে Create করবে
   if (!counter) {
     counter = await tx.counter.create({
       data: {
+        storeId: trustedStoreId,
         name,
         prefix,
         nextValue: start,
@@ -27,7 +30,7 @@ export async function generateCode(
 
   // Next Value Update
   await tx.counter.update({
-    where: { id: counter.id },
+    where: { id: counter.id, storeId: trustedStoreId },
     data: {
       nextValue: {
         increment: step,

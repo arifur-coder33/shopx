@@ -1,10 +1,12 @@
-export async function buildCategoryPath(categoryId) {
+import prisma from "@/lib/prisma";
+
+export async function buildCategoryPath(categoryId, storeId, database = prisma) {
   let names = [];
   let currentId = categoryId;
 
   while (currentId) {
-    const cat = await prisma.category.findUnique({
-      where: { id: currentId },
+    const cat = await database.category.findUnique({
+      where: { id: currentId, storeId },
       select: { name: true, parentCategoryId: true },
     });
 
@@ -14,5 +16,5 @@ export async function buildCategoryPath(categoryId) {
     currentId = cat.parentCategoryId;
   }
 
-  return names.reverse().join(" > ");
+  return names.join(" > ");
 }

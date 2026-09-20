@@ -1,6 +1,16 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { requireCurrentStoreId } from "../services/storeContextService";
+
+const SUPPORTED_MODELS = new Set(["user", "order"]);
+
+async function trustedWhere(model, where) {
+  if (!SUPPORTED_MODELS.has(model)) throw new Error("Unsupported data model");
+  if (model !== "order") return where;
+  const storeId = await requireCurrentStoreId();
+  return { ...where, storeId };
+}
 
 export async function fetchCursorData({
   model,
@@ -10,6 +20,7 @@ export async function fetchCursorData({
   take = 5,
 }) {
   if (!model) throw new Error("Prisma model is required");
+  where = await trustedWhere(model, where);
 
   const queryOptions = {
     where,
@@ -43,6 +54,7 @@ export async function fetchPageData({
   page = 1,
   take = 10,
 }) {
+  where = await trustedWhere(model, where);
   const skip = (page - 1) * take;
 
   const [data, total] = await Promise.all([
@@ -69,6 +81,7 @@ export async function fetchSingleData({ model, where = {}, select = {} }) {
   if (!model) throw new Error("Prisma model is required");
 
   try {
+    where = await trustedWhere(model, where);
     const data = await prisma[model].findFirst({
       where,
       select,

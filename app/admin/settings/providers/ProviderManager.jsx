@@ -64,7 +64,7 @@ export default function ProviderManager({ kind, result }) {
     return <main className="p-5"><div className="card">{result.message}</div></main>;
   }
 
-  const { providers, adapters, adapterDefinitions, credentialEncryptionReady } = result.data;
+  const { providers, adapters, adapterDefinitions, credentialEncryptionReady, steadfastWebhookUrl } = result.data;
   const filters = result.filters || {};
   const canUpdate = hasUIPermission(
     session?.user?.permissions || [],
@@ -252,7 +252,7 @@ export default function ProviderManager({ kind, result }) {
                             autoComplete="new-password"
                             placeholder={credentialEncryptionReady ? (editing.readiness.credentialsConfigured ? "Configured — enter only to replace" : "Required before enabling") : "Set encryption master key first"}
                           />
-                          <button
+                          {credential.key !== "webhookAuthToken" && <button
                             type="button"
                             disabled={!credentialEncryptionReady || revealingCredential === credential.key}
                             onClick={() => toggleCredentialVisibility(credential)}
@@ -261,7 +261,7 @@ export default function ProviderManager({ kind, result }) {
                             title={`${isVisible ? "Hide" : "Show"} ${credential.label}`}
                           >
                             {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className={`h-4 w-4 ${revealingCredential === credential.key ? "animate-pulse" : ""}`} />}
-                          </button>
+                          </button>}
                         </span>
                       </label>
                     );
@@ -279,6 +279,21 @@ export default function ProviderManager({ kind, result }) {
                     <label key={config.key} className="grid gap-1 text-sm font-semibold">{config.label}{config.type === "boolean" ? <select className={field} name={`config_${config.key}`} defaultValue={String(editing.nonSecretConfig?.[config.key] ?? config.defaultValue)}><option value="true">{config.trueLabel || "Yes"}</option><option value="false">{config.falseLabel || "No"}</option></select> : <input className={field} type={config.type === "number" ? "number" : "text"} min={config.type === "number" ? "0" : undefined} step={config.type === "number" ? "0.01" : undefined} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue} />}</label>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {kind === "courier" && editing.adapterKey === "STEADFAST" && (
+              <section className="space-y-2 rounded-brand border border-border p-3 text-sm">
+                <h3 className="font-bold">Steadfast webhook</h3>
+                <p className="text-text-muted">Save a separate, random Webhook Bearer Auth Token of at least 24 characters above, enable authenticated webhooks, then enter this Callback URL and the same token in your Steadfast merchant portal. Do not use the outbound API key as the webhook token.</p>
+                {steadfastWebhookUrl ? (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input className={`${field} min-w-0`} readOnly aria-label="Steadfast Callback URL" value={steadfastWebhookUrl} onFocus={(event) => event.target.select()} />
+                    <button type="button" className="button shrink-0" onClick={() => navigator.clipboard.writeText(steadfastWebhookUrl).then(() => toast.success("Callback URL copied.")).catch(() => toast.error("Could not copy the Callback URL."))}>Copy</button>
+                  </div>
+                ) : (
+                  <p className="text-warning">A verified Store domain is required before the webhook can be enabled.</p>
+                )}
               </section>
             )}
 

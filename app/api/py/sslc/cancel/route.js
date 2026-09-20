@@ -1,8 +1,9 @@
-import { markPaymentCancelled } from "@/backend/serverActions/paymentAction";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 async function handleCancel(req) {
+  const storeId = await requireCurrentStoreId();
   let formData;
   const siteUrl = new URL(req.url).origin;
 
@@ -16,25 +17,18 @@ async function handleCancel(req) {
   const transactionId = formData.get("tran_id");
   const payment = paymentId
     ? await prisma.payment.findUnique({
-        where: { id: paymentId },
+        where: { id: paymentId, storeId },
         include: { order: true },
       })
     : transactionId
       ? await prisma.payment.findFirst({
-          where: { transactionId },
+          where: { storeId, transactionId },
           include: { order: true },
         })
       : null;
 
-  if (payment) {
-    await markPaymentCancelled({
-      paymentId: payment.id,
-      orderId: payment.orderId,
-      orderNo: payment.order.orderNo,
-      gatewayResponse: Object.fromEntries(formData.entries()),
-      reason: "Customer cancelled payment.",
-    });
-  }
+  // A customer-facing cancel redirect is not verified provider settlement.
+  // Do not let forged return parameters block a later validated success.
 
   const cancelUrl = new URL("/payment/cancel", siteUrl);
   const orderNo = payment?.order?.orderNo || formData.get("value_a");

@@ -5,10 +5,12 @@ import { createNagadPayment } from "@/backend/lib/payments/providers/nagad";
 import { initiateSSLcommerzPayment } from "@/backend/lib/payments/providers/sslcommerz";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
+import { requireCurrentStoreId } from "@/backend/services/storeContextService";
 
 export async function initiateConfiguredPayment(paymentId) {
+  const storeId = await requireCurrentStoreId();
   const payment = await prisma.payment.findUnique({
-    where: { id: paymentId },
+    where: { id: paymentId, storeId },
     include: {
       order: true,
       paymentGateway: { include: { moneyAccount: true } },
@@ -42,7 +44,7 @@ export async function initiateConfiguredPayment(paymentId) {
         providerConfiguration,
       });
       await prisma.payment.update({
-        where: { id: payment.id },
+        where: { id: payment.id, storeId },
         data: { transactionId: response.transactionId },
       });
       return { success: true, url: response.url };
@@ -53,7 +55,7 @@ export async function initiateConfiguredPayment(paymentId) {
         providerConfiguration,
       });
       await prisma.payment.update({
-        where: { id: payment.id },
+        where: { id: payment.id, storeId },
         data: { externalEventId: response.paymentID },
       });
       return { success: true, url: response.bkashURL };
@@ -64,7 +66,7 @@ export async function initiateConfiguredPayment(paymentId) {
         providerConfiguration,
       });
       await prisma.payment.update({
-        where: { id: payment.id },
+        where: { id: payment.id, storeId },
         data: {
           transactionId: response.transactionId,
           externalEventId: response.externalEventId,
@@ -82,9 +84,10 @@ export async function initiateConfiguredPayment(paymentId) {
 }
 
 export async function initiateOrderPayment(orderId) {
+  const storeId = await requireCurrentStoreId();
   const paymentId = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
-      where: { id: orderId },
+      where: { id: orderId, storeId },
       include: { selectedPaymentGateway: true },
     });
     if (
@@ -98,13 +101,14 @@ export async function initiateOrderPayment(orderId) {
       throw new Error("This order has no outstanding payment.");
     }
     const pending = await tx.payment.findFirst({
-      where: { orderId, paymentGatewayId: order.selectedPaymentGatewayId, status: "PENDING" },
+      where: { storeId, orderId, paymentGatewayId: order.selectedPaymentGatewayId, status: "PENDING" },
       orderBy: { createdAt: "desc" },
       select: { id: true },
     });
     if (pending) return pending.id;
     const payment = await tx.payment.create({
       data: {
+        storeId,
         orderId,
         gateway: order.selectedPaymentGateway.code,
         paymentMethod: order.paymentMethod,
@@ -131,6 +135,7 @@ export async function retryCustomerOrderPayment({
 }) {
   let paymentId;
   try {
+    const storeId = await requireCurrentStoreId();
     const method = String(paymentMethod || "").toUpperCase();
     if (!orderNo || !phoneNumber || !["COD", "ONLINE", "EMI"].includes(method)) {
       throw new Error("Select a valid payment method.");
@@ -141,7 +146,7 @@ export async function retryCustomerOrderPayment({
 
     const attempt = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({
-        where: { orderNo, phoneNumber },
+        where: { storeId, orderNo, phoneNumber },
         include: { shipping: true },
       });
       if (!order) throw new Error("Order not found.");
@@ -158,7 +163,7 @@ export async function retryCustomerOrderPayment({
       let gateway = null;
       if (method !== "COD") {
         gateway = await tx.paymentGateway.findUnique({
-          where: { id: paymentGatewayId },
+          where: { id: paymentGatewayId, storeId },
           include: { moneyAccount: true },
         });
         if (!getProviderRuntimeConfiguration("gateway", gateway).ready) {
@@ -169,7 +174,7 @@ export async function retryCustomerOrderPayment({
         }
       } else {
         const cod = await tx.paymentGateway.findFirst({
-          where: { adapterKey: "COD", isActive: true },
+          where: { storeId, adapterKey: "COD", isActive: true },
           include: { moneyAccount: true },
         });
         if (!getProviderRuntimeConfiguration("gateway", cod).ready) {
@@ -180,11 +185,12 @@ export async function retryCustomerOrderPayment({
       // A retry is a new immutable attempt. Old unfinished attempts remain in
       // history but cannot later be posted accidentally.
       await tx.payment.updateMany({
-        where: { orderId: order.id, status: "PENDING" },
+        where: { storeId, orderId: order.id, status: "PENDING" },
         data: { status: "CANCELLED" },
       });
       const payment = await tx.payment.create({
         data: {
+          storeId,
           orderId: order.id,
           gateway: method !== "COD" ? gateway.code : "COD",
           paymentMethod: method,
@@ -195,7 +201,7 @@ export async function retryCustomerOrderPayment({
         },
       });
       await tx.order.update({
-        where: { id: order.id },
+        where: { id: order.id, storeId },
         data: {
           paymentMethod: method,
           paymentStatus: "PENDING",
@@ -229,11 +235,11 @@ export async function retryCustomerOrderPayment({
     if (!initiated.success || !initiated.url) {
       await prisma.$transaction([
         prisma.payment.update({
-          where: { id: attempt.paymentId },
+          where: { id: attempt.paymentId, storeId },
           data: { status: "FAILED" },
         }),
         prisma.order.updateMany({
-          where: { orderNo, phoneNumber, paidAmount: 0, status: "PENDING" },
+          where: { storeId, orderNo, phoneNumber, paidAmount: 0, status: "PENDING" },
           data: { paymentStatus: "FAILED" },
         }),
       ]);

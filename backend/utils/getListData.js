@@ -8,6 +8,7 @@ export async function getListData({
   searchableFields = [],
   relationSearch = {},
   dateField = "createdAt",
+  baseWhere = {},
 }) {
   const {
     limit = 10,
@@ -20,7 +21,7 @@ export async function getListData({
     ...filters
   } = params;
 
-  const where = {};
+  const where = { ...baseWhere };
 
   // 🔹 Normal searchable fields
   searchableFields.forEach(({ field, type = "string", exactMatch = false }) => {

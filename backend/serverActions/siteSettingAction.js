@@ -8,6 +8,7 @@ import {
   normalizeSiteAppearance,
   normalizeSiteIdentity,
 } from "../services/siteAppearanceService";
+import { requireCurrentStoreId } from "../services/storeContextService";
 
 const clean = (value) => String(value || "").trim();
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -23,18 +24,19 @@ const boundedInteger = (value, label, min, max) => {
   }
   return number;
 };
-const refreshSiteSetting = () => {
-  revalidateTag("site-setting");
+const refreshSiteSetting = (storeId) => {
+  revalidateTag(`site-setting:${storeId}`);
   revalidatePath("/", "layout");
   revalidatePath("/admin/settings/site-appearance");
 };
 
 export async function getSiteSetting(params) {
   try {
+    const storeId = await requireCurrentStoreId();
     const data = params
-      ? await prisma.siteSetting.findFirst({ ...params })
+      ? await prisma.siteSetting.findFirst({ ...params, where: { ...params.where, storeId } })
       : process.env.NODE_ENV === "development"
-        ? await prisma.siteSetting.findFirst()
+        ? await prisma.siteSetting.findUnique({ where: { storeId } })
         : await getCachedSiteSettingRecord();
 
     return { success: true, data: data };
@@ -45,6 +47,7 @@ export async function getSiteSetting(params) {
 
 export async function siteSettingUpdate(formData) {
   await requireProcurementPermission("siteSetting", "update");
+  const storeId = await requireCurrentStoreId();
   let data = Object.fromEntries(formData.entries());
   let preparedData = {
     ...data,
@@ -53,7 +56,7 @@ export async function siteSettingUpdate(formData) {
   // Handle  image
   const singleImage = formData.get("logo");
 
-  const getSetting = await prisma.siteSetting.findFirst();
+  const getSetting = await prisma.siteSetting.findUnique({ where: { storeId } });
   if (singleImage && singleImage?.size > 1) {
     const singleUploadedImage = await cloudinaryUpload({
       image: singleImage,
@@ -74,17 +77,17 @@ export async function siteSettingUpdate(formData) {
 
   if (!getSetting) {
     const result = await prisma.siteSetting.create({
-      data: preparedData,
+      data: { ...preparedData, storeId },
     });
-    refreshSiteSetting();
+    refreshSiteSetting(storeId);
     return { success: true, result };
   }
   if (getSetting) {
     const result = await prisma.siteSetting.update({
-      where: { id: getSetting?.id },
+      where: { id: getSetting?.id, storeId },
       data: preparedData,
     });
-    refreshSiteSetting();
+    refreshSiteSetting(storeId);
     return { success: true, result };
   }
 }
@@ -92,11 +95,12 @@ export async function siteSettingUpdate(formData) {
 export async function getSiteAppearanceForAdmin() {
   try {
     await requireProcurementPermission("siteSetting", "view");
-    const setting = await prisma.siteSetting.findFirst();
+    const storeId = await requireCurrentStoreId();
+    const setting = await prisma.siteSetting.findUnique({ where: { storeId } });
     const mediaNames = [setting?.logo, setting?.favicon].filter(Boolean);
     const media = mediaNames.length
       ? await prisma.media.findMany({
-          where: { name: { in: mediaNames } },
+          where: { storeId, name: { in: mediaNames } },
           select: { id: true, name: true, url: true },
         })
       : [];
@@ -119,8 +123,10 @@ export async function getSiteAppearanceForAdmin() {
 export async function updateSiteAppearance(formData) {
   try {
     await requireProcurementPermission("siteSetting", "update");
+    const storeId = await requireCurrentStoreId();
     const values = Object.fromEntries(formData.entries());
-    const existing = await prisma.siteSetting.findFirst({
+    const existing = await prisma.siteSetting.findUnique({
+      where: { storeId },
       select: { id: true, logo: true, favicon: true },
     });
     const siteName = clean(values.siteName);
@@ -139,10 +145,10 @@ export async function updateSiteAppearance(formData) {
     const faviconId = clean(values.favicon);
     const [logoMedia, faviconMedia] = await Promise.all([
       logoId
-        ? prisma.media.findUnique({ where: { id: logoId }, select: { name: true } })
+        ? prisma.media.findUnique({ where: { id: logoId, storeId }, select: { name: true } })
         : null,
       faviconId
-        ? prisma.media.findUnique({ where: { id: faviconId }, select: { name: true } })
+        ? prisma.media.findUnique({ where: { id: faviconId, storeId }, select: { name: true } })
         : null,
     ]);
     if (logoId && !logoMedia) throw new Error("Selected logo image was not found.");
@@ -170,11 +176,11 @@ export async function updateSiteAppearance(formData) {
     };
 
     if (existing) {
-      await prisma.siteSetting.update({ where: { id: existing.id }, data });
+      await prisma.siteSetting.update({ where: { id: existing.id, storeId }, data });
     } else {
-      await prisma.siteSetting.create({ data });
+      await prisma.siteSetting.create({ data: { ...data, storeId } });
     }
-    refreshSiteSetting();
+    refreshSiteSetting(storeId);
     return { success: true, message: "Site appearance updated." };
   } catch (error) {
     return { success: false, message: error.message || "Failed to update site appearance." };
