@@ -1,7 +1,5 @@
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
-import {
-  getStorefrontProductForPage,
-} from "@/backend/services/storefrontProductService";
+import { getStorefrontProductForPage } from "@/backend/services/storefrontProductService";
 import { buildProductSeo } from "@/backend/utils/productSeo";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import JsonLd from "@/components/seo/JsonLd";
@@ -10,12 +8,13 @@ import { DEFAULT_BLUR_DATA_URL } from "@/utils/cloudinaryUrl";
 import { notFound } from "next/navigation";
 import ProductDataView from "../_components/ProductDataView";
 
-export const revalidate = 60;
 export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 const compact = (value, length) => {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
   return text.length > length ? `${text.slice(0, length - 1).trim()}…` : text;
 };
 
@@ -48,7 +47,9 @@ export async function generateMetadata({ params }) {
     return {
       title: "পণ্য পাওয়া যায়নি",
       description: "আপনি যে পণ্যটি খুঁজছেন সেটি পাওয়া যায়নি।",
-      alternates: { canonical: `${siteUrl}/product/${encodeURIComponent(slug)}` },
+      alternates: {
+        canonical: `${siteUrl}/product/${encodeURIComponent(slug)}`,
+      },
       robots: { index: false, follow: false },
     };
   }
@@ -58,7 +59,9 @@ export async function generateMetadata({ params }) {
     ? `৳${new Intl.NumberFormat("bn-BD", { maximumFractionDigits: 2 }).format(seo.lowestPrice)}`
     : "";
   const title = compact(
-    [product.title, priceLabel, product.category?.name].filter(Boolean).join(" - "),
+    [product.title, priceLabel, product.category?.name]
+      .filter(Boolean)
+      .join(" - "),
     65,
   );
   const description = compact(seo.description, 160);
@@ -99,7 +102,8 @@ export async function generateMetadata({ params }) {
       locale: "bn_BD",
       images: seo.images.slice(0, 4).map((url, index) => ({
         url,
-        alt: index === 0 ? product.title : `${product.title} - ছবি ${index + 1}`,
+        alt:
+          index === 0 ? product.title : `${product.title} - ছবি ${index + 1}`,
       })),
     },
     twitter: {
@@ -114,7 +118,9 @@ export async function generateMetadata({ params }) {
         "product:price:currency": "BDT",
       }),
       "product:availability": seo.availability,
-      ...(product.category?.name && { "product:category": product.category.name }),
+      ...(product.category?.name && {
+        "product:category": product.category.name,
+      }),
     },
   };
 }
@@ -131,10 +137,12 @@ export default async function ProductPage({ params }) {
       <Breadcrumb
         items={[
           ...(data.category?.name
-            ? [{
-                label: data.category.name,
-                href: `/category/${data.category.fullPath || data.category.slug}`,
-              }]
+            ? [
+                {
+                  label: data.category.name,
+                  href: `/category/${data.category.fullPath || data.category.slug}`,
+                },
+              ]
             : []),
           { label: data.title },
         ]}

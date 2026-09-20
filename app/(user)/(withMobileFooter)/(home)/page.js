@@ -5,7 +5,7 @@ import HeroSlider from "./_components/HeroSlider";
 import HomeStorefront from "./_components/HomeStorefront";
 
 export const revalidate = 60;
-export const dynamic = "force-dynamic";
+
 export async function generateMetadata() {
   const siteUrl = await getSiteUrl();
   const {
