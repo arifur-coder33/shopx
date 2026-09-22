@@ -58,6 +58,9 @@ function inRequest(hostname, cookie, callback) {
 function form(values) {
   const result = new FormData();
   for (const [key, value] of Object.entries(values)) result.set(key, typeof value === "string" ? value : JSON.stringify(value));
+  if ((values.warehouseId && values.variationId && "quantity" in values) || (values.purchaseOrderId && values.warehouseId && "items" in values)) {
+    if (!result.has("operationId")) result.set("operationId", randomUUID());
+  }
   return result;
 }
 

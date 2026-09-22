@@ -7,13 +7,17 @@ import {
   createSiteAppearanceCss,
   getPublicSiteAppearance,
   getPublicSiteIdentity,
+  normalizeSiteAppearance,
 } from "@/backend/services/siteAppearanceService";
+import { getCurrentStoreContext } from "@/backend/services/storeContextService";
 
 // Import all font objects from your central font file
 import { tiro_bangla } from "@/app/fonts/font";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 export async function generateMetadata() {
+  const context = await getCurrentStoreContext();
+  if (context.type !== "STORE") return { title: "Shopz Platform", robots: { index: false, follow: false } };
   const identity = await getPublicSiteIdentity();
   const siteUrl = await getSiteUrl();
   return {
@@ -49,7 +53,8 @@ export async function generateMetadata() {
 }
 
 export default async function RootLayout({ children }) {
-  const appearance = await getPublicSiteAppearance();
+  const context = await getCurrentStoreContext();
+  const appearance = context.type === "STORE" ? await getPublicSiteAppearance() : normalizeSiteAppearance(null);
   return (
     // Apply all font variables to the <html> tag. This makes them globally available.
     <html

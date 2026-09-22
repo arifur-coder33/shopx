@@ -120,7 +120,7 @@ export async function provisionStore(input, options = {}) {
       });
 
       return { store, owner };
-    });
+    }, { timeout: 30000 });
   } catch (error) {
     if (error?.code === "P2002") {
       throw new StoreProvisioningError(

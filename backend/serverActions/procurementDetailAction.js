@@ -58,7 +58,7 @@ export async function updateProcurementRecord(section, id, formData) {
       if (locked) throw new Error("This purchase order is locked because it has a receipt or payment.");
       const current = await prisma.purchaseOrder.findUnique({ where: { id, storeId }, include: { items: true } });
       if (!current) throw new Error("Purchase order not found.");
-      const rows = current.items.map((item) => { const quantity = toNumber(values[`quantity_${item.id}`], item.quantity), unitCost = toNumber(values[`unitCost_${item.id}`], item.unitCost), discount = toNumber(values[`discount_${item.id}`], item.discount); if (quantity <= 0 || unitCost < 0 || discount < 0) throw new Error("Purchase item values are invalid."); return { id: item.id, quantity, unitCost, discount, total: quantity * unitCost - discount }; });
+      const rows = current.items.map((item) => { const quantity = values[`quantity_${item.id}`] === undefined ? item.quantity : Number(values[`quantity_${item.id}`]), unitCost = toNumber(values[`unitCost_${item.id}`], item.unitCost), discount = toNumber(values[`discount_${item.id}`], item.discount); if (!Number.isSafeInteger(quantity) || quantity <= 0 || unitCost < 0 || discount < 0) throw new Error("Purchase item quantity must be a positive whole number."); return { id: item.id, quantity, unitCost, discount, total: quantity * unitCost - discount }; });
       const subtotal = rows.reduce((sum, row) => sum + row.quantity * row.unitCost, 0), discount = toNumber(values.discount), vat = toNumber(values.vat), shippingCost = toNumber(values.shippingCost), total = Math.max(0, subtotal - discount + vat + shippingCost);
       await prisma.$transaction([prisma.purchaseOrder.update({ where: { id, storeId }, data: { status: ["DRAFT", "APPROVED", "ORDERED", "CANCELLED"].includes(values.status) ? values.status : current.status, subtotal, discount, vat, shippingCost, total, dueAmount: total, expectedDate: values.expectedDate ? toDate(values.expectedDate) : null, notes: values.notes || null, updatedBy: userId } }), ...rows.map((row) => prisma.purchaseItem.update({ where: { id: row.id, purchaseOrderId: id }, data: { quantity: row.quantity, unitCost: row.unitCost, discount: row.discount, total: row.total } }))]);
     } else if (section === "receipts") {
@@ -107,19 +107,23 @@ export async function deleteProcurementRecord(section, id) {
         if (paid || receipt.items.some((item) => item.deliveryItems.length || item.deliveredQuantity > 0)) throw new Error("Receipt cannot be deleted after payment or delivery.");
         for (const item of receipt.items) {
           const checkoutDebits = await tx.inventoryTransaction.findMany({ where: { storeId, warehouseId: receipt.warehouseId, variationId: item.variationId, referenceType: "SALE", type: "OUT", createdBy: "checkout" }, select: { referenceId: true } });
-          if (checkoutDebits.length) {
-            const activeOrders = await tx.order.count({ where: { storeId, id: { in: checkoutDebits.map((row) => row.referenceId).filter(Boolean) }, status: { in: ["PENDING", "PROCESSING"] } } });
-            if (activeOrders) throw new Error("Receipt stock is allocated to an active checkout order.");
+          for (const orderId of new Set(checkoutDebits.map((row) => row.referenceId).filter(Boolean))) {
+            const [restored, delivery] = await Promise.all([
+              tx.inventoryTransaction.count({ where: { storeId, referenceType: "RETURN", referenceId: orderId, type: "RETURN_IN", createdBy: "checkout-cancel" } }),
+              tx.delivery.count({ where: { storeId, orderId } }),
+            ]);
+            if (!restored && !delivery) throw new Error("Receipt stock is allocated to an unsettled checkout order.");
           }
           const stock = await tx.stock.findUnique({ where: { storeId_warehouseId_variationId: { storeId, warehouseId: receipt.warehouseId, variationId: item.variationId } } });
           if (!stock || stock.quantity < item.quantity || stock.available < item.quantity) throw new Error("Receipt stock has already been consumed or adjusted.");
           const reversed = await tx.stock.updateMany({ where: { id: stock.id, storeId, quantity: { gte: item.quantity }, available: { gte: item.quantity } }, data: { quantity: { decrement: item.quantity }, available: { decrement: item.quantity }, updatedBy: userId } });
           if (reversed.count !== 1) throw new Error("Receipt stock changed before it could be reversed.");
+          const remainingStock = await tx.stock.findUnique({ where: { id: stock.id, storeId }, select: { quantity: true } });
+          await tx.inventoryTransaction.create({ data: { storeId, warehouseId: receipt.warehouseId, variationId: item.variationId, type: "ADJUSTMENT", quantity: -item.quantity, balanceAfter: remainingStock.quantity, referenceType: "ADJUSTMENT", referenceId: id, remarks: `Deleted goods receipt ${receipt.grnNo}`, createdBy: userId } });
           const purchaseItem = receipt.purchaseOrder.items.find((row) => row.variationId === item.variationId && row.receivedQty >= item.quantity);
           if (!purchaseItem) throw new Error("Could not safely match the receipt to its purchase item.");
           await tx.purchaseItem.update({ where: { id: purchaseItem.id }, data: { receivedQty: { decrement: item.quantity } } });
         }
-        await tx.inventoryTransaction.deleteMany({ where: { storeId, referenceId: id, referenceType: "PURCHASE" } });
         const journals = await tx.journalEntry.findMany({ where: { storeId, referenceId: id, referenceType: "GOODS_RECEIPT" }, select: { id: true } });
         if (journals.length) await tx.journalLine.deleteMany({ where: { journalEntryId: { in: journals.map((row) => row.id) } } });
         await tx.journalEntry.deleteMany({ where: { storeId, id: { in: journals.map((row) => row.id) } } });

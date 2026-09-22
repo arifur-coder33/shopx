@@ -16,6 +16,20 @@ async function seedStoreFoundation() {
   return ensureDefaultStandaloneStore(prisma);
 }
 
+async function seedInitialPlatformSuperAdmin() {
+  const email = String(process.env.PLATFORM_SUPER_ADMIN_EMAIL || "").trim().toLowerCase();
+  const password = process.env.PLATFORM_SUPER_ADMIN_PASSWORD;
+  if (!email && !password) return;
+  if (!email || !password || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12) {
+    throw new Error("PLATFORM_SUPER_ADMIN_EMAIL and a password of at least 12 characters are required together.");
+  }
+  const role = await prisma.platformRole.findUnique({ where: { code: "SUPER_ADMIN" }, select: { id: true } });
+  if (!role) throw new Error("Seed Platform roles before creating a Platform SUPER_ADMIN.");
+  if (await prisma.platformMember.count({ where: { roleId: role.id } })) return;
+  await prisma.platformMember.create({ data: { name: "Platform Super Admin", email, normalizedEmail: email,
+    passwordHash: await bcrypt.hash(password, 12), roleId: role.id, status: "ACTIVE" } });
+}
+
 async function seedFinanceProviders(storeId) {
   const {
     getProviderAccountType,
@@ -200,7 +214,13 @@ async function main() {
   console.log("🌱 Running MASTER RBAC seed...");
 
   const defaultStore = await seedStoreFoundation();
+  await prisma.plan.upsert({
+    where: { slug: "FREE" },
+    update: {},
+    create: { name: "Free", slug: "FREE", description: "Default plan without paid billing.", features: {}, limits: {} },
+  });
   await seedIdentityFoundation(prisma);
+  await seedInitialPlatformSuperAdmin();
 
   /* ======================
      1️⃣ ROLES

@@ -28,6 +28,9 @@ model Store {
   name      String
   slug      String          @unique
   status    StoreStatus     @default(ACTIVE)
+  currentSubscriptionId String? @db.ObjectId
+  currentSubscription Subscription? @relation("StoreCurrentSubscription", fields: [currentSubscriptionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subscriptions Subscription[] @relation("StoreSubscriptions")
   domains   StoreDomain[]
   members   StoreMember[]
   roles     StoreRole[]
@@ -68,6 +71,59 @@ model Store {
   journalEntries JournalEntry[]
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
+}
+
+enum SubscriptionInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+model Plan {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+  slug String @unique
+  description String?
+  isActive Boolean @default(true)
+  monthlyPriceMinor Int?
+  yearlyPriceMinor Int?
+  features Json
+  limits Json
+  subscriptions Subscription[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model Subscription {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  storeId String @db.ObjectId
+  store Store @relation("StoreSubscriptions", fields: [storeId], references: [id], onDelete: Cascade)
+  currentFor Store[] @relation("StoreCurrentSubscription")
+  planId String @db.ObjectId
+  plan Plan @relation(fields: [planId], references: [id])
+  interval SubscriptionInterval
+  status SubscriptionStatus
+  startedAt DateTime @default(now())
+  currentPeriodStart DateTime
+  currentPeriodEnd DateTime
+  trialStartedAt DateTime?
+  trialEndsAt DateTime?
+  cancelledAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId, createdAt])
+  @@index([storeId, status, currentPeriodEnd])
+  @@index([planId, status])
 }
 
 model StoreDomain {

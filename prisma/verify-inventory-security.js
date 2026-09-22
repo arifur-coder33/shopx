@@ -54,7 +54,9 @@ function inRequest(host, cookie, fn) {
   return workAsyncStorage.run({ route: "/phase11-inventory", incrementalCache: {} }, () =>
     workUnitAsyncStorage.run({ type: "request", headers: new Headers({ host, "x-forwarded-proto": "http", ...(cookie ? { cookie } : {}) }) }, fn));
 }
-const invoke = (record, action, values) => inRequest(`${record.host}:3000`, record.cookie, () => action(form(values)));
+const invoke = (record, action, values) => inRequest(`${record.host}:3000`, record.cookie, () => action(form({
+  ...(action.name === "adjustStock" || action.name === "createGoodsReceipt" ? { operationId: randomUUID() } : {}), ...values,
+})));
 const stock = (record) => db.stock.findUnique({ where: { storeId_warehouseId_variationId: {
   storeId: record.store.id, warehouseId: record.warehouse.id, variationId: record.variation.id,
 } } });
@@ -166,16 +168,27 @@ async function main() {
   const { storeHandlers, storeAuth } = await import("../auth/store.js");
   const { adjustStock } = await import("../backend/serverActions/inventoryAction.js");
   const { createGoodsReceipt } = await import("../backend/serverActions/goodsReceiptAction.js");
-  const { createOrder } = await import("../backend/serverActions/orderActions.js");
+  const { createPurchaseOrder } = await import("../backend/serverActions/purchaseAction.js");
+  const { createOrder, deleteOrderById, updateOrderStatusAction } = await import("../backend/serverActions/orderActions.js");
   const { createDelivery } = await import("../backend/serverActions/deliveryAction.js");
   const { deleteProcurementRecord } = await import("../backend/serverActions/procurementDetailAction.js");
   const { deleteProductById } = await import("../backend/serverActions/productActions.js");
   try {
     const a = await setup("a", hashPassword, storeHandlers, storeAuth);
     const b = await setup("b", hashPassword, storeHandlers, storeAuth);
+    const sharedAdjustmentId = randomUUID();
     for (const record of [a, b]) {
-      const add = await invoke(record, adjustStock, { warehouseId: record.warehouse.id, variationId: record.variation.id, quantity: 10 });
+      const initialAdjustment = { warehouseId: record.warehouse.id, variationId: record.variation.id, quantity: 10, operationId: sharedAdjustmentId };
+      const add = await invoke(record, adjustStock, initialAdjustment);
       assert.equal(add.success, true, add.message);
+      assert.equal((await stock(record)).quantity, 10);
+      const repeatAdd = await invoke(record, adjustStock, initialAdjustment);
+      assert.equal(repeatAdd.success, true, repeatAdd.message);
+      assert.equal(repeatAdd.data.id, add.data.id);
+      assert.equal((await stock(record)).quantity, 10);
+      assert.equal((await movements(record)).length, 1);
+      const changedRetry = await invoke(record, adjustStock, { ...initialAdjustment, quantity: 9 });
+      assert.equal(changedRetry.success, false);
       assert.equal((await stock(record)).quantity, 10);
       const subtract = await invoke(record, adjustStock, { warehouseId: record.warehouse.id, variationId: record.variation.id, quantity: -3 });
       assert.equal(subtract.success, true, subtract.message);
@@ -188,6 +201,8 @@ async function main() {
       assert.equal((await movements(record)).at(-1).balanceAfter, 10);
       pass(`Store ${record.label.toUpperCase()} valid decrement/increment and Store-owned ledger`);
     }
+    assert.notEqual((await movements(a))[0].id, (await movements(b))[0].id);
+    pass("same adjustment UUID is isolated by trusted Store; retries do not double-post");
     for (const [own, foreign] of [[a, b], [b, a]]) {
       const beforeOwn = await stock(own);
       const beforeForeign = await stock(foreign);
@@ -200,7 +215,7 @@ async function main() {
         assert.equal((await stock(own)).quantity, beforeOwn.quantity);
         assert.equal((await stock(foreign)).quantity, beforeForeign.quantity);
       }
-      const wrongHost = await inRequest(`${foreign.host}:3000`, own.cookie, () => adjustStock(form({ warehouseId: foreign.warehouse.id, variationId: foreign.variation.id, quantity: -1 })));
+      const wrongHost = await inRequest(`${foreign.host}:3000`, own.cookie, () => adjustStock(form({ warehouseId: foreign.warehouse.id, variationId: foreign.variation.id, quantity: -1, operationId: randomUUID() })));
       assert.equal(wrongHost.success, false);
       pass(`Store ${own.label.toUpperCase()} foreign IDs and wrong-host session rejected`);
     }
@@ -212,7 +227,7 @@ async function main() {
       assert.equal((await movements(a)).length, baseline.length);
     }
     pass("insufficient and malformed adjustments leave stock/ledger unchanged");
-    const unauthenticated = await inRequest(`${a.host}:3000`, "", () => adjustStock(form({ warehouseId: a.warehouse.id, variationId: a.variation.id, quantity: -1 })));
+    const unauthenticated = await inRequest(`${a.host}:3000`, "", () => adjustStock(form({ warehouseId: a.warehouse.id, variationId: a.variation.id, quantity: -1, operationId: randomUUID() })));
     assert.equal(unauthenticated.success, false);
     assert.equal((await stock(a)).quantity, 10);
     pass("unauthenticated inventory mutation rejected");
@@ -237,6 +252,10 @@ async function main() {
     pass("controlled post-stock failure rolls back stock and movement");
 
     const supplier = await db.supplier.create({ data: { storeId: a.store.id, supplierCode: run, companyName: run } });
+    const fractionalPo = await invoke(a, createPurchaseOrder, { supplierId: supplier.id,
+      items: [{ productId: a.product.id, variationId: a.variation.id, quantity: 1.5, unitCost: 0, discount: 0 }] });
+    assert.equal(fractionalPo.success, false);
+    assert.equal(await db.purchaseOrder.count({ where: { storeId: a.store.id } }), 0);
     const po = await db.purchaseOrder.create({ data: { storeId: a.store.id, poNo: run, supplierId: supplier.id,
       status: "ORDERED", subtotal: 0, total: 0, dueAmount: 0,
       items: { create: [{ productId: a.product.id, variationId: a.variation.id, quantity: 2,
@@ -251,8 +270,18 @@ async function main() {
       assert.equal((await stock(a)).quantity, 0);
       assert.equal(await db.goodsReceipt.count({ where: { storeId: a.store.id } }), 0);
     }
-    const received = await invoke(a, createGoodsReceipt, receiptForm([sourceItem]));
+    const receiptOperationId = randomUUID();
+    const receiptInput = { ...receiptForm([sourceItem, { ...sourceItem, quantity: 0, supplierLotNumber: "" }]), operationId: receiptOperationId };
+    const received = await invoke(a, createGoodsReceipt, receiptInput);
     assert.equal(received.success, true, received.message);
+    assert.equal((await stock(a)).quantity, 2);
+    const repeatedReceipt = await invoke(a, createGoodsReceipt, receiptInput);
+    assert.equal(repeatedReceipt.success, true, repeatedReceipt.message);
+    assert.equal(repeatedReceipt.data.id, received.data.id);
+    assert.equal((await stock(a)).quantity, 2);
+    assert.equal(await db.goodsReceipt.count({ where: { storeId: a.store.id } }), 1);
+    const changedReceiptRetry = await invoke(a, createGoodsReceipt, { ...receiptInput, items: [{ ...sourceItem, quantity: 1 }] });
+    assert.equal(changedReceiptRetry.success, false);
     assert.equal((await stock(a)).quantity, 2);
     const receiptMovement = (await movements(a)).find((row) => row.referenceType === "PURCHASE" && row.referenceId === received.data.id);
     assert.equal(receiptMovement.quantity, 2);
@@ -297,6 +326,27 @@ async function main() {
     assert.equal(foreignDelivery.success, false);
     assert.equal((await stock(b)).quantity, 10);
     pass("real delivery action does not double-debit checkout stock; repeat and foreign-host requests rejected");
+    const unsafeDelete = await inRequest(`${a.host}:3000`, adminCookie, () => deleteOrderById(checkout.data.id));
+    assert.equal(unsafeDelete.success, false);
+    assert.equal((await stock(a)).quantity, 1);
+    const lateCancellation = await inRequest(`${a.host}:3000`, adminCookie, () => updateOrderStatusAction(checkout.data.id, "CANCELLED", "Too late"));
+    assert.equal(lateCancellation.success, false);
+    assert.equal((await stock(a)).quantity, 1);
+    const secondCheckout = await inRequest(`${a.host}:3000`, "", () => createOrder(form({
+      customerName: "Temporary Buyer", phoneNumber: "01700000000", email: "temporary@example.test",
+      district: "Dhaka", thana: "Test", deliveryAddress: "Temporary address", deliveryArea: "outside-dhaka",
+      paymentMethod: "COD", products: [{ id: a.product.id, quantity: 1, variation: { id: a.variation.id } }], ttclid: "",
+    })));
+    assert.equal(secondCheckout.success, true, secondCheckout.error?.message || secondCheckout.message);
+    assert.equal((await stock(a)).quantity, 0);
+    const statusCancellation = await inRequest(`${a.host}:3000`, adminCookie, () => updateOrderStatusAction(secondCheckout.data.id, "CANCELLED", "Temporary test"));
+    assert.equal(statusCancellation.success, true, statusCancellation.message);
+    assert.equal((await stock(a)).quantity, 1);
+    const repeatedCancellation = await inRequest(`${a.host}:3000`, adminCookie, () => updateOrderStatusAction(secondCheckout.data.id, "CANCELLED", "Temporary test"));
+    assert.equal(repeatedCancellation.success, false);
+    assert.equal((await stock(a)).quantity, 1);
+    assert.equal((await movements(a)).filter((row) => row.referenceType === "RETURN" && row.referenceId === secondCheckout.data.id).length, 1);
+    pass("status-based cancellation restores checkout stock once; order deletion cannot erase stock history");
 
     a.extraProduct = await db.product.create({ data: { storeId: a.store.id, title: `${run}-stocked`, slug: `${run}-stocked` } });
     const extraVariation = await db.productVariation.create({ data: { productId: a.extraProduct.id, sku: `${run}-stocked`, matcherId: `${run}-stocked` } });
@@ -313,19 +363,58 @@ async function main() {
       items: { create: [{ productId: b.product.id, variationId: b.variation.id, quantity: 3,
         unitCost: 0, discount: 0, total: 0 }] } } });
     const poItemB = await db.purchaseItem.findFirst({ where: { purchaseOrderId: poB.id } });
-    const receiptB = await invoke(b, createGoodsReceipt, { purchaseOrderId: poB.id, warehouseId: b.warehouse.id,
-      items: [{ purchaseItemId: poItemB.id, variationId: b.variation.id, quantity: 3, supplierLotNumber: `${run}-b` }] });
+    const receiptBInput = { purchaseOrderId: poB.id, warehouseId: b.warehouse.id,
+      items: [{ purchaseItemId: poItemB.id, variationId: b.variation.id, quantity: 3, supplierLotNumber: `${run}-b` }], operationId: randomUUID() };
+    const receiptB = await invoke(b, createGoodsReceipt, receiptBInput);
     assert.equal(receiptB.success, true, receiptB.message);
     assert.equal((await stock(b)).quantity, 13);
     const adminCookieB = await loginLegacy(`${b.host}:3000`);
     const reversedReceipt = await inRequest(`${b.host}:3000`, adminCookieB, () => deleteProcurementRecord("receipts", receiptB.data.id));
     assert.equal(reversedReceipt.success, true, reversedReceipt.message);
     assert.equal((await stock(b)).quantity, 10);
-    assert.equal((await movements(b)).filter((row) => row.referenceId === receiptB.data.id).length, 0);
+    const receiptMovements = (await movements(b)).filter((row) => row.referenceId === receiptB.data.id);
+    assert.equal(receiptMovements.length, 2);
+    assert.equal(receiptMovements.reduce((sum, row) => sum + row.quantity, 0), 0);
+    assert.equal(receiptMovements.find((row) => row.type === "ADJUSTMENT").balanceAfter, 10);
     const repeatedReversal = await inRequest(`${b.host}:3000`, adminCookieB, () => deleteProcurementRecord("receipts", receiptB.data.id));
     assert.equal(repeatedReversal.success, false);
     assert.equal((await stock(b)).quantity, 10);
     pass("receipt deletion reverses stock once; repeated deletion cannot decrement again");
+    const replayDeletedReceipt = await invoke(b, createGoodsReceipt, receiptBInput);
+    assert.equal(replayDeletedReceipt.success, false);
+    assert.equal((await stock(b)).quantity, 10);
+
+    const partialPo = await db.purchaseOrder.create({ data: { storeId: b.store.id, poNo: `${run}-partial`, supplierId: supplierB.id,
+      status: "ORDERED", subtotal: 0, total: 0, dueAmount: 0,
+      items: { create: [{ productId: b.product.id, variationId: b.variation.id, quantity: 2,
+        unitCost: 0, discount: 0, total: 0 }] } } });
+    const partialItem = await db.purchaseItem.findFirst({ where: { purchaseOrderId: partialPo.id } });
+    const partialInput = { purchaseOrderId: partialPo.id, warehouseId: b.warehouse.id,
+      items: [{ purchaseItemId: partialItem.id, variationId: b.variation.id, quantity: 1, supplierLotNumber: `${run}-partial` }], operationId: randomUUID() };
+    const partialFirst = await invoke(b, createGoodsReceipt, partialInput);
+    assert.equal(partialFirst.success, true, partialFirst.message);
+    assert.equal((await stock(b)).quantity, 11);
+    const partialRetry = await invoke(b, createGoodsReceipt, partialInput);
+    assert.equal(partialRetry.success, true, partialRetry.message);
+    assert.equal(partialRetry.data.id, partialFirst.data.id);
+    assert.equal((await stock(b)).quantity, 11);
+    assert.equal((await db.purchaseItem.findUnique({ where: { id: partialItem.id } })).receivedQty, 1);
+    const partialSecond = await invoke(b, createGoodsReceipt, { ...partialInput, operationId: randomUUID() });
+    assert.equal(partialSecond.success, true, partialSecond.message);
+    assert.equal((await stock(b)).quantity, 12);
+    assert.equal((await db.purchaseItem.findUnique({ where: { id: partialItem.id } })).receivedQty, 2);
+    pass("partial GRN retry posts once; a new operation can receive the remaining quantity");
+
+    const concurrentId = randomUUID();
+    const concurrentInput = { warehouseId: b.warehouse.id, variationId: b.variation.id, quantity: -1, operationId: concurrentId };
+    const simultaneousRetries = await Promise.allSettled([invoke(b, adjustStock, concurrentInput), invoke(b, adjustStock, concurrentInput)]);
+    assert(simultaneousRetries.some((row) => row.status === "fulfilled" && row.value.success));
+    assert.equal((await stock(b)).quantity, 11);
+    const settledRetry = await invoke(b, adjustStock, concurrentInput);
+    assert.equal(settledRetry.success, true, settledRetry.message);
+    assert.equal((await stock(b)).quantity, 11);
+    assert.equal((await db.inventoryTransaction.findMany({ where: { storeId: b.store.id, id: settledRetry.data.id } })).length, 1);
+    pass("concurrent identical adjustment requests create one movement; later retry is idempotent");
   } finally {
     await cleanup();
     await db.$disconnect();

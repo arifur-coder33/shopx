@@ -835,12 +835,13 @@ export async function deleteOrderById(orderId) {
   try {
     await requireProcurementPermission("order", "delete");
     const storeId = await requireCurrentStoreId();
-    // Delete the order by its ID
-    const deletedOrder = await prisma.order.delete({
-      where: {
-        id: orderId,
-        storeId,
-      },
+    await prisma.$transaction(async (tx) => {
+      const [checkoutMovements, deliveries] = await Promise.all([
+        tx.inventoryTransaction.count({ where: { storeId, referenceType: "SALE", referenceId: orderId, type: "OUT" } }),
+        tx.delivery.count({ where: { storeId, orderId } }),
+      ]);
+      if (checkoutMovements || deliveries) throw new Error("Order with stock movement or delivery cannot be deleted. Use the controlled cancellation workflow.");
+      await tx.order.delete({ where: { id: orderId, storeId } });
     });
     revalidatePath("/admin/order");
     revalidateTag("order");
@@ -861,6 +862,10 @@ export async function updateOrderStatusAction(orderId, status, note) {
   try {
     await requireProcurementPermission("order", "update");
     if (status === "REFUNDED") throw new Error("Complete the financial refund instead of changing the Order status directly.");
+    if (status === "CANCELLED") {
+      const cancelled = await cancelOrderById({ orderId, cancelReason: note, cancelReasonType: "Order Cancelled" });
+      return cancelled.success ? { success: true, message: "Order Status Updated" } : cancelled;
+    }
     const storeId = await requireCurrentStoreId();
     // 🔎 get order first (for orderNo + old status)
     const order = await prisma.order.findUnique({
@@ -1042,6 +1047,9 @@ export async function cancelOrderById({
       // ❗ Already CANCELLED হলে আবার stock add করবে না
       if (order.status === "CANCELLED" || order.status === "RETURNED") {
         throw new Error("Order already CANCELLED/returned");
+      }
+      if (await tx.delivery.count({ where: { storeId, orderId } })) {
+        throw new Error("An order with a prepared delivery requires the return workflow, not cancellation.");
       }
 
       await restoreCheckoutStock(tx, storeId, order);

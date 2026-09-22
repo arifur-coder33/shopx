@@ -6,6 +6,17 @@ const secret = process.env.AUTH_SECRET;
 export default async function proxy(req) {
   const url = req.nextUrl.clone();
 
+  // The platform hostname has a public pricing home, not a Store storefront.
+  // This is navigation only; /pricing still verifies the trusted context.
+  if (url.pathname === "/" && process.env.DEPLOYMENT_MODE === "SAAS") {
+    const hostname = req.headers.get("host")?.split(":")[0]?.toLowerCase();
+    const platformHostname = process.env.PLATFORM_DOMAIN?.split(":")[0]?.toLowerCase();
+    if (hostname && platformHostname && hostname === platformHostname) {
+      url.pathname = "/pricing";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Store credentials are separate from the legacy User token. Only the
   // finance/POS admin surfaces migrated to StoreMember may use this boundary.
   const storeCookieName = `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}authjs.store.session-token`;
@@ -66,7 +77,7 @@ export default async function proxy(req) {
 }
 
 export const config = {
-  matcher: ["/login", "/my-account/:path*", "/admin/:path*"],
+  matcher: ["/", "/login", "/my-account/:path*", "/admin/:path*"],
 };
 // import { auth } from "@/auth";
 // import { NextResponse } from "next/server";

@@ -4,6 +4,7 @@ import { generateCode } from "../utils/generateCode";
 import { ACCOUNT_CODES, postJournal } from "../utils/accounting";
 import { actionError, refreshProcurement, requireProcurementPermission } from "../utils/procurement";
 import { requireCurrentStoreId } from "../services/storeContextService";
+import { inventoryOperationFingerprint, inventoryOperationId } from "../utils/inventoryOperation";
 
 export async function createGoodsReceipt(formData) {
   try {
@@ -14,12 +15,21 @@ export async function createGoodsReceipt(formData) {
     if (!Array.isArray(inputItems)) throw new Error("Receipt items must be a list.");
     const parsedItems = inputItems.map((item) => ({ purchaseItemId: item?.purchaseItemId, variationId: item?.variationId, quantity: Number(item?.quantity), supplierLotNumber: String(item?.supplierLotNumber || "").trim() }));
     if (parsedItems.some((item) => !item.purchaseItemId || !item.variationId || !Number.isSafeInteger(item.quantity) || item.quantity < 0)) throw new Error("Receipt quantities must be non-negative whole numbers.");
-    const requestedItems = parsedItems.filter((item) => item.quantity > 0);
+    const requestedItems = parsedItems.filter((item) => item.quantity > 0).sort((a, b) => a.purchaseItemId.localeCompare(b.purchaseItemId));
     if (new Set(requestedItems.map((item) => item.purchaseItemId)).size !== requestedItems.length) throw new Error("A purchase item may appear only once in a receipt.");
     if (!values.purchaseOrderId || !values.warehouseId || !requestedItems.length) return { success: false, message: "Purchase order, warehouse and receipt quantities are required." };
     if (requestedItems.some((item) => !item.supplierLotNumber)) return { success: false, message: "Supplier lot number is required for every received item." };
+    const ledgerId = inventoryOperationId(storeId, "GOODS_RECEIPT", values.operationId);
+    const fingerprint = inventoryOperationFingerprint([values.purchaseOrderId, values.warehouseId, requestedItems]);
 
     const result = await prisma.$transaction(async (tx) => {
+      const previous = await tx.inventoryTransaction.findUnique({ where: { id: ledgerId } });
+      if (previous) {
+        if (previous.storeId !== storeId || previous.referenceType !== "PURCHASE" || !previous.remarks?.endsWith(`[retry:${fingerprint}]`)) throw new Error("Operation ID was already used for another goods receipt.");
+        const existingReceipt = await tx.goodsReceipt.findUnique({ where: { id: previous.referenceId, storeId } });
+        if (!existingReceipt) throw new Error("This goods receipt was removed and cannot be posted again with the same operation ID.");
+        return existingReceipt;
+      }
       const [po, warehouse] = await Promise.all([
         tx.purchaseOrder.findUnique({ where: { id: values.purchaseOrderId, storeId }, include: { items: true } }),
         tx.warehouse.findUnique({ where: { id: values.warehouseId, storeId }, select: { id: true } }),
@@ -57,7 +67,7 @@ export async function createGoodsReceipt(formData) {
         ],
       });
 
-      for (const item of requestedItems) {
+      for (const [index, item] of requestedItems.entries()) {
         const stockKey = { storeId, warehouseId: values.warehouseId, variationId: item.variationId };
         const current = await tx.stock.findUnique({ where: { storeId_warehouseId_variationId: stockKey } });
         let updatedStock;
@@ -70,7 +80,7 @@ export async function createGoodsReceipt(formData) {
         } else {
           updatedStock = await tx.stock.create({ data: { ...stockKey, quantity: item.quantity, available: item.quantity, createdBy: userId, updatedBy: userId } });
         }
-        await tx.inventoryTransaction.create({ data: { storeId, warehouseId: values.warehouseId, variationId: item.variationId, type: "IN", quantity: item.quantity, balanceAfter: updatedStock.quantity, referenceType: "PURCHASE", referenceId: receipt.id, remarks: `Received against ${po.poNo}; supplier lot ${item.supplierLotNumber}`, createdBy: userId } });
+        await tx.inventoryTransaction.create({ data: { ...(index === 0 ? { id: ledgerId } : {}), storeId, warehouseId: values.warehouseId, variationId: item.variationId, type: "IN", quantity: item.quantity, balanceAfter: updatedStock.quantity, referenceType: "PURCHASE", referenceId: receipt.id, remarks: `Received against ${po.poNo}; supplier lot ${item.supplierLotNumber}${index === 0 ? ` [retry:${fingerprint}]` : ""}`, createdBy: userId } });
         const received = await tx.purchaseItem.updateMany({ where: { id: item.purchaseItemId, purchaseOrderId: po.id, receivedQty: { lte: itemMap.get(item.purchaseItemId).quantity - item.quantity } }, data: { receivedQty: { increment: item.quantity } } });
         if (received.count !== 1) throw new Error("Received quantity changed or exceeds the purchase order.");
       }

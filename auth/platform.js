@@ -6,8 +6,10 @@ import {
   platformJwtCallback,
   platformSessionCallback,
 } from "../backend/services/identitySession.server.js";
+import { getCurrentStoreContext } from "../backend/services/storeContextService.js";
 
 export const platformAuthConfig = {
+  basePath: "/api/platform-auth",
   session: { strategy: "jwt" },
   secret: process.env.PLATFORM_AUTH_SECRET,
   trustHost: true,
@@ -20,7 +22,8 @@ export const platformAuthConfig = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize(credentials) {
+      async authorize(credentials) {
+        if ((await getCurrentStoreContext()).type !== "PLATFORM") return null;
         return authorizePlatformCredentials(credentials);
       },
     }),

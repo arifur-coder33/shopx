@@ -25,6 +25,7 @@ const PLATFORM_PERMISSIONS = Object.freeze({
     ["PLATFORM", "VIEW"],
     ["STORES", "VIEW"],
     ["STORES", "MANAGE"],
+    ["BILLING", "VIEW"],
   ],
   SUPPORT: [
     ["PLATFORM", "VIEW"],
