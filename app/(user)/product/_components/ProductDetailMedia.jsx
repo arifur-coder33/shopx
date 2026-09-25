@@ -36,7 +36,7 @@ function getVideoSource(rawUrl) {
   }
 }
 
-export default function ProductDetailMedia({ title, videoUrl, videos = [], gallery = [] }) {
+export default function ProductDetailMedia({ title, videoUrl, videos = [], gallery = [], only = "all", sectionId }) {
   const videoItems = (videos.length
     ? videos
     : videoUrl
@@ -59,11 +59,13 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
     ? cloudinaryDetailImage(photos[0].name, 1200)
     : undefined;
 
-  if (videoItems.length === 0 && photos.length === 0) return null;
+  const showVideos = only !== "photos" && videoItems.length > 0;
+  const showPhotos = only !== "videos" && photos.length > 0;
+  if (!showVideos && !showPhotos) return null;
 
   return (
-    <section className="mx-auto mt-6 max-w-5xl space-y-6" aria-label="পণ্যের ভিডিও ও ছবি">
-      {videoItems.map((video, index) => (
+    <section id={sectionId} className="mx-auto mt-6 max-w-5xl space-y-6" aria-label={only === "videos" ? "পণ্যের ভিডিও" : only === "photos" ? "পণ্যের ছবি" : "পণ্যের ভিডিও ও ছবি"}>
+      {showVideos && videoItems.map((video, index) => (
         <div key={video.id || video.url} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
           <div className="border-b border-border px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary-hover">ভিডিও {index + 1}</p>
@@ -79,7 +81,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
         </div>
       ))}
 
-      {photos.length > 0 && (
+      {showPhotos && (
         <div>
           <div className="mb-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary-hover">

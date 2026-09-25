@@ -2,17 +2,14 @@
 "use client";
 
 import KalapanaFont from "@/components/KalapanaFont";
-import { replaceNumbers } from "@/utils/engToBanNumber";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
+import { replaceNumbers } from "@/utils/engToBanNumber";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import BuyNowSection from "./BuyNowSection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
 
-export default function ProductInfoClient({
-  data,
-  setActiveImageId,
-}) {
+export default function ProductInfoClient({ data, setActiveImageId }) {
   const { variations, hasVariations } = data;
   const [selectedVariation, setSelectedVariation] = useState(null);
 
@@ -42,25 +39,28 @@ export default function ProductInfoClient({
     if (selectedVariation) {
       return calculateInitialDisplayPrice([selectedVariation], true);
     }
-    return calculateInitialDisplayPrice(
-      variations,
-      data.allowOutOfStockOrder,
-    );
+    return calculateInitialDisplayPrice(variations, data.allowOutOfStockOrder);
   }, [selectedVariation, variations, data.allowOutOfStockOrder]);
+
+  const campaignPriceToDisplay = selectedVariation
+    ? selectedVariation.campaignPrice
+    : (variations || []).filter((variation) => variation.campaignPrice != null).map((variation) => Number(variation.campaignPrice)).filter(Number.isFinite).sort((a, b) => a - b)[0];
+  const finalPriceToDisplay = campaignPriceToDisplay ?? priceToDisplay;
+  const finalOriginalPriceToDisplay = campaignPriceToDisplay != null ? priceToDisplay : originalPriceToDisplay;
 
   // After mounting, render the fully interactive UI.
   return (
     <>
       <KalapanaFont>
-        <p className="relative mt-4 min-h-16 text-2xl leading-tight dark:text-slate-300">
+        <p className=" mt-4 min-h-16 text-2xl leading-tight dark:text-slate-300">
           মূল্যঃ{" "}
           <span className="text-3xl tabular-nums text-purple sm:text-4xl md:text-5xl">
-            {replaceNumbers((priceToDisplay || 0).toString())}
+            {replaceNumbers((finalPriceToDisplay || 0).toString())}
           </span>{" "}
           টাকা
-          {originalPriceToDisplay && (
+          {finalOriginalPriceToDisplay && (
             <del className="price-del text-xl ml-2">
-              {replaceNumbers(originalPriceToDisplay.toString())}
+              {replaceNumbers(finalOriginalPriceToDisplay.toString())}
             </del>
           )}
         </p>

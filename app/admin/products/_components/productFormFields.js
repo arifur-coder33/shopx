@@ -5,6 +5,7 @@ export const productFormFields = ({
   onSelectCategoryHandler,
   loadCategoryDropDownLists,
   productVariationList,
+  specificationCategoryId,
 }) => [
   {
     type: "checkbox",
@@ -83,6 +84,7 @@ export const productFormFields = ({
     name: "seoDescription",
     colSpan: "full",
   },
+  { type: "productSpecifications", label: "Specifications", name: "specifications", categoryId: specificationCategoryId, colSpan: "full" },
   { type: "editor", label: "Description", name: "description" },
   {
     type: "productVariation",

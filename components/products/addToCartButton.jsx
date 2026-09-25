@@ -48,6 +48,8 @@ export default function AddToCartButton(props) {
         : product?.thumbnail?.name || product?.mainImage,
       slug: product?.slug,
       id: product?.id,
+      productId: product?.id,
+      categoryId: product?.categoryId,
       weight: getWeight,
       sku: getSku,
       category: category || "Uncategorized",

@@ -4,6 +4,7 @@ import {
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
 import { buildProductSeo } from "@/backend/utils/productSeo";
+import { applyProductCampaign, getActiveCampaigns, toCampaignDisplayData } from "@/backend/services/campaignService";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import JsonLd from "@/components/seo/JsonLd";
 import { getSiteUrl } from "@/lib/siteUrl";
@@ -74,6 +75,9 @@ export async function generateMetadata({ params }) {
         .filter(Boolean),
     ),
   );
+  const productVideos = (product.videos || [])
+    .map((video) => String(video.url || "").trim())
+    .filter((url) => /^https?:\/\//i.test(url));
 
   return {
     title: { absolute: compact(`${title} | ${identity.name}`, 65) },
@@ -100,8 +104,13 @@ export async function generateMetadata({ params }) {
       locale: "bn_BD",
       images: seo.images.slice(0, 4).map((url, index) => ({
         url,
+        width: 1200,
+        height: 1200,
         alt: index === 0 ? product.title : `${product.title} - ছবি ${index + 1}`,
       })),
+      ...(productVideos.length && {
+        videos: productVideos.map((url) => ({ url })),
+      }),
     },
     twitter: {
       card: "summary_large_image",
@@ -115,8 +124,11 @@ export async function generateMetadata({ params }) {
         "product:price:currency": "BDT",
       }),
       "product:availability": seo.availability,
+      "product:condition": "new",
+      "product:retailer_item_id": String(product.productCode || product.id),
       ...(product.category?.name && { "product:category": product.category.name }),
     },
+    publisher: identity.name,
   };
 }
 
@@ -130,9 +142,36 @@ export default async function ProductPage({ params }) {
   const { result, seo } = await productContext(slug);
   if (!result?.success || !seo) notFound();
   const data = result.data;
+  const activeCampaigns = await getActiveCampaigns();
+  const productCampaigns = activeCampaigns.filter((campaign) => {
+    const config = campaign.configuration || {};
+    const comboProductIds = (config.productPairs || []).flatMap((pair) => [
+      ...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])),
+      ...(pair.rewardProductIds || (pair.rewardProductId ? [pair.rewardProductId] : [])),
+    ]);
+    const hasTargets = campaign.products?.length || campaign.categories?.length || comboProductIds.length;
+    return !hasTargets ||
+      campaign.products?.some((target) => target.productId === data.id) ||
+      campaign.categories?.some((target) => target.categoryId === data.categoryId) ||
+      comboProductIds.includes(data.id);
+  });
+  const campaignOffers = productCampaigns.map(toCampaignDisplayData);
+  const variationsWithCampaigns = data.variations.map((variation) => {
+    const regular = Number(variation.regularPrice) || 0;
+    const sale = Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < regular
+      ? Number(variation.discountPrice)
+      : regular;
+    const pricing = applyProductCampaign({
+      campaigns: productCampaigns,
+      productId: data.id,
+      categoryId: data.categoryId,
+      basePrice: sale,
+    });
+    return { ...variation, campaignPrice: pricing.campaign ? pricing.price : null, campaignName: pricing.campaign?.name || null };
+  });
 
   return (
-    <div className="mb-16">
+    <div className="mb-16 pb-20 sm:pb-0">
       <JsonLd data={seo.structuredData} />
       <Breadcrumb
         items={[
@@ -145,7 +184,7 @@ export default async function ProductPage({ params }) {
           { label: data.title },
         ]}
       />
-      <ProductDataView data={data} blurDataURL={DEFAULT_BLUR_DATA_URL} />
+      <ProductDataView data={{ ...data, variations: variationsWithCampaigns }} campaignOffers={campaignOffers} blurDataURL={DEFAULT_BLUR_DATA_URL} />
     </div>
   );
 }

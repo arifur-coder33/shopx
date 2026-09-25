@@ -8,6 +8,7 @@ import JsonLd from "@/components/seo/JsonLd";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { notFound } from "next/navigation";
+import { cloudinaryDetailImage } from "@/utils/cloudinaryUrl";
 export const revalidate = 60;
 export const dynamic = "force-static";
 export const dynamicParams = true;
@@ -18,7 +19,13 @@ export async function generateMetadata({ params }) {
     currentSlug
       ? prisma.category.findUnique({
           where: { slug: currentSlug },
-          select: { name: true, description: true, fullPath: true, slug: true },
+        select: {
+          name: true,
+          description: true,
+          fullPath: true,
+          slug: true,
+          thumbnail: { select: { name: true } },
+        },
         })
       : null,
     getPublicSiteIdentity(),
@@ -38,7 +45,27 @@ export async function generateMetadata({ params }) {
     title: category.name,
     description,
     alternates: { canonical: url },
-    openGraph: { title: category.name, description, url, type: "website" },
+    openGraph: {
+      title: category.name,
+      description,
+      url,
+      type: "website",
+      ...(category.thumbnail?.name && {
+        images: [{
+          url: cloudinaryDetailImage(category.thumbnail.name, 1200),
+          alt: category.name,
+        }],
+      }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: category.name,
+      description,
+      ...(category.thumbnail?.name && {
+        images: [cloudinaryDetailImage(category.thumbnail.name, 1200)],
+      }),
+    },
+    keywords: [category.name, `${category.name} online`, `${category.name} Bangladesh`],
     robots: { index: true, follow: true },
   };
 }

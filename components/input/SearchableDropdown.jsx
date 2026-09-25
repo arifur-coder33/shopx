@@ -237,6 +237,8 @@ export default function SearchableDropdown({
   isConfirm = false,
   required = false,
   largeMobile = false,
+  addFormData,
+  onClear,
 }) {
   const { modalClosed, setModalClosed } = useModalContext();
   const generatedId = useId();
@@ -388,6 +390,7 @@ export default function SearchableDropdown({
           onChange={(e) => {
             setQuery(e.target.value);
             setSelected(null);
+            onClear?.();
           }}
           className={`peer block h-12 w-full appearance-none rounded-lg border border-gray-300 bg-slate-200 px-2.5 pr-11 ${largeMobile ? "text-xl md:text-lg" : "text-lg"} text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-500
               user-invalid:border-red-500
@@ -462,7 +465,7 @@ export default function SearchableDropdown({
                 <li className="px-3 py-2 text-gray-500">No results found</li>
                 {addForm && (
                   <li className="px-3 py-2 bg-blue-500 text-white">
-                    <LazyModalButton componentKey={addForm} />
+                    <LazyModalButton componentKey={addForm} data={{ ...addFormData, name: query }} />
                   </li>
                 )}
               </>

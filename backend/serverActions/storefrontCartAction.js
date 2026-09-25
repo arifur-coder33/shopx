@@ -13,6 +13,7 @@ export async function getStorefrontCartItem(slug) {
         title: true,
         slug: true,
         isActive: true,
+        categoryId: true,
         hasVariations: true,
         category: { select: { name: true, slug: true, fullPath: true } },
         thumbnail: { select: { name: true } },
@@ -46,6 +47,8 @@ export async function getStorefrontCartItem(slug) {
       success: true,
       data: {
         id: product.id,
+        productId: product.id,
+        categoryId: product.categoryId,
         title: product.title,
         slug: product.slug,
         discountPrice: variation.discountPrice || variation.regularPrice,
@@ -61,4 +64,15 @@ export async function getStorefrontCartItem(slug) {
   } catch (error) {
     return { success: false, error: error.message };
   }
+}
+
+export async function getStorefrontCategoryIds(productIds = []) {
+  const ids = [...new Set((Array.isArray(productIds) ? productIds : [])
+    .map(String).filter((id) => /^[a-f\d]{24}$/i.test(id)).slice(0, 100))];
+  if (!ids.length) return {};
+  const products = await prisma.product.findMany({
+    where: { id: { in: ids }, isActive: true },
+    select: { id: true, categoryId: true },
+  });
+  return Object.fromEntries(products.map((product) => [product.id, product.categoryId]));
 }

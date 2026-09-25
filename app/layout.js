@@ -24,10 +24,17 @@ export async function generateMetadata() {
     },
     description: identity.seoDescription,
     applicationName: identity.name,
+    alternates: { canonical: siteUrl },
     openGraph: {
       siteName: identity.name,
       type: "website",
       locale: "bn_BD",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: identity.seoTitle,
+      description: identity.seoDescription,
+      ...(identity.logoUrl && { images: [identity.logoUrl] }),
     },
     robots: {
       index: true,

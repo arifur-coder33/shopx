@@ -70,6 +70,8 @@ model RolePermission {
 
 // Category model for organizing products
 model Category {
+  specifications CategorySpecification[]
+  campaignTargets CampaignCategory[]
   id            String     @id @default(auto()) @map("_id") @db.ObjectId
   name          String // Category name
   slug          String     @unique // Unique slug for URL identification
@@ -148,6 +150,8 @@ model Media {
 }
 
 model Product {
+  specifications ProductSpecificationValue[]
+  campaignTargets CampaignProduct[]
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
   productCode  String?   @unique
   title        String // Product title
@@ -180,6 +184,46 @@ model Product {
   updatedAt            DateTime           @updatedAt // Auto-updated timestamp
 
   @@index([searchText])
+}
+
+// Roots can carry values directly; children are optional, reusable fields.
+model Specification {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+  key String @unique
+  parentId String? @db.ObjectId
+  parent Specification? @relation("SpecificationTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children Specification[] @relation("SpecificationTree")
+  categories CategorySpecification[]
+  values ProductSpecificationValue[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+}
+
+model CategorySpecification {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  categoryId String @db.ObjectId
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  specificationId String @db.ObjectId
+  specification Specification @relation(fields: [specificationId], references: [id])
+  options String[] @default([])
+  sortOrder Int @default(0)
+
+  @@unique([categoryId, specificationId])
+}
+
+model ProductSpecificationValue {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  productId String @db.ObjectId
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  specificationId String @db.ObjectId
+  specification Specification @relation(fields: [specificationId], references: [id])
+  value String
+  sortOrder Int @default(0)
+
+  @@unique([productId, specificationId])
 }
 
 model ProductVideo {
@@ -228,6 +272,88 @@ model ProductVariation {
   deliveryItems     DeliveryItem[]
 }
 
+// A campaign is a time-bound, server-evaluated promotion. Prices are never
+// trusted from the browser; checkout recalculates the active campaign.
+model Campaign {
+  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  description         String?
+  group               String            @default("PRODUCT_DISCOUNT") // PRODUCT_DISCOUNT, CART_DISCOUNT, DELIVERY_DISCOUNT, PAYMENT_DISCOUNT, COUPON, COMBO
+  type                String            @default("PRODUCT_DISCOUNT") // PRODUCT_DISCOUNT, DELIVERY, COUPON
+  status              String            @default("DRAFT") // DRAFT or PUBLISHED
+  bannerUrl           String?
+  startAt             DateTime?
+  endAt               DateTime?
+  discountType        String?           // PERCENT or FIXED
+  discountValue       Float?
+  specialPrice        Float?
+  maxDiscountAmount   Float?
+  minimumQuantity     Int?
+  stackable           Boolean           @default(false)
+  exclusive           Boolean           @default(false)
+  discountBase        String?           // PRODUCT_SUBTOTAL or ELIGIBLE_SUBTOTAL
+  deliveryZone        String?
+  shippingMethod      String?
+  terms               String?
+  cashbackType        String?
+  configuration       Json?
+  minimumOrderAmount  Float?
+  paymentMethod       String?
+  paymentMethods      String[]          @default([])
+  couponCode          String?
+  usageLimit          Int?
+  perCustomerLimit    Int?
+  priority            Int               @default(0)
+  createdBy           String?
+  updatedBy           String?
+  products            CampaignProduct[]
+  categories          CampaignCategory[]
+  usages              CampaignUsage[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([status, startAt, endAt])
+  @@index([type, status])
+  @@index([couponCode])
+}
+
+model CampaignProduct {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String   @db.ObjectId
+  productId  String   @db.ObjectId
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, productId])
+  @@index([productId])
+}
+
+model CampaignCategory {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String   @db.ObjectId
+  categoryId String   @db.ObjectId
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, categoryId])
+  @@index([categoryId])
+}
+
+model CampaignUsage {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String   @db.ObjectId
+  orderId    String   @db.ObjectId
+  customerKey String?
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, orderId])
+  @@index([campaignId, customerKey])
+}
+
 model Combination {
   id                 String           @id @default(auto()) @map("_id") @db.ObjectId
   productVariationId String           @db.ObjectId
@@ -246,12 +372,25 @@ model Order {
   id                        String           @id @default(auto()) @map("_id") @db.ObjectId
   orderNo                   String           @unique
   orderItems                OrderItem[]
+  campaignUsages            CampaignUsage[]
   userId                    String?          @db.ObjectId // Foreign key for User
   user                      User?            @relation(fields: [userId], references: [id]) // Relation to User
   customerName              String
   phoneNumber               String
   email                     String
   orderPrice                Float // Price of the product at the time of order
+  subtotal                  Float            @default(0)
+  productDiscount           Float            @default(0)
+  comboDiscount             Float            @default(0)
+  cartDiscount              Float            @default(0)
+  couponDiscount            Float            @default(0)
+  paymentDiscount           Float            @default(0)
+  deliveryDiscount          Float            @default(0)
+  cashbackAmount            Float            @default(0)
+  appliedCampaignIds        String[]         @default([])
+  appliedCampaignNames      String[]         @default([])
+  appliedCampaignBreakdown  Json?
+  appliedCouponCode         String?
   orderWeight               Float?
   adminDiscount             Float?
   adminNote                 String?

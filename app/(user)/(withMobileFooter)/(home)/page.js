@@ -3,6 +3,7 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import { Suspense } from "react";
 import HeroSlider from "./_components/HeroSlider";
 import HomeStorefront from "./_components/HomeStorefront";
+import CampaignHighlights from "./_components/CampaignHighlights";
 
 export const revalidate = 60;
 export const dynamic = "force-static";
@@ -33,6 +34,7 @@ export async function generateMetadata() {
       site: siteUrl,
       title: seoTitle,
       description: seoDescription,
+      images: logoUrl ? [logoUrl] : undefined,
     },
     alternates: {
       canonical: siteUrl,
@@ -46,6 +48,7 @@ export default async function Home() {
   return (
     <>
       <HeroSlider />
+      <CampaignHighlights />
       <Suspense fallback={<HomeProductsSkeleton />}>
         <HomeStorefront />
       </Suspense>

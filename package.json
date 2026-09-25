@@ -10,6 +10,7 @@
     "db:provider-backfill": "node prisma/backfill-provider-accounts.js",
     "test:accounting": "node prisma/verify-provider-accounting.js",
     "test:providers": "node prisma/verify-provider-configuration.js",
+    "test:specifications": "node prisma/verify-specifications.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

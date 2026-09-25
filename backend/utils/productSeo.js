@@ -149,6 +149,7 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
     ? Math.max(...variations.map((variation) => variation.price))
     : null;
   const seller = { "@type": "Organization", name: siteName, url: `${siteUrl}/` };
+  const brand = { "@type": "Brand", name: siteName };
   const productId = clean(product.productCode || product.id);
 
   const offerFor = (variation) => ({
@@ -171,6 +172,7 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
         url,
         productGroupID: productId,
         image: images,
+        brand,
         ...(product.category?.name && { category: product.category.name }),
         ...(() => {
           const variesBy = Array.from(
@@ -208,6 +210,7 @@ export function buildProductSeo({ product, siteUrl, siteName }) {
         description,
         url,
         image: images,
+        brand,
         sku: variations[0]?.sku || productId,
         ...(product.category?.name && { category: product.category.name }),
         ...(variations[0] && { offers: offerFor(variations[0]) }),

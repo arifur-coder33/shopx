@@ -1,5 +1,5 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import { Plus, ShoppingCart } from "lucide-react";
+import { Plus, ShoppingCart, Truck } from "lucide-react";
 import Link from "next/link";
 import ImageCustomServer from "../images/ImageCustomServer";
 import WishlistButton from "../wishlist/WishlistButton";
@@ -16,6 +16,9 @@ export default function ProductCard({ product, priority = false }) {
     thumbnail,
   } = product || {};
   const price = discountPrice > 0 ? discountPrice : regularPrice;
+  const displayPrice = product.campaignPrice > 0 ? product.campaignPrice : price;
+  const showDiscount = Number(product.campaignDiscountPercent) > 0;
+  const crossedPrice = displayPrice < price ? price : discountPrice > 0 ? regularPrice : null;
   const categoryName =
     typeof product.category === "string"
       ? product.category
@@ -50,6 +53,15 @@ export default function ProductCard({ product, priority = false }) {
               fetchPriority={priority ? "high" : "low"}
               priority={priority}
             />
+            {showDiscount && <span className="absolute left-2 top-2 z-[1] rounded-full bg-red-600 px-2 py-1 text-xs font-bold leading-none text-white shadow-sm">{replaceNumbers(`${product.campaignDiscountPercent}% OFF`)}</span>}
+            {product.deliveryCampaignLabel && <span className="absolute bottom-0 left-0 z-[1] block w-[78px] overflow-hidden rounded-md border border-brand bg-surface/95 shadow-md sm:w-[90px]" aria-label={product.deliveryCampaignLabel}>
+              <span className="flex h-5 items-center justify-between gap-1 px-1 sm:h-6 sm:px-1.5">
+                <span className="text-xs font-black italic leading-none tracking-tight text-brand sm:text-sm">FREE</span>
+                <Truck aria-hidden="true" className="h-4 w-5 shrink-0 text-brand sm:h-5 sm:w-6" strokeWidth={2.5} />
+              </span>
+              <span className="block bg-brand px-1 py-0.5 text-center text-[7px] font-black italic leading-none tracking-[0.1em] text-white sm:px-1.5 sm:text-[8px]">DELIVERY</span>
+              {product.deliveryCampaignLabel !== "Free delivery" && <span className="block truncate px-1 py-0 text-center text-[6px] font-semibold leading-tight text-brand sm:text-[7px]">{product.deliveryCampaignLabel.replace(/^Free delivery/i, "").trim()}</span>}
+            </span>}
           </div>
           <div className="p-1.5 sm:p-2">
             <h3 className="line-clamp-2 min-h-12 text-sm leading-6 sm:text-base">
@@ -58,13 +70,13 @@ export default function ProductCard({ product, priority = false }) {
             <div className="cursor-auto">
               <span className="text-base font-bold text-brand sm:text-xl">
                 {replaceNumbers(
-                  (discountPrice > 0 ? discountPrice : regularPrice).toString(),
+                  displayPrice.toString(),
                 )}
                 -/{" "}
               </span>
-              {discountPrice > 0 && (
+              {crossedPrice > 0 && (
                 <del className="price-del">
-                  {replaceNumbers(regularPrice?.toString())}
+                  {replaceNumbers(crossedPrice.toString())}
                 </del>
               )}
             </div>

@@ -18,6 +18,7 @@ export default function ProductForm({ actionType, updateAction, id }) {
   const [productVariationList, setProductVariationList] = useState([]);
   const [loadingProductData, setLoadingProductData] = useState(true);
   const [data, setData] = useState({});
+  const [specificationCategoryId, setSpecificationCategoryId] = useState("");
 
   // const loadCategoryDropDownLists = async () => {
   //   console.log("Loading categories for dropdown");
@@ -41,6 +42,7 @@ export default function ProductForm({ actionType, updateAction, id }) {
     debounce(async (category) => {
       try {
         const categoryIdToFetch = category?.id || category; // Handle if category is object or just ID
+        setSpecificationCategoryId(categoryIdToFetch || "");
         if (!categoryIdToFetch) {
           setProductVariationList([]); // Clear if no category
           return;
@@ -100,8 +102,9 @@ export default function ProductForm({ actionType, updateAction, id }) {
       loadCategoryDropDownLists: getCategory,
       onSelectCategoryHandler,
       productVariationList,
+      specificationCategoryId,
     });
-  }, [categoryDropdownList, productVariationList, onSelectCategoryHandler]);
+  }, [categoryDropdownList, productVariationList, onSelectCategoryHandler, specificationCategoryId]);
 
   const handleCreateAction = createAction;
   const handleUpdateAction = updateAction;

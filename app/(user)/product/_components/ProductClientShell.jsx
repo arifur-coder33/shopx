@@ -10,6 +10,7 @@ export default function ProductClientShell({
   titleComponent,
   bottomComponent,
   imageProps,
+  initialImage,
 }) {
   const {
     thumbnail,
@@ -53,6 +54,7 @@ export default function ProductClientShell({
           videoUrl={videoUrl}
           videos={videos}
           activeImageId={activeImageId}
+          initialImage={initialImage}
         />
       </div>
 

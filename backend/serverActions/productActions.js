@@ -12,6 +12,8 @@ import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { hasPermission } from "../utils/hasPermission";
 import { normalizeText } from "../utils/search";
+import { saveProductSpecifications } from "../services/specificationService";
+import { getActiveCampaigns, getProductCardCampaignData } from "../services/campaignService";
 import {
   normalizeProductVideos,
   parseProductVideosInput,
@@ -301,6 +303,7 @@ export async function createProductActions(formData) {
 
 export async function createProductAction(formData) {
   try {
+    await hasPermission("product", "create");
     let data = Object.fromEntries(formData.entries());
 
     // --- Basic Validation ---
@@ -383,7 +386,7 @@ export async function createProductAction(formData) {
 
       // --- Prepare Main Product Data [MODIFIED] ---
       // Price, stock are now removed from the main product create call
-      const categoryPath = buildCategoryPath(data.category);
+      const categoryPath = await buildCategoryPath(data.category, tx);
       const searchText = buildSearchText({
         title: data.title,
         description: data.description,
@@ -431,6 +434,8 @@ export async function createProductAction(formData) {
           data: productVideos.map((video) => ({ ...video, productId: product.id })),
         });
       }
+
+      await saveProductSpecifications(tx, product.id, product.categoryId, data.specifications);
 
       // 🔹 Insert product gallery separately
       if (mediaIds.length > 0) {
@@ -543,6 +548,7 @@ export async function getProductById(id) {
       where: { id: id },
       include: {
         category: true,
+        specifications: { orderBy: { sortOrder: "asc" }, include: { specification: { include: { parent: true } } } },
         thumbnail: {
           select: { id: true, name: true },
         },
@@ -1544,7 +1550,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
   }
 }
 export async function updateProductAction({ id: productId, formData }) {
-  await hasPermission("user", "product");
+  await hasPermission("product", "update");
   if (!productId) {
     return { success: false, message: "Product ID is required for update." };
   }
@@ -1592,7 +1598,7 @@ export async function updateProductAction({ id: productId, formData }) {
         const baseSlug = await generateSlug(data.slug || data.title);
         newSlug = await generateUniqueSlug(tx, baseSlug, productId);
       }
-      const categoryPath = await buildCategoryPath(data.category);
+      const categoryPath = await buildCategoryPath(data.category, tx);
 
       const searchText = await buildSearchText({
         title: data.title,
@@ -1629,6 +1635,8 @@ export async function updateProductAction({ id: productId, formData }) {
         where: { id: productId },
         data: productUpdateData,
       });
+
+      await saveProductSpecifications(tx, updatedProduct.id, updatedProduct.categoryId, data.specifications);
 
       await tx.productVideo.deleteMany({
         where: { productId: updatedProduct.id },
@@ -1964,64 +1972,54 @@ export const updateProductStatus = async ({ id, value }) => {
 
 export const searchProducts = async (rawQuery) => {
   const q = normalizeText(rawQuery);
-
   const variations = [q, q.slice(0, -1), q.slice(0, -2)];
-  const query = normalizeText(q);
+  const [products, campaigns] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        isActive: true,
+        OR: variations.map((value) => ({ searchText: { contains: value } })),
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        categoryId: true,
+        hasVariations: true,
+        thumbnail: { select: { name: true } },
+        variations: { select: { regularPrice: true, discountPrice: true } },
+        category: { select: { name: true, slug: true } },
+      },
+      take: 10,
+    }),
+    getActiveCampaigns(),
+  ]);
 
-  const products = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      OR: variations.map((v) => ({
-        searchText: { contains: v },
-      })),
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      thumbnail: { select: { name: true } },
-      variations: true,
-      category: { select: { name: true, slug: true } },
-    },
-    take: 10,
-  });
   const filteredProducts = products.map((product) => {
-    const variations = product.variations || [];
-
-    if (variations.length === 0) {
-      return {
-        id: product.id,
-        title: product.title,
-        slug: product.slug,
-        regularPrice: 0,
-        discountPrice: 0,
-        hasVariations: false,
-        thumbnail: product.thumbnail?.name || null,
-      };
-    }
-
-    const regularPrices = variations.map((v) => v.regularPrice);
-    const discountPrices = variations.map(
-      (v) => v.discountPrice ?? v.regularPrice,
-    );
-
-    const minRegular = Math.min(...regularPrices);
-    let minDiscount = Math.min(...discountPrices);
-
-    // discount validate
-    if (minDiscount >= minRegular) {
-      minDiscount = 0;
-    }
+    const productVariations = product.variations || [];
+    const regularPrices = productVariations.map((variation) => Number(variation.regularPrice)).filter(Number.isFinite);
+    const displayPrices = productVariations
+      .map((variation) => Number(variation.discountPrice ?? variation.regularPrice))
+      .filter(Number.isFinite);
+    const regularPrice = regularPrices.length ? Math.min(...regularPrices) : 0;
+    let discountPrice = displayPrices.length ? Math.min(...displayPrices) : 0;
+    if (discountPrice >= regularPrice) discountPrice = 0;
 
     return {
       id: product.id,
       title: product.title,
       slug: product.slug,
-      regularPrice: minRegular,
-      discountPrice: minDiscount,
+      regularPrice,
+      discountPrice,
       hasVariations: product.hasVariations,
       thumbnail: { name: product.thumbnail?.name || null },
-      // gallery: product.gallery.map((g) => g.media),
+      category: product.category?.name || "Uncategorized",
+      ...getProductCardCampaignData({
+        campaigns,
+        productId: product.id,
+        categoryId: product.categoryId,
+        regularPrice,
+        discountPrice,
+      }),
     };
   });
 

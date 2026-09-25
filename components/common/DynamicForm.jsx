@@ -29,6 +29,8 @@ const SearchableDropdown = dynamic(
 );
 const TagInput = dynamic(() => import("../input/TagInput"));
 const ProductVideosInput = dynamic(() => import("../input/ProductVideosInput"));
+const CategorySpecificationsInput = dynamic(() => import("../input/CategorySpecificationsInput"));
+const ProductSpecificationsInput = dynamic(() => import("../input/ProductSpecificationsInput"));
 
 export default function DynamicForm({
   category,
@@ -251,6 +253,10 @@ export default function DynamicForm({
                   />
                 </div>
               );
+            case "categorySpecifications":
+              return <CategorySpecificationsInput key={field.name} name={field.name} defaultValue={data?.[field.name]} />;
+            case "productSpecifications":
+              return <ProductSpecificationsInput key={field.name} name={field.name} categoryId={field.categoryId} initialCategoryId={data?.category?.id} defaultValue={data?.[field.name]} />;
             case "variation":
               return (
                 <VariationInput

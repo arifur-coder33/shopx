@@ -4,12 +4,14 @@ import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
 import { createOrder } from "@/backend/serverActions/orderActions";
+import { getCheckoutCampaignPreview } from "@/backend/serverActions/checkoutCampaignPreviewAction";
+import { calculateCampaignPreviewFallback } from "./campaignPreviewFallback";
 import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { cloneElement, isValidElement, useEffect, useMemo, useState, useTransition } from "react";
 import LoadingSpinner from "../common/LoadingSpinner";
 import DeliveryAreaSelector from "./DeliveryAreaSelector";
 import PaymentMethodSelector from "./PaymentMethodSelector";
@@ -26,16 +28,59 @@ export default function OrderForm({
   totalPrice,
   orderWeight,
   checkoutProviders,
+  campaignOffers = [],
 }) {
   const { data: session } = useSession();
   const { clearCart } = useCart();
   const [paymentSelection, setPaymentSelection] = useState(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [campaignPreview, setCampaignPreview] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState(null); // "creating", "success", "redirecting"
   const router = useRouter();
+  const campaignLineItems = useMemo(() => (products || []).map((item) => ({
+    variationId: item.variation?.id || item.variationId,
+    quantity: Number(item.quantity) || 1,
+  })), [products]);
+  const campaignLineKey = JSON.stringify(campaignLineItems);
+  const fallbackCampaignPreview = useMemo(() => calculateCampaignPreviewFallback({
+    campaigns: campaignOffers,
+    items: products || [],
+    deliveryCharge,
+    paymentMethod: paymentSelection?.paymentMethod === "COD"
+      ? "COD"
+      : checkoutProviders?.gateways?.find((provider) => provider.id === paymentSelection?.paymentGatewayId)?.code || paymentSelection?.paymentMethod,
+    couponCode,
+  }), [campaignOffers, products, deliveryCharge, paymentSelection, checkoutProviders, couponCode]);
+  const visibleCampaignPreview = useMemo(() => {
+    if (!campaignPreview?.rows?.length) return fallbackCampaignPreview;
+    const rows = new Map((fallbackCampaignPreview.rows || []).map((row) => [row.id, row]));
+    for (const row of campaignPreview.rows) rows.set(row.id, row);
+    return {
+      rows: [...rows.values()],
+      total: fallbackCampaignPreview.rows?.length ? fallbackCampaignPreview.total : campaignPreview.total,
+    };
+  }, [campaignPreview, fallbackCampaignPreview]);
+  useEffect(() => {
+    if (!campaignLineItems.length) {
+      setCampaignPreview(null);
+      return undefined;
+    }
+    let active = true;
+    getCheckoutCampaignPreview({
+      items: campaignLineItems,
+      paymentMethod: paymentSelection?.paymentMethod || null,
+      paymentGatewayId: paymentSelection?.paymentGatewayId || null,
+      couponCode,
+      deliveryArea,
+    }).then((result) => {
+      if (active) setCampaignPreview(result?.success ? result.data : null);
+    }).catch(() => { if (active) setCampaignPreview(null); });
+    return () => { active = false; };
+  }, [campaignLineKey, paymentSelection?.paymentMethod, paymentSelection?.paymentGatewayId, couponCode, deliveryArea]);
   const scrollToPaymentMethod = () => {
     const el = document.getElementById("paymentMethod");
 
@@ -168,7 +213,11 @@ export default function OrderForm({
               deliveryArea={deliveryArea}
               setPaymentMethod={setPaymentMethod}
             /> */}
-          {children}
+          {isValidElement(children) ? cloneElement(children, { campaignPreview: visibleCampaignPreview }) : children}
+          <div className="my-3 rounded-lg border p-3">
+            <label htmlFor="campaignCode" className="mb-1 block text-sm font-medium">কুপন কোড (ঐচ্ছিক)</label>
+            <input id="campaignCode" name="campaignCode" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="ক্যাম্পেইন কুপন কোড লিখুন" className="w-full rounded-lg border p-2 uppercase" maxLength={50} />
+          </div>
           <PaymentMethodSelector
             className="mt-2"
             setPaymentSelection={setPaymentSelection}

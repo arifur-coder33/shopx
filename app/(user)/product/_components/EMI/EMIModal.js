@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 
 const emiData = [
   {
@@ -359,15 +360,23 @@ export default function EMIModal({ price, onClose }) {
   const [selectedBank, setSelectedBank] = useState(emiData[0]);
   const [amount, setAmount] = useState(price);
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   const calculate = (tenure, rate) => {
     const total = amount + (amount * rate) / 100;
     const monthly = total / tenure;
     return { total, monthly };
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-2">
-      <div className="bg-white w-full max-w-4xl rounded-2xl overflow-hidden h-[90vh] flex flex-col">
+  return createPortal((
+    <div className="fixed inset-0 z-50 flex max-w-[100vw] items-center justify-center overflow-y-auto bg-black/40 p-2 sm:p-4">
+      <div className="flex h-[calc(100dvh-1rem)] max-h-[90vh] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl bg-white sm:h-[90vh] sm:max-w-4xl">
         {/* HEADER */}
         <div className="flex justify-between items-center px-4 py-3 border-b bg-gray-50">
           <h2 className="text-lg font-semibold">EMI Options</h2>
@@ -380,14 +389,14 @@ export default function EMIModal({ price, onClose }) {
         </div>
 
         {/* BODY */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden sm:flex-row">
           {/* LEFT BANK LIST (SCROLLABLE) */}
-          <div className="w-[220px] border-r overflow-y-auto p-2 space-y-2 bg-gray-50">
+          <div className="flex max-h-32 w-full shrink-0 gap-2 overflow-x-auto overflow-y-hidden border-b bg-gray-50 p-2 sm:max-h-none sm:w-[220px] sm:flex-col sm:space-y-2 sm:overflow-y-auto sm:overflow-x-hidden sm:border-b-0 sm:border-r">
             {sortedEmiData.map((bank) => (
               <div
                 key={bank.name}
                 onClick={() => setSelectedBank(bank)}
-                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer border ${
+                className={`flex min-w-[9rem] shrink-0 items-center gap-2 rounded-lg border p-2 text-left sm:min-w-0 ${
                   selectedBank.name === bank.name
                     ? "border-orange-400 bg-orange-50"
                     : "bg-white hover:bg-gray-100"
@@ -402,7 +411,7 @@ export default function EMIModal({ price, onClose }) {
           </div>
 
           {/* RIGHT SIDE */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* AMOUNT INPUT */}
             <div className="p-3 border-b">
               <p className="text-xs text-gray-500 mb-1">Enter Amount</p>
@@ -415,8 +424,8 @@ export default function EMIModal({ price, onClose }) {
             </div>
 
             {/* TABLE (SCROLLABLE) */}
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-xs">
+            <div className="min-h-0 flex-1 overflow-auto">
+              <table className="w-full min-w-[30rem] text-xs">
                 <thead className="bg-gray-100 sticky top-0 z-10">
                   <tr>
                     <th className="p-2 text-left">Plan (Monthly)</th>
@@ -454,5 +463,5 @@ export default function EMIModal({ price, onClose }) {
         </div>
       </div>
     </div>
-  );
+  ), document.body);
 }

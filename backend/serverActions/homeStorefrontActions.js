@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
 
 const PRODUCT_BATCH_SIZE = 10;
 
@@ -11,6 +12,7 @@ const productSelect = {
   hasVariations: true,
   thumbnail: { select: { name: true } },
   category: { select: { name: true } },
+  categoryId: true,
   variations: {
     select: {
       regularPrice: true,
@@ -19,7 +21,7 @@ const productSelect = {
   },
 };
 
-function storefrontProduct(product) {
+function storefrontProduct(product, campaigns = []) {
   const variations = product.variations || [];
   const regularPrices = variations
     .map((variation) => Number(variation.regularPrice))
@@ -30,6 +32,13 @@ function storefrontProduct(product) {
   const regularPrice = regularPrices.length ? Math.min(...regularPrices) : 0;
   const lowestSalePrice = salePrices.length ? Math.min(...salePrices) : 0;
 
+  const campaignDisplay = getProductCardCampaignData({
+    campaigns,
+    productId: product.id,
+    categoryId: product.categoryId,
+    regularPrice,
+    discountPrice: lowestSalePrice,
+  });
   return {
     id: product.id,
     title: product.title,
@@ -40,6 +49,7 @@ function storefrontProduct(product) {
       lowestSalePrice > 0 && lowestSalePrice < regularPrice
         ? lowestSalePrice
         : 0,
+    ...campaignDisplay,
     thumbnail: { name: product.thumbnail?.name || null },
     category: product.category?.name || "Uncategorized",
   };
@@ -54,7 +64,7 @@ const regularProductWhere = {
   ],
 };
 
-async function productBatch({ featured, cursor = null, limit }) {
+async function productBatch({ featured, cursor = null, limit, campaigns = [] }) {
   const products = await prisma.product.findMany({
     where: featured ? { isActive: true, isFeatured: true } : regularProductWhere,
     select: productSelect,
@@ -67,7 +77,7 @@ async function productBatch({ featured, cursor = null, limit }) {
   const visibleProducts = hasMore ? products.slice(0, limit) : products;
 
   return {
-    products: visibleProducts.map(storefrontProduct),
+    products: visibleProducts.map((product) => storefrontProduct(product, campaigns)),
     nextCursor: hasMore
       ? visibleProducts[visibleProducts.length - 1]?.id || null
       : null,
@@ -76,6 +86,10 @@ async function productBatch({ featured, cursor = null, limit }) {
 
 export async function getHomeStorefrontData() {
   try {
+    // Campaigns are loaded first because the product batches need the resolved
+    // list to calculate display prices without referencing an uninitialised
+    // Promise.all binding.
+    const campaigns = await getActiveCampaigns();
     const [categories, featured, regular] = await Promise.all([
       prisma.category.findMany({
         select: {
@@ -88,8 +102,8 @@ export async function getHomeStorefrontData() {
         },
         orderBy: { name: "asc" },
       }),
-      productBatch({ featured: true, limit: PRODUCT_BATCH_SIZE }),
-      productBatch({ featured: false, limit: PRODUCT_BATCH_SIZE }),
+      productBatch({ featured: true, limit: PRODUCT_BATCH_SIZE, campaigns }),
+      productBatch({ featured: false, limit: PRODUCT_BATCH_SIZE, campaigns }),
     ]);
 
     return { success: true, categories, featured, regular };
@@ -105,6 +119,7 @@ export async function getMoreHomeProducts(cursor) {
       featured: false,
       cursor: cursor || null,
       limit: PRODUCT_BATCH_SIZE,
+      campaigns: await getActiveCampaigns(),
     });
     return { success: true, ...regular };
   } catch (error) {

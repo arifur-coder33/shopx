@@ -3,7 +3,9 @@ import {
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
+import { getCheckoutCampaignOffers } from "@/backend/services/campaignService";
 import { getCheckoutProviders } from "@/backend/serverActions/providerConfigurationAction";
+
 
 import { Suspense } from "react";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
@@ -28,9 +30,10 @@ export default async function BuyNowPage({ params }) {
     throw new Error(product?.error || "Product could not be loaded.");
   }
 
-  const [deliveryRates, checkoutProviders] = await Promise.all([
+  const [deliveryRates, checkoutProviders, campaignOffers] = await Promise.all([
     getCheckoutDeliveryRates(),
     getCheckoutProviders(),
+    getCheckoutCampaignOffers(),
   ]);
   const data = product.data;
 
@@ -58,6 +61,8 @@ export default async function BuyNowPage({ params }) {
           data={data}
           deliveryRates={deliveryRates}
           checkoutProviders={checkoutProviders}
+          campaignOffers={campaignOffers}
+
         />
       </Suspense>
     </div>

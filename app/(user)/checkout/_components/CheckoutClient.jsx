@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { useState } from "react";
 import BuyNowProductDetails from "../../buynow/[slug]/_components/BuyNowProductDetails";
 
-export default function CheckoutClient({ checkoutProviders }) {
+export default function CheckoutClient({ checkoutProviders, deliveryRates, campaignOffers = [] }) {
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
   const [totalPrice, setTotalPrice] = useState(0);
   const [deliveryCharge, setDeliveryCharge] = useState(0);
@@ -27,6 +27,8 @@ export default function CheckoutClient({ checkoutProviders }) {
       totalPrice={totalPrice}
       orderWeight={orderWeight}
       checkoutProviders={checkoutProviders}
+      campaignOffers={campaignOffers}
+
     >
       <BuyNowProductDetails
         data={cartItems}
@@ -34,6 +36,7 @@ export default function CheckoutClient({ checkoutProviders }) {
         setDeliveryCharge={setDeliveryCharge}
         setTotalPrice={setTotalPrice}
         setOrderWeight={setOrderWeight}
+        deliveryRates={deliveryRates}
       />
     </OrderForm>
   );

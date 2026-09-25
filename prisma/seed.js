@@ -201,6 +201,7 @@ async function main() {
     "category",
     "product",
     "variation",
+    "specification",
     "sellReport",
     "order",
     "pos",
@@ -221,6 +222,7 @@ async function main() {
     "socialTracking",
     "siteSetting",
     "contentPage",
+    "campaign",
   ];
 
   for (const key of resources) {

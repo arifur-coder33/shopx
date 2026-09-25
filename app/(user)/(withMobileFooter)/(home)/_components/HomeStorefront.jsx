@@ -24,9 +24,10 @@ export default async function HomeStorefront() {
   }
 
   const siteUrl = await getSiteUrl();
-  const topCategories = result.categories
-    .filter((category) => !category.parentCategoryId)
-    .slice(0, 12);
+  const rootCategories = result.categories.filter(
+    (category) => !category.parentCategoryId,
+  );
+  const topCategories = rootCategories.slice(0, 12);
   const sameAs = [contact.facebookPage, contact.messenger].filter(Boolean);
   const categoryItems = (
     topCategories.length ? topCategories : result.categories.slice(0, 12)
@@ -89,7 +90,7 @@ export default async function HomeStorefront() {
     <>
       <JsonLd data={structuredData} />
 
-      <ShopByCategory categories={result.categories} />
+      <ShopByCategory categories={rootCategories} />
 
       {result.featured.products.length > 0 && (
         <section className="mt-7" aria-labelledby="featured-products-title">

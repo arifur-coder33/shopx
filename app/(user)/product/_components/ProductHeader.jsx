@@ -5,6 +5,8 @@ import ProductClientShell from "./ProductClientShell";
 import WishlistButton from "@/components/wishlist/WishlistButton";
 import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
 import { Suspense } from "react";
+import ProductInitialImage from "./ProductInitialImage";
+import { CampaignOfferList } from "@/components/campaign/CampaignOfferList";
 
 async function ProductEmiAvailability() {
   const providers = await getCheckoutProviders();
@@ -14,7 +16,7 @@ async function ProductEmiAvailability() {
   return sslActive ? <EMISection /> : null;
 }
 
-export default function ProductHeader({ data, imageProps }) {
+export default function ProductHeader({ data, imageProps, campaignOffers = [] }) {
   const { title } = data;
   const variations = (data.variations || []).map((variation) => ({
     id: variation.id,
@@ -22,6 +24,8 @@ export default function ProductHeader({ data, imageProps }) {
     weight: variation.weight,
     regularPrice: variation.regularPrice,
     discountPrice: variation.discountPrice,
+    campaignPrice: variation.campaignPrice,
+    campaignName: variation.campaignName,
     stock: variation.stock,
     thumbnailId: variation.thumbnailId,
     thumbnail: variation.thumbnail
@@ -48,6 +52,7 @@ export default function ProductHeader({ data, imageProps }) {
   const discountPrice = salePrices.length ? Math.min(...salePrices) : 0;
   const clientData = {
     id: data.id,
+    categoryId: data.categoryId,
     title,
     slug: data.slug,
     weight: data.weight,
@@ -90,6 +95,12 @@ export default function ProductHeader({ data, imageProps }) {
       <ProductClientShell
         imageProps={imageProps}
         data={clientData}
+        initialImage={
+          <ProductInitialImage
+            imageId={imageProps.initialSrc}
+            alt={imageProps.alt}
+          />
+        }
         titleComponent={
           <div className="flex items-start gap-3 border-b border-border pb-3">
             <h1
@@ -101,11 +112,7 @@ export default function ProductHeader({ data, imageProps }) {
             <WishlistButton product={wishlistProduct} />
           </div>
         }
-        bottomComponent={
-          <Suspense fallback={null}>
-            <ProductEmiAvailability />
-          </Suspense>
-        }
+        bottomComponent={<><CampaignOfferList campaigns={campaignOffers} title="এই পণ্যে চলমান অফার" /><Suspense fallback={null}><ProductEmiAvailability /></Suspense></>}
       />
       <WishlistHydrationSync />
     </>

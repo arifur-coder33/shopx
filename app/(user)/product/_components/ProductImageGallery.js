@@ -51,6 +51,7 @@ export default function ProductImageGallery({
   videoUrl = null,
   videos = [],
   imageProps,
+  initialImage = null,
 }) {
   const allMedia = useMemo(() => {
     const mediaMap = new Map();
@@ -271,7 +272,7 @@ export default function ProductImageGallery({
           }
           onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
           onClick={openModal}
-        >
+          >
           <div
             className={styles.transitionContainer}
             style={
@@ -285,6 +286,15 @@ export default function ProductImageGallery({
                 : undefined
             }
           >
+            {initialImage && (
+              <div
+                aria-hidden={mainImageLoaded}
+                className={styles.serverInitialImage}
+                style={{ opacity: mainImageLoaded ? 0 : 1 }}
+              >
+                {initialImage}
+              </div>
+            )}
             {!isVideoActive && (
               <div
                 aria-hidden="true"
@@ -333,6 +343,7 @@ export default function ProductImageGallery({
                 fetchPriority={activeIndex === 0 ? "high" : undefined}
                 sizes="(max-width:768px)100vw,40vw"
                 className={`${styles.mainProductImage} rounded-md object-contain`}
+                style={{ opacity: mainImageLoaded ? 1 : 0 }}
                 unoptimized
               />
             )}

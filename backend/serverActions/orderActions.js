@@ -12,6 +12,7 @@ import { getListData } from "../utils/getListData";
 import { getUserId } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
 import { firePurchaseServer } from "./SocialPurchaseEventAction";
+import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyProductCampaign, getActiveCampaigns } from "@/backend/services/campaignService";
 const statusMap = {
   all: null, // no filter
   running: [
@@ -284,6 +285,7 @@ export async function createOrder(formData) {
             id: true,
             title: true,
             productCode: true,
+            categoryId: true,
             allowOutOfStockOrder: true,
           },
         },
@@ -325,7 +327,9 @@ export async function createOrder(formData) {
     }
     const serverOrderPrice = orderItems.reduce((total, item) => {
       const variation = variationMap[item.variation.id];
-      const unitPrice = variation.discountPrice ?? variation.regularPrice;
+      const unitPrice = Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < Number(variation.regularPrice)
+        ? Number(variation.discountPrice)
+        : Number(variation.regularPrice);
       if (!Number.isFinite(Number(unitPrice)))
         throw new Error(`Price is unavailable for ${variation.product.title}.`);
       return total + Number(item.quantity) * Number(unitPrice);
@@ -341,41 +345,43 @@ export async function createOrder(formData) {
       data.deliveryArea === "inside-dhaka" ? "inside-dhaka" : "outside-dhaka";
 
     const result = await prisma.$transaction(async (tx) => {
+      const provider = paymentMethod !== "COD"
+        ? await tx.paymentGateway.findUnique({ where: { id: data.paymentGatewayId }, include: { moneyAccount: true } })
+        : await tx.paymentGateway.findFirst({ where: { adapterKey: "COD", isActive: true } });
+      const providerConfiguration = provider ? getProviderRuntimeConfiguration("gateway", provider) : null;
+      if (!providerConfiguration?.ready) throw new Error(paymentMethod === "COD" ? "Cash on Delivery is currently disabled." : "The selected provider is unavailable or not fully configured.");
+      if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") throw new Error("Installment payment is available only through SSLCommerz.");
+      const campaignPaymentMethod = provider?.code || paymentMethod;
+      // Campaigns are evaluated here, after trusted product data is loaded.
+      // Browser-supplied totals and prices are never used for the order.
+      const activeCampaigns = await getActiveCampaigns({ couponCode: data.campaignCode });
+      const pricedItems = orderItems.map((item) => {
+        const variation = variationMap[item.variation.id];
+        const regular = Number(variation.regularPrice);
+        const discounted = Number(variation.discountPrice);
+        const basePrice = discounted > 0 && discounted < regular ? discounted : regular;
+        return { item, variation, pricing: applyProductCampaign({ campaigns: activeCampaigns, productId: variation.product.id, categoryId: variation.product.categoryId, basePrice }) };
+      });
+      const campaignOrderPrice = pricedItems.reduce((total, { item, pricing }) => total + pricing.price * Number(item.quantity), 0);
+      const campaignItems = pricedItems.map(({ item, variation, pricing }) => ({ productId: variation.product.id, categoryId: variation.product.categoryId, quantity: Number(item.quantity), basePrice: Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < Number(variation.regularPrice) ? Number(variation.discountPrice) : Number(variation.regularPrice), price: pricing.price }));
+      const cartPricing = applyCartCampaign({ campaigns: activeCampaigns, subtotal: campaignOrderPrice, items: campaignItems });
+      const paymentPricing = applyPaymentCampaign({ campaigns: activeCampaigns, subtotal: cartPricing.subtotal, paymentMethod: campaignPaymentMethod, items: campaignItems });
       const deliveryRates = await getCheckoutDeliveryRates(tx);
-      const deliveryCharge = calculateDeliveryCharge(
+      const originalDeliveryCharge = calculateDeliveryCharge(
         deliveryArea,
         serverOrderWeight,
         deliveryRates,
       );
-      const totalAmount = serverOrderPrice + deliveryCharge;
-      const provider =
-        paymentMethod !== "COD"
-          ? await tx.paymentGateway.findUnique({
-              where: { id: data.paymentGatewayId },
-              include: { moneyAccount: true },
-            })
-          : null;
-      const providerConfiguration = provider
-        ? getProviderRuntimeConfiguration("gateway", provider)
-        : null;
-      if (paymentMethod !== "COD" && !providerConfiguration?.ready) {
-        throw new Error(
-          "The selected provider is unavailable or not fully configured.",
-        );
-      }
-      if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") {
-        throw new Error(
-          "Installment payment is available only through SSLCommerz.",
-        );
-      }
-      if (paymentMethod === "COD") {
-        const codGateway = await tx.paymentGateway.findFirst({
-          where: { adapterKey: "COD", isActive: true },
-        });
-        if (!getProviderRuntimeConfiguration("gateway", codGateway).ready) {
-          throw new Error("Cash on Delivery is currently disabled.");
-        }
-      }
+      const deliveryPricing = applyDeliveryCampaign({ campaigns: activeCampaigns, subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: originalDeliveryCharge, items: campaignItems });
+      const deliveryCharge = deliveryPricing.deliveryCharge;
+      const merchandiseTotal = paymentPricing.subtotal;
+      const totalAmount = merchandiseTotal + deliveryCharge;
+      const appliedCampaigns = [
+        ...pricedItems.map(({ pricing }) => pricing.campaign),
+        cartPricing.campaign,
+        paymentPricing.campaign,
+        deliveryPricing.campaign,
+      ].filter(Boolean);
       const counter = await tx.orderCounter.upsert({
         where: { idNo: 11 },
         update: { lastOrderNumber: { increment: 1 } },
@@ -394,7 +400,16 @@ export async function createOrder(formData) {
           thana: data.thana,
           deliveryArea,
           deliveryCharge,
-          orderPrice: serverOrderPrice,
+          orderPrice: merchandiseTotal,
+          subtotal: campaignOrderPrice,
+          productDiscount: pricedItems.reduce((sum, { item, pricing }) => sum + pricing.discount * Number(item.quantity), 0),
+          cartDiscount: cartPricing.discount,
+          paymentDiscount: paymentPricing.discount,
+          deliveryDiscount: deliveryPricing.discount,
+          appliedCampaignIds: [...new Set(appliedCampaigns.map((campaign) => campaign.id))],
+          appliedCampaignNames: [...new Set(appliedCampaigns.map((campaign) => campaign.name))],
+          appliedCampaignBreakdown: appliedCampaigns.map((campaign) => ({ id: campaign.id, name: campaign.name, group: campaign.group || campaign.type })),
+          appliedCouponCode: data.campaignCode ? String(data.campaignCode).trim().toUpperCase() : null,
           orderWeight: serverOrderWeight,
           deliveryAddress: data.deliveryAddress,
           paymentMethod,
@@ -414,13 +429,12 @@ export async function createOrder(formData) {
         },
       });
       await tx.orderItem.createMany({
-        data: orderItems.map((item, i) => {
-          const variation = variationMap[item.variation.id];
+        data: pricedItems.map(({ item, variation, pricing }, i) => {
           return {
             orderNo: newOrderNumber,
             orderItemNo: i + 1,
             productName: variation.product.title,
-            price: Number(variation.discountPrice ?? variation.regularPrice),
+            price: pricing.price,
             quantity: Number(item.quantity),
             productCode: variation.product.productCode,
             sku: variation.sku,
@@ -459,6 +473,10 @@ export async function createOrder(formData) {
           createdBy: "user",
         },
       });
+      const appliedCampaignIds = [...new Set(appliedCampaigns.map((campaign) => campaign.id))];
+      if (appliedCampaignIds.length) {
+        await tx.campaignUsage.createMany({ data: appliedCampaignIds.map((campaignId) => ({ campaignId, orderId: order.id, customerKey: data.phoneNumber || null })) });
+      }
       return {
         ...order,
         paymentId: payment.id,

@@ -8,7 +8,10 @@ export default function ThemeToggle({ className, sun, moon }) {
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
-    const dark = storedTheme === "dark" || (!storedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const dark =
+      storedTheme === "dark" ||
+      (!storedTheme &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.classList.toggle("dark", dark);
     setIsDarkMode(dark);
   }, []);
@@ -31,7 +34,7 @@ export default function ThemeToggle({ className, sun, moon }) {
       id="toggle"
       aria-label={isDarkMode ? "Use light theme" : "Use dark theme"}
       onClick={toggleTheme}
-      className="flex h-11 w-11 items-center justify-center rounded-brand text-text-muted hover:bg-surface-muted hover:text-text"
+      className=" h-11 w-11 items-center justify-center rounded-brand text-text-muted hover:bg-surface-muted hover:text-text hidden md:flex"
     >
       {isDarkMode ? (
         <div className="flex flex-row gap-2 items-center">

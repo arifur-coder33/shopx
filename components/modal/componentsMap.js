@@ -1,4 +1,5 @@
 export const componentsMap = {
+  SpecificationForm: () => import("@/app/admin/specifications/components/SpecificationForm"),
   CategoryForm: () => import("@/app/admin/categories/components/CategoryForm"),
   VariationForm: () => import("@/app/admin/variation/components/VariationForm"),
   ProductForm: () => import("@/app/admin/products/_components/ProductForm"),
@@ -14,4 +15,5 @@ export const componentsMap = {
   UserUpdateForm: () =>
     import("@/app/(user)/(withMobileFooter)/(myAccount)/my-account/_components/UserUpdateForm"),
   SupplierForm: () => import("@/app/admin/suppliers/Components/SupplierForm"),
+  CampaignForm: () => import("@/app/admin/campaigns/components/CampaignForm"),
 };

@@ -45,6 +45,8 @@ export const CartProvider = ({ children }) => {
           isSameCartItem(item, product)
             ? {
                 ...item,
+                productId: product.productId || product.id || item.productId,
+                categoryId: product.categoryId || item.categoryId,
                 quantity: qty ? item.quantity + qty : item.quantity + 1,
               }
             : item

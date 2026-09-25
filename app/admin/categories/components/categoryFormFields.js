@@ -17,6 +17,7 @@ export const categoryFormFields = ({ dropdownList, loadDropDownLists }) => [
     addForm: "",
   },
   { type: "file", label: "Category Banner", name: "banner", colSpan: "full" },
+  { type: "categorySpecifications", label: "Specifications", name: "specifications", colSpan: "full" },
   // {
   //   type: "checkbox",
   //   label: "Has Vairant",

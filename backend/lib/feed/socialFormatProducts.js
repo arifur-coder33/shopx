@@ -82,7 +82,6 @@ export function socialFormatProducts(products, { siteUrl, brand } = {}) {
 
       // Additional images — variation image বাদে বাকিগুলো
       const additionalImages = galleryImages.filter((img) => img !== image);
-      console.log("price", v.regularPrice);
       const regularPrice = v.regularPrice || 0;
       const discountPrice = v.discountPrice || null;
       const hasDiscount = discountPrice && discountPrice < regularPrice;

@@ -4,19 +4,29 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { cache } from "react";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
-import { newSlug } from "../utils/generateSlug";
+import { generateSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
+import { categorySpecificationInput } from "../services/specificationService";
+import { hasPermission } from "../utils/hasPermission";
+import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
 
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
 
   try {
-    const slug = await newSlug(data?.slug || data?.name);
+    const slug = generateSlug(data?.slug || data?.name || "");
+    if (!slug) throw new Error("A valid category slug is required.");
+    let specifications;
+    if (data.specifications !== undefined) {
+      await hasPermission("category", "create");
+      specifications = await categorySpecificationInput(prisma, data.specifications);
+    }
 
     const preparedData = {
       name: data?.name,
       description: data?.description,
       slug: slug,
+      ...(specifications && { specifications: { create: specifications.map(({ specificationId, ...row }) => ({ ...row, specification: { connect: { id: specificationId } } })) } }),
       ...(data?.thumbnail
         ? { thumbnail: { connect: { id: data?.thumbnail } } }
         : {}), // <-- only connect if thumbnail exists
@@ -66,10 +76,12 @@ export async function createCategoryAction(formData) {
       }
     }
 
-    revalidatePath("/admin/category");
-    return { success: true, data: category }; // Return success with user data
+    revalidatePath("/admin/categories");
+    revalidatePath("/");
+    revalidatePath("/category/[...slug]", "page");
+    return { success: true, data: { ...category, fullPath } };
   } catch (error) {
-    return { success: false, error: error }; // Return structured error
+    return { success: false, error: error.message, message: error.message };
   }
 }
 
@@ -82,6 +94,7 @@ export async function getCategoryById(id) {
         name: true,
         description: true,
         slug: true,
+        specifications: { orderBy: { sortOrder: "asc" }, include: { specification: { include: { parent: true } } } },
 
         thumbnail: {
           select: {
@@ -136,10 +149,16 @@ export async function updateCategoryAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
 
   try {
+    let specifications;
+    if (data.specifications !== undefined) {
+      await hasPermission("category", "update");
+      specifications = await categorySpecificationInput(prisma, data.specifications, id);
+    }
     if (!data?.name) {
       throw new Error("সব ফিল্ড গুলতে তথ্য দিন।");
     }
-    const slug = await newSlug(data?.slug || data?.name);
+    const slug = generateSlug(data?.slug || data?.name || "");
+    if (!slug) throw new Error("A valid category slug is required.");
     const checkSlug = await prisma.category.findFirst({
       where: { slug: slug, NOT: { id: id } },
     });
@@ -169,7 +188,14 @@ export async function updateCategoryAction({ formData, id }) {
       where: {
         id: id,
       },
-      data: preparedData,
+      data: { ...preparedData, ...(specifications && { specifications: {
+        deleteMany: { specificationId: { notIn: specifications.map((row) => row.specificationId) } },
+        upsert: specifications.map(({ specificationId, ...row }) => ({
+          where: { categoryId_specificationId: { categoryId: id, specificationId } },
+          update: row,
+          create: { ...row, specification: { connect: { id: specificationId } } },
+        })),
+      } }) },
     });
 
     const fullPath = await buildCategoryPath(id);
@@ -249,9 +275,12 @@ export async function updateCategoryAction({ formData, id }) {
       }
     }
     revalidatePath("/admin/product/add");
-    return { success: true, data: updateData }; // Return success with user data
+    revalidatePath("/admin/categories");
+    revalidatePath("/");
+    revalidatePath("/category/[...slug]", "page");
+    return { success: true, data: { ...updateData, fullPath } };
   } catch (error) {
-    return { success: false, error: error.message }; // Return structured error
+    return { success: false, error: error.message, message: error.message };
   }
 }
 
@@ -431,7 +460,8 @@ export async function getCategory() {
 
 export async function getAllCategoryWithproduct() {
   try {
-    const data = await prisma.category.findMany({
+    const [data, campaigns] = await Promise.all([
+      prisma.category.findMany({
       where: {
         products: { some: { isActive: true } },
       },
@@ -445,6 +475,7 @@ export async function getAllCategoryWithproduct() {
           take: 10,
           select: {
             id: true,
+            categoryId: true,
             title: true,
             slug: true,
             productCode: true,
@@ -463,7 +494,9 @@ export async function getAllCategoryWithproduct() {
           },
         },
       },
-    });
+    }),
+      getActiveCampaigns(),
+    ]);
 
     const filteredData = data
       .map((category) => ({
@@ -481,6 +514,7 @@ export async function getAllCategoryWithproduct() {
               hasVariations: false,
               thumbnail: product.thumbnail?.name || null,
               category: product.category.name,
+              ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: 0, discountPrice: 0 }),
             };
           }
 
@@ -498,7 +532,7 @@ export async function getAllCategoryWithproduct() {
           }
 
           return {
-            id: variations[0]?.sku,
+            id: product.id,
             title: product.title,
             slug: product.slug,
             regularPrice: minRegular,
@@ -506,6 +540,7 @@ export async function getAllCategoryWithproduct() {
             hasVariations: product.hasVariations,
             thumbnail: { name: product.thumbnail?.name || null },
             category: product.category.name,
+            ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: minRegular, discountPrice: minDiscount }),
             // gallery: product.gallery.map((g) => g.media),
           };
         }),
@@ -748,7 +783,7 @@ export async function getCategoryPageData(slug) {
     const categoryIds = getChildIds(targetCategory.id);
 
     // 4️⃣ get products (ONLY LIGHT DATA)
-    const products = await prisma.product.findMany({
+    const [products, campaigns] = await Promise.all([prisma.product.findMany({
       where: {
         isActive: true,
         categoryId: {
@@ -758,6 +793,7 @@ export async function getCategoryPageData(slug) {
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
       select: {
         id: true,
+        categoryId: true,
         title: true,
         slug: true,
         hasVariations: true,
@@ -776,7 +812,7 @@ export async function getCategoryPageData(slug) {
         },
         category: { select: { name: true, slug: true } },
       },
-    });
+    }), getActiveCampaigns()]);
 
     const filteredProducts = products.map((product) => {
       const variations = product.variations || [];
@@ -790,6 +826,7 @@ export async function getCategoryPageData(slug) {
           discountPrice: 0,
           hasVariations: false,
           thumbnail: product.thumbnail?.name || null,
+          ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: 0, discountPrice: 0 }),
         };
       }
 
@@ -814,6 +851,7 @@ export async function getCategoryPageData(slug) {
         discountPrice: minDiscount,
         hasVariations: product.hasVariations,
         thumbnail: { name: product.thumbnail?.name || null },
+        ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: minRegular, discountPrice: minDiscount }),
         // gallery: product.gallery.map((g) => g.media),
       };
     });
