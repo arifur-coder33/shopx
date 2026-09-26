@@ -26,8 +26,8 @@ const groups = [
 const campaignRules = {
   PRODUCT_DISCOUNT: { title: "Product Discount", summary: "নির্বাচিত পণ্য বা পণ্যের শ্রেণিতে ছাড় দেওয়া হবে।", bullets: ["পণ্য বা পণ্যের শ্রেণি বেছে দিন।", "শতাংশ বা নির্দিষ্ট টাকার ছাড় দিন।", "ঐচ্ছিকভাবে সর্বোচ্চ ছাড় ও ন্যূনতম quantity সেট করুন।"] },
   CART_DISCOUNT: { title: "Cart Discount", summary: "কার্টের যোগ্য মোট মূল্যের ওপর ছাড় দেওয়া হবে।", bullets: ["শতাংশ বা নির্দিষ্ট টাকার ছাড় বেছে নিন।", "ন্যূনতম কার্ট মূল্য ও সর্বোচ্চ ছাড় নির্ধারণ করতে পারেন।", "পণ্যের ছাড়ের আগে বা পরে এই ছাড় হিসাব হবে, তা বেছে নিন।"] },
-  DELIVERY_DISCOUNT: { title: "Delivery Discount", summary: "ডেলিভারি চার্জে ছাড় বা বিনামূল্যে ডেলিভারি দেওয়া হবে।", bullets: ["বিনামূল্যে ডেলিভারি, শতকরা ছাড়, নির্দিষ্ট টাকার ছাড়, অথবা অনলাইন পেমেন্টে ডেলিভারি ছাড় বেছে নিন।", "ন্যূনতম অর্ডার মূল্য, ডেলিভারি এলাকা ও পাঠানোর পদ্ধতি নির্ধারণ করতে পারেন।", "অনলাইন পেমেন্টের অফার হলে পেমেন্টের মাধ্যম বেছে নিন।"] },
-  PAYMENT_DISCOUNT: { title: "Payment Discount", summary: "নির্বাচিত পেমেন্টের মাধ্যমে পরিশোধ করলে ছাড় বা টাকা ফেরত দেওয়া হবে।", bullets: ["এক বা একাধিক চালু পেমেন্ট মাধ্যম বেছে নিন।", "শতকরা ছাড়, নির্দিষ্ট টাকার ছাড়, টাকা ফেরত, অথবা অগ্রিম পরিশোধের অফার নির্ধারণ করুন।", "চাইলে ন্যূনতম অর্ডার মূল্য ও সর্বোচ্চ ছাড় নির্ধারণ করুন।"] },
+  DELIVERY_DISCOUNT: { title: "Delivery Discount", summary: "ডেলিভারি চার্জে ছাড় বা বিনামূল্যে ডেলিভারি দেওয়া হবে।", bullets: ["বিনামূল্যে ডেলিভারি, শতকরা ছাড় অথবা নির্দিষ্ট টাকার ছাড় বেছে নিন।", "ন্যূনতম অর্ডার মূল্য, ডেলিভারি এলাকা ও পাঠানোর পদ্ধতি নির্ধারণ করতে পারেন।"] },
+  PAYMENT_DISCOUNT: { title: "Payment Discount", summary: "নির্বাচিত payment method-এ পণ্যের মূল্য বা delivery charge-এ ছাড় দেওয়া হবে।", bullets: ["ছাড়টি পণ্যের মোট মূল্য নাকি delivery charge-এ হবে বেছে নিন।", "শতকরা বা নির্দিষ্ট টাকার ছাড় এবং payment method বেছে নিন।", "চাইলে ন্যূনতম অর্ডার মূল্য ও সর্বোচ্চ ছাড় নির্ধারণ করুন।"] },
   COUPON: { title: "Coupon Campaign", summary: "কুপন কোড দিলে এই প্রচারের শর্ত অনুযায়ী ছাড় দেওয়া হবে।", bullets: ["একটি স্বতন্ত্র কুপন কোড দিন।", "কার্ট ছাড়, শতকরা ছাড়, নির্দিষ্ট টাকার ছাড়, বিনামূল্যে ডেলিভারি, অথবা পেমেন্ট ছাড় বেছে নিন।", "চাইলে ন্যূনতম অর্ডার মূল্য, সর্বোচ্চ ছাড়, পেমেন্ট মাধ্যম, অথবা প্রথম অর্ডারের শর্ত দিন।"] },
   COMBO: { title: "Combo Offer", summary: "প্রতিটি নিয়মে কেনার শর্ত বেছে একটি পুরস্কার পণ্য নির্ধারণ করুন।", bullets: ["শর্ত হতে পারে যেকোনো পণ্য, নির্দিষ্ট পণ্য, অথবা এক/একাধিক পণ্যের শ্রেণি।", "প্রতিটি নিয়মের জন্য একটি পুরস্কার পণ্য বেছে নিন।", "একটি প্রচারে একাধিক আলাদা নিয়ম যোগ করা যায়।"] },
 };
@@ -51,7 +51,7 @@ function PaymentDiscountTargets({ paymentGateways, scope, setScope, specificOnli
   const onlineGateways = paymentGateways.filter((gateway) => gateway.adapterKey !== "COD");
   const toggleMethod = (code) => setSelectedMethods((current) => current.includes(code) ? current.filter((item) => item !== code) : [...current, code]);
   return <section className="space-y-3 md:col-span-2">
-    <fieldset><legend className="mb-2 text-sm font-medium">Discount applies to</legend>
+    <fieldset><legend className="mb-2 text-sm font-medium">Applicable payment method</legend>
       <div className="grid gap-2 sm:grid-cols-3">
         {[["ALL", "All payment methods"], ["COD", "COD only"], ["ONLINE", "Online payment"]].map(([value, label]) => <label key={value} className={"flex cursor-pointer items-center gap-2 rounded-lg border p-3 " + (scope === value ? "border-primary bg-primary-soft" : "border-border")}>
           <input type="radio" name="paymentScopeChoice" checked={scope === value} onChange={() => setScope(value)} />{label}
@@ -176,6 +176,10 @@ export default function CampaignForm({ products, categories, paymentGateways, in
   const [group, setGroup] = useState(initialCampaign?.group || initialCampaign?.type || "PRODUCT_DISCOUNT");
   const [offerType, setOfferType] = useState(initialCampaign?.configuration?.offerType || (initialCampaign?.group === "DELIVERY_DISCOUNT" ? "FREE" : "PERCENT"));
   const [paymentScope, setPaymentScope] = useState(initialCampaign?.configuration?.paymentScope || (initialCampaign?.paymentMethods?.includes("COD") ? "COD" : initialCampaign?.paymentMethods?.length ? "ONLINE" : "ALL"));
+  const [paymentDiscountTarget, setPaymentDiscountTarget] = useState(initialCampaign?.configuration?.paymentDiscountTarget || "ORDER");
+  const [stackable, setStackable] = useState(Boolean(initialCampaign?.stackable) && !initialCampaign?.exclusive);
+  const [exclusive, setExclusive] = useState(initialCampaign ? (Boolean(initialCampaign.exclusive) || !initialCampaign.stackable) : true);
+  const [cashbackType, setCashbackType] = useState(initialCampaign?.cashbackType || "FIXED");
   const [specificOnlineMethods, setSpecificOnlineMethods] = useState(Boolean(initialCampaign?.paymentMethods?.length && !initialCampaign.paymentMethods.includes("COD")));
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState(initialCampaign?.paymentMethods?.filter((method) => method !== "COD") || []);
   const [targetScope, setTargetScope] = useState(initialCampaign?.products?.length ? "PRODUCT" : initialCampaign?.categories?.length ? "CATEGORY" : "ALL");
@@ -240,8 +244,8 @@ export default function CampaignForm({ products, categories, paymentGateways, in
       <CampaignInput name="priority" label="Priority" type="number" defaultValue={initialCampaign?.priority ?? 0} />
       <CampaignInput name="usageLimit" label="Total usage limit" type="number" min="1" defaultValue={initialCampaign?.usageLimit ?? ""} />
       <CampaignInput name="perCustomerLimit" label="Per-customer usage limit" type="number" min="1" defaultValue={initialCampaign?.perCustomerLimit ?? ""} />
-      <label className="flex items-start gap-2"><input name="stackable" type="checkbox" defaultChecked={initialCampaign?.stackable || false} className="mt-1" /><span><span className="block">Allow stacking with other campaigns</span><span className="block text-xs text-text-muted">টিক দিলে এই প্রচারের ছাড় অন্য প্রচারের ছাড়ের সাথেও যোগ হতে পারবে।</span></span></label>
-      <label className="flex items-start gap-2"><input name="exclusive" type="checkbox" defaultChecked={initialCampaign?.exclusive || false} className="mt-1" /><span><span className="block">Exclusive campaign</span><span className="block text-xs text-text-muted">টিক দিলে এই প্রচারের ছাড় অন্য প্রচারের সাথে একসাথে চলবে না।</span></span></label>
+      <label className="flex items-start gap-2"><input name="stackable" type="checkbox" checked={stackable} onChange={(event) => { const allowed = event.target.checked; setStackable(allowed); setExclusive(!allowed); }} className="mt-1" /><span><span className="block">Allow stacking with other campaigns</span><span className="block text-xs text-text-muted">টিক দিলে এই প্রচারের ছাড় অন্য প্রচারের ছাড়ের সাথেও যোগ হতে পারবে।</span></span></label>
+      <label className="flex items-start gap-2"><input name="exclusive" type="checkbox" checked={exclusive} onChange={(event) => { const locked = event.target.checked; setExclusive(locked); setStackable(!locked); }} className="mt-1" /><span><span className="block">Exclusive campaign</span><span className="block text-xs text-text-muted">টিক দিলে এই প্রচারের ছাড় অন্য প্রচারের সাথে একসাথে চলবে না।</span></span></label>
       <textarea name="terms" defaultValue={initialCampaign?.terms || ""} placeholder="Terms and conditions" className={`${inputClass} md:col-span-2`} rows={2} />
     </section>
 
@@ -273,26 +277,30 @@ export default function CampaignForm({ products, categories, paymentGateways, in
     {group === "DELIVERY_DISCOUNT" && <section className="space-y-3 rounded-lg border p-3">
       <h3 className="font-semibold">Delivery discount settings</h3>
       <div className="grid gap-3 md:grid-cols-2">
-        <select name="offerType" value={offerType || "FREE"} onChange={(event) => setOfferType(event.target.value)} className={inputClass}><option value="FREE">Free delivery</option><option value="PERCENT">Percentage discount</option><option value="FIXED">Fixed amount discount</option><option value="ONLINE_PAYMENT">Delivery Discount on online payment</option></select>
+        <select name="offerType" value={offerType || "FREE"} onChange={(event) => setOfferType(event.target.value)} className={inputClass}><option value="FREE">Free delivery</option><option value="PERCENT">Percentage discount</option><option value="FIXED">Fixed amount discount</option></select>
         <CampaignInput name="minimumOrderAmount" label="Minimum order amount" type="number" min="0" step="0.01" defaultValue={initialCampaign?.minimumOrderAmount ?? ""} />
-        {offerType === "FREE" ? <><input type="hidden" name="discountType" value="PERCENT" /><input type="hidden" name="discountValue" value="100" /><p className="self-center text-sm text-text-muted">The full delivery charge will be discounted.</p></> : offerType === "PERCENT" ? <><input type="hidden" name="discountType" value="PERCENT" /><CampaignInput name="discountValue" label="Delivery discount %" type="number" min="0" max="100" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required /></> : offerType === "FIXED" ? <><input type="hidden" name="discountType" value="FIXED" /><CampaignInput name="discountValue" label="Delivery discount amount" type="number" min="0" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required /></> : <><select name="discountType" defaultValue={initialCampaign?.discountType || "PERCENT"} className={inputClass}><option value="PERCENT">Percentage discount</option><option value="FIXED">Fixed amount discount</option></select><CampaignInput name="discountValue" label="Online payment delivery discount" type="number" min="0" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required /></>}
+        {offerType === "FREE" ? <><input type="hidden" name="discountType" value="PERCENT" /><input type="hidden" name="discountValue" value="100" /><p className="self-center text-sm text-text-muted">The full delivery charge will be discounted.</p></> : offerType === "PERCENT" ? <><input type="hidden" name="discountType" value="PERCENT" /><CampaignInput name="discountValue" label="Delivery discount %" type="number" min="0" max="100" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required /></> : offerType === "FIXED" ? <><input type="hidden" name="discountType" value="FIXED" /><CampaignInput name="discountValue" label="Delivery discount amount" type="number" min="0" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required /></> : null}
         <CampaignInput name="maxDiscountAmount" label="Maximum delivery discount" type="number" min="0" step="0.01" defaultValue={initialCampaign?.maxDiscountAmount ?? ""} />
         <CampaignInput name="deliveryZone" label="Applicable delivery zone" defaultValue={initialCampaign?.deliveryZone || ""} />
         <CampaignInput name="shippingMethod" label="Shipping method (optional)" defaultValue={initialCampaign?.shippingMethod || ""} />
-        {offerType === "ONLINE_PAYMENT" && <PaymentMethodChoices paymentGateways={paymentGateways} />}
       </div>
     </section>}
 
     {group === "PAYMENT_DISCOUNT" && <section className="space-y-3 rounded-lg border p-3">
       <h3 className="font-semibold">Payment discount settings</h3>
       <div className="grid gap-3 md:grid-cols-2">
-        <select name="offerType" value={offerType || "PERCENT"} onChange={(event) => setOfferType(event.target.value)} className={inputClass}><option value="PERCENT">Percentage discount</option><option value="FIXED">Fixed amount discount</option><option value="CASHBACK">Cashback after payment success</option><option value="ADVANCE">Full advance payment discount</option></select>
+        <label className="space-y-1 text-sm font-medium">Discount applies to
+          <select name="paymentDiscountTarget" value={paymentDiscountTarget} onChange={(event) => { setPaymentDiscountTarget(event.target.value); if (event.target.value === "DELIVERY" && ["CASHBACK", "ADVANCE"].includes(offerType)) setOfferType("PERCENT"); }} className={inputClass}><option value="ORDER">Product/order amount</option><option value="DELIVERY">Delivery charge</option></select>
+        </label>
+        <label className="space-y-1 text-sm font-medium">Discount type
+          <select name="offerType" value={offerType || "PERCENT"} onChange={(event) => setOfferType(event.target.value)} className={inputClass}><option value="PERCENT">Percentage discount</option><option value="FIXED">Fixed amount discount</option>{paymentDiscountTarget === "ORDER" && <><option value="CASHBACK">Cashback after payment success</option><option value="ADVANCE">Full advance payment discount</option></>}</select>
+        </label>
         <PaymentDiscountTargets paymentGateways={paymentGateways} scope={paymentScope} setScope={setPaymentScope} specificOnline={specificOnlineMethods} setSpecificOnline={setSpecificOnlineMethods} selectedMethods={selectedPaymentMethods} setSelectedMethods={setSelectedPaymentMethods} />
-        <select name="discountType" defaultValue={initialCampaign?.discountType || "PERCENT"} className={inputClass}><option value="PERCENT">Percentage</option><option value="FIXED">Fixed amount</option></select>
-        <CampaignInput name="discountValue" label={offerType === "CASHBACK" ? "Cashback value" : "Discount value"} type="number" min="0" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required />
+        <input type="hidden" name="discountType" value={offerType === "FIXED" ? "FIXED" : offerType === "CASHBACK" ? cashbackType : "PERCENT"} />
+        <CampaignInput name="discountValue" label={paymentDiscountTarget === "DELIVERY" ? "Delivery charge discount" : offerType === "CASHBACK" ? "Cashback value" : "Discount value"} type="number" min="0" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required />
         {showMinimumOrder && <CampaignInput name="minimumOrderAmount" label="Minimum order amount" type="number" min="0" step="0.01" defaultValue={initialCampaign?.minimumOrderAmount ?? ""} />}
         <CampaignInput name="maxDiscountAmount" label={offerType === "CASHBACK" ? "Maximum cashback" : "Maximum discount"} type="number" min="0" step="0.01" defaultValue={initialCampaign?.maxDiscountAmount ?? ""} />
-        {offerType === "CASHBACK" && <select name="cashbackType" defaultValue={initialCampaign?.cashbackType || "FIXED"} className={inputClass}><option value="FIXED">Fixed cashback</option><option value="PERCENT">Percentage cashback</option></select>}
+        {offerType === "CASHBACK" && <select name="cashbackType" value={cashbackType} onChange={(event) => setCashbackType(event.target.value)} className={inputClass}><option value="FIXED">Fixed cashback</option><option value="PERCENT">Percentage cashback</option></select>}
       </div>
     </section>}
 

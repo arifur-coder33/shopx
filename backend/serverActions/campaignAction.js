@@ -65,10 +65,10 @@ function campaignData(formData, userId) {
     endAt,
     discountType,
     discountValue,
-    specialPrice: Number.isFinite(Number(formData.get("specialPrice"))) && Number(formData.get("specialPrice")) >= 0 ? Number(formData.get("specialPrice")) : null,
-    maxDiscountAmount: Number.isFinite(Number(formData.get("maxDiscountAmount"))) && Number(formData.get("maxDiscountAmount")) >= 0 ? Number(formData.get("maxDiscountAmount")) : null,
+    specialPrice: String(formData.get("specialPrice") ?? "").trim() !== "" && Number.isFinite(Number(formData.get("specialPrice"))) && Number(formData.get("specialPrice")) >= 0 ? Number(formData.get("specialPrice")) : null,
+    maxDiscountAmount: String(formData.get("maxDiscountAmount") ?? "").trim() !== "" && Number.isFinite(Number(formData.get("maxDiscountAmount"))) && Number(formData.get("maxDiscountAmount")) > 0 ? Number(formData.get("maxDiscountAmount")) : null,
     minimumQuantity: Number.isFinite(Number(formData.get("minimumQuantity"))) && Number(formData.get("minimumQuantity")) > 0 ? Number(formData.get("minimumQuantity")) : null,
-    stackable: formData.get("stackable") === "on",
+    stackable: formData.get("stackable") === "on" && formData.get("exclusive") !== "on",
     exclusive: formData.get("exclusive") === "on",
     discountBase: String(formData.get("discountBase") || "ELIGIBLE_SUBTOTAL").trim().toUpperCase(),
     deliveryZone: String(formData.get("deliveryZone") || "").trim() || null,
@@ -78,6 +78,7 @@ function campaignData(formData, userId) {
     configuration: {
       offerType: String(formData.get("offerType") || "").trim().toUpperCase() || null,
       paymentScope: String(formData.get("paymentScope") || "ALL").trim().toUpperCase(),
+      paymentDiscountTarget: String(formData.get("paymentDiscountTarget") || "ORDER").trim().toUpperCase(),
       couponType: String(formData.get("couponType") || "").trim().toUpperCase() || null,
       comboType: String(formData.get("comboType") || "").trim().toUpperCase() || null,
       productPairs: parseProductPairs(formData.get("productPairs")),
@@ -153,6 +154,9 @@ export async function saveCampaign(formData) {
     const submittedMethods = [...new Set(rawPaymentMethods.map((code) => code.trim().toUpperCase()).filter(Boolean))];
     const paymentScope = data.group === "PAYMENT_DISCOUNT" ? data.configuration.paymentScope : null;
     if (data.group === "PAYMENT_DISCOUNT" && !["ALL", "COD", "ONLINE"].includes(paymentScope)) throw new Error("Choose all payment methods, COD, or online payment.");
+    if (data.group === "PAYMENT_DISCOUNT" && !["ORDER", "DELIVERY"].includes(data.configuration.paymentDiscountTarget)) throw new Error("Choose whether the payment discount applies to the order or delivery charge.");
+    if (data.group === "PAYMENT_DISCOUNT" && data.configuration.paymentDiscountTarget === "DELIVERY" && !["PERCENT", "FIXED"].includes(data.configuration.offerType)) throw new Error("Delivery payment discounts must be percentage or fixed amount discounts.");
+    if (data.group === "DELIVERY_DISCOUNT" && data.configuration.offerType === "ONLINE_PAYMENT") throw new Error("Create online-payment delivery discounts under Payment Discount and select Delivery charge.");
     const specificOnline = formData.get("onlineMethodScope") === "SPECIFIC";
     if (data.group === "PAYMENT_DISCOUNT" && paymentScope !== "ONLINE" && submittedMethods.length) throw new Error("Specific payment methods can only be selected for online payment.");
     if (data.group === "PAYMENT_DISCOUNT" && paymentScope === "ONLINE" && specificOnline && !submittedMethods.length) throw new Error("Select at least one online payment method.");
@@ -188,9 +192,6 @@ export async function saveCampaign(formData) {
     if (data.type === "COUPON" && !data.couponCode) throw new Error("Coupon campaigns need a coupon code.");
     if (data.type === "COMBO" && !data.configuration.productPairs.length) throw new Error("Add at least one complete buy/get product pair.");
     if (data.type === "COMBO" && data.configuration.productPairs.some((pair) => !["ALL", "PRODUCT", "CATEGORY"].includes(pair.triggerType) || !/^[a-f\d]{24}$/i.test(pair.rewardProductId) || (pair.triggerType === "PRODUCT" ? !pair.requiredProductIds.length || pair.requiredProductIds.some((productId) => !/^[a-f\d]{24}$/i.test(productId)) || pair.requiredProductIds.includes(pair.rewardProductId) || !!pair.requiredCategoryIds.length : pair.triggerType === "CATEGORY" ? !pair.requiredCategoryIds.length || pair.requiredCategoryIds.some((categoryId) => !/^[a-f\d]{24}$/i.test(categoryId)) || !!pair.requiredProductIds.length : !!pair.requiredProductIds.length || !!pair.requiredCategoryIds.length))) throw new Error("Choose all products, valid specific products, or valid categories, and one reward product for every combo rule.");
-    if (data.group === "DELIVERY_DISCOUNT" && data.configuration.offerType === "ONLINE_PAYMENT" && !selectedPaymentMethods.length) {
-      throw new Error("Choose at least one configured online payment method for this delivery discount.");
-    }
     const saved = await prisma.$transaction(async (tx) => {
       if (data.couponCode) {
         const duplicate = await tx.campaign.findFirst({ where: { couponCode: data.couponCode, ...(id ? { id: { not: id } } : {}) }, select: { id: true } });

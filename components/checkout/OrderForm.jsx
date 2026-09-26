@@ -61,9 +61,18 @@ export default function OrderForm({
     for (const row of campaignPreview.rows) rows.set(row.id, row);
     return {
       rows: [...rows.values()],
+      itemDiscounts: campaignPreview.itemDiscounts?.length ? campaignPreview.itemDiscounts : fallbackCampaignPreview.itemDiscounts || [],
+      progress: fallbackCampaignPreview.progress || [],
       total: fallbackCampaignPreview.rows?.length ? fallbackCampaignPreview.total : campaignPreview.total,
     };
   }, [campaignPreview, fallbackCampaignPreview]);
+  const appliedDeliveryDiscount = (visibleCampaignPreview.rows || []).reduce((sum, row) => {
+    const campaign = campaignOffers.find((offer) => offer.id === row.id);
+    const isDeliveryCampaign = campaign && (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) || (campaign.type === "PAYMENT_DISCOUNT" && campaign.configuration?.paymentDiscountTarget === "DELIVERY"));
+    return isDeliveryCampaign ? sum + Math.max(0, Number(row.discount) || 0) : sum;
+  }, 0);
+  const alreadyFreeDelivery = Number(deliveryCharge) > 0 && appliedDeliveryDiscount >= Number(deliveryCharge);
+  const paymentDeliveryCampaigns = alreadyFreeDelivery ? [] : campaignOffers.filter((campaign) => campaign.type === "PAYMENT_DISCOUNT" && campaign.configuration?.paymentDiscountTarget === "DELIVERY");
   useEffect(() => {
     if (!campaignLineItems.length) {
       setCampaignPreview(null);
@@ -222,6 +231,8 @@ export default function OrderForm({
             className="mt-2"
             setPaymentSelection={setPaymentSelection}
             initialProviders={checkoutProviders}
+            paymentDeliveryCampaigns={paymentDeliveryCampaigns}
+            cartItems={products || []}
           />
         </div>
         <div className="w-full md:w-1/2">

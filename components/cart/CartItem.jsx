@@ -13,6 +13,7 @@ export default function CartItem({
   slug,
   discountPrice,
   regularPrice,
+  campaignOffer = null,
   setProductQy,
   productQty = 1,
   removeItem,
@@ -20,9 +21,10 @@ export default function CartItem({
   id,
 }) {
   const product = { id, variation };
-  const unitPrice = Number(discountPrice || regularPrice || 0);
-  const hasDiscount =
-    Number(discountPrice) > 0 && Number(discountPrice) < Number(regularPrice);
+  const baseUnitPrice = Number(discountPrice || regularPrice || 0);
+  const campaignDiscount = Math.min(baseUnitPrice, Math.max(0, Number(campaignOffer?.discount) || 0));
+  const unitPrice = Math.max(0, baseUnitPrice - campaignDiscount);
+  const hasDiscount = (Number(discountPrice) > 0 && Number(discountPrice) < Number(regularPrice)) || campaignDiscount > 0;
 
   return (
     <article className="relative rounded-2xl border border-border bg-surface p-3 shadow-sm">
@@ -68,9 +70,10 @@ export default function CartItem({
             <strong className="text-base text-primary">৳{money(unitPrice)}</strong>
             {hasDiscount && (
               <span className="text-xs text-text-muted line-through">
-                ৳{money(regularPrice)}
+                ৳{money(baseUnitPrice)}
               </span>
             )}
+            {campaignDiscount > 0 && <span className="rounded-md bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">{campaignOffer.name}: ৳{money(campaignDiscount * productQty)} ছাড়</span>}
           </div>
         </div>
 

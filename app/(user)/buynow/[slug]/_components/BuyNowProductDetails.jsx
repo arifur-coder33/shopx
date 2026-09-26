@@ -15,6 +15,7 @@ export default function BuyNowProductDetails({
   deliveryRates,
   campaignPreview,
 }) {
+  const itemDiscounts = new Map((campaignPreview?.itemDiscounts || []).map((offer) => [offer.variationId, offer]));
   let totalPrices;
   const isArray = Array.isArray(data);
 
@@ -22,7 +23,8 @@ export default function BuyNowProductDetails({
     totalPrices = data.reduce(
       (acc, item) => {
         const qty = item.quantity || 1;
-        acc.totalDiscountPrice += (item.discountPrice || 0) * qty;
+        const offer = itemDiscounts.get(item.variation?.id || item.variationId);
+        acc.totalDiscountPrice += Math.max(0, (item.discountPrice || item.regularPrice || 0) - (offer?.discount || 0)) * qty;
         acc.totalRegularPrice += (item.regularPrice || 0) * qty;
         acc.totalWeight += (item.weight || 1) * qty;
 
@@ -32,7 +34,7 @@ export default function BuyNowProductDetails({
     );
   } else {
     totalPrices = {
-      totalDiscountPrice: data.discountPrice * productQty || 0,
+      totalDiscountPrice: Math.max(0, (data.discountPrice || data.regularPrice || 0) - (itemDiscounts.get(data.variation?.id || data.variationId)?.discount || 0)) * productQty || 0,
       totalRegularPrice: data.regularPrice * productQty || 0,
       totalWeight: data.weight * productQty || 1,
     };
@@ -50,6 +52,7 @@ export default function BuyNowProductDetails({
             <CartItemQtyUpdate
               key={product?.variation?.id || product?.id}
               data={product}
+              campaignOffer={itemDiscounts.get(product.variation?.id || product.variationId)}
             />
           );
         })
@@ -60,6 +63,7 @@ export default function BuyNowProductDetails({
           slug={data.slug}
           discountPrice={data.discountPrice}
           regularPrice={data.regularPrice}
+          campaignOffer={itemDiscounts.get(data.variation?.id || data.variationId)}
           setProductQy={setProductQty}
           productQty={productQty}
           removeItem={() => {}}

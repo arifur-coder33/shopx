@@ -2,6 +2,9 @@
 
 import { getCheckoutProviders } from "@/backend/serverActions/providerConfigurationAction";
 import Image from "next/image";
+import CampaignCountdown from "@/app/(user)/(withMobileFooter)/campaign/CampaignCountdown";
+import { getCampaignRuleText } from "@/components/campaign/campaignRuleText";
+import { replaceNumbers } from "@/utils/engToBanNumber";
 import { useEffect, useState } from "react";
 
 const EMPTY_PROVIDERS = { codEnabled: false, gateways: [] };
@@ -67,6 +70,8 @@ export default function PaymentMethodSelector({
   setPaymentSelection,
   className = "",
   initialProviders,
+  paymentDeliveryCampaigns = [],
+  cartItems = [],
 }) {
   const [mode, setMode] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
@@ -88,6 +93,24 @@ export default function PaymentMethodSelector({
     };
   }, [initialProviders]);
 
+  const visiblePaymentDeliveryCampaigns = paymentDeliveryCampaigns.filter((campaign) => {
+    const productTargets = campaign.products || [];
+    const categoryTargets = campaign.categories || [];
+    const itemMatch = (!productTargets.length && !categoryTargets.length) || cartItems.some((item) =>
+      productTargets.includes(item.productId || item.id) ||
+      Boolean(item.categoryId && categoryTargets.includes(item.categoryId))
+    );
+    if (!itemMatch) return false;
+
+    const scope = campaign.configuration?.paymentScope;
+    const onlineCodes = providers.gateways.map((provider) => String(provider.code || provider.adapterKey || "").toUpperCase());
+    const selectedMethods = campaign.paymentMethods || [];
+    if (scope === "COD") return providers.codEnabled;
+    if (scope === "ONLINE") return onlineCodes.length > 0 && (!selectedMethods.length || selectedMethods.some((code) => onlineCodes.includes(code)));
+    if (!selectedMethods.length) return providers.codEnabled || onlineCodes.length > 0;
+    return (providers.codEnabled && selectedMethods.includes("COD")) || selectedMethods.some((code) => onlineCodes.includes(code));
+  });
+
   const selectMode = (nextMode) => {
     setMode(nextMode);
     setSelectedKey("");
@@ -108,11 +131,19 @@ export default function PaymentMethodSelector({
       id="paymentMethod"
       className={`rounded-2xl border border-border bg-surface p-4 shadow-sm ${className}`}
     >
-      <div className="mb-3">
-        <h2 className="font-bold text-text">পেমেন্ট মেথড</h2>
-        <p className="text-xs font-normal text-text-muted">
-          আপনার সুবিধামতো পেমেন্ট নির্বাচন করুন
-        </p>
+      <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+        <div className="shrink-0">
+          <h2 className="font-bold text-text">পেমেন্ট মেথড</h2>
+          <p className="text-xs font-normal text-text-muted">
+            আপনার সুবিধামতো পেমেন্ট নির্বাচন করুন
+          </p>
+        </div>
+        {visiblePaymentDeliveryCampaigns.length > 0 && <div className="min-w-0 space-y-1 sm:text-right">
+          {visiblePaymentDeliveryCampaigns.map((campaign) => <div key={campaign.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-primary-soft px-2 py-1.5 text-xs sm:justify-end">
+            <span className="font-semibold text-primary">ক্যাম্পেইন {replaceNumbers(campaign.name)}: {replaceNumbers(getCampaignRuleText(campaign))}</span>
+            <CampaignCountdown compact showCompactLabel startAt={campaign.startAt} endAt={campaign.endAt} className="text-xs text-text-muted" />
+          </div>)}
+        </div>}
       </div>
 
       {loading ? (

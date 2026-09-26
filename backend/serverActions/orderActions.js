@@ -12,7 +12,14 @@ import { getListData } from "../utils/getListData";
 import { getUserId } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
 import { firePurchaseServer } from "./SocialPurchaseEventAction";
-import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyProductCampaign, getActiveCampaigns } from "@/backend/services/campaignService";
+import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyPaymentDeliveryCampaign, applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority } from "@/backend/services/campaignService";
+function compatibleCampaigns(campaigns, selectedCampaigns) {
+  if (!selectedCampaigns.length) return campaigns;
+  const selectedIds = new Set(selectedCampaigns.map((campaign) => campaign.id));
+  const canStack = selectedCampaigns.every((campaign) => campaign.stackable === true && campaign.exclusive !== true);
+  return campaigns.filter((campaign) => selectedIds.has(campaign.id) || (canStack && campaign.stackable === true && campaign.exclusive !== true));
+}
+
 const statusMap = {
   all: null, // no filter
   running: [
@@ -355,25 +362,38 @@ export async function createOrder(formData) {
       // Campaigns are evaluated here, after trusted product data is loaded.
       // Browser-supplied totals and prices are never used for the order.
       const activeCampaigns = await getActiveCampaigns({ couponCode: data.campaignCode });
+      const priorityItems = orderItems.map((item) => { const variation = variationMap[item.variation.id]; const regular = Number(variation.regularPrice); const sale = Number(variation.discountPrice); const price = sale > 0 && sale < regular ? sale : regular; return { productId: variation.product.id, categoryId: variation.product.categoryId, quantity: Number(item.quantity), basePrice: price, price }; });
+      const prioritizedCampaigns = selectCampaignsByPriority({ campaigns: activeCampaigns, items: priorityItems, paymentMethod: campaignPaymentMethod });
+      const selectedCampaigns = new Map();
+      const compatible = () => compatibleCampaigns(prioritizedCampaigns, [...selectedCampaigns.values()]);
+      const remember = (campaign) => { if (campaign) selectedCampaigns.set(campaign.id, campaign); };
       const pricedItems = orderItems.map((item) => {
         const variation = variationMap[item.variation.id];
         const regular = Number(variation.regularPrice);
         const discounted = Number(variation.discountPrice);
         const basePrice = discounted > 0 && discounted < regular ? discounted : regular;
-        return { item, variation, pricing: applyProductCampaign({ campaigns: activeCampaigns, productId: variation.product.id, categoryId: variation.product.categoryId, basePrice }) };
+        const pricing = applyProductCampaign({ campaigns: compatible(), productId: variation.product.id, categoryId: variation.product.categoryId, basePrice });
+        remember(pricing.campaign);
+        return { item, variation, pricing };
       });
       const campaignOrderPrice = pricedItems.reduce((total, { item, pricing }) => total + pricing.price * Number(item.quantity), 0);
       const campaignItems = pricedItems.map(({ item, variation, pricing }) => ({ productId: variation.product.id, categoryId: variation.product.categoryId, quantity: Number(item.quantity), basePrice: Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < Number(variation.regularPrice) ? Number(variation.discountPrice) : Number(variation.regularPrice), price: pricing.price }));
-      const cartPricing = applyCartCampaign({ campaigns: activeCampaigns, subtotal: campaignOrderPrice, items: campaignItems });
-      const paymentPricing = applyPaymentCampaign({ campaigns: activeCampaigns, subtotal: cartPricing.subtotal, paymentMethod: campaignPaymentMethod, items: campaignItems });
+      const cartPricing = applyCartCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, items: campaignItems });
+      remember(cartPricing.campaign);
+      const paymentPricing = applyPaymentCampaign({ campaigns: compatible(), subtotal: cartPricing.subtotal, paymentMethod: campaignPaymentMethod, items: campaignItems });
+      remember(paymentPricing.campaign);
       const deliveryRates = await getCheckoutDeliveryRates(tx);
       const originalDeliveryCharge = calculateDeliveryCharge(
         deliveryArea,
         serverOrderWeight,
         deliveryRates,
       );
-      const deliveryPricing = applyDeliveryCampaign({ campaigns: activeCampaigns, subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: originalDeliveryCharge, items: campaignItems });
-      const deliveryCharge = deliveryPricing.deliveryCharge;
+      const deliveryPricing = applyDeliveryCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: originalDeliveryCharge, items: campaignItems });
+      remember(deliveryPricing.campaign);
+      const paymentDeliveryPricing = applyPaymentDeliveryCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: deliveryPricing.deliveryCharge, items: campaignItems });
+      remember(paymentDeliveryPricing.campaign);
+      const deliveryCharge = paymentDeliveryPricing.deliveryCharge;
+      const totalDeliveryDiscount = deliveryPricing.discount + paymentDeliveryPricing.discount;
       const merchandiseTotal = paymentPricing.subtotal;
       const totalAmount = merchandiseTotal + deliveryCharge;
       const appliedCampaigns = [
@@ -381,6 +401,7 @@ export async function createOrder(formData) {
         cartPricing.campaign,
         paymentPricing.campaign,
         deliveryPricing.campaign,
+        paymentDeliveryPricing.campaign,
       ].filter(Boolean);
       const counter = await tx.orderCounter.upsert({
         where: { idNo: 11 },
@@ -405,7 +426,7 @@ export async function createOrder(formData) {
           productDiscount: pricedItems.reduce((sum, { item, pricing }) => sum + pricing.discount * Number(item.quantity), 0),
           cartDiscount: cartPricing.discount,
           paymentDiscount: paymentPricing.discount,
-          deliveryDiscount: deliveryPricing.discount,
+          deliveryDiscount: totalDeliveryDiscount,
           appliedCampaignIds: [...new Set(appliedCampaigns.map((campaign) => campaign.id))],
           appliedCampaignNames: [...new Set(appliedCampaigns.map((campaign) => campaign.name))],
           appliedCampaignBreakdown: appliedCampaigns.map((campaign) => ({ id: campaign.id, name: campaign.name, group: campaign.group || campaign.type })),

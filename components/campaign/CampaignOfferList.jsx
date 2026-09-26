@@ -12,7 +12,8 @@ function discountLabel(campaign) {
   if (campaign.type === "PAYMENT_DISCOUNT") {
     const scope = campaign.configuration?.paymentScope;
     const methodText = scope === "COD" ? "COD পেমেন্টে" : scope === "ONLINE" ? "অনলাইন পেমেন্টে" : "নির্বাচিত পেমেন্টে";
-    return methodText + " " + (campaign.discountType === "PERCENT" ? amount + "%" : "৳" + amount) + " ছাড়";
+    const targetText = campaign.configuration?.paymentDiscountTarget === "DELIVERY" ? "ডেলিভারি চার্জে " : "";
+    return methodText + " " + targetText + (campaign.discountType === "PERCENT" ? amount + "%" : "৳" + amount) + " ছাড়";
   }
   if (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type)) {
     const free = campaign.configuration?.offerType === "FREE" ||

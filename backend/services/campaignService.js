@@ -24,6 +24,11 @@ function targetsProduct(campaign, productId, categoryId) {
   );
 }
 
+function hasEligibleItems(campaign, items = []) {
+  if (!campaign.products?.length && !campaign.categories?.length) return items.length > 0;
+  return items.some((item) => targetsProduct(campaign, item.productId, item.categoryId) && Number(item.quantity) > 0);
+}
+
 function eligibleSubtotal(campaign, items = [], priceKey = "price") {
   if (!items.length) return null;
   return money(items.reduce((sum, item) =>
@@ -33,6 +38,10 @@ function eligibleSubtotal(campaign, items = [], priceKey = "price") {
 }
 
 function discountAmount(campaign, basePrice) {
+  const specialPrice = Number(campaign.specialPrice);
+  if (campaign.type === "PRODUCT_DISCOUNT" && campaign.specialPrice != null && Number.isFinite(specialPrice)) {
+    return money(Math.max(0, basePrice - Math.max(0, specialPrice)));
+  }
   if (campaign.discountType === "PERCENT") {
     return money((basePrice * Math.min(100, Math.max(0, campaign.discountValue || 0))) / 100);
   }
@@ -78,8 +87,16 @@ export async function getPublicCampaigns() {
       startAt: true,
       endAt: true,
       minimumOrderAmount: true,
+      minimumQuantity: true,
+      maxDiscountAmount: true,
+      specialPrice: true,
+      discountType: true,
+      discountValue: true,
+      configuration: true,
+      paymentMethods: true,
       couponCode: true,
       priority: true,
+      _count: { select: { products: true, categories: true } },
     },
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
   });
@@ -192,8 +209,8 @@ export function applyProductCampaign({ campaigns, productId, categoryId, basePri
       targetsProduct(campaign, productId, categoryId),
   );
   const best = eligible
-    .map((campaign) => ({ campaign, amount: discountAmount(campaign, basePrice) }))
-    .sort((left, right) => right.amount - left.amount)[0];
+    .map((campaign) => ({ campaign, amount: campaignMax(campaign, discountAmount(campaign, basePrice)) }))
+    .sort((left, right) => (Number(right.campaign.priority) || 0) - (Number(left.campaign.priority) || 0) || right.amount - left.amount)[0];
   if (!best || best.amount <= 0) return { price: money(basePrice), discount: 0, campaign: null };
   return {
     price: money(basePrice - best.amount),
@@ -253,34 +270,53 @@ export function applyCartCampaign({ campaigns, subtotal, items = [] }) {
     const base = eligibleSubtotal(campaign, items, campaign.discountBase === "PRODUCT_SUBTOTAL" ? "basePrice" : "price");
     return { campaign, base: base ?? money(subtotal) };
   }).filter(({ campaign, base }) => ["CART_DISCOUNT", "COUPON"].includes(campaign.type) && base >= money(campaign.minimumOrderAmount));
-  const best = eligible.map(({ campaign, base }) => ({ campaign, discount: discountAmount(campaign, base) })).sort((a, b) => b.discount - a.discount)[0];
+  const best = eligible.map(({ campaign, base }) => ({ campaign, discount: discountAmount(campaign, base) })).sort((a, b) => (Number(b.campaign.priority) || 0) - (Number(a.campaign.priority) || 0) || b.discount - a.discount)[0];
   if (!best || best.discount <= 0) return { subtotal: money(subtotal), discount: 0, campaign: null };
   const discount = Math.min(money(subtotal), best.discount, campaignMax(best.campaign, subtotal));
   return { subtotal: money(subtotal - discount), discount, campaign: best.campaign };
 }
 
 export function applyPaymentCampaign({ campaigns, subtotal, paymentMethod, items = [] }) {
+  if (!paymentMethod) return { subtotal: money(subtotal), discount: 0, campaign: null };
   const eligible = campaigns.map((campaign) => {
     const base = eligibleSubtotal(campaign, items) ?? money(subtotal);
     return { campaign, base };
   }).filter(({ campaign, base }) => {
-    if (campaign.type !== "PAYMENT_DISCOUNT" || base < money(campaign.minimumOrderAmount)) return false;
+    if (campaign.type !== "PAYMENT_DISCOUNT" || campaign.configuration?.paymentDiscountTarget === "DELIVERY" || !hasEligibleItems(campaign, items) || base < money(campaign.minimumOrderAmount)) return false;
     const scope = campaign.configuration?.paymentScope;
     if (scope === "COD") return paymentMethod === "COD";
     if (scope === "ONLINE") return paymentMethod !== "COD" && (!campaign.paymentMethods?.length || campaign.paymentMethods.includes(paymentMethod));
     return !(campaign.paymentMethods?.length || campaign.paymentMethod) || campaign.paymentMethods?.includes(paymentMethod) || campaign.paymentMethod === paymentMethod;
   });
-  const best = eligible.map(({ campaign, base }) => ({ campaign, discount: discountAmount(campaign, base) })).sort((a, b) => b.discount - a.discount)[0];
+  const best = eligible.map(({ campaign, base }) => ({ campaign, discount: discountAmount(campaign, base) })).sort((a, b) => (Number(b.campaign.priority) || 0) - (Number(a.campaign.priority) || 0) || b.discount - a.discount)[0];
   if (!best || best.discount <= 0) return { subtotal: money(subtotal), discount: 0, campaign: null };
   const discount = Math.min(money(subtotal), best.discount, campaignMax(best.campaign, subtotal));
   return { subtotal: money(subtotal - discount), discount, campaign: best.campaign };
+}
+
+export function applyPaymentDeliveryCampaign({ campaigns, subtotal, paymentMethod, deliveryCharge, items = [] }) {
+  if (!paymentMethod) return { deliveryCharge: money(deliveryCharge), discount: 0, campaign: null };
+  const eligible = campaigns.map((campaign) => ({ campaign, base: eligibleSubtotal(campaign, items) ?? money(subtotal) })).filter(({ campaign, base }) => {
+    if (campaign.type !== "PAYMENT_DISCOUNT" || campaign.configuration?.paymentDiscountTarget !== "DELIVERY" || !hasEligibleItems(campaign, items) || base < money(campaign.minimumOrderAmount)) return false;
+    const scope = campaign.configuration?.paymentScope;
+    if (scope === "COD") return paymentMethod === "COD";
+    if (scope === "ONLINE") return paymentMethod !== "COD" && (!campaign.paymentMethods?.length || campaign.paymentMethods.includes(paymentMethod));
+    return !(campaign.paymentMethods?.length || campaign.paymentMethod) || campaign.paymentMethods?.includes(paymentMethod) || campaign.paymentMethod === paymentMethod;
+  });
+  const best = eligible.map(({ campaign }) => ({ campaign, discount: discountAmount(campaign, deliveryCharge) }))
+    .sort((a, b) => (Number(b.campaign.priority) || 0) - (Number(a.campaign.priority) || 0) || b.discount - a.discount)[0];
+  if (!best || best.discount <= 0) return { deliveryCharge: money(deliveryCharge), discount: 0, campaign: null };
+  const discount = Math.min(money(deliveryCharge), best.discount, campaignMax(best.campaign, deliveryCharge));
+  return { deliveryCharge: money(deliveryCharge - discount), discount, campaign: best.campaign };
 }
 
 export function applyDeliveryCampaign({ campaigns, subtotal, paymentMethod, deliveryCharge, items = [] }) {
   const eligible = campaigns.map((campaign) => ({ campaign, base: eligibleSubtotal(campaign, items) ?? money(subtotal) })).filter(
     ({ campaign, base }) =>
       ["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) &&
+      hasEligibleItems(campaign, items) &&
       base >= money(campaign.minimumOrderAmount) &&
+      ((campaign.configuration?.offerType !== "ONLINE_PAYMENT" && campaign.configuration?.paymentScope !== "ONLINE") || (Boolean(paymentMethod) && paymentMethod !== "COD")) &&
       (!(campaign.paymentMethods?.length || campaign.paymentMethod) || campaign.paymentMethods?.includes(paymentMethod) || campaign.paymentMethod === paymentMethod),
   );
   const best = eligible
@@ -291,7 +327,7 @@ export function applyDeliveryCampaign({ campaigns, subtotal, paymentMethod, deli
           ? money((deliveryCharge * Math.min(100, Math.max(0, campaign.discountValue || 0))) / 100)
           : money(Math.min(deliveryCharge, campaign.discountValue || 0)),
     }))
-    .sort((left, right) => right.discount - left.discount)[0];
+    .sort((left, right) => (Number(right.campaign.priority) || 0) - (Number(left.campaign.priority) || 0) || right.discount - left.discount)[0];
   if (!best || best.discount <= 0) return { deliveryCharge: money(deliveryCharge), discount: 0, campaign: null };
   const cappedDiscount = Math.min(money(deliveryCharge), best.discount, campaignMax(best.campaign, deliveryCharge));
   return {
@@ -301,8 +337,55 @@ export function applyDeliveryCampaign({ campaigns, subtotal, paymentMethod, deli
   };
 }
 
+function campaignPaymentMatches(campaign, paymentMethod) {
+  if (campaign.configuration?.paymentScope === "COD") return paymentMethod === "COD";
+  if (campaign.configuration?.paymentScope === "ONLINE" || campaign.configuration?.offerType === "ONLINE_PAYMENT") {
+    return Boolean(paymentMethod) && paymentMethod !== "COD" && (!campaign.paymentMethods?.length || campaign.paymentMethods.includes(paymentMethod));
+  }
+  return !(campaign.paymentMethods?.length || campaign.paymentMethod) || campaign.paymentMethods?.includes(paymentMethod) || campaign.paymentMethod === paymentMethod;
+}
+
+export function selectCampaignsByPriority({ campaigns = [], items = [], paymentMethod = null }) {
+  const eligible = campaigns.map((campaign) => {
+    const base = eligibleSubtotal(campaign, items, campaign.discountBase === "PRODUCT_SUBTOTAL" ? "basePrice" : "price") ?? 0;
+    const hasItems = hasEligibleItems(campaign, items);
+    let reward = 0;
+    let applies = false;
+    if (campaign.type === "PRODUCT_DISCOUNT") {
+      const offers = items.filter((item) => targetsProduct(campaign, item.productId, item.categoryId));
+      reward = Math.max(0, ...offers.map((item) => campaignMax(campaign, discountAmount(campaign, money(item.price ?? item.basePrice)))))
+        * Math.max(1, ...offers.map((item) => Math.max(1, Number(item.quantity) || 1)));
+      applies = offers.length > 0 && reward > 0;
+    } else if (["CART_DISCOUNT", "COUPON"].includes(campaign.type)) {
+      applies = hasItems && base >= money(campaign.minimumOrderAmount);
+      reward = campaignMax(campaign, discountAmount(campaign, base));
+    } else if (campaign.type === "PAYMENT_DISCOUNT") {
+      applies = hasItems && Boolean(paymentMethod) && campaignPaymentMatches(campaign, paymentMethod) &&
+        base >= money(campaign.minimumOrderAmount);
+      reward = campaign.configuration?.paymentDiscountTarget === "DELIVERY"
+        ? Math.max(0, Number(campaign.discountValue) || 0)
+        : campaignMax(campaign, discountAmount(campaign, base));
+    } else if (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type)) {
+      applies = hasItems && base >= money(campaign.minimumOrderAmount) && campaignPaymentMatches(campaign, paymentMethod);
+      reward = campaign.discountType === "PERCENT" ? Number(campaign.discountValue) || 0 : Number(campaign.discountValue) || 0;
+    }
+    return { campaign, applies: applies && reward > 0, reward };
+  }).filter((candidate) => candidate.applies)
+    .sort((a, b) => (Number(b.campaign.priority) || 0) - (Number(a.campaign.priority) || 0) || b.reward - a.reward);
+  if (!eligible.length) return [];
+  const top = eligible[0].campaign;
+  return top.stackable === true && top.exclusive !== true
+    ? eligible.map(({ campaign }) => campaign).filter((campaign) => campaign.stackable === true && campaign.exclusive !== true)
+    : [top];
+}
+
 function campaignMax(campaign, amount) {
-  return campaign.maxDiscountAmount == null ? amount : Math.max(0, Math.min(amount, money(campaign.maxDiscountAmount)));
+  const maxDiscountAmount = Number(campaign.maxDiscountAmount);
+  // Older campaign forms stored an empty optional cap as 0. Treat that legacy
+  // value as unset so those product discounts still apply.
+  return campaign.maxDiscountAmount == null || !Number.isFinite(maxDiscountAmount) || maxDiscountAmount <= 0
+    ? amount
+    : Math.max(0, Math.min(amount, money(maxDiscountAmount)));
 }
 export function toCampaignDisplayData(campaign) {
   return {
@@ -311,9 +394,14 @@ export function toCampaignDisplayData(campaign) {
     description: campaign.description || "",
     group: campaign.group || campaign.type,
     type: campaign.type,
+    stackable: campaign.stackable === true,
+    exclusive: campaign.exclusive === true,
+    priority: Number(campaign.priority) || 0,
     discountType: campaign.discountType,
     discountValue: Number(campaign.discountValue) || 0,
+    specialPrice: campaign.specialPrice == null ? null : Number(campaign.specialPrice),
     minimumOrderAmount: Number(campaign.minimumOrderAmount) || 0,
+    minimumQuantity: campaign.minimumQuantity == null ? null : Number(campaign.minimumQuantity),
     maxDiscountAmount: campaign.maxDiscountAmount == null ? null : Number(campaign.maxDiscountAmount),
     startAt: campaign.startAt?.toISOString?.() || null,
     endAt: campaign.endAt?.toISOString?.() || null,

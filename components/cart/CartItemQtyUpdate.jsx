@@ -1,7 +1,7 @@
 const { useCart } = require("@/context/CartContext");
 import CartItem from "./CartItem";
 
-export default function CartItemQtyUpdate({ data }) {
+export default function CartItemQtyUpdate({ data, campaignOffer }) {
   const { addToCart, reduceCartQty } = useCart();
   const qtyHandler = (qty, action) => {
     if (action === "increment") {
@@ -11,6 +11,6 @@ export default function CartItemQtyUpdate({ data }) {
     }
   };
   return (
-    <CartItem {...data} productQty={data?.quantity} setProductQy={qtyHandler} />
+    <CartItem {...data} campaignOffer={campaignOffer} productQty={data?.quantity} setProductQy={qtyHandler} />
   );
 }
