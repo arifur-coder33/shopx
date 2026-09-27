@@ -1,5 +1,6 @@
 "use client";
 import { Truck } from "lucide-react";
+import { resolveComboRewards } from "@/components/campaign/resolveComboRewards";
 import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
@@ -34,13 +35,19 @@ export default function OrderForm({
   const { clearCart } = useCart();
   const [paymentSelection, setPaymentSelection] = useState(null);
   const [couponCode, setCouponCode] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [couponFeedback, setCouponFeedback] = useState("");
   const [campaignPreview, setCampaignPreview] = useState(null);
+  const [dismissedComboCampaignIds, setDismissedComboCampaignIds] = useState([]);
+  const [comboVariationSelections, setComboVariationSelections] = useState({});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState(null); // "creating", "success", "redirecting"
   const router = useRouter();
+  const comboRewardGroups = useMemo(() => resolveComboRewards(campaignOffers, products, dismissedComboCampaignIds, comboVariationSelections), [campaignOffers, products, dismissedComboCampaignIds, comboVariationSelections]);
+  const comboRewardItems = comboRewardGroups.items;
   const campaignLineItems = useMemo(() => (products || []).map((item) => ({
     variationId: item.variation?.id || item.variationId,
     quantity: Number(item.quantity) || 1,
@@ -90,6 +97,23 @@ export default function OrderForm({
     }).catch(() => { if (active) setCampaignPreview(null); });
     return () => { active = false; };
   }, [campaignLineKey, paymentSelection?.paymentMethod, paymentSelection?.paymentGatewayId, couponCode, deliveryArea]);
+  const appliedCouponCampaign = campaignOffers.find((campaign) => campaign.type === "COUPON" && String(campaign.couponCode || "").trim().toUpperCase() === couponCode);
+  const couponIsApplied = Boolean(appliedCouponCampaign && visibleCampaignPreview.rows?.some((row) => row.id === appliedCouponCampaign.id));
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    const campaign = campaignOffers.find((offer) => offer.type === "COUPON" && String(offer.couponCode || "").trim().toUpperCase() === code);
+    if (!code) { setCouponFeedback("কুপন কোড লিখুন"); return; }
+    if (!campaign) { setCouponCode(""); setCouponFeedback("এই কুপন কোডটি পাওয়া যায়নি বা আর চালু নেই"); return; }
+    setCampaignPreview(null);
+    setCouponCode(code);
+    setCouponFeedback("");
+  };
+  const removeCoupon = () => {
+    setCouponCode("");
+    setCouponInput("");
+    setCouponFeedback("");
+    setCampaignPreview(null);
+  };
   const scrollToPaymentMethod = () => {
     const el = document.getElementById("paymentMethod");
 
@@ -146,7 +170,7 @@ export default function OrderForm({
     formData.append("ttclid", getCookie("ttclid"));
     formData.append("userAgent", navigator.userAgent);
     formData.delete("quantity");
-    formData.append("products", JSON.stringify(products));
+    formData.append("products", JSON.stringify([...(products || []), ...comboRewardItems]));
 
     formData.append("deliveryArea", deliveryArea);
     const response = await createOrder(formData); // Call server action
@@ -222,11 +246,12 @@ export default function OrderForm({
               deliveryArea={deliveryArea}
               setPaymentMethod={setPaymentMethod}
             /> */}
-          {isValidElement(children) ? cloneElement(children, { campaignPreview: visibleCampaignPreview }) : children}
-          <div className="my-3 rounded-lg border p-3">
-            <label htmlFor="campaignCode" className="mb-1 block text-sm font-medium">কুপন কোড (ঐচ্ছিক)</label>
-            <input id="campaignCode" name="campaignCode" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="ক্যাম্পেইন কুপন কোড লিখুন" className="w-full rounded-lg border p-2 uppercase" maxLength={50} />
+          {isValidElement(children) ? cloneElement(children, { campaignPreview: visibleCampaignPreview, comboRewardItems, comboRewardGroups, onSelectComboVariation: (rewardKey, variationId) => setComboVariationSelections((current) => ({ ...current, [rewardKey]: variationId })), onCancelCombo: (campaignId) => setDismissedComboCampaignIds((current) => [...current, campaignId]) }) : children}
+          <div className="my-3 flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 focus-within:border-primary">
+            <input id="campaignCode" value={couponInput} onChange={(event) => { setCouponInput(event.target.value); setCouponFeedback(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); applyCoupon(); } }} placeholder="ক্যাম্পেইন কুপন কোড লিখুন" className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 uppercase outline-none focus:ring-0" maxLength={50} />
+            <button type="button" onClick={applyCoupon} className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-white">Apply</button>
           </div>
+          <input type="hidden" name="campaignCode" value={couponCode} />
           <PaymentMethodSelector
             className="mt-2"
             setPaymentSelection={setPaymentSelection}

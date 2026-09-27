@@ -18,6 +18,10 @@ export default function ProductCard({ product, priority = false }) {
   const price = discountPrice > 0 ? discountPrice : regularPrice;
   const displayPrice = product.campaignPrice > 0 ? product.campaignPrice : price;
   const showDiscount = Number(product.campaignDiscountPercent) > 0;
+  const comboOffer = product.comboOffers?.[0];
+  const comboRewards = comboOffer?.rewardProducts?.length
+    ? comboOffer.rewardProducts
+    : comboOffer ? [{ id: comboOffer.id, name: comboOffer.rewardProductName, thumbnail: comboOffer.rewardProductThumbnail }] : [];
   const crossedPrice = displayPrice < price ? price : discountPrice > 0 ? regularPrice : null;
   const categoryName =
     typeof product.category === "string"
@@ -54,6 +58,7 @@ export default function ProductCard({ product, priority = false }) {
               priority={priority}
             />
             {showDiscount && <span className="absolute left-2 top-2 z-[1] rounded-full bg-red-600 px-2 py-1 text-xs font-bold leading-none text-white shadow-sm">{replaceNumbers(`${product.campaignDiscountPercent}% OFF`)}</span>}
+            {comboOffer && <div className="absolute bottom-2 right-2 z-[2] flex max-w-[104px] flex-col items-center gap-0.5 rounded-md border border-border bg-surface/95 p-1 shadow-md" title={comboRewards.map((reward) => reward.name).join(", ")} aria-label={`${comboRewards.length} reward products: ${comboOffer.badge}`}><div className="flex items-center gap-0.5">{comboRewards.slice(0, 2).map((reward) => <ImageCustomServer key={reward.id} src={reward.thumbnail} alt={reward.name || "Combo reward product"} w={56} h={56} className="h-8 w-8 rounded object-cover" sizes="32px" />)}{comboRewards.length > 2 && <span className="grid h-8 min-w-8 place-items-center rounded bg-primary-soft px-1 text-[10px] font-bold text-primary">+{replaceNumbers(String(comboRewards.length - 2))}</span>}</div><span className="text-[9px] font-black leading-none text-brand sm:text-[10px]">{comboOffer.badge}</span></div>}
             {product.deliveryCampaignLabel && <span className="absolute bottom-0 left-0 z-[1] block w-[78px] overflow-hidden rounded-md border border-brand bg-surface/95 shadow-md sm:w-[90px]" aria-label={product.deliveryCampaignLabel}>
               <span className="flex h-5 items-center justify-between gap-1 px-1 sm:h-6 sm:px-1.5">
                 <span className="text-xs font-black italic leading-none tracking-tight text-brand sm:text-sm">FREE</span>
@@ -67,6 +72,7 @@ export default function ProductCard({ product, priority = false }) {
             <h3 className="line-clamp-2 min-h-12 text-sm leading-6 sm:text-base">
               {title}
             </h3>
+
             <div className="cursor-auto">
               <span className="text-base font-bold text-brand sm:text-xl">
                 {replaceNumbers(

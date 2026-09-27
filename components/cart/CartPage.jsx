@@ -6,6 +6,8 @@ import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { ArrowRight, ShoppingBag, ShoppingCart } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { getCheckoutCampaignPreview } from "@/backend/serverActions/checkoutCampaignPreviewAction";
 import Link from "next/link";
 import CartItems from "./CartItems";
 
@@ -20,7 +22,24 @@ export default function CartPage({ setIsOpen }) {
     totalCartQuantity,
     totalCartRegularPrice,
   } = useCart();
-  const discount = Math.max(0, totalCartRegularPrice - totalCartPrice);
+  const [campaignPreview, setCampaignPreview] = useState({ itemDiscounts: [], cartOffers: [] });
+  const campaignItemDiscount = campaignPreview.itemDiscounts.reduce((sum, offer) => sum + Number(offer.discount || 0) * Number(offer.quantity || 1), 0);
+  const appliedCartDiscount = campaignPreview.cartOffers.filter((offer) => offer.applied && ["CART_DISCOUNT", "COUPON", "PAYMENT_DISCOUNT"].includes(offer.type)).reduce((sum, offer) => sum + Number(offer.discount || 0), 0);
+  const discount = Math.max(0, totalCartRegularPrice - totalCartPrice) + campaignItemDiscount + appliedCartDiscount;
+  const cartTotal = Math.max(0, totalCartPrice - campaignItemDiscount - appliedCartDiscount);
+  const productCampaignOffers = campaignPreview.cartOffers.filter((offer) => offer.isProductScoped);
+  const cartCampaignOffers = campaignPreview.cartOffers.filter((offer) => !offer.isProductScoped);
+  const cartItemsKey = JSON.stringify(cartItems.map((item) => [item.variation?.id || item.variationId, item.quantity]));
+
+  useEffect(() => {
+    let current = true;
+    const items = cartItems.map((item) => ({ variationId: item.variation?.id || item.variationId, quantity: item.quantity })).filter((item) => item.variationId);
+    if (!items.length) { setCampaignPreview({ itemDiscounts: [], cartOffers: [] }); return () => { current = false; }; }
+    getCheckoutCampaignPreview({ items }).then((result) => {
+      if (current) setCampaignPreview(result?.success ? { itemDiscounts: result.data?.itemDiscounts || [], cartOffers: result.data?.cartOffers || [] } : { itemDiscounts: [], cartOffers: [] });
+    }).catch(() => { if (current) setCampaignPreview({ itemDiscounts: [], cartOffers: [] }); });
+    return () => { current = false; };
+  }, [cartItemsKey]);
 
   const eventHandler = () => {
     setIsOpen(false);
@@ -60,7 +79,7 @@ export default function CartPage({ setIsOpen }) {
 
       {cartItems.length > 0 ? (
         <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain py-4">
-          <CartItems />
+          <CartItems itemDiscounts={campaignPreview.itemDiscounts} scopedOffers={productCampaignOffers} />
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-6 text-center">
@@ -90,10 +109,21 @@ export default function CartPage({ setIsOpen }) {
                 <span className="font-semibold">৳{money(discount)}</span>
               </div>
             )}
+            {appliedCartDiscount > 0 && <div className="flex items-center justify-between text-emerald-600"><span>ক্যাম্পেইন ছাড়</span><span className="font-semibold">−৳{money(appliedCartDiscount)}</span></div>}
             <div className="flex items-end justify-between gap-3">
               <span className="text-text-muted">সর্বমোট</span>
-              <strong className="text-xl text-text">৳{money(totalCartPrice)}</strong>
+              <strong className="text-xl text-text">৳{money(cartTotal)}</strong>
             </div>
+            {cartCampaignOffers.length > 0 && <div className="space-y-2 px-1 pt-1">
+              {cartCampaignOffers.map((offer) => <div key={offer.id} className="text-[11px] leading-4">
+                {offer.applied
+                  ? <p className="whitespace-normal break-words"><span className="font-semibold text-text">{replaceNumbers(offer.name)}: </span><span className="text-xs text-primary">{replaceNumbers(offer.ruleText)}{offer.discount > 0 ? ` · −৳${money(offer.discount)}` : ""}</span></p>
+                  : <>
+                    <p className="whitespace-normal break-words text-primary"><span className="font-semibold text-text">{replaceNumbers(offer.name)}: </span><span className="text-primary">{replaceNumbers(offer.target > 0 ? offer.message : `${offer.ruleText} · ${offer.message}`)}</span></p>
+                    {offer.target > 0 && <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-surface-muted" role="progressbar" aria-label={`${replaceNumbers(offer.name)} অফারের অগ্রগতি`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(offer.percent)}><div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${offer.percent}%` }} /></div>}
+                  </>}
+              </div>)}
+            </div>}
           </div>
 
           <Link

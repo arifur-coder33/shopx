@@ -23,12 +23,16 @@ function parseIds(value) {
 function parseProductPairs(value) {
   const parsed = JSON.parse(String(value || "[]"));
   if (!Array.isArray(parsed)) throw new Error("Invalid combo rules.");
-  return parsed.map((pair) => ({
-    triggerType: String(pair?.triggerType || "PRODUCT").toUpperCase(),
-    requiredProductIds: Array.isArray(pair?.requiredProductIds) ? pair.requiredProductIds.map(String) : (pair?.requiredProductId ? [String(pair.requiredProductId)] : []),
-    requiredCategoryIds: Array.isArray(pair?.requiredCategoryIds) ? pair.requiredCategoryIds.map(String) : (pair?.requiredCategoryId ? [String(pair.requiredCategoryId)] : []),
-    rewardProductId: String(pair?.rewardProductId || ""),
-  }));
+  return parsed.map((pair) => {
+    const rewardProductIds = Array.isArray(pair?.rewardProductIds) && pair.rewardProductIds.length ? [...new Set(pair.rewardProductIds.map(String))] : (pair?.rewardProductId ? [String(pair.rewardProductId)] : []);
+    return {
+      triggerType: String(pair?.triggerType || "PRODUCT").toUpperCase(),
+      requiredProductIds: Array.isArray(pair?.requiredProductIds) ? pair.requiredProductIds.map(String) : (pair?.requiredProductId ? [String(pair.requiredProductId)] : []),
+      requiredCategoryIds: Array.isArray(pair?.requiredCategoryIds) ? pair.requiredCategoryIds.map(String) : (pair?.requiredCategoryId ? [String(pair.requiredCategoryId)] : []),
+      rewardProductIds,
+      rewardProductId: rewardProductIds[0] || "",
+    };
+  });
 }
 
 function dateOrNull(value) {
@@ -190,14 +194,29 @@ export async function saveCampaign(formData) {
     if (targetScope === "PRODUCT" && (!productIds.length || categoryIds.length)) throw new Error("Choose one or more products only.");
     if (targetScope === "ALL" && (productIds.length || categoryIds.length)) throw new Error("All products scope cannot include specific targets.");
     if (data.type === "COUPON" && !data.couponCode) throw new Error("Coupon campaigns need a coupon code.");
+    if (data.type === "COMBO") {
+      const comboType = data.configuration.comboType;
+      if (!["BUNDLE_FIXED", "BUNDLE_PERCENT", "BUY_X_GET_Y", "BUY_X_GET_Y_DISCOUNT", "QUANTITY"].includes(comboType)) throw new Error("Choose a valid combo offer type.");
+      if (!data.configuration.requiredQuantity || !data.configuration.rewardQuantity) throw new Error("Set both the qualifying quantity and reward quantity.");
+      if (comboType === "BUNDLE_FIXED" && data.discountType !== "FIXED") throw new Error("A fixed-price bundle must use a fixed price.");
+      if (comboType === "BUNDLE_PERCENT" && data.discountType !== "PERCENT") throw new Error("A percentage bundle must use percentage discount.");
+      if (comboType === "BUY_X_GET_Y_DISCOUNT" && (!(data.configuration.rewardDiscountPercent > 0) || data.configuration.rewardDiscountPercent > 100)) throw new Error("Set a reward discount between 0 and 100 percent.");
+      if (comboType === "BUY_X_GET_Y" && (data.discountType !== "PERCENT" || data.discountValue !== 100)) throw new Error("A free reward must use 100 percent discount.");
+    }
     if (data.type === "COMBO" && !data.configuration.productPairs.length) throw new Error("Add at least one complete buy/get product pair.");
-    if (data.type === "COMBO" && data.configuration.productPairs.some((pair) => !["ALL", "PRODUCT", "CATEGORY"].includes(pair.triggerType) || !/^[a-f\d]{24}$/i.test(pair.rewardProductId) || (pair.triggerType === "PRODUCT" ? !pair.requiredProductIds.length || pair.requiredProductIds.some((productId) => !/^[a-f\d]{24}$/i.test(productId)) || pair.requiredProductIds.includes(pair.rewardProductId) || !!pair.requiredCategoryIds.length : pair.triggerType === "CATEGORY" ? !pair.requiredCategoryIds.length || pair.requiredCategoryIds.some((categoryId) => !/^[a-f\d]{24}$/i.test(categoryId)) || !!pair.requiredProductIds.length : !!pair.requiredProductIds.length || !!pair.requiredCategoryIds.length))) throw new Error("Choose all products, valid specific products, or valid categories, and one reward product for every combo rule.");
+    if (data.type === "COMBO" && data.configuration.productPairs.some((pair) => {
+      const rewards = pair.rewardProductIds || [];
+      if (!rewards.length || rewards.some((productId) => !/^[a-f\d]{24}$/i.test(productId))) return true;
+      if (pair.triggerType === "PRODUCT") return !pair.requiredProductIds.length || pair.requiredProductIds.some((productId) => !/^[a-f\d]{24}$/i.test(productId)) || pair.requiredProductIds.some((productId) => rewards.includes(productId)) || !!pair.requiredCategoryIds.length;
+      if (pair.triggerType === "CATEGORY") return !pair.requiredCategoryIds.length || pair.requiredCategoryIds.some((categoryId) => !/^[a-f\d]{24}$/i.test(categoryId)) || !!pair.requiredProductIds.length;
+      return pair.triggerType !== "ALL" || !!pair.requiredProductIds.length || !!pair.requiredCategoryIds.length;
+    })) throw new Error("Choose valid buy conditions and one or more valid reward products for every combo rule.");
     const saved = await prisma.$transaction(async (tx) => {
       if (data.couponCode) {
         const duplicate = await tx.campaign.findFirst({ where: { couponCode: data.couponCode, ...(id ? { id: { not: id } } : {}) }, select: { id: true } });
         if (duplicate) throw new Error("That coupon code is already in use.");
       }
-      const pairProductIds = [...new Set(data.configuration.productPairs.flatMap((pair) => [pair.rewardProductId, ...(pair.triggerType === "PRODUCT" ? pair.requiredProductIds : [])]))];
+      const pairProductIds = [...new Set(data.configuration.productPairs.flatMap((pair) => [...(pair.rewardProductIds || []), ...(pair.triggerType === "PRODUCT" ? pair.requiredProductIds : [])]))];
       const pairCategoryIds = [...new Set(data.configuration.productPairs.filter((pair) => pair.triggerType === "CATEGORY").flatMap((pair) => pair.requiredCategoryIds))];
       if (pairProductIds.length && await tx.product.count({ where: { id: { in: pairProductIds } } }) !== pairProductIds.length) throw new Error("One or more combo products do not exist.");
       if (pairCategoryIds.length && await tx.category.count({ where: { id: { in: pairCategoryIds } } }) !== pairCategoryIds.length) throw new Error("One or more combo categories do not exist.");

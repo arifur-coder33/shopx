@@ -4,7 +4,7 @@ import {
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
 import { buildProductSeo } from "@/backend/utils/productSeo";
-import { applyProductCampaign, getActiveCampaigns, toCampaignDisplayData } from "@/backend/services/campaignService";
+import { applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority, toCampaignDisplayData } from "@/backend/services/campaignService";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import JsonLd from "@/components/seo/JsonLd";
 import { getSiteUrl } from "@/lib/siteUrl";
@@ -147,10 +147,10 @@ export default async function ProductPage({ params }) {
     const config = campaign.configuration || {};
     const comboProductIds = (config.productPairs || []).flatMap((pair) => [
       ...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])),
-      ...(pair.rewardProductIds || (pair.rewardProductId ? [pair.rewardProductId] : [])),
+      ...(pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : [])),
     ]);
     const hasTargets = campaign.products?.length || campaign.categories?.length || comboProductIds.length;
-    return !hasTargets ||
+    return (!hasTargets && campaign.type !== "COUPON") ||
       campaign.products?.some((target) => target.productId === data.id) ||
       campaign.categories?.some((target) => target.categoryId === data.categoryId) ||
       comboProductIds.includes(data.id);
@@ -161,8 +161,10 @@ export default async function ProductPage({ params }) {
     const sale = Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < regular
       ? Number(variation.discountPrice)
       : regular;
+    const productItem = { productId: data.id, categoryId: data.categoryId, quantity: 1, basePrice: sale, price: sale };
+    const applicableCampaigns = selectCampaignsByPriority({ campaigns: productCampaigns, items: [productItem] });
     const pricing = applyProductCampaign({
-      campaigns: productCampaigns,
+      campaigns: applicableCampaigns,
       productId: data.id,
       categoryId: data.categoryId,
       basePrice: sale,

@@ -101,7 +101,7 @@ export async function getCheckoutCampaignPreview({
           categoryId: variation.product.categoryId,
           basePrice,
         });
-        if (pricing.campaign) { remember(pricing.campaign); itemDiscounts.push({ variationId: variation.id, productId: variation.product.id, name: pricing.campaign.name, ruleText: getCampaignRuleText(pricing.campaign), discount: money(pricing.discount), startAt: pricing.campaign.startAt?.toISOString?.() || null, endAt: pricing.campaign.endAt?.toISOString?.() || null }); }
+        if (pricing.campaign) { remember(pricing.campaign); itemDiscounts.push({ campaignId: pricing.campaign.id, isProductSpecific: pricing.campaign.type === "PRODUCT_DISCOUNT", variationId: variation.id, productId: variation.product.id, name: pricing.campaign.name, ruleText: getCampaignRuleText(pricing.campaign), discount: money(pricing.discount), quantity: item.quantity, startAt: pricing.campaign.startAt?.toISOString?.() || null, endAt: pricing.campaign.endAt?.toISOString?.() || null }); }
         return { item, variation, pricing, basePrice };
       })
       .filter(Boolean);
@@ -185,6 +185,81 @@ export async function getCheckoutCampaignPreview({
         discount: paymentDeliveryPricing.discount,
       });
 
+    const cartOfferScope = (campaign) => {
+      const isProductScoped = Boolean(campaign.products?.length || campaign.categories?.length);
+      const productIds = pricedItems.filter(({ variation }) =>
+        (!campaign.products?.length && !campaign.categories?.length) ||
+        campaign.products?.some((target) => target.productId === variation.product.id) ||
+        campaign.categories?.some((target) => target.categoryId === variation.product.categoryId),
+      ).map(({ variation }) => variation.product.id);
+      return { isProductScoped, productIds: [...new Set(productIds)] };
+    };
+    const appliedCampaignIds = new Set(rowsByCampaign.keys());
+    const cartGroupTypes = ["CART_DISCOUNT", "COUPON", "DELIVERY", "DELIVERY_DISCOUNT", "PAYMENT_DISCOUNT"];
+    const compatibleCartCampaigns = compatibleCampaigns(campaigns, [...selectedCampaigns.values()])
+      .filter((campaign) => cartGroupTypes.includes(campaign.type) && !appliedCampaignIds.has(campaign.id));
+    const cartOffers = [...rowsByCampaign.values()]
+      .filter(({ campaign }) => cartGroupTypes.includes(campaign.type))
+      .map(({ campaign, discount }) => ({
+        id: campaign.id,
+        type: campaign.type,
+        priority: Number(campaign.priority) || 0,
+        isFreeDelivery: (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) || campaign.configuration?.paymentDiscountTarget === "DELIVERY") && (campaign.configuration?.offerType === "FREE" || (campaign.discountType === "PERCENT" && Number(campaign.discountValue) >= 100)),
+        name: campaign.name,
+        ...cartOfferScope(campaign),
+        ruleText: getCampaignRuleText(campaign),
+        applied: true,
+        discount: money(discount),
+        remaining: 0,
+        message: "এই অর্ডারে প্রযোজ্য",
+      }));
+    const progressOffers = compatibleCartCampaigns.map((campaign) => {
+      const eligibleItems = pricedItems.filter(({ variation }) =>
+        (!campaign.products?.length && !campaign.categories?.length) ||
+        campaign.products?.some((target) => target.productId === variation.product.id) ||
+        campaign.categories?.some((target) => target.categoryId === variation.product.categoryId),
+      );
+      if (!eligibleItems.length) return null;
+      const target = money(campaign.minimumOrderAmount);
+      const baseKey = campaign.type === "CART_DISCOUNT" && campaign.discountBase === "PRODUCT_SUBTOTAL" ? "basePrice" : "pricing.price";
+      const current = money(eligibleItems.reduce((sum, line) => sum + (baseKey === "basePrice" ? line.basePrice : line.pricing.price) * line.item.quantity, 0));
+      const remaining = money(target - current);
+      const paymentOffer = campaign.type === "PAYMENT_DISCOUNT";
+      const needsPaymentChoice = paymentOffer && !campaignPaymentMethod && remaining <= 0;
+      if (!needsPaymentChoice && (target <= 0 || remaining <= 0)) return null;
+      const deliveryOffer = ["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) || campaign.configuration?.paymentDiscountTarget === "DELIVERY";
+      const freeDelivery = deliveryOffer && (campaign.configuration?.offerType === "FREE" || (campaign.discountType === "PERCENT" && Number(campaign.discountValue) >= 100));
+      const reward = freeDelivery ? "ফ্রি ডেলিভারি" : campaign.discountType === "PERCENT" ? `${Number(campaign.discountValue) || 0}% ছাড়` : `৳${Number(campaign.discountValue || 0).toLocaleString("en-US")} ছাড়`;
+      const paymentLabel = campaign.configuration?.paymentScope === "ONLINE" ? "অনলাইন পেমেন্টে " : campaign.configuration?.paymentScope === "COD" ? "COD পেমেন্টে " : "পেমেন্টে ";
+      const purchaseTarget = campaign.products?.length || campaign.categories?.length ? "যোগ্য পণ্যে" : "পণ্যে";
+      return {
+        id: campaign.id,
+        type: campaign.type,
+        priority: Number(campaign.priority) || 0,
+        isFreeDelivery: (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) || campaign.configuration?.paymentDiscountTarget === "DELIVERY") && (campaign.configuration?.offerType === "FREE" || (campaign.discountType === "PERCENT" && Number(campaign.discountValue) >= 100)),
+        name: campaign.name,
+        ...cartOfferScope(campaign),
+        ruleText: getCampaignRuleText(campaign),
+        applied: false,
+        discount: 0,
+        remaining: Math.max(0, remaining),
+        current,
+        target,
+        percent: target > 0 ? Math.min(100, Math.max(0, (current / target) * 100)) : 100,
+        message: needsPaymentChoice
+          ? "checkout-এ payment method নির্বাচন করলে এই offer প্রযোজ্য হবে"
+          : `আর ৳${remaining.toLocaleString("en-US")} ${purchaseTarget} কিনলে ${paymentOffer ? paymentLabel : ""}${reward}`,
+      };
+    }).filter(Boolean).sort((left, right) => left.remaining - right.remaining);
+    cartOffers.push(...progressOffers);
+    const freeDeliveryOffers = cartOffers.filter((offer) => offer.isFreeDelivery);
+    if (freeDeliveryOffers.length > 1) {
+      const preferredFreeDelivery = [...freeDeliveryOffers].sort((left, right) => Number(right.applied) - Number(left.applied) || right.priority - left.priority)[0];
+      for (let index = cartOffers.length - 1; index >= 0; index -= 1) {
+        if (cartOffers[index].isFreeDelivery && cartOffers[index].id !== preferredFreeDelivery.id) cartOffers.splice(index, 1);
+      }
+    }
+
     const rows = [...rowsByCampaign.values()]
       .filter((row) => row.discount > 0)
       .map((row) => displayRow(row.campaign, row.discount));
@@ -193,6 +268,7 @@ export async function getCheckoutCampaignPreview({
       data: {
         rows,
         itemDiscounts,
+        cartOffers,
         total: money(paymentPricing.subtotal + paymentDeliveryPricing.deliveryCharge),
       },
     };

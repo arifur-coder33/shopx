@@ -362,7 +362,29 @@ export async function createOrder(formData) {
       // Campaigns are evaluated here, after trusted product data is loaded.
       // Browser-supplied totals and prices are never used for the order.
       const activeCampaigns = await getActiveCampaigns({ couponCode: data.campaignCode });
-      const priorityItems = orderItems.map((item) => { const variation = variationMap[item.variation.id]; const regular = Number(variation.regularPrice); const sale = Number(variation.discountPrice); const price = sale > 0 && sale < regular ? sale : regular; return { productId: variation.product.id, categoryId: variation.product.categoryId, quantity: Number(item.quantity), basePrice: price, price }; });
+      const comboRewardLines = orderItems.filter((item) => item.comboReward === true);
+      const purchasedLines = orderItems.filter((item) => item.comboReward !== true);
+      const comboCampaignById = new Map(activeCampaigns.filter((campaign) => campaign.type === "COMBO" || campaign.group === "COMBO").map((campaign) => [campaign.id, campaign]));
+      const comboCampaignsUsed = new Map();
+      for (const item of comboRewardLines) {
+        const variation = variationMap[item.variation.id];
+        const campaign = comboCampaignById.get(item.comboCampaignId);
+        const pair = campaign?.configuration?.productPairs?.find((candidate) => (candidate.rewardProductIds || (candidate.rewardProductId ? [candidate.rewardProductId] : [])).includes(variation?.product?.id));
+        if (!campaign || !pair) throw new Error("এই combo reward আর চালু নেই। পণ্যগুলো আবার যাচাই করুন।");
+        const requiredQty = Math.max(1, Number(campaign.configuration?.requiredQuantity) || 1);
+        const qualifyingQty = purchasedLines.reduce((sum, purchased) => {
+          const source = variationMap[purchased.variation.id];
+          if (!source?.product) return sum;
+          const matches = pair.triggerType === "ALL" || (pair.triggerType === "PRODUCT"
+            ? (pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])).includes(source.product.id)
+            : (pair.requiredCategoryIds || (pair.requiredCategoryId ? [pair.requiredCategoryId] : [])).includes(source.product.categoryId));
+          return sum + (matches ? Number(purchased.quantity) || 0 : 0);
+        }, 0);
+        const rewardQuantity = Math.max(1, Number(campaign.configuration?.rewardQuantity) || 1);
+        if (qualifyingQty < requiredQty || Number(item.quantity) !== rewardQuantity) throw new Error("Combo offer-এর শর্ত পূরণ হয়নি। পণ্যগুলো আবার যাচাই করুন।");
+        comboCampaignsUsed.set(campaign.id, campaign);
+      }
+      const priorityItems = purchasedLines.map((item) => { const variation = variationMap[item.variation.id]; const regular = Number(variation.regularPrice); const sale = Number(variation.discountPrice); const price = sale > 0 && sale < regular ? sale : regular; return { productId: variation.product.id, categoryId: variation.product.categoryId, quantity: Number(item.quantity), basePrice: price, price }; });
       const prioritizedCampaigns = selectCampaignsByPriority({ campaigns: activeCampaigns, items: priorityItems, paymentMethod: campaignPaymentMethod });
       const selectedCampaigns = new Map();
       const compatible = () => compatibleCampaigns(prioritizedCampaigns, [...selectedCampaigns.values()]);
@@ -372,8 +394,38 @@ export async function createOrder(formData) {
         const regular = Number(variation.regularPrice);
         const discounted = Number(variation.discountPrice);
         const basePrice = discounted > 0 && discounted < regular ? discounted : regular;
-        const pricing = applyProductCampaign({ campaigns: compatible(), productId: variation.product.id, categoryId: variation.product.categoryId, basePrice });
-        remember(pricing.campaign);
+        let pricing;
+        if (item.comboReward === true) {
+          const campaign = comboCampaignById.get(item.comboCampaignId);
+          const comboType = campaign.configuration?.comboType || "BUNDLE_FIXED";
+          const percent = comboType === "BUY_X_GET_Y" ? 100
+            : comboType === "BUY_X_GET_Y_DISCOUNT" ? Number(campaign.configuration?.rewardDiscountPercent || 0)
+              : comboType === "BUNDLE_PERCENT" || (comboType === "QUANTITY" && campaign.discountType === "PERCENT") ? Number(campaign.discountValue || 0) : 0;
+          const fixed = comboType === "QUANTITY" && campaign.discountType !== "PERCENT" ? Number(campaign.discountValue || 0) : 0;
+          let rewardPrice = Math.max(0, Math.round((basePrice * (1 - Math.min(100, percent) / 100) - fixed) * 100) / 100);
+          if (comboType === "BUNDLE_FIXED") {
+            const pair = campaign.configuration?.productPairs?.find((candidate) => (candidate.rewardProductIds || (candidate.rewardProductId ? [candidate.rewardProductId] : [])).includes(variation.product.id));
+            const qualifying = purchasedLines.filter((purchased) => {
+              const source = variationMap[purchased.variation.id];
+              return source?.product && pair && (pair.triggerType === "ALL" || (pair.triggerType === "PRODUCT"
+                ? (pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])).includes(source.product.id)
+                : (pair.requiredCategoryIds || (pair.requiredCategoryId ? [pair.requiredCategoryId] : [])).includes(source.product.categoryId)));
+            });
+            const triggerSubtotal = qualifying.reduce((sum, purchased) => {
+              const source = variationMap[purchased.variation.id];
+              const regular = Number(source.regularPrice) || 0;
+              const sale = Number(source.discountPrice) || 0;
+              return sum + (sale > 0 && sale < regular ? sale : regular) * (Number(purchased.quantity) || 1);
+            }, 0);
+            const rewardCount = (pair?.rewardProductIds || (pair?.rewardProductId ? [pair.rewardProductId] : [])).length * Math.max(1, Number(campaign.configuration?.rewardQuantity) || 1);
+            rewardPrice = Math.max(0, Math.round((Number(campaign.discountValue || 0) - triggerSubtotal) / Math.max(1, rewardCount) * 100) / 100);
+          }
+          pricing = { price: rewardPrice, discount: Math.max(0, basePrice - rewardPrice), campaign };
+          remember(campaign);
+        } else {
+          pricing = applyProductCampaign({ campaigns: compatible(), productId: variation.product.id, categoryId: variation.product.categoryId, basePrice });
+          remember(pricing.campaign);
+        }
         return { item, variation, pricing };
       });
       const campaignOrderPrice = pricedItems.reduce((total, { item, pricing }) => total + pricing.price * Number(item.quantity), 0);
@@ -398,6 +450,7 @@ export async function createOrder(formData) {
       const totalAmount = merchandiseTotal + deliveryCharge;
       const appliedCampaigns = [
         ...pricedItems.map(({ pricing }) => pricing.campaign),
+        ...comboCampaignsUsed.values(),
         cartPricing.campaign,
         paymentPricing.campaign,
         deliveryPricing.campaign,
@@ -423,7 +476,8 @@ export async function createOrder(formData) {
           deliveryCharge,
           orderPrice: merchandiseTotal,
           subtotal: campaignOrderPrice,
-          productDiscount: pricedItems.reduce((sum, { item, pricing }) => sum + pricing.discount * Number(item.quantity), 0),
+          productDiscount: pricedItems.reduce((sum, { item, pricing }) => sum + (item.comboReward ? 0 : pricing.discount * Number(item.quantity)), 0),
+          comboDiscount: pricedItems.reduce((sum, { item, pricing }) => sum + (item.comboReward ? pricing.discount * Number(item.quantity) : 0), 0),
           cartDiscount: cartPricing.discount,
           paymentDiscount: paymentPricing.discount,
           deliveryDiscount: totalDeliveryDiscount,

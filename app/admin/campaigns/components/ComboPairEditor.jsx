@@ -64,15 +64,15 @@ export default function ComboPairEditor({ products, categories, initialPairs = [
     triggerType: ["ALL", "PRODUCT", "CATEGORY"].includes(pair.triggerType) ? pair.triggerType : "PRODUCT",
     requiredProductIds: pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : []),
     requiredCategoryIds: pair.requiredCategoryIds || (pair.requiredCategoryId ? [pair.requiredCategoryId] : []),
-    rewardProductId: pair.rewardProductId || "",
-  })) : [{ triggerType: "ALL", requiredProductIds: [], requiredCategoryIds: [], rewardProductId: "" }]);
+    rewardProductIds: pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : []),
+  })) : [{ triggerType: "ALL", requiredProductIds: [], requiredCategoryIds: [], rewardProductIds: [] }]);
   const update = (next) => { setPairs(next); onChange(next); };
   const setField = (index, field, value) => update(pairs.map((pair, i) => i === index ? { ...pair, [field]: value } : pair));
-  const complete = (pair) => pair.rewardProductId && (pair.triggerType === "ALL" || (pair.triggerType === "PRODUCT" ? pair.requiredProductIds.length > 0 : pair.requiredCategoryIds.length > 0));
+  const complete = (pair) => pair.rewardProductIds.length > 0 && (pair.triggerType === "ALL" || (pair.triggerType === "PRODUCT" ? pair.requiredProductIds.length > 0 : pair.requiredCategoryIds.length > 0));
 
   return <div className="space-y-4 md:col-span-2">
     <input type="hidden" name="productPairs" value={JSON.stringify(pairs.filter(complete))} readOnly />
-    <div><h4 className="text-sm font-medium">Buy condition and reward</h4><p className="text-xs text-text-muted">Choose any product, one or more specific products (any one can trigger it), or multiple categories for each rule, then select one reward product.</p></div>
+    <div><h4 className="text-sm font-medium">Buy condition and reward</h4><p className="text-xs text-text-muted">Choose any product, one or more specific products (any one can trigger it), or multiple categories for each rule, then select one or more reward products.</p></div>
     {pairs.map((pair, index) => <section key={index} className="space-y-3 rounded-lg border p-3">
       <div className="flex items-center justify-between"><h5 className="text-sm font-semibold">Rule {index + 1}</h5>{pairs.length > 1 && <button type="button" onClick={() => update(pairs.filter((_, i) => i !== index))} className="text-sm text-red-600">Remove rule</button>}</div>
       <fieldset className="space-y-2"><legend className="text-sm font-medium">When customer buys</legend>
@@ -85,8 +85,8 @@ export default function ComboPairEditor({ products, categories, initialPairs = [
         {pair.triggerType === "CATEGORY" && <ComboCategoryPicker index={index} categories={categories} selectedIds={pair.requiredCategoryIds} setSelectedIds={(ids) => setField(index, "requiredCategoryIds", ids)} />}
         {pair.triggerType === "ALL" && <p className="text-xs text-text-muted">The rule can be triggered by any product in the cart.</p>}
       </fieldset>
-      <div><h5 className="mb-2 text-sm font-medium">Reward product</h5><ComboProductPicker name={"pair-reward-" + index} label="Reward product" products={products} single selectedIds={pair.rewardProductId ? [pair.rewardProductId] : []} setSelectedIds={(ids) => setField(index, "rewardProductId", ids[0] || "")} /></div>
+      <div><h5 className="mb-2 text-sm font-medium">Reward products</h5><ComboProductPicker name={"pair-reward-" + index} label="Reward products" products={products} selectedIds={pair.rewardProductIds} setSelectedIds={(ids) => setField(index, "rewardProductIds", ids)} /></div>
     </section>)}
-    <button type="button" onClick={() => update([...pairs, { triggerType: "ALL", requiredProductIds: [], requiredCategoryIds: [], rewardProductId: "" }])} className="rounded-lg border px-3 py-2 text-sm">+ Add another rule</button>
+    <button type="button" onClick={() => update([...pairs, { triggerType: "ALL", requiredProductIds: [], requiredCategoryIds: [], rewardProductIds: [] }])} className="rounded-lg border px-3 py-2 text-sm">+ Add another rule</button>
   </div>;
 }

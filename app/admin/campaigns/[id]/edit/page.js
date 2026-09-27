@@ -18,7 +18,7 @@ export default async function EditCampaignPage({ params }) {
     },
   });
   if (!campaign) notFound();
-  const productIds = [...new Set([...campaign.products.map((item) => item.productId), ...(campaign.configuration?.requiredProductIds || []), ...(campaign.configuration?.rewardProductIds || []), ...(campaign.configuration?.productPairs || []).flatMap((pair) => [...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])), pair.rewardProductId])])];
+  const productIds = [...new Set([...campaign.products.map((item) => item.productId), ...(campaign.configuration?.requiredProductIds || []), ...(campaign.configuration?.rewardProductIds || []), ...(campaign.configuration?.productPairs || []).flatMap((pair) => [...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])), ...(pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : []))])])];
   const categoryIds = [...new Set([...campaign.categories.map((item) => item.categoryId), ...(campaign.configuration?.productPairs || []).flatMap((pair) => pair.requiredCategoryIds || (pair.requiredCategoryId ? [pair.requiredCategoryId] : [])).filter(Boolean)])];
   const options = await getCampaignEditorOptions(productIds, categoryIds);
   const bannerMedia = campaign.bannerUrl ? await prisma.media.findFirst({ where: { name: campaign.bannerUrl }, select: { id: true, name: true } }) : null;

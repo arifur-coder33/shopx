@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { getComboRewardBadge, comboPairMatchesProduct } from "@/components/campaign/comboOfferText";
 
 const money = (value) => Math.round(Math.max(0, Number(value) || 0) * 100) / 100;
 
@@ -48,6 +49,35 @@ function discountAmount(campaign, basePrice) {
   return money(Math.min(basePrice, campaign.discountValue || 0));
 }
 
+async function withComboDisplayNames(campaigns) {
+  const comboCampaigns = campaigns.filter((campaign) => campaign.type === "COMBO" || campaign.group === "COMBO");
+  const pairs = comboCampaigns.flatMap((campaign) => campaign.configuration?.productPairs || []);
+  const productIds = [...new Set(pairs.flatMap((pair) => [ ...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])), ...(pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : [])) ].filter(Boolean)))];
+  const categoryIds = [...new Set(pairs.flatMap((pair) => pair.requiredCategoryIds || (pair.requiredCategoryId ? [pair.requiredCategoryId] : [])))];
+  if (!productIds.length && !categoryIds.length) return campaigns;
+  const [products, categories] = await Promise.all([
+    productIds.length ? prisma.product.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, slug: true, thumbnail: { select: { name: true } }, variations: { select: { id: true, sku: true, regularPrice: true, discountPrice: true, weight: true, thumbnail: { select: { name: true } }, combinations: { include: { variationName: { select: { name: true } }, variationValue: { select: { value: true } } } } } } } }) : [],
+    categoryIds.length ? prisma.category.findMany({ where: { id: { in: categoryIds } }, select: { id: true, name: true } }) : [],
+  ]);
+  const productNames = new Map(products.map((product) => [product.id, product.title]));
+  const productThumbnails = new Map(products.map((product) => [product.id, product.thumbnail?.name || null]));
+  const productMap = new Map(products.map((product) => [product.id, product]));
+  const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
+  return campaigns.map((campaign) => {
+    if (campaign.type !== "COMBO" && campaign.group !== "COMBO") return campaign;
+    const configuration = campaign.configuration || {};
+    return { ...campaign, configuration: { ...configuration, productPairs: (configuration.productPairs || []).map((pair) => ({
+      ...pair,
+      requiredProductNames: (pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])).map((id) => productNames.get(id)).filter(Boolean),
+      requiredCategoryNames: (pair.requiredCategoryIds || (pair.requiredCategoryId ? [pair.requiredCategoryId] : [])).map((id) => categoryNames.get(id)).filter(Boolean),
+      rewardProductIds: pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : []),
+      rewardProductNames: (pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : [])).map((id) => productNames.get(id)).filter(Boolean),
+      rewardProducts: (pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : [])).map((id) => { const product = productMap.get(id); const prices = (product?.variations || []).map((variation) => ({ regular: Number(variation.regularPrice) || 0, sale: Number(variation.discountPrice) || 0 })).map(({ regular, sale }) => sale > 0 && sale < regular ? sale : regular).filter((price) => price > 0); const regularPrices = (product?.variations || []).map((variation) => Number(variation.regularPrice) || 0).filter((price) => price > 0); const sorted = [...(product?.variations || [])].sort((a, b) => { const price = (v) => { const regular = Number(v.regularPrice) || 0; const sale = Number(v.discountPrice) || 0; return sale > 0 && sale < regular ? sale : regular; }; return price(a) - price(b); }); const variation = sorted.find((item) => Number(item.regularPrice) > 0); const regular = Number(variation?.regularPrice) || 0; const sale = Number(variation?.discountPrice) || 0; return { id, name: product?.title || "Reward product", slug: product?.slug || "", thumbnail: variation?.thumbnail?.name || product?.thumbnail?.name || null, price: sale > 0 && sale < regular ? sale : (regular || null), regularPrice: regular || null, variation: variation ? { id: variation.id, sku: variation.sku, weight: variation.weight, regularPrice: variation.regularPrice, discountPrice: variation.discountPrice, thumbnail: variation.thumbnail?.name || product?.thumbnail?.name || null, combinations: variation.combinations } : null, variations: sorted.map((item) => ({ id: item.id, sku: item.sku, weight: item.weight, regularPrice: item.regularPrice, discountPrice: item.discountPrice, thumbnail: item.thumbnail?.name || product?.thumbnail?.name || null, combinations: item.combinations })) }; }),
+      rewardProductName: productNames.get((pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : []))[0]) || "",
+      rewardProductThumbnail: productThumbnails.get((pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : []))[0]) || null,
+    })) } };
+  });
+}
 export async function getActiveCampaigns({ couponCode } = {}) {
   const now = new Date();
   const campaigns = await prisma.campaign.findMany({
@@ -62,10 +92,10 @@ export async function getActiveCampaigns({ couponCode } = {}) {
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
   });
   const normalizedCode = couponCode ? String(couponCode).trim().toUpperCase() : null;
-  return campaigns.filter((campaign) =>
+  return withComboDisplayNames(campaigns.filter((campaign) =>
     isWithinSchedule(campaign, now) &&
-    (campaign.type !== "COUPON" || (normalizedCode && campaign.couponCode === normalizedCode)),
-  );
+    (campaign.type !== "COUPON" || (normalizedCode && campaign.couponCode === normalizedCode))
+  ));
 }
 
 export async function getPublicCampaigns() {
@@ -105,11 +135,12 @@ export async function getPublicCampaigns() {
 export async function getPublicCampaignProducts(campaignId, page = 1, pageSize = 40) {
   if (!/^[a-f\d]{24}$/i.test(String(campaignId || ""))) return null;
   const now = new Date();
-  const campaign = await prisma.campaign.findUnique({
+  let campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
     include: { products: true, categories: true },
   });
   if (!campaign || campaign.status !== "PUBLISHED" || (campaign.endAt && campaign.endAt < now)) return null;
+  [campaign] = await withComboDisplayNames([campaign]);
 
   const configuration = campaign.configuration || {};
   const pairs = Array.isArray(configuration.productPairs) ? configuration.productPairs : [];
@@ -120,7 +151,7 @@ export async function getPublicCampaignProducts(campaignId, page = 1, pageSize =
   for (const pair of pairs) {
     for (const id of [
       ...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])),
-      ...(pair.rewardProductIds || (pair.rewardProductId ? [pair.rewardProductId] : [])),
+      ...(pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : [])),
     ]) if (id) productIds.add(id);
     for (const id of pair.requiredCategoryIds || (pair.requiredCategoryId ? [pair.requiredCategoryId] : [])) {
       if (id) categoryIds.add(id);
@@ -174,7 +205,7 @@ export async function getPublicCampaignProducts(campaignId, page = 1, pageSize =
         categoryId: true,
         hasVariations: true,
         thumbnail: { select: { name: true } },
-        variations: { select: { regularPrice: true, discountPrice: true } },
+        variations: { select: { id: true, sku: true, regularPrice: true, discountPrice: true, weight: true, thumbnail: { select: { name: true } }, combinations: { include: { variationName: { select: { name: true } }, variationValue: { select: { value: true } } } } } },
         category: { select: { name: true } },
       },
     }),
@@ -235,6 +266,11 @@ export function getProductCardCampaignData({
     categoryId,
     basePrice,
   });
+  const comboOffers = campaigns
+    .filter((campaign) => campaign.type === "COMBO" || campaign.group === "COMBO")
+    .flatMap((campaign) => (campaign.configuration?.productPairs || [])
+      .filter((pair) => comboPairMatchesProduct(pair, productId, categoryId))
+      .map((pair) => ({ id: `${campaign.id}-${pair.rewardProductIds?.[0] || pair.rewardProductId}`, badge: getComboRewardBadge(campaign), rewardProductName: pair.rewardProductName || "Reward product", rewardProductThumbnail: pair.rewardProductThumbnail || null, rewardProducts: pair.rewardProducts || [] })));
   const campaignDiscountPercent = productOffer.campaign && basePrice > 0
     ? Math.round((productOffer.discount / basePrice) * 100)
     : 0;
@@ -255,6 +291,7 @@ export function getProductCardCampaignData({
   return {
     campaignPrice: productOffer.campaign ? productOffer.price : null,
     campaignDiscountPercent,
+    comboOffers,
     deliveryCampaignLabel: deliveryCampaign
       ? Number(deliveryCampaign.minimumOrderAmount) > 0
         ? `Free delivery from ৳${Number(deliveryCampaign.minimumOrderAmount).toLocaleString()}`
@@ -426,5 +463,5 @@ export async function getCheckoutCampaignOffers() {
     include: { products: true, categories: true },
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
   });
-  return campaigns.map(toCampaignDisplayData);
+  return (await withComboDisplayNames(campaigns)).map(toCampaignDisplayData);
 }

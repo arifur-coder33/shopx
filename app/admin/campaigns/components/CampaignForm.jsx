@@ -29,7 +29,7 @@ const campaignRules = {
   DELIVERY_DISCOUNT: { title: "Delivery Discount", summary: "ডেলিভারি চার্জে ছাড় বা বিনামূল্যে ডেলিভারি দেওয়া হবে।", bullets: ["বিনামূল্যে ডেলিভারি, শতকরা ছাড় অথবা নির্দিষ্ট টাকার ছাড় বেছে নিন।", "ন্যূনতম অর্ডার মূল্য, ডেলিভারি এলাকা ও পাঠানোর পদ্ধতি নির্ধারণ করতে পারেন।"] },
   PAYMENT_DISCOUNT: { title: "Payment Discount", summary: "নির্বাচিত payment method-এ পণ্যের মূল্য বা delivery charge-এ ছাড় দেওয়া হবে।", bullets: ["ছাড়টি পণ্যের মোট মূল্য নাকি delivery charge-এ হবে বেছে নিন।", "শতকরা বা নির্দিষ্ট টাকার ছাড় এবং payment method বেছে নিন।", "চাইলে ন্যূনতম অর্ডার মূল্য ও সর্বোচ্চ ছাড় নির্ধারণ করুন।"] },
   COUPON: { title: "Coupon Campaign", summary: "কুপন কোড দিলে এই প্রচারের শর্ত অনুযায়ী ছাড় দেওয়া হবে।", bullets: ["একটি স্বতন্ত্র কুপন কোড দিন।", "কার্ট ছাড়, শতকরা ছাড়, নির্দিষ্ট টাকার ছাড়, বিনামূল্যে ডেলিভারি, অথবা পেমেন্ট ছাড় বেছে নিন।", "চাইলে ন্যূনতম অর্ডার মূল্য, সর্বোচ্চ ছাড়, পেমেন্ট মাধ্যম, অথবা প্রথম অর্ডারের শর্ত দিন।"] },
-  COMBO: { title: "Combo Offer", summary: "প্রতিটি নিয়মে কেনার শর্ত বেছে একটি পুরস্কার পণ্য নির্ধারণ করুন।", bullets: ["শর্ত হতে পারে যেকোনো পণ্য, নির্দিষ্ট পণ্য, অথবা এক/একাধিক পণ্যের শ্রেণি।", "প্রতিটি নিয়মের জন্য একটি পুরস্কার পণ্য বেছে নিন।", "একটি প্রচারে একাধিক আলাদা নিয়ম যোগ করা যায়।"] },
+  COMBO: { title: "Combo Offer", summary: "প্রতিটি নিয়মে কেনার শর্ত বেছে এক বা একাধিক পুরস্কার পণ্য নির্ধারণ করুন।", bullets: ["শর্ত হতে পারে যেকোনো পণ্য, নির্দিষ্ট পণ্য, অথবা এক/একাধিক পণ্যের শ্রেণি।", "প্রতিটি নিয়মের জন্য এক বা একাধিক পুরস্কার পণ্য বেছে নিন।", "একটি প্রচারে একাধিক আলাদা নিয়ম যোগ করা যায়।"] },
 };
 function PaymentMethodChoices({ paymentGateways, optional = false, selected = [] }) {
   return <fieldset className="md:col-span-2">
@@ -174,6 +174,8 @@ export default function CampaignForm({ products, categories, paymentGateways, in
   const [busy, setBusy] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [group, setGroup] = useState(initialCampaign?.group || initialCampaign?.type || "PRODUCT_DISCOUNT");
+  const [comboType, setComboType] = useState(initialCampaign?.configuration?.comboType || "BUNDLE_FIXED");
+  const [comboDiscountType, setComboDiscountType] = useState(initialCampaign?.discountType || "PERCENT");
   const [offerType, setOfferType] = useState(initialCampaign?.configuration?.offerType || (initialCampaign?.group === "DELIVERY_DISCOUNT" ? "FREE" : "PERCENT"));
   const [paymentScope, setPaymentScope] = useState(initialCampaign?.configuration?.paymentScope || (initialCampaign?.paymentMethods?.includes("COD") ? "COD" : initialCampaign?.paymentMethods?.length ? "ONLINE" : "ALL"));
   const [paymentDiscountTarget, setPaymentDiscountTarget] = useState(initialCampaign?.configuration?.paymentDiscountTarget || "ORDER");
@@ -321,13 +323,36 @@ export default function CampaignForm({ products, categories, paymentGateways, in
     {group === "COMBO" && <section className="space-y-3 rounded-lg border p-3">
       <h3 className="font-semibold">Combo offer settings</h3>
       <div className="grid gap-3 md:grid-cols-2">
-        <select name="comboType" defaultValue={initialCampaign?.configuration?.comboType || "BUNDLE_FIXED"} className={inputClass}><option value="BUNDLE_FIXED">Bundle fixed price</option><option value="BUNDLE_PERCENT">Bundle percentage discount</option><option value="BUY_X_GET_Y">Buy X get Y</option><option value="BUY_X_GET_Y_DISCOUNT">Buy X get Y discount</option><option value="QUANTITY">Quantity based discount</option></select>
-        <CampaignInput name="requiredQuantity" label="Required quantity" type="number" min="1" defaultValue={initialCampaign?.configuration?.requiredQuantity ?? ""} />
+        <label className="space-y-1 text-sm font-medium">Combo offer type
+          <select name="comboType" value={comboType} onChange={(event) => setComboType(event.target.value)} className={inputClass}>
+            <option value="BUNDLE_FIXED">Bundle fixed price</option><option value="BUNDLE_PERCENT">Bundle percentage discount</option><option value="BUY_X_GET_Y">Buy X get Y free</option><option value="BUY_X_GET_Y_DISCOUNT">Buy X get Y with discount</option><option value="QUANTITY">Quantity based discount</option>
+          </select>
+        </label>
+        <CampaignInput name="requiredQuantity" label={comboType === "BUY_X_GET_Y" || comboType === "BUY_X_GET_Y_DISCOUNT" ? "Buy quantity (X)" : "Qualifying quantity"} type="number" min="1" defaultValue={initialCampaign?.configuration?.requiredQuantity ?? 1} required />
         <ComboPairEditor products={products} categories={categories} initialPairs={productPairs} onChange={setProductPairs} />
-        <CampaignInput name="rewardQuantity" label="Reward quantity" type="number" min="1" defaultValue={initialCampaign?.configuration?.rewardQuantity ?? ""} />
-        <CampaignInput name="rewardDiscountPercent" label="Reward discount %" type="number" min="0" max="100" defaultValue={initialCampaign?.configuration?.rewardDiscountPercent ?? ""} />
-        <select name="discountType" defaultValue={initialCampaign?.discountType || "PERCENT"} className={inputClass}><option value="PERCENT">Percentage discount</option><option value="FIXED">Fixed amount discount</option></select>
-        <CampaignInput name="discountValue" label="Combo price or discount value" type="number" min="0" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required />
+        <CampaignInput name="rewardQuantity" label={comboType === "BUY_X_GET_Y" || comboType === "BUY_X_GET_Y_DISCOUNT" ? "Get quantity (Y)" : "Reward quantity"} type="number" min="1" defaultValue={initialCampaign?.configuration?.rewardQuantity ?? 1} required />
+        {comboType === "BUNDLE_FIXED" && <>
+          <input type="hidden" name="discountType" value="FIXED" />
+          <CampaignInput key="bundle-fixed-price" name="discountValue" label="Total bundle price" type="number" min="0" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required />
+        </>}
+        {comboType === "BUNDLE_PERCENT" && <>
+          <input type="hidden" name="discountType" value="PERCENT" />
+          <CampaignInput key="bundle-percent-discount" name="discountValue" label="Bundle discount (%)" type="number" min="0.01" max="100" step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required />
+        </>}
+        {comboType === "BUY_X_GET_Y" && <>
+          <input type="hidden" name="discountType" value="PERCENT" /><input type="hidden" name="discountValue" value="100" />
+          <p className="self-center text-sm text-text-muted">Reward product is free when the buy condition is met.</p>
+        </>}
+        {comboType === "BUY_X_GET_Y_DISCOUNT" && <>
+          <input type="hidden" name="discountType" value="PERCENT" /><input type="hidden" name="discountValue" value="0" />
+          <CampaignInput key="reward-discount-percent" name="rewardDiscountPercent" label="Reward product discount (%)" type="number" min="0.01" max="100" step="0.01" defaultValue={initialCampaign?.configuration?.rewardDiscountPercent ?? ""} required />
+        </>}
+        {comboType === "QUANTITY" && <>
+          <label className="space-y-1 text-sm font-medium">Discount type
+            <select name="discountType" value={comboDiscountType} onChange={(event) => setComboDiscountType(event.target.value)} className={inputClass}><option value="PERCENT">Percentage discount</option><option value="FIXED">Fixed amount discount</option></select>
+          </label>
+          <CampaignInput key={`quantity-discount-${comboDiscountType}`} name="discountValue" label={comboDiscountType === "PERCENT" ? "Quantity discount (%)" : "Quantity discount amount"} type="number" min="0.01" max={comboDiscountType === "PERCENT" ? 100 : undefined} step="0.01" defaultValue={initialCampaign?.discountValue ?? ""} required />
+        </>}
       </div>
     </section>}
 

@@ -14,6 +14,7 @@ export default function CartItem({
   discountPrice,
   regularPrice,
   campaignOffer = null,
+  campaignRules = [],
   setProductQy,
   productQty = 1,
   removeItem,
@@ -53,6 +54,11 @@ export default function CartItem({
             </h3>
           </Link>
 
+          {campaignRules.length > 0 && <div className="mt-1 space-y-0.5">
+            {campaignRules.map((rule) => <p key={rule.id} className="whitespace-normal break-words text-[10px] leading-4 text-primary">
+              <span className="font-semibold text-text">{replaceNumbers(rule.name)}: </span>{replaceNumbers(rule.applied ? rule.ruleText : rule.message || rule.ruleText)}
+            </p>)}
+          </div>}
           {variation?.combinations?.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1">
               {variation.combinations.map((item, index) => (
