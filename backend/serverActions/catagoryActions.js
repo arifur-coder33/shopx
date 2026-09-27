@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { cache } from "react";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { generateSlug } from "../utils/generateSlug";
@@ -78,6 +78,8 @@ export async function createCategoryAction(formData) {
 
     revalidatePath("/admin/categories");
     revalidatePath("/");
+    revalidateTag("categories");
+    revalidateTag("home-storefront");
     revalidatePath("/category/[...slug]", "page");
     return { success: true, data: { ...category, fullPath } };
   } catch (error) {
@@ -277,6 +279,8 @@ export async function updateCategoryAction({ formData, id }) {
     revalidatePath("/admin/product/add");
     revalidatePath("/admin/categories");
     revalidatePath("/");
+    revalidateTag("categories");
+    revalidateTag("home-storefront");
     revalidatePath("/category/[...slug]", "page");
     return { success: true, data: { ...updateData, fullPath } };
   } catch (error) {
@@ -719,7 +723,9 @@ export async function getCategoryTree() {
 
   return roots;
 }
-export async function getCategoryPageData(slug) {
+const CATEGORY_PRODUCT_PAGE_SIZE = 24;
+
+export async function getCategoryPageData(slug, cursor = null) {
   try {
     // 1️⃣ all categories (for tree + recursion)
     const categories = await prisma.category.findMany({
@@ -765,22 +771,25 @@ export async function getCategoryPageData(slug) {
             }`,
     }));
 
-    // 3️⃣ recursive function for subcategories
-    const getChildIds = (parentCategoryId) => {
-      const children = categories.filter(
-        (c) => c.parentCategoryId === parentCategoryId,
-      );
-
-      let ids = [parentCategoryId];
-
-      children.forEach((child) => {
-        ids = [...ids, ...getChildIds(child.id)];
-      });
-
-      return ids;
-    };
-
-    const categoryIds = getChildIds(targetCategory.id);
+    // Build the category subtree in linear time instead of filtering all
+    // categories repeatedly for each descendant.
+    const childrenByParent = new Map();
+    for (const category of categories) {
+      if (!category.parentCategoryId) continue;
+      const children = childrenByParent.get(category.parentCategoryId) || [];
+      children.push(category.id);
+      childrenByParent.set(category.parentCategoryId, children);
+    }
+    const categoryIds = [];
+    const pendingCategoryIds = [targetCategory.id];
+    const visitedCategoryIds = new Set();
+    while (pendingCategoryIds.length) {
+      const categoryId = pendingCategoryIds.pop();
+      if (visitedCategoryIds.has(categoryId)) continue;
+      visitedCategoryIds.add(categoryId);
+      categoryIds.push(categoryId);
+      pendingCategoryIds.push(...(childrenByParent.get(categoryId) || []));
+    }
 
     // 4️⃣ get products (ONLY LIGHT DATA)
     const [products, campaigns] = await Promise.all([prisma.product.findMany({
@@ -790,7 +799,10 @@ export async function getCategoryPageData(slug) {
           in: categoryIds,
         },
       },
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      take: CATEGORY_PRODUCT_PAGE_SIZE + 1,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
       select: {
         id: true,
         categoryId: true,
@@ -801,7 +813,6 @@ export async function getCategoryPageData(slug) {
           select: {
             regularPrice: true,
             discountPrice: true,
-            combinations: true,
           },
         },
         thumbnail: {
@@ -814,7 +825,11 @@ export async function getCategoryPageData(slug) {
       },
     }), getActiveCampaigns()]);
 
-    const filteredProducts = products.map((product) => {
+    const hasMore = products.length > CATEGORY_PRODUCT_PAGE_SIZE;
+    const visibleProducts = hasMore
+      ? products.slice(0, CATEGORY_PRODUCT_PAGE_SIZE)
+      : products;
+    const filteredProducts = visibleProducts.map((product) => {
       const variations = product.variations || [];
 
       if (variations.length === 0) {
@@ -859,6 +874,7 @@ export async function getCategoryPageData(slug) {
     return {
       success: true,
       data: filteredProducts,
+      nextCursor: hasMore ? visibleProducts.at(-1)?.id || null : null,
       category: {
         id: targetCategory.id,
         name: targetCategory.name,

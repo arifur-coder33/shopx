@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { hasPermission, getUserId } from "../utils/hasPermission";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 
 const TYPES = new Set(["PRODUCT_DISCOUNT", "CART_DISCOUNT", "DELIVERY_DISCOUNT", "DELIVERY", "PAYMENT_DISCOUNT", "COUPON", "COMBO"]);
@@ -256,6 +256,10 @@ export async function saveCampaign(formData) {
     });
     revalidatePath("/admin/campaigns");
     revalidatePath("/");
+    revalidatePath("/campaign");
+    revalidatePath("/campaign/[id]", "page");
+    revalidateTag("campaigns");
+    revalidateTag("home-storefront");
     revalidatePath("/category/[...slug]", "page");
     revalidatePath("/product/[slug]", "page");
     return { success: true, data: saved };
@@ -272,6 +276,10 @@ export async function deleteCampaign(id) {
     await prisma.campaign.delete({ where: { id } });
     revalidatePath("/admin/campaigns");
     revalidatePath("/");
+    revalidatePath("/campaign");
+    revalidatePath("/campaign/[id]", "page");
+    revalidateTag("campaigns");
+    revalidateTag("home-storefront");
     return { success: true };
   } catch (error) { return resultError(error); }
 }
@@ -285,6 +293,10 @@ export async function setCampaignStatus(id, status) {
     const campaign = await prisma.campaign.update({ where: { id }, data: { status: nextStatus, updatedBy: await getUserId() } });
     revalidatePath("/admin/campaigns");
     revalidatePath("/");
+    revalidatePath("/campaign");
+    revalidatePath("/campaign/[id]", "page");
+    revalidateTag("campaigns");
+    revalidateTag("home-storefront");
     return { success: true, data: campaign };
   } catch (error) { return resultError(error); }
 }

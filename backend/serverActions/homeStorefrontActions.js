@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
 
 const PRODUCT_BATCH_SIZE = 10;
@@ -84,7 +85,7 @@ async function productBatch({ featured, cursor = null, limit, campaigns = [] }) 
   };
 }
 
-export async function getHomeStorefrontData() {
+async function loadHomeStorefrontData() {
   try {
     // Campaigns are loaded first because the product batches need the resolved
     // list to calculate display prices without referencing an uninitialised
@@ -113,7 +114,7 @@ export async function getHomeStorefrontData() {
   }
 }
 
-export async function getMoreHomeProducts(cursor) {
+async function loadMoreHomeProducts(cursor) {
   try {
     const regular = await productBatch({
       featured: false,
@@ -126,4 +127,24 @@ export async function getMoreHomeProducts(cursor) {
     console.error("Failed to load more home products:", error);
     return { success: false, error: error.message };
   }
+}
+
+const readCachedHomeStorefrontData = unstable_cache(
+  loadHomeStorefrontData,
+  ["home-storefront-data-v1"],
+  { revalidate: 60, tags: ["home-storefront", "products", "campaigns", "categories"] },
+);
+
+const readCachedMoreHomeProducts = unstable_cache(
+  loadMoreHomeProducts,
+  ["home-more-products-v1"],
+  { revalidate: 60, tags: ["home-storefront", "products", "campaigns", "categories"] },
+);
+
+export async function getHomeStorefrontData() {
+  return readCachedHomeStorefrontData();
+}
+
+export async function getMoreHomeProducts(cursor) {
+  return readCachedMoreHomeProducts(cursor || null);
 }

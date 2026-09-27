@@ -1,16 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ProductCard from "@/components/products/ProductCard";
 import ImageCustomServer from "@/components/images/ImageCustomServer";
 import CampaignCountdown from "../CampaignCountdown";
-import { getPublicCampaignProducts } from "@/backend/services/campaignService";
+import { getPublicCampaignProducts, getPublicCampaigns } from "@/backend/services/campaignService";
+import CampaignProductsGrid from "./CampaignProductsGrid";
 
+export const dynamic = "force-static";
+export const dynamicParams = true;
 export const revalidate = 60;
 
-export default async function CampaignDetailPage({ params, searchParams }) {
+export async function generateStaticParams() {
+  const campaigns = await getPublicCampaigns();
+  return campaigns.map(({ id }) => ({ id }));
+}
+
+export default async function CampaignDetailPage({ params }) {
   const { id } = await params;
-  const query = await searchParams;
-  const result = await getPublicCampaignProducts(id, query?.page);
+  const result = await getPublicCampaignProducts(id, 1);
   if (!result) notFound();
   const { campaign, products, total, page, totalPages } = result;
 
@@ -25,13 +31,8 @@ export default async function CampaignDetailPage({ params, searchParams }) {
     </header>
     <section aria-labelledby="campaign-products-title">
       <div className="mb-3 flex items-end justify-between gap-3"><h2 id="campaign-products-title" className="text-xl font-bold sm:text-2xl">এই ক্যাম্পেইনের পণ্য</h2><span className="text-sm text-text-muted">{total}টি পণ্য</span></div>
-      {products.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">{products.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <p className="rounded-xl border border-border bg-surface p-6 text-center text-text-muted">এই ক্যাম্পেইনে এখন কোনো পণ্য নেই।</p>}
+      {products.length ? <CampaignProductsGrid campaignId={id} initialProducts={products} total={total} totalPages={totalPages} /> : <p className="rounded-xl border border-border bg-surface p-6 text-center text-text-muted">এই ক্যাম্পেইনে এখন কোনো পণ্য নেই।</p>}
     </section>
-    {totalPages > 1 && <nav aria-label="Campaign product pages" className="mt-6 flex items-center justify-center gap-4">
-      {page > 1 && <Link className="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary" href={`/campaign/${id}?page=${page - 1}`}>আগের পৃষ্ঠা</Link>}
-      <span className="text-sm text-text-muted">পৃষ্ঠা {page} / {totalPages}</span>
-      {page < totalPages && <Link className="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary" href={`/campaign/${id}?page=${page + 1}`}>পরের পৃষ্ঠা</Link>}
-    </nav>}
   </main>;
 }
 

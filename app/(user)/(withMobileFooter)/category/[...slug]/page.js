@@ -1,7 +1,7 @@
 // export const dynamic = "force-static"; //
 import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
-import ProductCard from "@/components/products/ProductCard";
-import ProductList from "@/components/products/productList";
+import ProductListHeader from "@/components/products/productListHeader";
+import CategoryProductGrid from "./CategoryProductGrid";
 import prisma from "@/lib/prisma";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import JsonLd from "@/components/seo/JsonLd";
@@ -145,17 +145,12 @@ export default async function CategoryWithProductPage({ params }) {
     <>
       <JsonLd data={categorySchema} />
       <Breadcrumb items={result?.breadcrumbs || []} className="mb-2" />
-      <ProductList headerName={result?.category?.name}>
-        {data.length > 0
-          ? data.map((product, index) => (
-              <ProductCard
-                key={product?.id}
-                product={product}
-                priority={index < 2}
-              />
-            ))
-          : "No Product found."}
-      </ProductList>
+      <ProductListHeader headerName={result.category.name} />
+      <CategoryProductGrid
+        initialProducts={data}
+        initialCursor={result.nextCursor}
+        categorySlug={slug[slug.length - 1]}
+      />
     </>
   );
 }

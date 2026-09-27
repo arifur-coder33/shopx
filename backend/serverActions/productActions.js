@@ -288,6 +288,7 @@ export async function createProductActions(formData) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag("home-storefront");
     revalidateTag(`product-${result.slug}`);
     console.log("Product created with variations:", result);
     return { success: true, data: result };
@@ -531,6 +532,7 @@ export async function createProductAction(formData) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag("home-storefront");
     revalidateTag(`product-${result.slug}`);
     console.log("Product created successfully:", result);
     return { success: true, data: result };
@@ -1343,6 +1345,7 @@ export async function updateProductActions({ id: productId, formData }) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag("home-storefront");
     revalidateTag(`product-${result.slug}`);
 
     return { success: true, data: result };
@@ -1536,6 +1539,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag("home-storefront");
     revalidateTag(`product-${result.slug}`);
     console.log("Product updated successfully:", result);
     return { success: true, data: result };
@@ -1879,6 +1883,7 @@ export async function updateProductAction({ id: productId, formData }) {
     revalidatePath("/");
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
+    revalidateTag("home-storefront");
     revalidateTag(`product-${result.slug}`);
 
     let successMessage = "Product updated successfully.";
@@ -1933,6 +1938,7 @@ export async function deleteProductById(productId) {
     revalidatePath(`/product/${deletedProduct.slug}`);
     revalidateTag(`product-${deletedProduct.slug}`);
     revalidateTag("products");
+    revalidateTag("home-storefront");
 
     return { success: true, message: "Product deleted successfully." };
   } catch (error) {
@@ -1962,6 +1968,7 @@ export const updateProductStatus = async ({ id, value }) => {
     revalidatePath("/");
     revalidatePath("/admin/product");
     revalidateTag("products");
+    revalidateTag("home-storefront");
     revalidateTag(`product-${id}`);
 
     return { success: true, data };
