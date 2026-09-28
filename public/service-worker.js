@@ -12,9 +12,9 @@ self.addEventListener("push", (event) => {
 
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    const visibleOrdersPage = windows.find((client) => client.visibilityState === "visible" && new URL(client.url).origin === self.location.origin && new URL(client.url).pathname.startsWith("/admin/orders2"));
-    if (visibleOrdersPage) {
-      visibleOrdersPage.postMessage({ type: "order-push", orderId: payload.orderId, title: notification.title });
+    const focusedOrdersPage = windows.find((client) => client.focused && client.visibilityState === "visible" && new URL(client.url).origin === self.location.origin && new URL(client.url).pathname.startsWith("/admin/orders2"));
+    if (focusedOrdersPage) {
+      focusedOrdersPage.postMessage({ type: "order-push", orderId: payload.orderId, title: notification.title });
       return;
     }
     await self.registration.showNotification(notification.title, notification);

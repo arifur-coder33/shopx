@@ -1,8 +1,7 @@
 import "server-only";
 import webpush from "web-push";
-import { getNativeMongoDatabase } from "@/lib/nativeMongo";
+import prisma from "@/lib/prisma";
 
-const COLLECTION = "OrderPushSubscription";
 
 function hasVapidConfig() {
   return Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.VAPID_SUBJECT);
@@ -19,26 +18,24 @@ export async function saveOrderPushSubscription(userId, subscription) {
   if (!userId || !endpoint.startsWith("https://") || !p256dh || !auth) {
     throw new Error("Invalid push subscription.");
   }
-  const db = await getNativeMongoDatabase();
-  const collection = db.collection(COLLECTION);
-  await collection.createIndex({ endpoint: 1 }, { unique: true });
-  await collection.updateOne(
-    { endpoint },
-    { $set: { userId, subscription: { endpoint, keys: { p256dh, auth } }, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
-    { upsert: true },
-  );
+  const now = new Date();
+  await prisma.orderPushSubscription.upsert({
+    where: { endpoint },
+    update: { userId, subscription, updatedAt: now },
+    create: { userId, endpoint, subscription, createdAt: now, updatedAt: now },
+  });
 }
 
 export async function removeOrderPushSubscription(userId, endpoint) {
   if (!userId || !endpoint) return;
-  const db = await getNativeMongoDatabase();
-  await db.collection(COLLECTION).deleteOne({ userId, endpoint });
+  await prisma.orderPushSubscription.deleteMany({ where: { userId, endpoint } });
 }
 
 export async function sendOrderPushNotification(order) {
   if (!hasVapidConfig()) return;
-  const db = await getNativeMongoDatabase();
-  const subscriptions = await db.collection(COLLECTION).find({}, { projection: { subscription: 1 } }).toArray();
+  const subscriptions = await prisma.orderPushSubscription.findMany({
+    select: { subscription: true },
+  });
   if (!subscriptions.length) return;
 
   webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
@@ -55,7 +52,7 @@ export async function sendOrderPushNotification(order) {
       await webpush.sendNotification(subscription, payload, { TTL: 60 * 60 });
     } catch (error) {
       if (error?.statusCode === 404 || error?.statusCode === 410) {
-        await db.collection(COLLECTION).deleteOne({ "subscription.endpoint": subscription.endpoint });
+        await prisma.orderPushSubscription.deleteMany({ where: { endpoint: subscription.endpoint } });
       }
     }
   }));

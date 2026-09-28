@@ -7,7 +7,7 @@ import { Bell, BellOff, CalendarDays, Copy, ListFilter, Phone, RefreshCw, Search
 import { toast } from "react-toastify";
 import { getRecentOrdersForAdmin, markOrderViewedAction, updateOrderStatusAction } from "@/backend/serverActions/orderActions";
 import { createOrderRealtimeToken, getOrderPushConfig, getOrderCardForAdminAction, saveOrderPushSubscriptionAction, removeOrderPushSubscriptionAction } from "@/backend/serverActions/realtimeActions";
-import { useRealtimeSocket } from "@/hooks/useRealtimeSocket";
+import { useRealtimeConnection } from "@/hooks/useRealtimeConnection";
 
 const PAGE_SIZE = 50;
 function urlBase64ToUint8Array(value) {
@@ -81,6 +81,31 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     setViewedIds((current) => new Set(current).add(orderId));
     markOrderViewedAction(orderId).catch(() => toast.error("অর্ডার দেখা হিসেবে সংরক্ষণ হয়নি।"));
   }, []);
+  const pendingOrderAlerts = useRef(new Map());
+  const showNewOrderAlert = useCallback((order) => {
+    if (!order?.id) return;
+    const alerts = pendingOrderAlerts.current;
+    alerts.set(order.id, order);
+    const count = alerts.size;
+    const latestOrder = order;
+    const toastId = "orders2-new-orders";
+    const message = count === 1
+      ? `নতুন অর্ডার #${order.orderNo} · ${order.customerName} · ${money(order.orderPrice + (order.deliveryCharge || 0))}`
+      : `${count.toLocaleString("bn-BD")}টি নতুন অর্ডার এসেছে · সর্বশেষ #${order.orderNo}`;
+    const options = {
+      position: "top-center",
+      autoClose: 8000,
+      pauseOnHover: true,
+      pauseOnFocusLoss: true,
+      onClick: () => {
+        markViewed(latestOrder.id);
+        router.push(`/admin/orders2/${latestOrder.id}`);
+      },
+      onClose: () => alerts.clear(),
+    };
+    if (toast.isActive(toastId)) toast.update(toastId, { render: message, ...options });
+    else toast.info(message, { toastId, ...options });
+  }, [markViewed, router]);
   const refresh = useCallback(async () => {
     const requestId = statusRequest.current;
     setRefreshing(true);
@@ -97,9 +122,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
       });
       setHasMore((current) => current || result.hasMore);
       if (!firstPoll.current && newOrders.length && notificationsEnabled) {
-        newOrders.slice().reverse().forEach((order) => {
-          toast.info(`নতুন অর্ডার #${order.orderNo} · ${order.customerName} · ${money(order.orderPrice + (order.deliveryCharge || 0))}`, { position: "top-center", autoClose: 12000, pauseOnHover: true, pauseOnFocusLoss: true, onClick: () => { markViewed(order.id); router.push(`/admin/orders2/${order.id}`); } });
-        });
+        newOrders.slice().reverse().forEach(showNewOrderAlert);
       }
       firstPoll.current = false;
     } catch {
@@ -107,7 +130,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     } finally {
       if (requestId === statusRequest.current) setRefreshing(false);
     }
-  }, [notificationsEnabled, markViewed, router, statusFilter]);
+  }, [notificationsEnabled, showNewOrderAlert, statusFilter]);
 
   const handleRealtimeEvent = useCallback((event, payload) => {
     if (event === "realtime:connected") return;
@@ -116,14 +139,9 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     if (knownIds.current.has(payload.id)) return;
     knownIds.current.add(payload.id);
     setOrders((current) => [payload, ...current.filter((order) => order.id !== payload.id)]);
-    if (notificationsEnabled) {
-      toast.info(`নতুন অর্ডার #${payload.orderNo} · ${payload.customerName} · ${money(payload.orderPrice + (payload.deliveryCharge || 0))}`, {
-        position: "top-center", autoClose: 12000, pauseOnHover: true, pauseOnFocusLoss: true,
-        onClick: () => { markViewed(payload.id); router.push(`/admin/orders2/${payload.id}`); },
-      });
-    }
-  }, [notificationsEnabled, markViewed, router, statusFilter]);
-  const realtimeStatus = useRealtimeSocket({ enabled: true, getAccessToken: createOrderRealtimeToken, onEvent: handleRealtimeEvent });
+    if (notificationsEnabled) showNewOrderAlert(payload);
+  }, [notificationsEnabled, showNewOrderAlert, statusFilter]);
+  const realtimeStatus = useRealtimeConnection({ enabled: true, getAccessToken: createOrderRealtimeToken, onEvent: handleRealtimeEvent });
 
   useEffect(() => {
     if (realtimeStatus === "connected") refresh();
@@ -151,11 +169,11 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
       if (!order || (statusFilter !== "ALL" && order.status !== statusFilter) || knownIds.current.has(order.id)) return;
       knownIds.current.add(order.id);
       setOrders((current) => [order, ...current]);
-      if (notificationsEnabled) toast.info(event.data.title || `নতুন অর্ডার #${order.orderNo}`, { position: "top-center", autoClose: 12000, pauseOnHover: true, pauseOnFocusLoss: true });
+      if (notificationsEnabled) showNewOrderAlert(order);
     };
     navigator.serviceWorker.addEventListener("message", onWorkerMessage);
     return () => navigator.serviceWorker.removeEventListener("message", onWorkerMessage);
-  }, [notificationsEnabled, statusFilter]);
+  }, [notificationsEnabled, showNewOrderAlert, statusFilter]);
 
   const loadMore = async () => {
     if (!hasMore || loadingMore || !orders.length) return;

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Copy, Phone, Search, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { deleteAbandonedCheckoutLeadAction } from "@/backend/serverActions/abandonedCheckoutActions";
+import { deleteAbandonedCheckoutLeadAction, getAbandonedCheckoutLeadsAction } from "@/backend/serverActions/abandonedCheckoutActions";
+import { createOrderRealtimeToken } from "@/backend/serverActions/realtimeActions";
+import { useRealtimeConnection } from "@/hooks/useRealtimeConnection";
 
 const digits = (value) => String(value || "").replace(/\D/g, "");
 const relativeDate = (value) => {
@@ -21,12 +22,60 @@ export default function AbandonedCheckoutLeads({ initialLeads = [], canDelete = 
   const [query, setQuery] = useState("");
   const [pendingId, setPendingId] = useState(null);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+  const syncInProgress = useRef(false);
+  const syncLeads = useCallback(async () => {
+    if (syncInProgress.current) return;
+    syncInProgress.current = true;
+    try {
+      const latest = await getAbandonedCheckoutLeadsAction();
+      setLeads(Array.isArray(latest) ? latest : []);
+    } catch {
+      // Keep the current list visible when a background sync fails.
+    } finally {
+      syncInProgress.current = false;
+    }
+  }, []);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return leads;
     return leads.filter((lead) => `${lead.customerName} ${lead.phoneNumber} ${lead.district} ${lead.thana} ${(lead.items || []).map((item) => item.name).join(" ")}`.toLowerCase().includes(needle));
   }, [leads, query]);
+
+  const handleRealtimeEvent = (event, payload) => {
+    if (event === "abandoned-checkout.updated" && payload?.id) {
+      setLeads((current) => [payload, ...current.filter((lead) => lead.id !== payload.id)]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    } else if (event === "abandoned-checkout.deleted" && payload?.id) {
+      setLeads((current) => current.filter((lead) => lead.id !== payload.id));
+    }
+  };
+  const realtimeStatus = useRealtimeConnection({
+    enabled: true,
+    getAccessToken: createOrderRealtimeToken,
+    onEvent: handleRealtimeEvent,
+    subscribeTo: "abandoned-checkouts",
+  });
+
+  useEffect(() => {
+    setLeads(initialLeads);
+  }, [initialLeads]);
+
+  useEffect(() => {
+    if (realtimeStatus === "connected") {
+      // Reconcile once after connect/reconnect so a brief disconnect cannot lose an update.
+      syncLeads();
+      return undefined;
+    }
+    const syncIfVisible = () => {
+      if (document.visibilityState === "visible") syncLeads();
+    };
+    const timer = window.setInterval(syncIfVisible, 60000);
+    window.addEventListener("focus", syncIfVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", syncIfVisible);
+    };
+  }, [realtimeStatus, syncLeads]);
 
   const copyPhone = async (phone) => {
     try {
@@ -53,8 +102,8 @@ export default function AbandonedCheckoutLeads({ initialLeads = [], canDelete = 
   return (
     <section className="mx-auto max-w-6xl space-y-4">
       <header className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><h1 className="text-xl font-bold text-text-primary">অসম্পূর্ণ Checkout</h1><p className="mt-1 text-sm text-text-muted">যারা ফোন নম্বর দিয়ে checkout শুরু করেছেন, কিন্তু order করেননি।</p></div>
-        <div className="flex items-center gap-2"><span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{leads.length} জন</span><button type="button" onClick={() => router.refresh()} className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-surface-muted">Refresh</button></div>
+        <div><h1 className="text-xl font-bold text-text-primary">অসম্পূর্ণ Checkout</h1><p className="mt-1 text-sm text-text-muted">যারা ফোন নম্বর দিয়ে checkout শুরু করেছেন, কিন্তু order করেননি।</p><p className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-text-muted"><span className={`h-1.5 w-1.5 rounded-full ${realtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />{realtimeStatus === "connected" ? "লাইভ আপডেট চালু" : realtimeStatus === "unavailable" ? "লাইভ সংযোগ নেই · ৬০ সেকেন্ডে sync" : "লাইভ সংযোগ হচ্ছে · ৬০ সেকেন্ডে sync"}</p></div>
+        <div className="flex items-center gap-2"><span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{leads.length} জন</span><button type="button" onClick={syncLeads} className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-surface-muted">Refresh</button></div>
       </header>
       <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="নাম, ফোন, জেলা বা পণ্য খুঁজুন" className="min-h-11 w-full rounded-xl border border-border bg-surface pl-9 pr-3 text-sm outline-none focus:border-primary" /></label>
       {filtered.length ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{filtered.map((lead) => (
