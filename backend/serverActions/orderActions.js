@@ -583,12 +583,12 @@ export async function createOrder(formData) {
     return { success: false, error: error.message };
   }
 }
-export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status } = {}) {
+export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status, includeUnseenCount = false } = {}) {
   await hasPermission("order", "view");
   const pageSize = Math.min(100, Math.max(1, Number(limit) || 50));
   const allowedStatuses = ["PENDING", "PROCESSING", "READY_TO_SHIP", "SHIPPED", "DELIVERED", "DELIVERY_FAILED", "CANCELLED", "FAILED_RETURNING", "FAILED_RETURN_RECEIVED", "RETURNING", "RETURNED", "REFUNDING", "REFUNDED"];
   const where = allowedStatuses.includes(status) ? { status } : {};
-  const rows = await prisma.order.findMany({
+  const rowsPromise = prisma.order.findMany({
     where,
     ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
     take: pageSize + 1,
@@ -600,7 +600,18 @@ export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status } =
       orderItems: { select: { id: true, productName: true, price: true, quantity: true, thumbnail: true } },
     },
   });
-  return { orders: rows.slice(0, pageSize), hasMore: rows.length > pageSize };
+  const [rows, userId] = await Promise.all([
+    rowsPromise,
+    includeUnseenCount ? getUserId() : Promise.resolve(null),
+  ]);
+  const unseenCount = userId
+    ? await prisma.order.count({ where: { NOT: { viewedBy: { has: userId } } } })
+    : 0;
+  return {
+    orders: rows.slice(0, pageSize),
+    hasMore: rows.length > pageSize,
+    ...(includeUnseenCount ? { unseenCount } : {}),
+  };
 }
 
 export async function markOrderViewedAction(orderId) {

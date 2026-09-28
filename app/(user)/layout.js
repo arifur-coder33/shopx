@@ -13,7 +13,7 @@ export default async function UserLayout({ children }) {
   return (
     <>
       <NavBar />
-      <main className="site-container min-h-screen pb-20 pt-2 md:pb-4 md:pt-4">{children}</main>
+      <main className="site-container min-h-screen pb-[calc(6rem_+_env(safe-area-inset-bottom))] pt-2 md:pb-4 md:pt-4">{children}</main>
       <Footer />
 
       {/* All your scripts are now cleanly handled by this component */}

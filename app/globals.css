@@ -162,8 +162,8 @@
 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes storefront-page-enter {
-  from { opacity: 0.94; transform: translateY(2px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0.94; }
+  to { opacity: 1; }
 }
 @keyframes product-reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes hero-zoom { from { opacity: 0.5; transform: scale(1.06); } to { opacity: 1; transform: scale(1); } }
@@ -183,4 +183,23 @@
 
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+
+/* Keep mobile notices below the sticky storefront header and above the footer. */
+@media (max-width: 767px) {
+  .Toastify__toast-container {
+    z-index: 2147483647 !important;
+  }
+
+  .Toastify__toast-container--top-right,
+  .Toastify__toast-container--top-center,
+  .Toastify__toast-container--top-left {
+    top: calc(env(safe-area-inset-top) + 4.75rem) !important;
+    right: 0.75rem !important;
+    left: 0.75rem !important;
+    width: auto !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
 }

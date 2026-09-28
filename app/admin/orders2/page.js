@@ -10,6 +10,6 @@ export default async function Orders2Page() {
   if (!hasUIPermission(session?.user?.permissions, "order", "view")) {
     return <div className="card">Unauthorized</div>;
   }
-  const result = await getRecentOrdersForAdmin({ limit: 50, status: "PENDING" });
-  return <Orders2Client initialOrders={result.orders} initialHasMore={result.hasMore} viewerId={session.user.id} canUpdate={hasUIPermission(session?.user?.permissions, "order", "update")} />;
+  const result = await getRecentOrdersForAdmin({ limit: 50, status: "PENDING", includeUnseenCount: true });
+  return <Orders2Client initialOrders={result.orders} initialHasMore={result.hasMore} initialUnseenCount={result.unseenCount || 0} viewerId={session.user.id} canUpdate={hasUIPermission(session?.user?.permissions, "order", "update")} />;
 }

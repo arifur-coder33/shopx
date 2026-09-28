@@ -54,7 +54,7 @@ function isInDateRange(value, filter) {
   return dateValue >= start && dateValue < end;
 }
 
-export default function Orders2Client({ initialOrders, initialHasMore, canUpdate, viewerId }) {
+export default function Orders2Client({ initialOrders, initialHasMore, initialUnseenCount = 0, canUpdate, viewerId }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders || []);
   const [query, setQuery] = useState("");
@@ -65,6 +65,9 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
   const [hasMore, setHasMore] = useState(Boolean(initialHasMore));
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [viewedIds, setViewedIds] = useState(() => new Set((initialOrders || []).filter((order) => order.viewedBy?.includes(viewerId)).map((order) => order.id)));
+  const [unseenCount, setUnseenCount] = useState(initialUnseenCount);
+  const viewedOrderIds = useRef(new Set((initialOrders || []).filter((order) => order.viewedBy?.includes(viewerId)).map((order) => order.id)));
+  const unseenOrderIds = useRef(new Set((initialOrders || []).filter((order) => !order.viewedBy?.includes(viewerId)).map((order) => order.id)));
   const knownIds = useRef(new Set((initialOrders || []).map((order) => order.id)));
   const firstPoll = useRef(true);
   const statusRequest = useRef(0);
@@ -79,6 +82,10 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
   }, [notificationPreferenceKey]);
   const markViewed = useCallback((orderId) => {
     setViewedIds((current) => new Set(current).add(orderId));
+    viewedOrderIds.current.add(orderId);
+    if (unseenOrderIds.current.delete(orderId)) {
+      setUnseenCount((current) => Math.max(0, current - 1));
+    }
     markOrderViewedAction(orderId).catch(() => toast.error("অর্ডার দেখা হিসেবে সংরক্ষণ হয়নি।"));
   }, []);
   const pendingOrderAlerts = useRef(new Map());
@@ -110,10 +117,19 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     const requestId = statusRequest.current;
     setRefreshing(true);
     try {
-      const result = await getRecentOrdersForAdmin({ limit: PAGE_SIZE, status: statusFilter });
+      const result = await getRecentOrdersForAdmin({ limit: PAGE_SIZE, status: statusFilter, includeUnseenCount: true });
       if (requestId !== statusRequest.current) return;
       const latest = result.orders || [];
       const newOrders = latest.filter((order) => !knownIds.current.has(order.id));
+      latest.forEach((order) => {
+        if (order.viewedBy?.includes(viewerId)) {
+          viewedOrderIds.current.add(order.id);
+          unseenOrderIds.current.delete(order.id);
+        } else if (!viewedOrderIds.current.has(order.id)) {
+          unseenOrderIds.current.add(order.id);
+        }
+      });
+      if (typeof result.unseenCount === "number") setUnseenCount(result.unseenCount);
       latest.forEach((order) => knownIds.current.add(order.id));
       setOrders((current) => {
         const merged = new Map(latest.map((order) => [order.id, order]));
@@ -130,17 +146,21 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     } finally {
       if (requestId === statusRequest.current) setRefreshing(false);
     }
-  }, [notificationsEnabled, showNewOrderAlert, statusFilter]);
+  }, [notificationsEnabled, showNewOrderAlert, statusFilter, viewerId]);
 
   const handleRealtimeEvent = useCallback((event, payload) => {
     if (event === "realtime:connected") return;
     if (event !== "order.created" || !payload?.id) return;
-    if (statusFilter !== "ALL" && payload.status !== statusFilter) return;
     if (knownIds.current.has(payload.id)) return;
     knownIds.current.add(payload.id);
+    if (!viewedOrderIds.current.has(payload.id) && !unseenOrderIds.current.has(payload.id)) {
+      unseenOrderIds.current.add(payload.id);
+      setUnseenCount((current) => current + 1);
+    }
+    if (statusFilter !== "ALL" && payload.status !== statusFilter) return;
     setOrders((current) => [payload, ...current.filter((order) => order.id !== payload.id)]);
     if (notificationsEnabled) showNewOrderAlert(payload);
-  }, [notificationsEnabled, showNewOrderAlert, statusFilter]);
+  }, [notificationsEnabled, showNewOrderAlert, statusFilter, viewerId]);
   const realtimeStatus = useRealtimeConnection({ enabled: true, getAccessToken: createOrderRealtimeToken, onEvent: handleRealtimeEvent });
 
   useEffect(() => {
@@ -173,16 +193,21 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     };
     navigator.serviceWorker.addEventListener("message", onWorkerMessage);
     return () => navigator.serviceWorker.removeEventListener("message", onWorkerMessage);
-  }, [notificationsEnabled, showNewOrderAlert, statusFilter]);
+  }, [notificationsEnabled, showNewOrderAlert, statusFilter, viewerId]);
 
   const loadMore = async () => {
     if (!hasMore || loadingMore || !orders.length) return;
     const requestId = statusRequest.current;
     setLoadingMore(true);
     try {
-      const result = await getRecentOrdersForAdmin({ limit: PAGE_SIZE, cursorId: orders[orders.length - 1].id, status: statusFilter });
+      const result = await getRecentOrdersForAdmin({ limit: PAGE_SIZE, cursorId: orders[orders.length - 1].id, status: statusFilter, includeUnseenCount: true });
       if (requestId !== statusRequest.current) return;
       const newRows = (result.orders || []).filter((order) => !knownIds.current.has(order.id));
+      newRows.forEach((order) => {
+        if (order.viewedBy?.includes(viewerId)) viewedOrderIds.current.add(order.id);
+        else if (!viewedOrderIds.current.has(order.id)) unseenOrderIds.current.add(order.id);
+      });
+      if (typeof result.unseenCount === "number") setUnseenCount(result.unseenCount);
       newRows.forEach((order) => knownIds.current.add(order.id));
       setOrders((current) => [...current, ...newRows]);
       setHasMore(Boolean(result.hasMore));
@@ -255,9 +280,18 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     setLoadingMore(false);
     setRefreshing(true);
     try {
-      const result = await getRecentOrdersForAdmin({ limit: PAGE_SIZE, status: nextStatus });
+      const result = await getRecentOrdersForAdmin({ limit: PAGE_SIZE, status: nextStatus, includeUnseenCount: true });
       if (requestId !== statusRequest.current) return;
       setOrders(result.orders || []);
+      (result.orders || []).forEach((order) => {
+        if (order.viewedBy?.includes(viewerId)) {
+          viewedOrderIds.current.add(order.id);
+          unseenOrderIds.current.delete(order.id);
+        } else if (!viewedOrderIds.current.has(order.id)) {
+          unseenOrderIds.current.add(order.id);
+        }
+      });
+      if (typeof result.unseenCount === "number") setUnseenCount(result.unseenCount);
       setHasMore(Boolean(result.hasMore));
       knownIds.current = new Set((result.orders || []).map((order) => order.id));
       firstPoll.current = true;
@@ -286,7 +320,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
   return (
     <section className="mx-auto max-w-7xl space-y-3 p-1 sm:p-2">
       <header className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div><h1 className="text-xl font-bold text-text-primary">অর্ডার ২ · Live</h1><p className="text-xs text-text-muted"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${realtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />{realtimeStatus === "connected" ? "লাইভ সংযুক্ত" : "লাইভ সংযোগ হচ্ছে · ব্যাকআপ refresh ৩০ সেকেন্ডে"}</p></div>
+        <div><div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-bold text-text-primary">অর্ডার ২ · Live</h1><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{unseenCount.toLocaleString("bn-BD")}টি দেখা হয়নি</span></div><p className="text-xs text-text-muted"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${realtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />{realtimeStatus === "connected" ? "লাইভ সংযুক্ত" : "লাইভ সংযোগ হচ্ছে · ব্যাকআপ refresh ৩০ সেকেন্ডে"}</p></div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={toggleNotifications} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted">{notificationsEnabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}{notificationsEnabled ? "নোটিফিকেশন বন্ধ করুন" : "নোটিফিকেশন চালু করুন"}</button>
           <button type="button" onClick={refresh} disabled={refreshing} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-white disabled:opacity-60"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />রিফ্রেশ</button>
