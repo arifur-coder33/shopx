@@ -6,11 +6,13 @@ import DeliveryAddress from "./DeliveryAddress";
 
 import { getCheckoutCampaignPreview } from "@/backend/serverActions/checkoutCampaignPreviewAction";
 import { createOrder } from "@/backend/serverActions/orderActions";
+import { saveAbandonedCheckoutLeadAction } from "@/backend/serverActions/abandonedCheckoutActions";
 import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
 import {
   cloneElement,
   isValidElement,
@@ -46,6 +48,8 @@ export default function OrderForm({
   const [paymentSelection, setPaymentSelection] = useState(null);
   const formRef = useRef(null);
   const checkoutDraftLoaded = useRef(false);
+  const [leadDraft, setLeadDraft] = useState(null);
+  const leadSaveTimer = useRef(null);
   const [couponCode, setCouponCode] = useState("");
   const [couponInput, setCouponInput] = useState("");
   const [couponFeedback, setCouponFeedback] = useState("");
@@ -93,6 +97,7 @@ export default function OrderForm({
         "note",
       ];
       if (saved && form) {
+        setLeadDraft(saved);
         fieldNames.forEach((name) => {
           const field = form.elements.namedItem(name);
           if (field && typeof saved[name] === "string") {
@@ -109,7 +114,7 @@ export default function OrderForm({
     checkoutDraftLoaded.current = true;
   }, [setDeliveryArea]);
 
-  const saveCheckoutDraft = (nextDeliveryArea) => {
+  const saveCheckoutDraft = (nextDeliveryArea, saveImmediately = false) => {
     if (!checkoutDraftLoaded.current || !formRef.current) return;
     try {
       const form = formRef.current;
@@ -128,13 +133,42 @@ export default function OrderForm({
       });
       draft.deliveryArea =
         typeof nextDeliveryArea === "string" ? nextDeliveryArea : deliveryArea;
-      window.localStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft));
+      setLeadDraft(draft);
+      try { window.localStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft)); } catch { /* Local browser storage may be unavailable. */ }
+      const phoneNumber = String(draft.phoneNumber || "").replace(/\D/g, "").slice(0, 13);
+      if (saveImmediately && /^01[3-9]\d{8}$/.test(phoneNumber)) {
+        saveAbandonedCheckoutLeadAction({ ...draft, phoneNumber, items: leadItems }).catch(() => {});
+      }
     } catch {
       /* Checkout remains usable when browser storage is unavailable. */
     }
   };
 
   const comboRewardItems = comboRewardGroups.items;
+  const leadItems = useMemo(() => [...(products || []), ...(comboRewardItems || [])]
+    .map((item) => {
+      const slug = String(item.slug || "").trim();
+      const price = Number(item.price ?? item.discountPrice ?? item.regularPrice);
+      return {
+        name: item.title || item.productName || "",
+        quantity: Number(item.quantity) || 1,
+        price: Number.isFinite(price) && price >= 0 ? price : null,
+        productUrl: /^[a-zA-Z0-9_-]+$/.test(slug) ? `/product/${slug}` : null,
+      };
+    })
+    .filter((item) => item.name), [products, comboRewardItems]);
+
+  useEffect(() => {
+    if (!leadDraft?.phoneNumber) return undefined;
+    let phoneNumber = String(leadDraft.phoneNumber).replace(/\D/g, "").slice(0, 13);
+    if (/^8801[3-9]\d{8}$/.test(phoneNumber)) phoneNumber = `0${phoneNumber.slice(2)}`;
+    if (!/^01[3-9]\d{8}$/.test(phoneNumber)) return undefined;
+    leadSaveTimer.current = window.setTimeout(() => {
+      saveAbandonedCheckoutLeadAction({ ...leadDraft, phoneNumber, items: leadItems }).catch(() => {});
+      leadSaveTimer.current = null;
+    }, 900);
+    return () => { if (leadSaveTimer.current) window.clearTimeout(leadSaveTimer.current); };
+  }, [leadDraft, leadItems]);
   const campaignLineItems = useMemo(
     () =>
       (products || []).map((item) => ({
@@ -308,11 +342,14 @@ export default function OrderForm({
       scrollToPaymentMethod();
       return;
     }
-    setLoading(true);
-    setLoadingStep("creating");
-
-    setError(null);
-    setSuccess(null);
+    if (loadingStep) return;
+    flushSync(() => {
+      setLoadingStep("creating");
+      setError(null);
+      setSuccess(null);
+    });
+    // Let the customer see the progress overlay before the server request starts.
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
     const form = e.target; // Reference to the form element
 
     const formData = new FormData(form); // Collect form data
@@ -353,6 +390,8 @@ export default function OrderForm({
     //   },
     // };
     if (response.success) {
+      if (leadSaveTimer.current) window.clearTimeout(leadSaveTimer.current);
+      setLeadDraft(null);
       try {
         window.localStorage.removeItem(CHECKOUT_DRAFT_KEY);
       } catch {
@@ -375,7 +414,6 @@ export default function OrderForm({
         window.location.href = initiated.url;
       } else {
         setLoadingStep("success");
-        await new Promise((resolve) => window.setTimeout(resolve, 1100));
         router.push(
           `/order-success?p=${encodeURIComponent(response.data.phoneNumber)}&o=${response.data.orderNo}&orderSuccess=true`,
         );
@@ -402,7 +440,7 @@ export default function OrderForm({
     // });
   };
   return (
-    <form ref={formRef} onSubmit={handleSubmit} onChange={saveCheckoutDraft}>
+    <form ref={formRef} onSubmit={handleSubmit} onChange={saveCheckoutDraft} onBlurCapture={(event) => { if (event.target?.name === "phoneNumber") saveCheckoutDraft(undefined, true); }}>
       <div className="w-full mb-2">
         {success && <p style={{ color: "green" }}>{success}</p>}
         {error && (

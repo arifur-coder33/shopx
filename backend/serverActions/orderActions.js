@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
 import { notifyOrderCreated } from "@/backend/services/orderRealtimeService";
+import { deleteAbandonedCheckoutLeadByPhone } from "@/backend/services/abandonedCheckoutService";
 import { headers } from "next/headers";
 import { getIP } from "../utils/getIp";
 import { getListCount } from "../utils/getListCount";
@@ -513,66 +514,68 @@ export async function createOrder(formData) {
           ttclid: data?.ttclid,
           userAgent: data?.userAgent,
           ipAddress: ip,
+          orderItems: {
+            create: pricedItems.map(({ item, variation, pricing }, i) => ({
+              orderNo: newOrderNumber,
+              orderItemNo: i + 1,
+              productName: variation.product.title,
+              campaignName: pricing.campaign?.name || null,
+              campaignDiscount: Math.round(Number(pricing.discount || 0) * Number(item.quantity) * 100) / 100,
+              price: pricing.price,
+              quantity: Number(item.quantity),
+              productCode: variation.product.productCode,
+              sku: variation.sku,
+              thumbnail: item.thumbnail,
+              productId: variation.product.id,
+              variationId: variation.id,
+              combinationId: item.variation.combinationId || undefined,
+              combinations: JSON.stringify(
+                item.variation.combinations?.map((c) => ({
+                  name: c.variationName.name,
+                  value: c.variationValue.value,
+                })) || [],
+              ),
+            })),
+          },
+          payments: {
+            create: {
+              gateway: paymentMethod !== "COD" ? provider.code : "COD",
+              paymentMethod,
+              paymentGatewayId: paymentMethod !== "COD" ? provider.id : null,
+              courierProviderId: null,
+              amount: totalAmount,
+              status: "PENDING",
+            },
+          },
+          timeline: {
+            create: {
+              orderNo: newOrderNumber,
+              status: "PENDING",
+              title: "Order Created",
+              message: "Your order has been created and is pending confirmation.",
+              createdBy: "user",
+            },
+          },
         },
-      });
-      await tx.orderItem.createMany({
-        data: pricedItems.map(({ item, variation, pricing }, i) => {
-          return {
-            orderNo: newOrderNumber,
-            orderItemNo: i + 1,
-            productName: variation.product.title,
-            campaignName: pricing.campaign?.name || null,
-            campaignDiscount: Math.round(Number(pricing.discount || 0) * Number(item.quantity) * 100) / 100,
-            price: pricing.price,
-            quantity: Number(item.quantity),
-            productCode: variation.product.productCode,
-            sku: variation.sku,
-            thumbnail: item.thumbnail,
-            productId: variation.product.id,
-            variationId: variation.id,
-            orderId: order.id,
-            combinationId: item.variation.combinationId || undefined,
-            combinations: JSON.stringify(
-              item.variation.combinations?.map((c) => ({
-                name: c.variationName.name,
-                value: c.variationValue.value,
-              })) || [],
-            ),
-          };
-        }),
-      });
-      const payment = await tx.payment.create({
-        data: {
-          orderId: order.id,
-          gateway: paymentMethod !== "COD" ? provider.code : "COD",
-          paymentMethod,
-          paymentGatewayId: paymentMethod !== "COD" ? provider.id : null,
-          courierProviderId: null,
-          amount: totalAmount,
-          status: "PENDING",
-        },
-      });
-      await tx.orderTimeline.create({
-        data: {
-          orderId: order.id,
-          orderNo: order.orderNo,
-          status: "PENDING",
-          title: "Order Created",
-          message: "Your order has been created and is pending confirmation.",
-          createdBy: "user",
-        },
+        include: { payments: { select: { id: true } } },
       });
       const appliedCampaignIds = [...new Set(appliedCampaigns.map((campaign) => campaign.id))];
       if (appliedCampaignIds.length) {
         await tx.campaignUsage.createMany({ data: appliedCampaignIds.map((campaignId) => ({ campaignId, orderId: order.id, customerKey: data.phoneNumber || null })) });
       }
+      const { payments: createdPayments, ...createdOrder } = order;
       return {
-        ...order,
-        paymentId: payment.id,
+        ...createdOrder,
+        paymentId: createdPayments[0]?.id,
         providerCode: paymentMethod !== "COD" ? provider.code : "COD",
       };
     });
-    after(() => notifyOrderCreated(result.id));
+    after(async () => {
+      await Promise.all([
+        notifyOrderCreated(result.id),
+        deleteAbandonedCheckoutLeadByPhone(data.phoneNumber),
+      ]);
+    });
     revalidatePath("/admin/orders");
     revalidateTag("orders");
     return { success: true, data: result };

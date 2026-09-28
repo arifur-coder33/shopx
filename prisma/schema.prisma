@@ -1509,3 +1509,21 @@ enum InventoryReference {
   ADJUSTMENT
   OPENING
 }
+
+model AbandonedCheckoutLead {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber     String   @unique
+  customerName    String?
+  district        String?
+  thana           String?
+  deliveryAddress String?
+  email           String?
+  note            String?
+  deliveryArea    String?
+  items           Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastSeenAt      DateTime @default(now())
+
+  @@index([updatedAt])
+}
