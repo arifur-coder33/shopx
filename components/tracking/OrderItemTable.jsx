@@ -88,6 +88,11 @@ const Item = ({ data }) => {
         </td>
         <td className="p-2 sm:w-4/12 w-8/12 text-gray-900 dark:text-white ">
           <p className="line-clamp-2"> {data.productName}</p>
+          {data.campaignName && data.campaignDiscount > 0 && (
+            <p className="text-xs font-medium text-emerald-700">
+              {data.campaignName}: {replaceNumbers(Number(data.campaignDiscount).toLocaleString("en-BD"))} টাকা ছাড়
+            </p>
+          )}
           <p className="sm:hidden text-[10px] dark:text-gray-400">
             মুল্যঃ {replaceNumbers(data?.price.toString())} X পরিমান{" "}
             {replaceNumbers(data?.quantity.toString())}

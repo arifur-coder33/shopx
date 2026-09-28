@@ -3,7 +3,7 @@
 //   cancelOrderById,
 //   updateOrderStatusAction,
 // } from "@/backend/serverActions/orderActions";
-// import { useState } from "react";
+// import { useEffect, useState } from "react";
 // import { toast } from "react-toastify";
 
 // export default function OrderFooter({ orderId, status, setStatus }) {
@@ -202,13 +202,14 @@ import {
 import { getOrderTimeline } from "@/backend/serverActions/orderTimelineActin";
 import { confirmFromUser } from "@/components/modal/confrim/confirm";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
   const [reason, setReason] = useState("");
   const [reasonType, setReasonType] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [returnAvailable, setReturnAvailable] = useState(false);
 
   const [refundData, setRefundData] = useState({
     method: "bkash",
@@ -216,19 +217,27 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
     note: "",
   });
 
-  // ✅ 30 days return check
-  const isReturnAvailable = async () => {
-    const getStatus = await getOrderTimeline(orderId);
-    const lastStatus = getStatus?.data?.[0];
-
-    if (lastStatus?.status !== "DELIVERED") return false;
-
-    const deliveryData = new Date(lastStatus.createdAt);
-    const now = new Date();
-    const diffDays = (now - deliveryData) / (1000 * 60 * 60 * 24);
-    return diffDays <= 30;
-  };
-
+  // Check return eligibility after render; server actions must not run in JSX conditions.
+  useEffect(() => {
+    if (status !== "DELIVERED") {
+      setReturnAvailable(false);
+      return;
+    }
+    let active = true;
+    const checkReturnEligibility = async () => {
+      try {
+        const timelineResult = await getOrderTimeline(orderId);
+        const lastStatus = timelineResult?.data?.[0];
+        const deliveryDate = lastStatus?.status === "DELIVERED" ? new Date(lastStatus.createdAt) : null;
+        const ageInDays = deliveryDate ? (Date.now() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24) : Infinity;
+        if (active) setReturnAvailable(ageInDays <= 30);
+      } catch {
+        if (active) setReturnAvailable(false);
+      }
+    };
+    checkReturnEligibility();
+    return () => { active = false; };
+  }, [orderId, status]);
   const resetReasonMode = () => {
     setReason("");
     setReasonType(null);
@@ -534,7 +543,7 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
               </>
             )}
             {/* DELIVERED */}
-            {status === "DELIVERED" && isReturnAvailable() && (
+            {status === "DELIVERED" && returnAvailable && (
               <>
                 <button
                   onClick={() => handleStatusChange("RETURNING")}

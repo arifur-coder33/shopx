@@ -83,6 +83,11 @@ export default function OrderItemsTable({
               </div>
               <div>
                 <p className="font-medium ">{item.productName}</p>
+                {item.campaignName && item.campaignDiscount > 0 && (
+                  <p className="text-xs font-medium text-emerald-700">
+                    {item.campaignName}: ৳{Number(item.campaignDiscount).toLocaleString("en-BD")} ছাড়
+                  </p>
+                )}
 
                 {item.combinations && (
                   <div className="flex">

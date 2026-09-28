@@ -9,7 +9,7 @@ import { headers } from "next/headers";
 import { getIP } from "../utils/getIp";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
-import { getUserId } from "../utils/hasPermission";
+import { getUserId, hasPermission } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
 import { firePurchaseServer } from "./SocialPurchaseEventAction";
 import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyPaymentDeliveryCampaign, applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority } from "@/backend/services/campaignService";
@@ -456,6 +456,15 @@ export async function createOrder(formData) {
         deliveryPricing.campaign,
         paymentDeliveryPricing.campaign,
       ].filter(Boolean);
+      const campaignDiscounts = new Map();
+      const addCampaignDiscount = (campaign, amount) => {
+        if (!campaign || !(Number(amount) > 0)) return;
+        const current = campaignDiscounts.get(campaign.id) || { id: campaign.id, name: campaign.name, group: campaign.group || campaign.type, discount: 0 };
+        current.discount = Math.round((current.discount + Number(amount)) * 100) / 100;
+        campaignDiscounts.set(campaign.id, current);
+      };
+      pricedItems.forEach(({ item, pricing }) => addCampaignDiscount(pricing.campaign, pricing.discount * Number(item.quantity)));
+      [cartPricing, paymentPricing, deliveryPricing, paymentDeliveryPricing].forEach(({ campaign, discount }) => addCampaignDiscount(campaign, discount));
       const counter = await tx.orderCounter.upsert({
         where: { idNo: 11 },
         update: { lastOrderNumber: { increment: 1 } },
@@ -483,7 +492,7 @@ export async function createOrder(formData) {
           deliveryDiscount: totalDeliveryDiscount,
           appliedCampaignIds: [...new Set(appliedCampaigns.map((campaign) => campaign.id))],
           appliedCampaignNames: [...new Set(appliedCampaigns.map((campaign) => campaign.name))],
-          appliedCampaignBreakdown: appliedCampaigns.map((campaign) => ({ id: campaign.id, name: campaign.name, group: campaign.group || campaign.type })),
+          appliedCampaignBreakdown: [...campaignDiscounts.values()],
           appliedCouponCode: data.campaignCode ? String(data.campaignCode).trim().toUpperCase() : null,
           orderWeight: serverOrderWeight,
           deliveryAddress: data.deliveryAddress,
@@ -509,6 +518,8 @@ export async function createOrder(formData) {
             orderNo: newOrderNumber,
             orderItemNo: i + 1,
             productName: variation.product.title,
+            campaignName: pricing.campaign?.name || null,
+            campaignDiscount: Math.round(Number(pricing.discount || 0) * Number(item.quantity) * 100) / 100,
             price: pricing.price,
             quantity: Number(item.quantity),
             productCode: variation.product.productCode,
@@ -564,6 +575,34 @@ export async function createOrder(formData) {
   } catch (error) {
     return { success: false, error: error.message };
   }
+}
+export async function getRecentOrdersForAdmin({ limit = 50, cursorId } = {}) {
+  await hasPermission("order", "view");
+  const pageSize = Math.min(100, Math.max(1, Number(limit) || 50));
+  const rows = await prisma.order.findMany({
+    ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    take: pageSize + 1,
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true, orderNo: true, status: true, customerName: true, phoneNumber: true,
+      deliveryAddress: true, thana: true, city: true, orderPrice: true,
+      deliveryCharge: true, paymentMethod: true, paymentStatus: true, paidAmount: true, dueAmount: true, createdAt: true, viewedBy: true,
+      orderItems: { select: { id: true, productName: true, price: true, quantity: true, thumbnail: true } },
+    },
+  });
+  return { orders: rows.slice(0, pageSize), hasMore: rows.length > pageSize };
+}
+
+export async function markOrderViewedAction(orderId) {
+  await hasPermission("order", "view");
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: "অনুগ্রহ করে আবার লগইন করুন।" };
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { viewedBy: true } });
+  if (!order) return { success: false, message: "অর্ডার পাওয়া যায়নি।" };
+  if (!(order.viewedBy || []).includes(userId)) {
+    await prisma.order.update({ where: { id: orderId }, data: { viewedBy: { push: userId } } });
+  }
+  return { success: true };
 }
 export async function getAllOrder(params) {
   return getListData({
@@ -693,6 +732,7 @@ export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
 
 export async function getOrderById(orderId) {
   try {
+    await hasPermission("order", "view");
     const data = await prisma.order.findUnique({
       where: { id: orderId },
 
@@ -792,6 +832,7 @@ export async function deleteOrderById(orderId) {
 
 export async function updateOrderStatusAction(orderId, status, note) {
   try {
+    await hasPermission("order", "update");
     // 🔎 get order first (for orderNo + old status)
     const order = await prisma.order.findUnique({
       where: { id: orderId },

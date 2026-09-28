@@ -40,7 +40,7 @@ export default function AdminShell({ children, siteSetting }) {
             />
             <main
               className={cn(
-                "min-h-screen min-w-0 flex-1 overflow-x-hidden p-2 transition-all duration-300 ease-in-out sm:p-4",
+                "min-h-screen min-w-0 flex-1 overflow-x-clip p-2 transition-all duration-300 ease-in-out sm:p-4",
                 isMobile ? "w-full" : isSidebarCollapsed ? "sm:ml-20" : "sm:ml-64",
               )}
             >

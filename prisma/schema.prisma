@@ -390,6 +390,7 @@ model Order {
   appliedCampaignIds        String[]         @default([])
   appliedCampaignNames      String[]         @default([])
   appliedCampaignBreakdown  Json?
+  viewedBy                  String[]         @default([])
   appliedCouponCode         String?
   orderWeight               Float?
   adminDiscount             Float?
@@ -438,6 +439,8 @@ model OrderItem {
   orderNo       String
   orderItemNo   Int
   productName   String
+  campaignName  String?
+  campaignDiscount Float @default(0)
   sku           String
   productCode   String?
   thumbnail     String?
