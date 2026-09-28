@@ -6,8 +6,17 @@ import Imagecustom from "@/components/images/ImageCustom";
 import { Bell, BellOff, CalendarDays, Copy, ListFilter, Phone, RefreshCw, Search } from "lucide-react";
 import { toast } from "react-toastify";
 import { getRecentOrdersForAdmin, markOrderViewedAction, updateOrderStatusAction } from "@/backend/serverActions/orderActions";
+import { createOrderRealtimeToken, getOrderPushConfig, getOrderCardForAdminAction, saveOrderPushSubscriptionAction, removeOrderPushSubscriptionAction } from "@/backend/serverActions/realtimeActions";
+import { useRealtimeSocket } from "@/hooks/useRealtimeSocket";
 
 const PAGE_SIZE = 50;
+function urlBase64ToUint8Array(value) {
+  const padding = "=".repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
+}
+
 const money = (value) => `৳${Number(value || 0).toLocaleString("en-BD")}`;
 const date = (value) => new Date(value).toLocaleString("en-BD", { dateStyle: "medium", timeStyle: "short" });
 const relativeTime = (value) => {
@@ -65,13 +74,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
   useEffect(() => {
     try {
       const savedPreference = window.localStorage.getItem(notificationPreferenceKey);
-      const canNotify = "Notification" in window && Notification.permission === "granted";
       if (savedPreference === "true") setNotificationsEnabled(true);
-      else if (savedPreference === "false") setNotificationsEnabled(false);
-      else if (canNotify) {
-        setNotificationsEnabled(true);
-        window.localStorage.setItem(notificationPreferenceKey, "true");
-      }
     } catch { /* Browser storage may be unavailable. */ }
   }, [notificationPreferenceKey]);
   const markViewed = useCallback((orderId) => {
@@ -96,14 +99,6 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
       if (!firstPoll.current && newOrders.length && notificationsEnabled) {
         newOrders.slice().reverse().forEach((order) => {
           toast.info(`নতুন অর্ডার #${order.orderNo} · ${order.customerName} · ${money(order.orderPrice + (order.deliveryCharge || 0))}`, { position: "top-center", autoClose: 12000, pauseOnHover: true, pauseOnFocusLoss: true, onClick: () => { markViewed(order.id); router.push(`/admin/orders2/${order.id}`); } });
-          if (notificationsEnabled && "Notification" in window && Notification.permission === "granted") {
-            const notification = new Notification(`নতুন অর্ডার #${order.orderNo}`, {
-              body: `${order.customerName} · ${money(order.orderPrice + (order.deliveryCharge || 0))}`,
-              tag: `order-${order.id}`,
-              requireInteraction: true,
-            });
-            notification.onclick = () => { markViewed(order.id); window.focus(); window.location.href = `/admin/orders2/${order.id}`; };
-          }
         });
       }
       firstPoll.current = false;
@@ -114,14 +109,53 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
     }
   }, [notificationsEnabled, markViewed, router, statusFilter]);
 
+  const handleRealtimeEvent = useCallback((event, payload) => {
+    if (event === "realtime:connected") return;
+    if (event !== "order.created" || !payload?.id) return;
+    if (statusFilter !== "ALL" && payload.status !== statusFilter) return;
+    if (knownIds.current.has(payload.id)) return;
+    knownIds.current.add(payload.id);
+    setOrders((current) => [payload, ...current.filter((order) => order.id !== payload.id)]);
+    if (notificationsEnabled) {
+      toast.info(`নতুন অর্ডার #${payload.orderNo} · ${payload.customerName} · ${money(payload.orderPrice + (payload.deliveryCharge || 0))}`, {
+        position: "top-center", autoClose: 12000, pauseOnHover: true, pauseOnFocusLoss: true,
+        onClick: () => { markViewed(payload.id); router.push(`/admin/orders2/${payload.id}`); },
+      });
+    }
+  }, [notificationsEnabled, markViewed, router, statusFilter]);
+  const realtimeStatus = useRealtimeSocket({ enabled: true, getAccessToken: createOrderRealtimeToken, onEvent: handleRealtimeEvent });
+
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") refresh();
-    }, 12000);
+    if (realtimeStatus === "connected") refresh();
+  }, [realtimeStatus, refresh]);
+
+  useEffect(() => {
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
-  }, [refresh]);
+    let timer;
+    if (realtimeStatus !== "connected") {
+      timer = window.setInterval(() => {
+        if (document.visibilityState === "visible") refresh();
+      }, 30000);
+    }
+    return () => { if (timer) window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
+  }, [refresh, realtimeStatus]);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return undefined;
+    const onWorkerMessage = async (event) => {
+      if (event.data?.type !== "order-push" || !event.data.orderId) return;
+      if (knownIds.current.has(event.data.orderId)) return;
+      const result = await getOrderCardForAdminAction(event.data.orderId);
+      const order = result?.data;
+      if (!order || (statusFilter !== "ALL" && order.status !== statusFilter) || knownIds.current.has(order.id)) return;
+      knownIds.current.add(order.id);
+      setOrders((current) => [order, ...current]);
+      if (notificationsEnabled) toast.info(event.data.title || `নতুন অর্ডার #${order.orderNo}`, { position: "top-center", autoClose: 12000, pauseOnHover: true, pauseOnFocusLoss: true });
+    };
+    navigator.serviceWorker.addEventListener("message", onWorkerMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onWorkerMessage);
+  }, [notificationsEnabled, statusFilter]);
 
   const loadMore = async () => {
     if (!hasMore || loadingMore || !orders.length) return;
@@ -144,20 +178,47 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
   const toggleNotifications = async () => {
     if (notificationsEnabled) {
       setNotificationsEnabled(false);
-      try { window.localStorage.setItem(notificationPreferenceKey, "false"); } catch { /* Toggle still applies until this page closes. */ }
+      try {
+        window.localStorage.setItem(notificationPreferenceKey, "false");
+        const registration = await navigator.serviceWorker?.getRegistration("/");
+        const subscription = await registration?.pushManager?.getSubscription();
+        if (subscription) {
+          await removeOrderPushSubscriptionAction(subscription.endpoint);
+          await subscription.unsubscribe();
+        }
+      } catch { /* In-page alerts still turn off if push cleanup is unavailable. */ }
       toast.success("নতুন অর্ডারের নোটিফিকেশন বন্ধ করা হয়েছে।");
       return;
     }
-    let pushEnabled = false;
-    if ("Notification" in window) {
-      try {
-        const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-        pushEnabled = permission === "granted";
-      } catch { /* In-app alerts work even if the browser blocks push permission. */ }
-    }
+
+    const permissionRequest = "Notification" in window
+      ? (Notification.permission === "granted" ? Promise.resolve("granted") : Notification.requestPermission())
+      : Promise.resolve("unsupported");
     setNotificationsEnabled(true);
     try { window.localStorage.setItem(notificationPreferenceKey, "true"); } catch { /* Toggle still applies until this page closes. */ }
-    toast.success(pushEnabled ? "নতুন অর্ডারের নোটিফিকেশন চালু হয়েছে।" : "অর্ডার পেজ খোলা থাকলে নতুন অর্ডারের নোটিফিকেশন দেখানো হবে।", { position: "top-center", autoClose: 7000 });
+    try {
+      const config = await getOrderPushConfig();
+      const canPush = Boolean(config?.publicKey && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
+      if (!canPush) {
+        toast.info(/iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.navigator.standalone
+          ? "iPhone-এ push পেতে Share → Add to Home Screen করে app খুলুন। আপাতত পেজ খোলা থাকলে alert আসবে।"
+          : "Push সেটআপ পাওয়া যায়নি। Orders2 খোলা থাকলে alert আসবে।", { position: "top-center", autoClose: 10000 });
+        return;
+      }
+      const permission = await permissionRequest;
+      if (permission !== "granted") {
+        toast.info("ব্রাউজার অনুমতি দেয়নি। পেজ খোলা থাকলে alert আসবে।", { position: "top-center", autoClose: 8000 });
+        return;
+      }
+      const registration = await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
+      const existing = await registration.pushManager.getSubscription();
+      const subscription = existing || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
+      const saved = await saveOrderPushSubscriptionAction(subscription.toJSON());
+      if (!saved?.success) throw new Error(saved?.message || "Push subscription save failed.");
+      toast.success("এই ডিভাইসে নতুন অর্ডারের push notification চালু হয়েছে।", { position: "top-center", autoClose: 8000 });
+    } catch (error) {
+      toast.info(error?.message || "Push চালু হয়নি। Orders2 পেজ খোলা থাকলে alert আসবে।", { position: "top-center", autoClose: 10000 });
+    }
   };
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const text = `${order.orderNo} ${order.customerName} ${order.phoneNumber}`.toLowerCase();
@@ -207,7 +268,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
   return (
     <section className="mx-auto max-w-7xl space-y-3 p-1 sm:p-2">
       <header className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div><h1 className="text-xl font-bold text-text-primary">অর্ডার ২ · Live</h1><p className="text-xs text-text-muted">প্রতি ১২ সেকেন্ডে আপডেট · <span className="font-semibold text-amber-700">হালকা হলুদ = দেখা হয়নি</span> · <span className="font-semibold text-emerald-700">সবুজ = দেখা হয়েছে</span></p></div>
+        <div><h1 className="text-xl font-bold text-text-primary">অর্ডার ২ · Live</h1><p className="text-xs text-text-muted"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${realtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />{realtimeStatus === "connected" ? "লাইভ সংযুক্ত" : "লাইভ সংযোগ হচ্ছে · ব্যাকআপ refresh ৩০ সেকেন্ডে"}</p></div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={toggleNotifications} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted">{notificationsEnabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}{notificationsEnabled ? "নোটিফিকেশন বন্ধ করুন" : "নোটিফিকেশন চালু করুন"}</button>
           <button type="button" onClick={refresh} disabled={refreshing} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-white disabled:opacity-60"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />রিফ্রেশ</button>
@@ -239,7 +300,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, canUpdate
       {filteredOrders.length === 0 ? <div className="rounded-xl border border-dashed border-border bg-surface p-8 text-center text-sm text-text-muted">কোনো অর্ডার পাওয়া যায়নি।</div> : <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {filteredOrders.map((order) => {
           const viewed = order.viewedBy?.includes(viewerId) || viewedIds.has(order.id);
-          return <article key={order.id} role="link" tabIndex={0} onClick={(event) => openOrderFromCard(event, order)} onPointerEnter={() => router.prefetch(`/admin/orders2/${order.id}`)} onTouchStart={() => router.prefetch(`/admin/orders2/${order.id}`)} onKeyDown={(event) => { if (event.key === "Enter") openOrderFromCard(event, order); }} className={`flex min-w-0 cursor-pointer flex-col rounded-xl border p-3 shadow-sm transition-shadow hover:shadow-md ${viewed ? "border-border bg-surface" : "border-amber-300 bg-amber-50"}`}>
+          return <article key={order.id} role="link" tabIndex={0} onClick={(event) => openOrderFromCard(event, order)} onPointerEnter={() => router.prefetch(`/admin/orders2/${order.id}`)} onTouchStart={() => router.prefetch(`/admin/orders2/${order.id}`)} onKeyDown={(event) => { if (event.key === "Enter") openOrderFromCard(event, order); }} className={`flex min-w-0 cursor-pointer flex-col rounded-xl border p-3 shadow-sm transition-shadow hover:shadow-md ${viewed ? "border-border bg-surface" : "border-primary/35 bg-primary/5"}`}>
             <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-bold text-text-primary">#{order.orderNo} · {order.customerName}</p><div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px]"><span className="text-text-muted">{date(order.createdAt)}</span><span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 font-semibold text-primary ring-1 ring-primary/10"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{relativeTime(order.createdAt)}</span></div></div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${statusStyle[order.status] || "bg-slate-100 text-slate-700"}`}>{order.status?.replaceAll("_", " ")}</span></div>
             <div className="mt-2 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1"><a className="truncate text-xs font-medium text-primary" href={`tel:${order.phoneNumber}`} aria-label="Call customer"><Phone className="mr-1 inline h-3.5 w-3.5" />{order.phoneNumber}</a><button type="button" onClick={() => copyPhone(order.phoneNumber)} title="নম্বর কপি" aria-label="Copy phone number" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:bg-white/70"><Copy className="h-3.5 w-3.5" /></button></div><span className="shrink-0 text-sm font-bold text-text-primary">{money(order.orderPrice + (order.deliveryCharge || 0))}</span></div>
             <div className="mt-2 space-y-1 border-t border-black/5 pt-2">{(order.orderItems || []).slice(0, 2).map((item) => <div key={item.id} className="flex min-w-0 items-center gap-2 text-xs"><div className="h-9 w-9 shrink-0 overflow-hidden rounded-md bg-white">{item.thumbnail ? <Imagecustom src={item.thumbnail} alt={item.productName || "পণ্য"} w={36} h={36} sizes="36px" imageClassName="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[8px] text-text-muted">ছবি নেই</div>}</div><span className="line-clamp-1 min-w-0 flex-1 text-text-primary">{item.productName} <span className="text-text-muted">×{item.quantity}</span></span></div>)}{order.orderItems?.length > 2 && <p className="pl-10 text-[10px] text-text-muted">আরও {order.orderItems.length - 2}টি পণ্য</p>}</div>

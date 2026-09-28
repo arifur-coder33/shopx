@@ -24,6 +24,8 @@ export async function generateMetadata() {
     },
     description: identity.seoDescription,
     applicationName: identity.name,
+    manifest: "/manifest.webmanifest",
+    appleWebApp: { capable: true, title: identity.name, statusBarStyle: "default" },
     alternates: { canonical: siteUrl },
     openGraph: {
       siteName: identity.name,

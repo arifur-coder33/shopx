@@ -5,6 +5,8 @@ import { getProviderRuntimeConfiguration } from "@/backend/services/providerCred
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { after } from "next/server";
+import { notifyOrderCreated } from "@/backend/services/orderRealtimeService";
 import { headers } from "next/headers";
 import { getIP } from "../utils/getIp";
 import { getListCount } from "../utils/getListCount";
@@ -569,6 +571,7 @@ export async function createOrder(formData) {
         providerCode: paymentMethod !== "COD" ? provider.code : "COD",
       };
     });
+    after(() => notifyOrderCreated(result.id));
     revalidatePath("/admin/orders");
     revalidateTag("orders");
     return { success: true, data: result };

@@ -40,6 +40,7 @@
     "jspdf-autotable": "^5.0.8",
     "lucide": "^1.21.0",
     "lucide-react": "^1.21.0",
+    "mongodb": "^6.21.0",
     "next": "16.2.9",
     "next-auth": "^5.0.0-beta.25",
     "next-cloudinary": "^6.17.5",
@@ -55,10 +56,13 @@
     "react-dropzone": "^15.0.0",
     "react-quill-new": "^3.8.3",
     "react-toastify": "^11.1.0",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.6.0",
     "tailwind-scrollbar-hide": "^4.0.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",

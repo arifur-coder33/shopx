@@ -5,6 +5,8 @@ import { postCustomerPaymentInTransaction } from "@/backend/services/paymentPost
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyOrderCreated } from "@/backend/services/orderRealtimeService";
 import { generateCode } from "../utils/generateCode";
 import { actionError, requireProcurementPermission } from "../utils/procurement";
 
@@ -412,6 +414,7 @@ export async function createPosSale(formData) {
       };
     });
 
+    after(() => notifyOrderCreated(sale.order.id));
     let courierWarning = null;
     if (fulfillment === "COURIER") {
       const courierForm = new FormData();
