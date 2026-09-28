@@ -78,7 +78,7 @@ async function withComboDisplayNames(campaigns) {
     })) } };
   });
 }
-export async function getActiveCampaigns({ couponCode } = {}) {
+export async function getActiveCampaigns({ couponCode, includeComboDisplayNames = true } = {}) {
   const now = new Date();
   const campaigns = await prisma.campaign.findMany({
     where: {
@@ -92,10 +92,11 @@ export async function getActiveCampaigns({ couponCode } = {}) {
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
   });
   const normalizedCode = couponCode ? String(couponCode).trim().toUpperCase() : null;
-  return withComboDisplayNames(campaigns.filter((campaign) =>
+  const activeCampaigns = campaigns.filter((campaign) =>
     isWithinSchedule(campaign, now) &&
     (campaign.type !== "COUPON" || (normalizedCode && campaign.couponCode === normalizedCode))
-  ));
+  );
+  return includeComboDisplayNames ? withComboDisplayNames(activeCampaigns) : activeCampaigns;
 }
 
 export async function getPublicCampaigns() {

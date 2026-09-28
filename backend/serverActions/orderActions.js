@@ -280,7 +280,12 @@ export async function createOrder(formData) {
       throw new Error("Select an online payment gateway.");
     }
     const variationIds = orderItems.map((item) => item.variation.id);
-    const variations = await prisma.productVariation.findMany({
+    const campaignsPromise = getActiveCampaigns({ couponCode: data.campaignCode, includeComboDisplayNames: false });
+    const deliveryRatesPromise = getCheckoutDeliveryRates();
+    const providerPromise = paymentMethod !== "COD"
+      ? prisma.paymentGateway.findUnique({ where: { id: data.paymentGatewayId }, include: { moneyAccount: true } })
+      : prisma.paymentGateway.findFirst({ where: { adapterKey: "COD", isActive: true } });
+    const variationsPromise = prisma.productVariation.findMany({
       where: { id: { in: variationIds } },
       select: {
         id: true,
@@ -300,6 +305,10 @@ export async function createOrder(formData) {
         },
       },
     });
+    const [variations, activeCampaigns, deliveryRates, provider] = await Promise.all([variationsPromise, campaignsPromise, deliveryRatesPromise, providerPromise]);
+    const providerConfiguration = provider ? getProviderRuntimeConfiguration("gateway", provider) : null;
+    if (!providerConfiguration?.ready) throw new Error(paymentMethod === "COD" ? "Cash on Delivery is currently disabled." : "The selected provider is unavailable or not fully configured.");
+    if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") throw new Error("Installment payment is available only through SSLCommerz.");
     const variationMap = Object.fromEntries(
       variations.map((v) => [
         v.id,
@@ -354,16 +363,9 @@ export async function createOrder(formData) {
       data.deliveryArea === "inside-dhaka" ? "inside-dhaka" : "outside-dhaka";
 
     const result = await prisma.$transaction(async (tx) => {
-      const provider = paymentMethod !== "COD"
-        ? await tx.paymentGateway.findUnique({ where: { id: data.paymentGatewayId }, include: { moneyAccount: true } })
-        : await tx.paymentGateway.findFirst({ where: { adapterKey: "COD", isActive: true } });
-      const providerConfiguration = provider ? getProviderRuntimeConfiguration("gateway", provider) : null;
-      if (!providerConfiguration?.ready) throw new Error(paymentMethod === "COD" ? "Cash on Delivery is currently disabled." : "The selected provider is unavailable or not fully configured.");
-      if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") throw new Error("Installment payment is available only through SSLCommerz.");
       const campaignPaymentMethod = provider?.code || paymentMethod;
       // Campaigns are evaluated here, after trusted product data is loaded.
       // Browser-supplied totals and prices are never used for the order.
-      const activeCampaigns = await getActiveCampaigns({ couponCode: data.campaignCode });
       const comboRewardLines = orderItems.filter((item) => item.comboReward === true);
       const purchasedLines = orderItems.filter((item) => item.comboReward !== true);
       const comboCampaignById = new Map(activeCampaigns.filter((campaign) => campaign.type === "COMBO" || campaign.group === "COMBO").map((campaign) => [campaign.id, campaign]));
@@ -436,7 +438,6 @@ export async function createOrder(formData) {
       remember(cartPricing.campaign);
       const paymentPricing = applyPaymentCampaign({ campaigns: compatible(), subtotal: cartPricing.subtotal, paymentMethod: campaignPaymentMethod, items: campaignItems });
       remember(paymentPricing.campaign);
-      const deliveryRates = await getCheckoutDeliveryRates(tx);
       const originalDeliveryCharge = calculateDeliveryCharge(
         deliveryArea,
         serverOrderWeight,

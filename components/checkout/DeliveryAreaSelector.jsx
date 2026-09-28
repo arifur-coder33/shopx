@@ -1,13 +1,10 @@
 "use client";
-import { useState } from "react";
 import RadioButton from "../RadioButton";
 
-function DeliveryAreaSelector({ setDeliveryArea }) {
-  const [selectedArea, setSelectedArea] = useState("outside-dhaka");
-
+function DeliveryAreaSelector({ setDeliveryArea, selectedArea = "outside-dhaka", onSelectArea }) {
   function onChangeArea(id) {
     setDeliveryArea(id);
-    setSelectedArea(id);
+    onSelectArea?.(id);
   }
 
   return (
@@ -23,7 +20,6 @@ function DeliveryAreaSelector({ setDeliveryArea }) {
         />
         <RadioButton
           id="outside-dhaka"
-          selected={true}
           name="deliveryArea"
           label="না। ঢাকার বাহিরে"
           isSelected={selectedArea === "outside-dhaka"}

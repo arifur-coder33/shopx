@@ -1,21 +1,31 @@
 "use client";
-import { Truck } from "lucide-react";
 import { resolveComboRewards } from "@/components/campaign/resolveComboRewards";
+import { Truck } from "lucide-react";
 import Button from "../button";
 import DeliveryAddress from "./DeliveryAddress";
 
-import { createOrder } from "@/backend/serverActions/orderActions";
 import { getCheckoutCampaignPreview } from "@/backend/serverActions/checkoutCampaignPreviewAction";
-import { calculateCampaignPreviewFallback } from "./campaignPreviewFallback";
+import { createOrder } from "@/backend/serverActions/orderActions";
 import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { cloneElement, isValidElement, useEffect, useMemo, useState, useTransition } from "react";
-import LoadingSpinner from "../common/LoadingSpinner";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { calculateCampaignPreviewFallback } from "./campaignPreviewFallback";
+import CheckoutProgressOverlay from "./CheckoutProgressOverlay";
 import DeliveryAreaSelector from "./DeliveryAreaSelector";
 import PaymentMethodSelector from "./PaymentMethodSelector";
+const CHECKOUT_DRAFT_KEY = "checkout-customer-draft:v1";
+
 export default function OrderForm({
   setDeliveryArea,
   children,
@@ -34,52 +44,171 @@ export default function OrderForm({
   const { data: session } = useSession();
   const { clearCart } = useCart();
   const [paymentSelection, setPaymentSelection] = useState(null);
+  const formRef = useRef(null);
+  const checkoutDraftLoaded = useRef(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponInput, setCouponInput] = useState("");
   const [couponFeedback, setCouponFeedback] = useState("");
   const [campaignPreview, setCampaignPreview] = useState(null);
-  const [dismissedComboCampaignIds, setDismissedComboCampaignIds] = useState([]);
+  const [dismissedComboCampaignIds, setDismissedComboCampaignIds] = useState(
+    [],
+  );
   const [comboVariationSelections, setComboVariationSelections] = useState({});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [confirmedOrderNo, setConfirmedOrderNo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loadingStep, setLoadingStep] = useState(null); // "creating", "success", "redirecting"
+  const [loadingStep, setLoadingStep] = useState(null); // creating, preparing-payment, success
   const router = useRouter();
-  const comboRewardGroups = useMemo(() => resolveComboRewards(campaignOffers, products, dismissedComboCampaignIds, comboVariationSelections), [campaignOffers, products, dismissedComboCampaignIds, comboVariationSelections]);
+  const comboRewardGroups = useMemo(
+    () =>
+      resolveComboRewards(
+        campaignOffers,
+        products,
+        dismissedComboCampaignIds,
+        comboVariationSelections,
+      ),
+    [
+      campaignOffers,
+      products,
+      dismissedComboCampaignIds,
+      comboVariationSelections,
+    ],
+  );
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(
+        window.localStorage.getItem(CHECKOUT_DRAFT_KEY) || "null",
+      );
+      const form = formRef.current;
+      const fieldNames = [
+        "customerName",
+        "phoneNumber",
+        "district",
+        "thana",
+        "deliveryAddress",
+        "email",
+        "note",
+      ];
+      if (saved && form) {
+        fieldNames.forEach((name) => {
+          const field = form.elements.namedItem(name);
+          if (field && typeof saved[name] === "string") {
+            field.value = saved[name];
+            field.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        });
+        if (["inside-dhaka", "outside-dhaka"].includes(saved.deliveryArea))
+          setDeliveryArea(saved.deliveryArea);
+      }
+    } catch {
+      /* Ignore an invalid or unavailable local checkout draft. */
+    }
+    checkoutDraftLoaded.current = true;
+  }, [setDeliveryArea]);
+
+  const saveCheckoutDraft = (nextDeliveryArea) => {
+    if (!checkoutDraftLoaded.current || !formRef.current) return;
+    try {
+      const form = formRef.current;
+      const draft = {};
+      [
+        "customerName",
+        "phoneNumber",
+        "district",
+        "thana",
+        "deliveryAddress",
+        "email",
+        "note",
+      ].forEach((name) => {
+        const field = form.elements.namedItem(name);
+        if (field) draft[name] = field.value;
+      });
+      draft.deliveryArea =
+        typeof nextDeliveryArea === "string" ? nextDeliveryArea : deliveryArea;
+      window.localStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* Checkout remains usable when browser storage is unavailable. */
+    }
+  };
+
   const comboRewardItems = comboRewardGroups.items;
-  const campaignLineItems = useMemo(() => (products || []).map((item) => ({
-    variationId: item.variation?.id || item.variationId,
-    quantity: Number(item.quantity) || 1,
-  })), [products]);
+  const campaignLineItems = useMemo(
+    () =>
+      (products || []).map((item) => ({
+        variationId: item.variation?.id || item.variationId,
+        quantity: Number(item.quantity) || 1,
+      })),
+    [products],
+  );
   const campaignLineKey = JSON.stringify(campaignLineItems);
-  const fallbackCampaignPreview = useMemo(() => calculateCampaignPreviewFallback({
-    campaigns: campaignOffers,
-    items: products || [],
-    deliveryCharge,
-    paymentMethod: paymentSelection?.paymentMethod === "COD"
-      ? "COD"
-      : checkoutProviders?.gateways?.find((provider) => provider.id === paymentSelection?.paymentGatewayId)?.code || paymentSelection?.paymentMethod,
-    couponCode,
-  }), [campaignOffers, products, deliveryCharge, paymentSelection, checkoutProviders, couponCode]);
+  const fallbackCampaignPreview = useMemo(
+    () =>
+      calculateCampaignPreviewFallback({
+        campaigns: campaignOffers,
+        items: products || [],
+        deliveryCharge,
+        paymentMethod:
+          paymentSelection?.paymentMethod === "COD"
+            ? "COD"
+            : checkoutProviders?.gateways?.find(
+                (provider) =>
+                  provider.id === paymentSelection?.paymentGatewayId,
+              )?.code || paymentSelection?.paymentMethod,
+        couponCode,
+      }),
+    [
+      campaignOffers,
+      products,
+      deliveryCharge,
+      paymentSelection,
+      checkoutProviders,
+      couponCode,
+    ],
+  );
   const visibleCampaignPreview = useMemo(() => {
     if (!campaignPreview?.rows?.length) return fallbackCampaignPreview;
-    const rows = new Map((fallbackCampaignPreview.rows || []).map((row) => [row.id, row]));
+    const rows = new Map(
+      (fallbackCampaignPreview.rows || []).map((row) => [row.id, row]),
+    );
     for (const row of campaignPreview.rows) rows.set(row.id, row);
     return {
       rows: [...rows.values()],
-      itemDiscounts: campaignPreview.itemDiscounts?.length ? campaignPreview.itemDiscounts : fallbackCampaignPreview.itemDiscounts || [],
+      itemDiscounts: campaignPreview.itemDiscounts?.length
+        ? campaignPreview.itemDiscounts
+        : fallbackCampaignPreview.itemDiscounts || [],
       progress: fallbackCampaignPreview.progress || [],
-      total: fallbackCampaignPreview.rows?.length ? fallbackCampaignPreview.total : campaignPreview.total,
+      total: fallbackCampaignPreview.rows?.length
+        ? fallbackCampaignPreview.total
+        : campaignPreview.total,
     };
   }, [campaignPreview, fallbackCampaignPreview]);
-  const appliedDeliveryDiscount = (visibleCampaignPreview.rows || []).reduce((sum, row) => {
-    const campaign = campaignOffers.find((offer) => offer.id === row.id);
-    const isDeliveryCampaign = campaign && (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) || (campaign.type === "PAYMENT_DISCOUNT" && campaign.configuration?.paymentDiscountTarget === "DELIVERY"));
-    return isDeliveryCampaign ? sum + Math.max(0, Number(row.discount) || 0) : sum;
-  }, 0);
-  const alreadyFreeDelivery = Number(deliveryCharge) > 0 && appliedDeliveryDiscount >= Number(deliveryCharge);
-  const paymentDeliveryCampaigns = alreadyFreeDelivery ? [] : campaignOffers.filter((campaign) => campaign.type === "PAYMENT_DISCOUNT" && campaign.configuration?.paymentDiscountTarget === "DELIVERY");
+  const appliedDeliveryDiscount = (visibleCampaignPreview.rows || []).reduce(
+    (sum, row) => {
+      const campaign = campaignOffers.find((offer) => offer.id === row.id);
+      const isDeliveryCampaign =
+        campaign &&
+        (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) ||
+          (campaign.type === "PAYMENT_DISCOUNT" &&
+            campaign.configuration?.paymentDiscountTarget === "DELIVERY"));
+      return isDeliveryCampaign
+        ? sum + Math.max(0, Number(row.discount) || 0)
+        : sum;
+    },
+    0,
+  );
+  const alreadyFreeDelivery =
+    Number(deliveryCharge) > 0 &&
+    appliedDeliveryDiscount >= Number(deliveryCharge);
+  const paymentDeliveryCampaigns = alreadyFreeDelivery
+    ? []
+    : campaignOffers.filter(
+        (campaign) =>
+          campaign.type === "PAYMENT_DISCOUNT" &&
+          campaign.configuration?.paymentDiscountTarget === "DELIVERY",
+      );
   useEffect(() => {
     if (!campaignLineItems.length) {
       setCampaignPreview(null);
@@ -92,18 +221,54 @@ export default function OrderForm({
       paymentGatewayId: paymentSelection?.paymentGatewayId || null,
       couponCode,
       deliveryArea,
-    }).then((result) => {
-      if (active) setCampaignPreview(result?.success ? result.data : null);
-    }).catch(() => { if (active) setCampaignPreview(null); });
-    return () => { active = false; };
-  }, [campaignLineKey, paymentSelection?.paymentMethod, paymentSelection?.paymentGatewayId, couponCode, deliveryArea]);
-  const appliedCouponCampaign = campaignOffers.find((campaign) => campaign.type === "COUPON" && String(campaign.couponCode || "").trim().toUpperCase() === couponCode);
-  const couponIsApplied = Boolean(appliedCouponCampaign && visibleCampaignPreview.rows?.some((row) => row.id === appliedCouponCampaign.id));
+    })
+      .then((result) => {
+        if (active) setCampaignPreview(result?.success ? result.data : null);
+      })
+      .catch(() => {
+        if (active) setCampaignPreview(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    campaignLineKey,
+    paymentSelection?.paymentMethod,
+    paymentSelection?.paymentGatewayId,
+    couponCode,
+    deliveryArea,
+  ]);
+  const appliedCouponCampaign = campaignOffers.find(
+    (campaign) =>
+      campaign.type === "COUPON" &&
+      String(campaign.couponCode || "")
+        .trim()
+        .toUpperCase() === couponCode,
+  );
+  const couponIsApplied = Boolean(
+    appliedCouponCampaign &&
+    visibleCampaignPreview.rows?.some(
+      (row) => row.id === appliedCouponCampaign.id,
+    ),
+  );
   const applyCoupon = () => {
     const code = couponInput.trim().toUpperCase();
-    const campaign = campaignOffers.find((offer) => offer.type === "COUPON" && String(offer.couponCode || "").trim().toUpperCase() === code);
-    if (!code) { setCouponFeedback("কুপন কোড লিখুন"); return; }
-    if (!campaign) { setCouponCode(""); setCouponFeedback("এই কুপন কোডটি পাওয়া যায়নি বা আর চালু নেই"); return; }
+    const campaign = campaignOffers.find(
+      (offer) =>
+        offer.type === "COUPON" &&
+        String(offer.couponCode || "")
+          .trim()
+          .toUpperCase() === code,
+    );
+    if (!code) {
+      setCouponFeedback("কুপন কোড লিখুন");
+      return;
+    }
+    if (!campaign) {
+      setCouponCode("");
+      setCouponFeedback("এই কুপন কোডটি পাওয়া যায়নি বা আর চালু নেই");
+      return;
+    }
     setCampaignPreview(null);
     setCouponCode(code);
     setCouponFeedback("");
@@ -145,6 +310,7 @@ export default function OrderForm({
     }
     setLoading(true);
     setLoadingStep("creating");
+
     setError(null);
     setSuccess(null);
     const form = e.target; // Reference to the form element
@@ -170,7 +336,10 @@ export default function OrderForm({
     formData.append("ttclid", getCookie("ttclid"));
     formData.append("userAgent", navigator.userAgent);
     formData.delete("quantity");
-    formData.append("products", JSON.stringify([...(products || []), ...comboRewardItems]));
+    formData.append(
+      "products",
+      JSON.stringify([...(products || []), ...comboRewardItems]),
+    );
 
     formData.append("deliveryArea", deliveryArea);
     const response = await createOrder(formData); // Call server action
@@ -184,27 +353,32 @@ export default function OrderForm({
     //   },
     // };
     if (response.success) {
-      setLoadingStep("success");
+      try {
+        window.localStorage.removeItem(CHECKOUT_DRAFT_KEY);
+      } catch {
+        /* Draft cleanup is best effort. */
+      }
+      setConfirmedOrderNo(response.data.orderNo);
       if (!buyNow) clearCart();
       if (paymentSelection.paymentMethod !== "COD") {
-        setLoadingStep("success");
-        setLoadingStep("redirecting");
+        setLoadingStep("preparing-payment");
         const initiated = await initiateConfiguredPayment(
           response.data.paymentId,
         );
         if (!initiated.success || !initiated.url) {
           setError(initiated.message || "Payment could not be initiated.");
           setLoadingStep(null);
-          return;
         }
+        setLoadingStep("success");
+        return;
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
         window.location.href = initiated.url;
       } else {
+        setLoadingStep("success");
+        await new Promise((resolve) => window.setTimeout(resolve, 1100));
         router.push(
-          `/order-success?p=${encodeURIComponent(
-            response?.data?.phoneNumber,
-          )}&o=${response?.data?.orderNo}&orderSuccess=true`,
+          `/order-success?p=${encodeURIComponent(response.data.phoneNumber)}&o=${response.data.orderNo}&orderSuccess=true`,
         );
-        setLoadingStep(null);
       }
 
       // setTimeout(() => {
@@ -228,7 +402,7 @@ export default function OrderForm({
     // });
   };
   return (
-    <form onSubmit={handleSubmit}>
+    <form ref={formRef} onSubmit={handleSubmit} onChange={saveCheckoutDraft}>
       <div className="w-full mb-2">
         {success && <p style={{ color: "green" }}>{success}</p>}
         {error && (
@@ -246,10 +420,48 @@ export default function OrderForm({
               deliveryArea={deliveryArea}
               setPaymentMethod={setPaymentMethod}
             /> */}
-          {isValidElement(children) ? cloneElement(children, { campaignPreview: visibleCampaignPreview, comboRewardItems, comboRewardGroups, onSelectComboVariation: (rewardKey, variationId) => setComboVariationSelections((current) => ({ ...current, [rewardKey]: variationId })), onCancelCombo: (campaignId) => setDismissedComboCampaignIds((current) => [...current, campaignId]) }) : children}
+          {isValidElement(children)
+            ? cloneElement(children, {
+                campaignPreview: visibleCampaignPreview,
+                comboRewardItems,
+                comboRewardGroups,
+                onSelectComboVariation: (rewardKey, variationId) =>
+                  setComboVariationSelections((current) => ({
+                    ...current,
+                    [rewardKey]: variationId,
+                  })),
+                onCancelCombo: (campaignId) =>
+                  setDismissedComboCampaignIds((current) => [
+                    ...current,
+                    campaignId,
+                  ]),
+              })
+            : children}
           <div className="my-3 flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 focus-within:border-primary">
-            <input id="campaignCode" value={couponInput} onChange={(event) => { setCouponInput(event.target.value); setCouponFeedback(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); applyCoupon(); } }} placeholder="ক্যাম্পেইন কুপন কোড লিখুন" className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 uppercase outline-none focus:ring-0" maxLength={50} />
-            <button type="button" onClick={applyCoupon} className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-white">Apply</button>
+            <input
+              id="campaignCode"
+              value={couponInput}
+              onChange={(event) => {
+                setCouponInput(event.target.value);
+                setCouponFeedback("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyCoupon();
+                }
+              }}
+              placeholder="ক্যাম্পেইন কুপন কোড লিখুন"
+              className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 uppercase outline-none focus:ring-0"
+              maxLength={50}
+            />
+            <button
+              type="button"
+              onClick={applyCoupon}
+              className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              Apply
+            </button>
           </div>
           <input type="hidden" name="campaignCode" value={couponCode} />
           <PaymentMethodSelector
@@ -267,42 +479,27 @@ export default function OrderForm({
             </div>
             <>
               <DeliveryAddress setDeliveryArea={setDeliveryArea} />
-              <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} />
+              <DeliveryAreaSelector
+                setDeliveryArea={setDeliveryArea}
+                selectedArea={deliveryArea}
+                onSelectArea={saveCheckoutDraft}
+              />
             </>
           </div>
         </div>
       </div>
       <Button
         type={"submit"}
+        disabled={Boolean(loadingStep)}
         className="w-full z-30 bg-brand p-2 sticky bottom-2  left-0 border-b-4  border-slate-600 rounded-lg text-center hover:text-white cursor-pointer  my-1.5 text-slate-200 "
       >
-        Place Order
+        {loadingStep ? "অর্ডার তৈরি হচ্ছে…" : "Place Order"}
       </Button>
-      {/* {loading && !error && (
-        <div className="fixed top-0 left-0 w-screen h-screen bg-black/70 z-30 flex items-center justify-center">
-          <LoadingSpinner message="অর্ডার নিশ্চিত হচ্ছে ..." />
-        </div>
-      )} */}
-
       {loadingStep && !error && (
-        <div className="fixed top-0 left-0 w-screen h-screen bg-black/70 z-30 flex items-center justify-center">
-          <LoadingSpinner
-            status={
-              loadingStep === "creating"
-                ? "loading"
-                : loadingStep === "success"
-                  ? "success"
-                  : "redirecting"
-            }
-            message={
-              loadingStep === "creating"
-                ? "আপনার অর্ডার নিশ্চিত করা হচ্ছে..."
-                : loadingStep === "success"
-                  ? "অর্ডার সফলভাবে নিশ্চিত হয়েছে।"
-                  : "নিরাপদ পেমেন্ট পেজে নিয়ে যাওয়া হচ্ছে..."
-            }
-          />
-        </div>
+        <CheckoutProgressOverlay
+          step={loadingStep}
+          orderNo={confirmedOrderNo}
+        />
       )}
     </form>
   );
