@@ -576,10 +576,13 @@ export async function createOrder(formData) {
     return { success: false, error: error.message };
   }
 }
-export async function getRecentOrdersForAdmin({ limit = 50, cursorId } = {}) {
+export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status } = {}) {
   await hasPermission("order", "view");
   const pageSize = Math.min(100, Math.max(1, Number(limit) || 50));
+  const allowedStatuses = ["PENDING", "PROCESSING", "READY_TO_SHIP", "SHIPPED", "DELIVERED", "DELIVERY_FAILED", "CANCELLED", "FAILED_RETURNING", "FAILED_RETURN_RECEIVED", "RETURNING", "RETURNED", "REFUNDING", "REFUNDED"];
+  const where = allowedStatuses.includes(status) ? { status } : {};
   const rows = await prisma.order.findMany({
+    where,
     ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
     take: pageSize + 1,
     orderBy: { createdAt: "desc" },
@@ -735,33 +738,19 @@ export async function getOrderById(orderId) {
     await hasPermission("order", "view");
     const data = await prisma.order.findUnique({
       where: { id: orderId },
-
       include: {
-        orderItems: {
-          include: {
-            variation: true,
-            combination: true,
-          },
-        },
+        orderItems: { include: { variation: true, combination: true } },
         shipping: { include: { courierProvider: true } },
         selectedPaymentGateway: true,
         selectedCourierProvider: true,
-        payments: {
-          include: {
-            paymentGateway: true,
-            courierProvider: true,
-            moneyAccount: true,
-          },
-        },
+        payments: { include: { paymentGateway: true, courierProvider: true, moneyAccount: true } },
       },
     });
-    console.log("Fetched order by ID:", data);
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
-
 export async function getOrders({ userId, status, page = 1, limit = 10 }) {
   try {
     const skip = (page - 1) * limit;
