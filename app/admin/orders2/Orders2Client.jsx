@@ -17,6 +17,13 @@ function urlBase64ToUint8Array(value) {
   return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
 }
 
+function subscriptionUsesVapidKey(subscription, publicKey) {
+  const currentKey = subscription?.options?.applicationServerKey;
+  if (!currentKey || !publicKey) return false;
+  const expected = urlBase64ToUint8Array(publicKey);
+  const current = new Uint8Array(currentKey);
+  return current.length === expected.length && current.every((byte, index) => byte === expected[index]);
+}
 const money = (value) => `৳${Number(value || 0).toLocaleString("en-BD")}`;
 const date = (value) => new Date(value).toLocaleString("en-BD", { dateStyle: "medium", timeStyle: "short" });
 const relativeTime = (value) => {
@@ -65,6 +72,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
   const [hasMore, setHasMore] = useState(Boolean(initialHasMore));
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [testingPush, setTestingPush] = useState(false);
+  const [pushReady, setPushReady] = useState(false);
   const [viewedIds, setViewedIds] = useState(() => new Set((initialOrders || []).filter((order) => order.viewedBy?.includes(viewerId)).map((order) => order.id)));
   const [unseenCount, setUnseenCount] = useState(initialUnseenCount);
   const viewedOrderIds = useRef(new Set((initialOrders || []).filter((order) => order.viewedBy?.includes(viewerId)).map((order) => order.id)));
@@ -72,14 +80,34 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
   const knownIds = useRef(new Set((initialOrders || []).map((order) => order.id)));
   const firstPoll = useRef(true);
   const statusRequest = useRef(0);
+  const testPushReceived = useRef(false);
 
   const notificationPreferenceKey = `orders2-notifications:${viewerId || "admin"}`;
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.getRegistration("/")
-      .then((registration) => registration?.update())
-      .catch(() => {});
+    let active = true;
+    const syncPushSubscription = async () => {
+      try {
+        if (!("Notification" in window) || Notification.permission !== "granted") return;
+        const registration = await navigator.serviceWorker.getRegistration("/");
+        if (!registration) return;
+        await registration.update();
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) return;
+        const config = await getOrderPushConfig();
+        if (!subscriptionUsesVapidKey(subscription, config?.publicKey)) return;
+        const saved = await saveOrderPushSubscriptionAction(subscription.toJSON());
+        if (active && saved?.success) {
+          setPushReady(true);
+          setNotificationsEnabled(true);
+        }
+      } catch {
+        // The notification button lets the user retry registration.
+      }
+    };
+    syncPushSubscription();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -190,6 +218,13 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return undefined;
     const onWorkerMessage = async (event) => {
+      if (event.data?.type === "order-push-test") {
+        if (event.data.stage === "received") testPushReceived.current = true;
+        if (event.data.stage === "received") toast.info("এই Chrome-এর service worker test push পেয়েছে।", { toastId: "push-test-received", autoClose: 10000 });
+        if (event.data.stage === "shown") toast.success("Browser notification API সফল হয়েছে। Windows notification settings দেখুন যদি banner না আসে।", { toastId: "push-test-shown", autoClose: 10000 });
+        if (event.data.stage === "failed") toast.error("Service worker browser notification দেখাতে পারেনি।", { toastId: "push-test-failed", autoClose: 10000 });
+        return;
+      }
       if (event.data?.type !== "order-push" || !event.data.orderId) return;
       if (knownIds.current.has(event.data.orderId)) return;
       const result = await getOrderCardForAdminAction(event.data.orderId);
@@ -229,9 +264,15 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
   const sendTestPush = async () => {
     setTestingPush(true);
     try {
-      const result = await sendOrderPushTestAction();
+      const registration = await navigator.serviceWorker?.getRegistration("/");
+      const subscription = await registration?.pushManager?.getSubscription();
+      if (!subscription || Notification.permission !== "granted") throw new Error("এই Chrome-এর push subscription নেই। নোটিফিকেশন আবার চালু করুন।");
+      const result = await sendOrderPushTestAction(subscription.endpoint);
       if (!result?.success) throw new Error(result?.message || "Test push পাঠানো যায়নি।");
-      toast.success("Test push server থেকে পাঠানো হয়েছে। browser notification দেখুন।", { position: "top-center", autoClose: 10000 });
+      toast.info("এই Chrome-এর endpoint-এ push provider request গ্রহণ করেছে। worker-এর ফল দেখুন।", { position: "top-center", autoClose: 10000 });
+      window.setTimeout(() => {
+        if (!testPushReceived.current) toast.error("Server push গ্রহণ করেছে, কিন্তু এই Chrome-এর service worker push পায়নি।", { position: "top-center", autoClose: 15000 });
+      }, 15000);
     } catch (error) {
       toast.error(error?.message || "Test push পাঠানো যায়নি।", { position: "top-center", autoClose: 10000 });
     } finally {
@@ -239,8 +280,9 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
     }
   };
   const toggleNotifications = async () => {
-    if (notificationsEnabled) {
+    if (pushReady) {
       setNotificationsEnabled(false);
+      setPushReady(false);
       try {
         window.localStorage.setItem(notificationPreferenceKey, "false");
         const registration = await navigator.serviceWorker?.getRegistration("/");
@@ -274,10 +316,16 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
         return;
       }
       const registration = await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
-      const existing = await registration.pushManager.getSubscription();
+      let existing = await registration.pushManager.getSubscription();
+      if (existing && !subscriptionUsesVapidKey(existing, config.publicKey)) {
+        await removeOrderPushSubscriptionAction(existing.endpoint);
+        await existing.unsubscribe();
+        existing = null;
+      }
       const subscription = existing || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
       const saved = await saveOrderPushSubscriptionAction(subscription.toJSON());
       if (!saved?.success) throw new Error(saved?.message || "Push subscription save failed.");
+      setPushReady(true);
       toast.success("এই ডিভাইসে নতুন অর্ডারের push notification চালু হয়েছে।", { position: "top-center", autoClose: 8000 });
     } catch (error) {
       toast.info(error?.message || "Push চালু হয়নি। Orders2 পেজ খোলা থাকলে alert আসবে।", { position: "top-center", autoClose: 10000 });
@@ -342,8 +390,8 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
       <header className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div><div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-bold text-text-primary">অর্ডার ২ · Live</h1><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{unseenCount.toLocaleString("bn-BD")}টি দেখা হয়নি</span></div><p className="text-xs text-text-muted"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${realtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />{realtimeStatus === "connected" ? "লাইভ সংযুক্ত" : "লাইভ সংযোগ হচ্ছে · ব্যাকআপ refresh ৩০ সেকেন্ডে"}</p></div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={sendTestPush} disabled={testingPush || !notificationsEnabled} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50">{testingPush ? "টেস্ট হচ্ছে…" : "টেস্ট পুশ"}</button>
-          <button type="button" onClick={toggleNotifications} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted">{notificationsEnabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}{notificationsEnabled ? "নোটিফিকেশন বন্ধ করুন" : "নোটিফিকেশন চালু করুন"}</button>
+          <button type="button" onClick={sendTestPush} disabled={testingPush || !pushReady} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50">{testingPush ? "টেস্ট হচ্ছে…" : "টেস্ট পুশ"}</button>
+          <button type="button" onClick={toggleNotifications} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted">{pushReady ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}{pushReady ? "নোটিফিকেশন বন্ধ করুন" : "নোটিফিকেশন চালু করুন"}</button>
           <button type="button" onClick={refresh} disabled={refreshing} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-white disabled:opacity-60"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />রিফ্রেশ</button>
         </div>
       </header>

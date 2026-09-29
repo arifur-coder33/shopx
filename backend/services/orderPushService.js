@@ -69,13 +69,14 @@ export async function sendOrderPushNotification(order) {
   }
 }
 
-export async function sendOrderPushTestNotification(userId) {
+export async function sendOrderPushTestNotification(userId, endpoint) {
   if (!hasVapidConfig()) throw new Error("VAPID config is missing on the server.");
-  const subscriptions = await prisma.orderPushSubscription.findMany({
-    where: { userId },
-    select: { endpoint: true, subscription: true },
+  if (!endpoint) throw new Error("এই browser-এর push subscription পাওয়া যায়নি।");
+  const saved = await prisma.orderPushSubscription.findFirst({
+    where: { userId, endpoint },
+    select: { subscription: true },
   });
-  if (!subscriptions.length) throw new Error("এই admin device-এ কোনো push subscription পাওয়া যায়নি। আবার নোটিফিকেশন চালু করুন।");
+  if (!saved) throw new Error("এই browser-এর subscription server-এ পাওয়া যায়নি। আবার নোটিফিকেশন চালু করুন।");
 
   webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
   const payload = JSON.stringify({
@@ -83,19 +84,15 @@ export async function sendOrderPushTestNotification(userId) {
     body: "এই browser-এ order push ঠিকভাবে কাজ করছে।",
     url: "/admin/orders2",
     tag: `order-push-test-${Date.now()}`,
+    test: true,
   });
-  const results = await Promise.allSettled(subscriptions.map(({ endpoint, subscription }) =>
-    webpush.sendNotification(subscription, payload, { TTL: 60 * 60 }).catch(async (error) => {
-      if (error?.statusCode === 404 || error?.statusCode === 410) {
-        await prisma.orderPushSubscription.deleteMany({ where: { endpoint } });
-      }
-      throw error;
-    }),
-  ));
-  const sent = results.filter((result) => result.status === "fulfilled").length;
-  if (!sent) {
-    const statusCode = results.find((result) => result.status === "rejected")?.reason?.statusCode;
-    throw new Error(statusCode ? `Push provider delivery failed (HTTP ${statusCode}).` : "Push provider delivery failed.");
+  try {
+    await webpush.sendNotification(saved.subscription, payload, { TTL: 60 * 60 });
+  } catch (error) {
+    if (error?.statusCode === 404 || error?.statusCode === 410) {
+      await prisma.orderPushSubscription.deleteMany({ where: { userId, endpoint } });
+    }
+    throw new Error(error?.statusCode ? `Push provider delivery failed (HTTP ${error.statusCode}).` : "Push provider delivery failed.");
   }
-  return { sent, failed: results.length - sent };
+  return { sent: true };
 }

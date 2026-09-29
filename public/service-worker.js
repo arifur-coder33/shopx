@@ -20,11 +20,21 @@ self.addEventListener("push", (event) => {
 
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const reportTestStage = (stage) => {
+      if (payload.test) windows.forEach((client) => client.postMessage({ type: "order-push-test", stage }));
+    };
+    reportTestStage("received");
     const focusedOrdersPage = windows.find((client) => client.focused && client.visibilityState === "visible" && new URL(client.url).origin === self.location.origin && new URL(client.url).pathname.startsWith("/admin/orders2"));
     if (focusedOrdersPage && payload.orderId) {
       focusedOrdersPage.postMessage({ type: "order-push", orderId: payload.orderId, title: notification.title });
     }
-    await self.registration.showNotification(notification.title, notification);
+    try {
+      await self.registration.showNotification(notification.title, notification);
+      reportTestStage("shown");
+    } catch {
+      reportTestStage("failed");
+      throw new Error("Browser notification could not be displayed.");
+    }
   })());
 });
 

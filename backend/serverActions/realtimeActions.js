@@ -44,12 +44,12 @@ export async function saveOrderPushSubscriptionAction(subscription) {
   }
 }
 
-export async function sendOrderPushTestAction() {
+export async function sendOrderPushTestAction(endpoint) {
   const session = await auth();
   const userId = getRealtimeUser(session);
   if (!userId) return { success: false, message: "Unauthorized" };
   try {
-    const result = await sendOrderPushTestNotification(userId);
+    const result = await sendOrderPushTestNotification(userId, endpoint);
     return { success: true, ...result };
   } catch (error) {
     return { success: false, message: error?.message || "Test push could not be sent." };
