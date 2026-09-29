@@ -32,7 +32,7 @@ export default function WishlistNavLink({ className = "" }) {
     <Link
       href="/wishlist"
       aria-label={`পছন্দের তালিকা${count ? `, ${count}টি পণ্য` : ""}`}
-      className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-primary-soft hover:text-primary ${className}`}
+      className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-colors hover:bg-primary-soft hover:text-primary ${className}`}
     >
       <Heart className="h-6 w-6" aria-hidden="true" />
       {count > 0 && (

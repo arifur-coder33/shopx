@@ -140,7 +140,7 @@ export default async function Footer() {
           </picture>
         </div>
 
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-400">
           © {new Date().getFullYear()} {identity.name} — সর্বস্বত্ব সংরক্ষিত
         </p>
       </div>

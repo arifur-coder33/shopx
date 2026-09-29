@@ -26,7 +26,7 @@ export default function CategoryDrawer({ className = "", children, initialData }
         aria-label="পণ্যের বিভাগ দেখুন"
         aria-expanded={isOpen}
         onClick={() => setIsOpen(true)}
-        className={`relative flex h-11 w-11 items-center justify-center rounded-brand border border-border bg-surface text-text shadow-sm transition hover:border-primary hover:bg-primary-soft hover:text-primary ${className}`}
+        className={`relative flex h-12 w-12 items-center justify-center rounded-brand border border-border bg-surface text-text shadow-sm transition hover:border-primary hover:bg-primary-soft hover:text-primary ${className}`}
       >
         {children || <Menu className="h-6 w-6" />}
       </button>

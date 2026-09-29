@@ -12,7 +12,7 @@ export default async function MobileFooter() {
         <div className="relative rounded-2xl border border-border bg-surface/95 shadow-2xl backdrop-blur">
           {/* Center Button */}
           <div className="absolute -top-1 left-1/2 -translate-x-1/2">
-            <Link href="/">
+            <Link href="/" aria-label="হোম পেজে যান">
               <div className="flex h-14 w-14 scale-110 items-center justify-center rounded-full bg-primary shadow-lg">
                 <Home className="text-white" size={26} />
               </div>
@@ -38,7 +38,7 @@ export default async function MobileFooter() {
               <ShoppingCart className="text-gray-600 dark:text-gray-300" />
             </Link> */}
 
-            <Link prefetch={true} href="/my-account">
+            <Link prefetch={true} href="/my-account" aria-label="আমার অ্যাকাউন্ট" className="flex h-12 w-12 items-center justify-center rounded-full">
               <User />
             </Link>
           </div>

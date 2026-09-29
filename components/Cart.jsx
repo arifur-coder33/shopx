@@ -15,10 +15,7 @@ export default function Cart({ className, children }) {
   const hasMounted = useMounted();
   return (
     <>
-      <div
-        onClick={() => setIsOpen(true)}
-        className="relative cursor-pointer"
-      >
+      <button type="button" aria-label="কার্ট খুলুন" aria-expanded={isOpen} onClick={() => setIsOpen(true)} className={className ? "relative flex min-h-12 min-w-12 items-center justify-center rounded-brand border-0 bg-transparent p-0 text-inherit cursor-pointer " + className : "relative flex min-h-12 min-w-12 items-center justify-center rounded-brand border-0 bg-transparent p-0 text-inherit cursor-pointer"}>
         {/* <ShoppingCart className={`${className}`} /> */}
         {children}
 
@@ -27,7 +24,7 @@ export default function Cart({ className, children }) {
             {replaceNumbers(totalCartQuantity.toString())}
           </span>
         )}
-      </div>
+      </button>
 
       {isOpen && (
         <Modal

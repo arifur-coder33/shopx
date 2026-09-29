@@ -21,7 +21,7 @@
   --color-danger: var(--brand-danger);
   --color-ledger: var(--brand-ledger);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-bengali: var(--font-tiro-bangla), sans-serif;
+  --font-bengali: "Noto Sans Bengali", "Nirmala UI", ui-sans-serif, system-ui, sans-serif;
   --radius-brand: var(--brand-radius);
   --shadow-brand: 0 12px 36px color-mix(in srgb, var(--brand-primary) 12%, transparent);
   --animate-fade-in: fade-in 0.3s ease-out;
@@ -79,7 +79,7 @@
     line-height: 1.6;
     transition: background-color 180ms ease, color 180ms ease;
   }
-  :lang(bn) { font-family: var(--font-tiro-bangla), ui-sans-serif, system-ui, sans-serif; }
+  :lang(bn) { font-family: "Noto Sans Bengali", "Nirmala UI", ui-sans-serif, system-ui, sans-serif; }
   img, video, canvas, svg { max-width: 100%; }
   button, input, select, textarea { font: inherit; }
   button, [role="button"], a { -webkit-tap-highlight-color: transparent; }

@@ -44,7 +44,6 @@ export default function ShopByCategory({ categories }) {
         aria-label="মূল ক্যাটাগরি"
       >
         {rootCategories.map((category, index) => {
-          console.log("category", category);
           const categoryPath = category.fullPath || category.slug;
           const mobile = gridPosition(index, 4);
           const small = gridPosition(index, 6);
@@ -72,7 +71,7 @@ export default function ShopByCategory({ categories }) {
               <span className="mx-auto block aspect-square w-full max-w-20 overflow-hidden rounded-full bg-surface-muted">
                 <ImageCustomServer
                   src={category.thumbnail?.name}
-                  alt={category.name}
+                  alt=""
                   w={96}
                   h={96}
                   className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"

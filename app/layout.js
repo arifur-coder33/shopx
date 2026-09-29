@@ -9,8 +9,8 @@ import {
   getPublicSiteIdentity,
 } from "@/backend/services/siteAppearanceService";
 
-// Import all font objects from your central font file
-import { tiro_bangla } from "@/app/fonts/font";
+
+
 import { getSiteUrl } from "@/lib/siteUrl";
 
 export async function generateMetadata() {
@@ -60,10 +60,10 @@ export async function generateMetadata() {
 export default async function RootLayout({ children }) {
   const appearance = await getPublicSiteAppearance();
   return (
-    // Apply all font variables to the <html> tag. This makes them globally available.
+
     <html
       lang="bn"
-      className={tiro_bangla.variable}
+
       suppressHydrationWarning
     >
       <head>
