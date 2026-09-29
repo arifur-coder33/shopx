@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { cache } from "react";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { generateSlug } from "../utils/generateSlug";
@@ -324,6 +324,9 @@ export async function deleteCategoryAction(id) {
     });
 
     revalidatePath("/admin/category");
+    revalidatePath("/");
+    revalidateTag("categories");
+    revalidateTag("home-storefront");
     return { success: true, data: "সফলভাবে delete হয়েছে।" };
   } catch (error) {
     return { success: false, error: error.message };
@@ -679,7 +682,7 @@ export async function getcategoryCount(params) {
 //   return buildTree(null); // start from root categories
 // }
 
-const getNavigationCategories = cache(() =>
+const queryNavigationCategories = () =>
   prisma.category.findMany({
     select: {
       id: true,
@@ -687,16 +690,23 @@ const getNavigationCategories = cache(() =>
       slug: true,
       parentCategoryId: true,
     },
-  }),
+  });
+
+const getNavigationCategories = cache(queryNavigationCategories);
+const getCachedNavigationCategories = unstable_cache(
+  queryNavigationCategories,
+  ["navigation-categories-v1"],
+  { revalidate: 300, tags: ["categories"] },
 );
 
 export async function getCategoryTree() {
   let allCategories;
 
   try {
-    // NavBar and MobileFooter both request this tree during one render.
-    // React cache keeps that to one database query without serving stale data.
-    allCategories = await getNavigationCategories();
+    // Share this tree across public requests while keeping development reads fresh.
+    allCategories = await (process.env.NODE_ENV === "development"
+      ? getNavigationCategories()
+      : getCachedNavigationCategories());
   } catch (error) {
     // Category navigation is non-critical. Keep the storefront available when
     // MongoDB is temporarily unreachable and let the next request retry.

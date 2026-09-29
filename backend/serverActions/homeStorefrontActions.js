@@ -66,7 +66,7 @@ const regularProductWhere = {
 };
 
 async function productBatch({ featured, cursor = null, limit, campaigns = [] }) {
-  const products = await prisma.product.findMany({
+  const productsPromise = prisma.product.findMany({
     where: featured ? { isActive: true, isFeatured: true } : regularProductWhere,
     select: productSelect,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -74,11 +74,12 @@ async function productBatch({ featured, cursor = null, limit, campaigns = [] }) 
     cursor: cursor ? { id: cursor } : undefined,
     skip: cursor ? 1 : 0,
   });
+  const [products, resolvedCampaigns] = await Promise.all([productsPromise, campaigns]);
   const hasMore = products.length > limit;
   const visibleProducts = hasMore ? products.slice(0, limit) : products;
 
   return {
-    products: visibleProducts.map((product) => storefrontProduct(product, campaigns)),
+    products: visibleProducts.map((product) => storefrontProduct(product, resolvedCampaigns)),
     nextCursor: hasMore
       ? visibleProducts[visibleProducts.length - 1]?.id || null
       : null,
@@ -87,10 +88,8 @@ async function productBatch({ featured, cursor = null, limit, campaigns = [] }) 
 
 async function loadHomeStorefrontData() {
   try {
-    // Campaigns are loaded first because the product batches need the resolved
-    // list to calculate display prices without referencing an uninitialised
-    // Promise.all binding.
-    const campaigns = await getActiveCampaigns();
+    // Start campaign and product queries together; calculate prices after both finish.
+    const campaigns = getActiveCampaigns();
     const [categories, featured, regular] = await Promise.all([
       prisma.category.findMany({
         select: {

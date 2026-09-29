@@ -139,10 +139,12 @@ export async function generateStaticParams() {
 
 export default async function ProductPage({ params }) {
   const { slug } = await params;
-  const { result, seo } = await productContext(slug);
+  const [{ result, seo }, activeCampaigns] = await Promise.all([
+    productContext(slug),
+    getActiveCampaigns(),
+  ]);
   if (!result?.success || !seo) notFound();
   const data = result.data;
-  const activeCampaigns = await getActiveCampaigns();
   const productCampaigns = activeCampaigns.filter((campaign) => {
     const config = campaign.configuration || {};
     const comboProductIds = (config.productPairs || []).flatMap((pair) => [

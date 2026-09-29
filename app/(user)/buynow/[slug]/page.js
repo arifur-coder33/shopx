@@ -1,5 +1,5 @@
 import {
-  getStorefrontProductBySlug,
+  getStorefrontCheckoutProductBySlug,
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
@@ -25,16 +25,16 @@ export async function generateStaticParams() {
 export default async function BuyNowPage({ params }) {
   const { slug } = await params;
 
-  const product = await getStorefrontProductBySlug(slug);
-  if (!product?.success || !product.data) {
-    throw new Error(product?.error || "Product could not be loaded.");
-  }
-
-  const [deliveryRates, checkoutProviders, campaignOffers] = await Promise.all([
+  const [product, deliveryRates, checkoutProviders, campaignOffers] = await Promise.all([
+    getStorefrontCheckoutProductBySlug(slug),
     getCheckoutDeliveryRates(),
     getCheckoutProviders(),
     getCheckoutCampaignOffers(),
   ]);
+  if (!product?.success || !product.data) {
+    throw new Error(product?.error || "Product could not be loaded.");
+  }
+
   const data = product.data;
 
   return (

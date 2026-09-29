@@ -62,6 +62,49 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
   }
 });
 
+export const getStorefrontCheckoutProductBySlug = cache(async (slug) => {
+  try {
+    const data = await prisma.product.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        isActive: true,
+        categoryId: true,
+        productCode: true,
+        hasVariations: true,
+        thumbnail: { select: { name: true } },
+        category: { select: { name: true, slug: true, fullPath: true } },
+        variations: {
+          select: {
+            id: true,
+            sku: true,
+            weight: true,
+            regularPrice: true,
+            discountPrice: true,
+            thumbnail: { select: { name: true } },
+            combinations: {
+              orderBy: { createdAt: "asc" },
+              select: {
+                variationName: { select: { id: true, name: true } },
+                variationValue: { select: { id: true, value: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!data || data.isActive === false) {
+      return { success: false, error: "Product could not be found." };
+    }
+    const { isActive: _isActive, ...product } = data;
+    return { success: true, data: product };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 export async function getStorefrontProductSlugs() {
   try {
     const products = await prisma.product.findMany({

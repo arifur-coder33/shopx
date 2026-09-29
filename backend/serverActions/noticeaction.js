@@ -1,10 +1,17 @@
 "use server";
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
+const readCachedNotice = unstable_cache(
+  () => prisma.notice.findFirst(),
+  ["storefront-notice-v1"],
+  { revalidate: 300, tags: ["notice"] },
+);
 export async function getNotice() {
   try {
-    const data = await prisma.notice.findFirst();
+    const data = await (process.env.NODE_ENV === "development"
+      ? prisma.notice.findFirst()
+      : readCachedNotice());
     return { success: true, data: data };
   } catch (error) {
     return { success: false, message: error.message };
@@ -33,6 +40,7 @@ export async function updateNotice(formData) {
     });
     revalidatePath("/");
     revalidatePath("/admin/notice");
+    revalidateTag("notice");
     return { success: true, result };
   }
   if (checkExistingData) {
@@ -41,6 +49,7 @@ export async function updateNotice(formData) {
       data: preparedData,
     });
     revalidatePath("/admin/notice");
+    revalidateTag("notice");
     revalidatePath("/");
     return { success: true, result };
   }
