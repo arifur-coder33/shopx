@@ -9,13 +9,11 @@ export function cloudinaryMainImage(publicId, widthHint, heightHint) {
     return "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
   }
 
-  // Only add the width parameter if widthHint is a valid number
-  const widthTransform = widthHint ? `w_${widthHint},` : "";
+  // Cap the delivered image at its display width and preserve its source aspect ratio.
+  // Avoid dpr_auto here: it can multiply small card widths into oversized downloads.
+  const widthTransform = widthHint ? `c_limit,w_${widthHint},` : "";
 
-  // Note: We're assuming height is not part of the transform string based on your original function.
-  // If you also wanted to support height, you'd add a similar `heightTransform`.
-
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${widthTransform}f_auto,q_auto:eco,dpr_auto/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${widthTransform}f_auto,q_auto:eco/${process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER}/${publicId}`;
 }
 
 // export function cloudinaryMainImage(imageName, width, height) {
