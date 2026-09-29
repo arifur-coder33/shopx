@@ -76,6 +76,13 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
   const notificationPreferenceKey = `orders2-notifications:${viewerId || "admin"}`;
 
   useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.getRegistration("/")
+      .then((registration) => registration?.update())
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     try {
       const savedPreference = window.localStorage.getItem(notificationPreferenceKey);
       if (savedPreference === "true") setNotificationsEnabled(true);
