@@ -11,7 +11,6 @@ import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitia
 import { useCart } from "@/context/CartContext";
 import { getCookie } from "@/utils/cookie/cooike";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { flushSync } from "react-dom";
 import {
   cloneElement,
@@ -20,7 +19,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from "react";
 import { calculateCampaignPreviewFallback } from "./campaignPreviewFallback";
 import CheckoutProgressOverlay from "./CheckoutProgressOverlay";
@@ -58,13 +56,11 @@ export default function OrderForm({
     [],
   );
   const [comboVariationSelections, setComboVariationSelections] = useState({});
-  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const [confirmedOrderNo, setConfirmedOrderNo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingStep, setLoadingStep] = useState(null); // creating, preparing-payment, success
-  const router = useRouter();
+  const [loadingStep, setLoadingStep] = useState(null);
+  const [successHref, setSuccessHref] = useState(null);
+  const submittingRef = useRef(false);
   const comboRewardGroups = useMemo(
     () =>
       resolveComboRewards(
@@ -336,122 +332,86 @@ export default function OrderForm({
       el.classList.remove("blink-border");
     }, 1000);
   };
-  const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     if (!paymentSelection) {
       scrollToPaymentMethod();
       return;
     }
-    if (loadingStep) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    const form = event.currentTarget;
     flushSync(() => {
       setLoadingStep("creating");
       setError(null);
-      setSuccess(null);
     });
-    // Let the customer see the progress overlay before the server request starts.
-    await new Promise((resolve) => window.requestAnimationFrame(resolve));
-    const form = e.target; // Reference to the form element
 
-    const formData = new FormData(form); // Collect form data
-    // if (buyNow) {
-    //   products[0].quantity = Number(formData.get("quantity"));
-    // }
-
-    if (session?.user?.id) {
-      formData.append("userId", session?.user?.id);
-    }
-
-    formData.append("paymentMethod", paymentSelection.paymentMethod);
-    if (paymentSelection.paymentGatewayId)
-      formData.append("paymentGatewayId", paymentSelection.paymentGatewayId);
-    formData.append("orderPrice", totalPrice);
-    formData.append("deliveryCharge", deliveryCharge);
-    formData.append("orderWeight", orderWeight);
-    formData.append("fbp", getCookie("_fbp"));
-    formData.append("fbc", getCookie("_fbc"));
-    formData.append("gclid", getCookie("gclid"));
-    formData.append("ttclid", getCookie("ttclid"));
-    formData.append("userAgent", navigator.userAgent);
-    formData.delete("quantity");
-    formData.append(
-      "products",
-      JSON.stringify([...(products || []), ...comboRewardItems]),
-    );
-
-    formData.append("deliveryArea", deliveryArea);
+    let createdOrder = null;
     try {
-    const response = await createOrder(formData); // Call server action
-    // const response = {
-    //   success: true,
-    //   data: {
-    //     id: "123456",
-    //     orderNo: "ORD123456",
-    //     customerName: "John Doe",
-    //     phoneNumber: "1234567890",
-    //   },
-    // };
-    if (response.success) {
+      // Paint the progress modal before starting the server request.
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      const formData = new FormData(form);
+      if (session?.user?.id) formData.append("userId", session.user.id);
+      formData.append("paymentMethod", paymentSelection.paymentMethod);
+      if (paymentSelection.paymentGatewayId) formData.append("paymentGatewayId", paymentSelection.paymentGatewayId);
+      formData.append("orderPrice", totalPrice);
+      formData.append("deliveryCharge", deliveryCharge);
+      formData.append("orderWeight", orderWeight);
+      formData.append("fbp", getCookie("_fbp"));
+      formData.append("fbc", getCookie("_fbc"));
+      formData.append("gclid", getCookie("gclid"));
+      formData.append("ttclid", getCookie("ttclid"));
+      formData.append("userAgent", navigator.userAgent);
+      formData.delete("quantity");
+      formData.append("products", JSON.stringify([...(products || []), ...comboRewardItems]));
+      formData.append("deliveryArea", deliveryArea);
+
+      const response = await createOrder(formData);
+      if (!response?.success || !response.data?.orderNo) {
+        throw new Error(response?.error || "অর্ডার তৈরি করা যায়নি। আবার চেষ্টা করুন।");
+      }
+      createdOrder = response.data;
+      setConfirmedOrderNo(createdOrder.orderNo);
+      setSuccessHref("/tracking/?o=" + encodeURIComponent(createdOrder.orderNo) + "&p=" + encodeURIComponent(createdOrder.phoneNumber));
       if (leadSaveTimer.current) window.clearTimeout(leadSaveTimer.current);
       setLeadDraft(null);
-      try {
-        window.localStorage.removeItem(CHECKOUT_DRAFT_KEY);
-      } catch {
-        /* Draft cleanup is best effort. */
-      }
-      setConfirmedOrderNo(response.data.orderNo);
+      try { window.localStorage.removeItem(CHECKOUT_DRAFT_KEY); } catch { /* Draft cleanup is best effort. */ }
       if (!buyNow) clearCart();
+
       if (paymentSelection.paymentMethod !== "COD") {
         setLoadingStep("preparing-payment");
-        const initiated = await initiateConfiguredPayment(
-          response.data.paymentId,
-        );
-        if (!initiated.success || !initiated.url) {
-          setError(initiated.message || "Payment could not be initiated.");
-          setLoadingStep(null);
-          return;
+        const initiated = await initiateConfiguredPayment(createdOrder.paymentId);
+        if (!initiated?.success || !initiated.url) {
+          throw new Error(initiated?.message || "অর্ডার নেওয়া হয়েছে, কিন্তু পেমেন্ট পেজ খোলা যায়নি। আবার অর্ডার করবেন না।");
         }
         setLoadingStep("redirecting");
         window.location.assign(initiated.url);
         return;
-      } else {
-        setLoadingStep("success");
-        router.replace(
-          `/order-success?p=${encodeURIComponent(response.data.phoneNumber)}&o=${response.data.orderNo}&orderSuccess=true`,
-        );
       }
 
-      // setTimeout(() => {
-      //   toast.success("অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
-      // }, 0);
-      // setLoading(false);
-
-      // trackFacebookEvent("Purchase", {
-      //   content_type: "product",
-      //   content_ids: products.map((product) => product.productId),
-      //   value: productPrice,
-      //   currency: "BDT", // Bangladeshi Taka
-      // });
-
-      // form.reset(); // Clear the form on success
-    } else {
-      window.scrollTo(0, 0);
-      setError(response.error || "Something went wrong");
-      setLoadingStep(null);
-    }
-    // });
+      const successUrl = "/order-success?p=" + encodeURIComponent(createdOrder.phoneNumber) + "&o=" + encodeURIComponent(createdOrder.orderNo) + "&orderSuccess=true";
+      setSuccessHref(successUrl);
+      setLoadingStep("success");
+      window.location.replace(successUrl);
     } catch (submitError) {
       setError(submitError?.message || "অর্ডার পাঠানো যায়নি। আবার চেষ্টা করুন।");
       setLoadingStep(null);
+      if (!createdOrder) submittingRef.current = false;
     }
   };
   return (
     <form ref={formRef} onSubmit={handleSubmit} onChange={saveCheckoutDraft} onBlurCapture={(event) => { if (event.target?.name === "phoneNumber") saveCheckoutDraft(undefined, true); }}>
       <div className="w-full mb-2">
-        {success && <p style={{ color: "green" }}>{success}</p>}
         {error && (
           <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">
             {" "}
             {error}{" "}
+          </div>
+        )}
+        {error && confirmedOrderNo && (
+          <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <p>অর্ডার #{confirmedOrderNo} তৈরি হয়েছে। আবার Place Order চাপবেন না।</p>
+            {successHref && <a href={successHref} className="mt-2 inline-block font-semibold underline">{paymentSelection?.paymentMethod === "COD" ? "কনফার্মেশন দেখুন" : "অর্ডারের তথ্য দেখুন"}</a>}
           </div>
         )}
       </div>
@@ -533,10 +493,10 @@ export default function OrderForm({
       </div>
       <Button
         type={"submit"}
-        disabled={Boolean(loadingStep)}
+        disabled={Boolean(loadingStep || confirmedOrderNo)}
         className="w-full z-30 bg-brand p-2 sticky bottom-2  left-0 border-b-4  border-slate-600 rounded-lg text-center hover:text-white cursor-pointer  my-1.5 text-slate-200 "
       >
-        {loadingStep ? "অর্ডার তৈরি হচ্ছে…" : "Place Order"}
+        {confirmedOrderNo ? "অর্ডার নেওয়া হয়েছে" : loadingStep ? "অর্ডার তৈরি হচ্ছে…" : "Place Order"}
       </Button>
       {loadingStep && !error && (
         <CheckoutProgressOverlay

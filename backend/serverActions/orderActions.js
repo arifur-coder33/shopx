@@ -576,8 +576,6 @@ export async function createOrder(formData) {
         deleteAbandonedCheckoutLeadByPhone(data.phoneNumber),
       ]);
     });
-    revalidatePath("/admin/orders");
-    revalidateTag("orders");
     return { success: true, data: result };
   } catch (error) {
     return { success: false, error: error.message };
