@@ -6,7 +6,7 @@ import Imagecustom from "@/components/images/ImageCustom";
 import { Bell, BellOff, CalendarDays, Copy, ListFilter, Phone, RefreshCw, Search } from "lucide-react";
 import { toast } from "react-toastify";
 import { getRecentOrdersForAdmin, markOrderViewedAction, updateOrderStatusAction } from "@/backend/serverActions/orderActions";
-import { createOrderRealtimeToken, getOrderPushConfig, getOrderCardForAdminAction, saveOrderPushSubscriptionAction, removeOrderPushSubscriptionAction } from "@/backend/serverActions/realtimeActions";
+import { createOrderRealtimeToken, getOrderPushConfig, getOrderCardForAdminAction, saveOrderPushSubscriptionAction, removeOrderPushSubscriptionAction, sendOrderPushTestAction } from "@/backend/serverActions/realtimeActions";
 import { useRealtimeConnection } from "@/hooks/useRealtimeConnection";
 
 const PAGE_SIZE = 50;
@@ -64,6 +64,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(Boolean(initialHasMore));
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [testingPush, setTestingPush] = useState(false);
   const [viewedIds, setViewedIds] = useState(() => new Set((initialOrders || []).filter((order) => order.viewedBy?.includes(viewerId)).map((order) => order.id)));
   const [unseenCount, setUnseenCount] = useState(initialUnseenCount);
   const viewedOrderIds = useRef(new Set((initialOrders || []).filter((order) => order.viewedBy?.includes(viewerId)).map((order) => order.id)));
@@ -218,6 +219,18 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
     }
   };
 
+  const sendTestPush = async () => {
+    setTestingPush(true);
+    try {
+      const result = await sendOrderPushTestAction();
+      if (!result?.success) throw new Error(result?.message || "Test push পাঠানো যায়নি।");
+      toast.success("Test push server থেকে পাঠানো হয়েছে। browser notification দেখুন।", { position: "top-center", autoClose: 10000 });
+    } catch (error) {
+      toast.error(error?.message || "Test push পাঠানো যায়নি।", { position: "top-center", autoClose: 10000 });
+    } finally {
+      setTestingPush(false);
+    }
+  };
   const toggleNotifications = async () => {
     if (notificationsEnabled) {
       setNotificationsEnabled(false);
@@ -322,6 +335,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
       <header className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div><div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-bold text-text-primary">অর্ডার ২ · Live</h1><span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{unseenCount.toLocaleString("bn-BD")}টি দেখা হয়নি</span></div><p className="text-xs text-text-muted"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${realtimeStatus === "connected" ? "bg-emerald-500" : "bg-amber-500"}`} />{realtimeStatus === "connected" ? "লাইভ সংযুক্ত" : "লাইভ সংযোগ হচ্ছে · ব্যাকআপ refresh ৩০ সেকেন্ডে"}</p></div>
         <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={sendTestPush} disabled={testingPush || !notificationsEnabled} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50">{testingPush ? "টেস্ট হচ্ছে…" : "টেস্ট পুশ"}</button>
           <button type="button" onClick={toggleNotifications} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-semibold text-text-primary hover:bg-surface-muted">{notificationsEnabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}{notificationsEnabled ? "নোটিফিকেশন বন্ধ করুন" : "নোটিফিকেশন চালু করুন"}</button>
           <button type="button" onClick={refresh} disabled={refreshing} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-white disabled:opacity-60"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />রিফ্রেশ</button>
         </div>

@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { saveOrderPushSubscription, removeOrderPushSubscription, getOrderPushPublicKey } from "@/backend/services/orderPushService";
+import { saveOrderPushSubscription, removeOrderPushSubscription, getOrderPushPublicKey, sendOrderPushTestNotification } from "@/backend/services/orderPushService";
 import jwt from "jsonwebtoken";
 import prisma from "@/lib/prisma";
 
@@ -44,6 +44,17 @@ export async function saveOrderPushSubscriptionAction(subscription) {
   }
 }
 
+export async function sendOrderPushTestAction() {
+  const session = await auth();
+  const userId = getRealtimeUser(session);
+  if (!userId) return { success: false, message: "Unauthorized" };
+  try {
+    const result = await sendOrderPushTestNotification(userId);
+    return { success: true, ...result };
+  } catch (error) {
+    return { success: false, message: error?.message || "Test push could not be sent." };
+  }
+}
 export async function removeOrderPushSubscriptionAction(endpoint) {
   const session = await auth();
   const userId = getRealtimeUser(session);
