@@ -4,7 +4,10 @@ import { sendOrderPushNotification } from "./orderPushService";
 
 export async function notifyOrderCreated(orderId) {
   try {
-    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY || !process.env.VAPID_SUBJECT) return;
+    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY || !process.env.VAPID_SUBJECT) {
+      console.warn("[order-push] VAPID config is missing; order notification was skipped.");
+      return;
+    }
     const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, orderNo: true } });
     if (order) await sendOrderPushNotification(order);
   } catch {

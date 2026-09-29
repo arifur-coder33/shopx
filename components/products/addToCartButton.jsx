@@ -5,6 +5,7 @@ import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { useSession } from "next-auth/react";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
+import { toast } from "react-toastify";
 export default function AddToCartButton(props) {
   const { data: session } = useSession();
   const { addToCart } = useCart();
@@ -54,17 +55,12 @@ export default function AddToCartButton(props) {
       sku: getSku,
       category: category || "Uncategorized",
     };
-    console.log("productcart Data", productData);
-
-    if (
+if (
       hasVariations &&
       variations[0]?.combinations?.length > 0 &&
       !selectedVariation
     ) {
-      import("react-toastify").then((module) => {
-        const { toast } = module;
-        toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
-      });
+      toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
 
       import("@/utils/sounds").then((module) => {
         const { errorSoundWithVibrate } = module;
@@ -77,10 +73,8 @@ export default function AddToCartButton(props) {
       return;
     }
     addToCart(productData, productQty);
-    import("react-toastify").then(({ toast }) => {
-      toast.success("পণ্যটি ব্যাগে যোগ হয়েছে", {
-        toastId: `product-cart-${productData.id}-${productData.variation?.id || "default"}`,
-      });
+    toast.success("পণ্যটি ব্যাগে যোগ হয়েছে", {
+      toastId: `product-cart-${productData.id}-${productData.variation?.id || "default"}`,
     });
 
     trackEvent({

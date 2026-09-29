@@ -101,7 +101,7 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
       : `${count.toLocaleString("bn-BD")}টি নতুন অর্ডার এসেছে · সর্বশেষ #${order.orderNo}`;
     const options = {
       position: "top-center",
-      autoClose: 8000,
+      autoClose: 10000,
       pauseOnHover: true,
       pauseOnFocusLoss: true,
       onClick: () => {

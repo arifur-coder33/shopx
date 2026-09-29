@@ -557,7 +557,7 @@ export async function createOrder(formData) {
             },
           },
         },
-        include: { payments: { select: { id: true } } },
+        select: { id: true, orderNo: true, phoneNumber: true, payments: { select: { id: true } } },
       });
       const appliedCampaignIds = [...new Set(appliedCampaigns.map((campaign) => campaign.id))];
       if (appliedCampaignIds.length) {

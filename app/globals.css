@@ -182,7 +182,7 @@
 .storefront-page-enter { animation: storefront-page-enter 160ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *:not(.Toastify__progress-bar):not(.animate-spin), *:not(.Toastify__progress-bar):not(.animate-spin)::before, *:not(.Toastify__progress-bar):not(.animate-spin)::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 

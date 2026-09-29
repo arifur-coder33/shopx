@@ -379,6 +379,7 @@ export default function OrderForm({
     );
 
     formData.append("deliveryArea", deliveryArea);
+    try {
     const response = await createOrder(formData); // Call server action
     // const response = {
     //   success: true,
@@ -407,14 +408,14 @@ export default function OrderForm({
         if (!initiated.success || !initiated.url) {
           setError(initiated.message || "Payment could not be initiated.");
           setLoadingStep(null);
+          return;
         }
-        setLoadingStep("success");
+        setLoadingStep("redirecting");
+        window.location.assign(initiated.url);
         return;
-        await new Promise((resolve) => window.setTimeout(resolve, 900));
-        window.location.href = initiated.url;
       } else {
         setLoadingStep("success");
-        router.push(
+        router.replace(
           `/order-success?p=${encodeURIComponent(response.data.phoneNumber)}&o=${response.data.orderNo}&orderSuccess=true`,
         );
       }
@@ -438,6 +439,10 @@ export default function OrderForm({
       setLoadingStep(null);
     }
     // });
+    } catch (submitError) {
+      setError(submitError?.message || "অর্ডার পাঠানো যায়নি। আবার চেষ্টা করুন।");
+      setLoadingStep(null);
+    }
   };
   return (
     <form ref={formRef} onSubmit={handleSubmit} onChange={saveCheckoutDraft} onBlurCapture={(event) => { if (event.target?.name === "phoneNumber") saveCheckoutDraft(undefined, true); }}>

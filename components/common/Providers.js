@@ -33,7 +33,7 @@ export default function Providers({ children }) {
           {children}
           <ToastContainer
             position="top-right"
-            autoClose={7000}
+            autoClose={10000}
             hideProgressBar={false}
             newestOnTop
             closeOnClick={false}

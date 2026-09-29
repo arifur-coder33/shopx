@@ -32,11 +32,17 @@ export async function removeOrderPushSubscription(userId, endpoint) {
 }
 
 export async function sendOrderPushNotification(order) {
-  if (!hasVapidConfig()) return;
+  if (!hasVapidConfig()) {
+    console.warn("[order-push] VAPID config is missing on the server.");
+    return;
+  }
   const subscriptions = await prisma.orderPushSubscription.findMany({
     select: { subscription: true },
   });
-  if (!subscriptions.length) return;
+  if (!subscriptions.length) {
+    console.warn("[order-push] No browser subscriptions are saved.");
+    return;
+  }
 
   webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
   const payload = JSON.stringify({
@@ -46,7 +52,7 @@ export async function sendOrderPushNotification(order) {
     url: `/admin/orders2/${order.id}`,
     tag: `order-${order.id}`,
   });
-  await Promise.allSettled(subscriptions.map(async ({ subscription }) => {
+  const results = await Promise.allSettled(subscriptions.map(async ({ subscription }) => {
     if (!subscription?.endpoint) return;
     try {
       await webpush.sendNotification(subscription, payload, { TTL: 60 * 60 });
@@ -54,6 +60,11 @@ export async function sendOrderPushNotification(order) {
       if (error?.statusCode === 404 || error?.statusCode === 410) {
         await prisma.orderPushSubscription.deleteMany({ where: { endpoint: subscription.endpoint } });
       }
+      throw error;
     }
   }));
+  const failures = results.filter((result) => result.status === "rejected");
+  if (failures.length) {
+    console.error("[order-push] Delivery failed for subscriptions.", failures.map(({ reason }) => ({ statusCode: reason?.statusCode || "unknown" })));
+  }
 }
