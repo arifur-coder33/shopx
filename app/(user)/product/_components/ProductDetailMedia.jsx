@@ -1,5 +1,4 @@
 import { cloudinaryDetailImage } from "@/utils/cloudinaryUrl";
-import Image from "next/image";
 import DeferredVideo from "./DeferredVideo";
 
 function getVideoSource(rawUrl) {
@@ -95,14 +94,16 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
                 key={photo.id || photo.name}
                 className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface-muted"
               >
-                <Image
-                  src={cloudinaryDetailImage(photo.name, 1200)}
+                <img
+                  src={cloudinaryDetailImage(photo.name, 640)}
+                  srcSet={[320, 480, 640, 960, 1200].map((width) => `${cloudinaryDetailImage(photo.name, width)} ${width}w`).join(", ")}
                   alt={photo.seoAlt || `${title} - বিস্তারিত ছবি ${index + 1}`}
-                  fill
+                  width={1200}
+                  height={1200}
                   sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 50vw, 600px"
-                  className="object-contain"
+                  className="absolute inset-0 h-full w-full object-contain"
                   loading="lazy"
-                  unoptimized
+                  decoding="async"
                 />
               </figure>
             ))}

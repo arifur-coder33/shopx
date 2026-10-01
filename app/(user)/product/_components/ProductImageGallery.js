@@ -139,11 +139,13 @@ export default function ProductImageGallery({
   const activeMedia = allMedia[activeIndex] || {};
   const isVideoActive = activeMedia.type === "video";
   const [zoomImageReady, setZoomImageReady] = useState(false);
+  const [desktopZoomActive, setDesktopZoomActive] = useState(false);
 
   useEffect(() => {
     setZoomImageReady(false);
     if (
       !mainImageLoaded ||
+      !desktopZoomActive ||
       isMobile ||
       isVideoActive ||
       !activeMedia.name
@@ -176,7 +178,7 @@ export default function ProductImageGallery({
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       if (zoomPreloader) zoomPreloader.onload = null;
     };
-  }, [activeMedia.name, isMobile, isVideoActive, mainImageLoaded]);
+  }, [activeMedia.name, isMobile, isVideoActive, mainImageLoaded, desktopZoomActive]);
 
   // const handleThumbnailClick = (index) => {
   //   if (allMedia[index].type === "video") {
@@ -198,7 +200,6 @@ export default function ProductImageGallery({
     document.body.style.overflow = "";
   };
 
-  const [desktopZoomActive, setDesktopZoomActive] = useState(false);
   const [desktopZoomPosition, setDesktopZoomPosition] = useState({
     x: 0.5,
     y: 0.5,
@@ -278,7 +279,7 @@ export default function ProductImageGallery({
             style={
               !isVideoActive && imageSrc
                 ? {
-                    backgroundImage: `url(${cloudinaryMainImage(imageSrc, 230, 230)})`,
+                    backgroundImage: initialImage ? undefined : `url(${cloudinaryMainImage(imageSrc, 230, 230)})`,
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "contain",

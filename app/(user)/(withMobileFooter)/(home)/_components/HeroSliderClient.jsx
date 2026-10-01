@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const motionClasses = {
   FADE: "hero-motion-fade",
@@ -13,10 +13,32 @@ const motionClasses = {
 export default function HeroSliderClient({ slides }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasChanged, setHasChanged] = useState(false);
+  const sliderRef = useRef(null);
+  const [canAutoplay, setCanAutoplay] = useState(false);
   const activeSlide = slides[activeIndex] || slides[0];
 
   useEffect(() => {
-    if (slides.length < 2) return undefined;
+    const target = sliderRef.current;
+    if (!target || slides.length < 2) return undefined;
+    let inView = false;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setCanAutoplay(inView && !document.hidden && !motion.matches);
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      update();
+    });
+    observer.observe(target);
+    document.addEventListener("visibilitychange", update);
+    motion.addEventListener("change", update);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", update);
+      motion.removeEventListener("change", update);
+    };
+  }, [slides.length]);
+
+  useEffect(() => {
+    if (slides.length < 2 || !canAutoplay) return undefined;
     let cancelled = false;
     const timer = window.setTimeout(() => {
       const nextIndex = (activeIndex + 1) % slides.length;
@@ -34,7 +56,7 @@ export default function HeroSliderClient({ slides }) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeIndex, slides]);
+  }, [activeIndex, slides, canAutoplay]);
 
   const changeSlide = (direction) => {
     const nextIndex = (activeIndex + direction + slides.length) % slides.length;
@@ -67,7 +89,7 @@ export default function HeroSliderClient({ slides }) {
   );
 
   return (
-    <section className="group relative aspect-[1280/500] overflow-hidden rounded-md bg-surface-muted" aria-roledescription="carousel" aria-label="Featured offers">
+    <section ref={sliderRef} className="group relative aspect-[1280/500] overflow-hidden rounded-md bg-surface-muted" aria-roledescription="carousel" aria-label="Featured offers">
       {activeSlide.link ? <a href={activeSlide.link} aria-label={activeSlide.title || "Open offer"} className="block h-full w-full">{image}</a> : image}
 
       {slides.length > 1 && (

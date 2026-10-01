@@ -6,7 +6,21 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
   try {
     const data = await prisma.product.findUnique({
       where: { slug },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        productCode: true,
+        description: true,
+        categoryId: true,
+        isActive: true,
+        hasVariations: true,
+        allowOutOfStockOrder: true,
+        seoDescription: true,
+        seoKeyWord: true,
+        videoUrl: true,
+        createdAt: true,
+        updatedAt: true,
         category: { select: { name: true, slug: true, fullPath: true } },
         specifications: { orderBy: { sortOrder: "asc" }, select: { id: true, value: true, specification: { select: { id: true, name: true, parent: { select: { id: true, name: true } } } } } },
         thumbnail: { select: { name: true, id: true } },
@@ -23,12 +37,18 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
           },
         },
         variations: {
-          include: {
+          select: {
+            id: true,
+            sku: true,
+            weight: true,
+            regularPrice: true,
+            discountPrice: true,
+            thumbnailId: true,
             stocks: { select: { available: true } },
             thumbnail: { select: { name: true, id: true } },
             combinations: {
               orderBy: { createdAt: "asc" },
-              include: {
+              select: {
                 variationName: { select: { id: true, name: true } },
                 variationValue: { select: { id: true, value: true } },
               },

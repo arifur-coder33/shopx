@@ -4,7 +4,8 @@ import {
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
 import { buildProductSeo } from "@/backend/utils/productSeo";
-import { applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority, toCampaignDisplayData } from "@/backend/services/campaignService";
+import { applyProductCampaign, selectCampaignsByPriority, toCampaignDisplayData } from "@/backend/services/campaignService";
+import { getStorefrontActiveCampaigns as getActiveCampaigns } from "@/backend/services/storefrontCampaignService";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import JsonLd from "@/components/seo/JsonLd";
 import { getSiteUrl } from "@/lib/siteUrl";

@@ -2,7 +2,8 @@
 
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
-import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
+import { getProductCardCampaignData } from "@/backend/services/campaignService";
+import { getStorefrontActiveCampaigns as getActiveCampaigns } from "@/backend/services/storefrontCampaignService";
 
 const PRODUCT_BATCH_SIZE = 10;
 
