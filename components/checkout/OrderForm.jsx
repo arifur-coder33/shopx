@@ -351,6 +351,30 @@ export default function OrderForm({
       // Paint the progress modal before starting the server request.
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
       const formData = new FormData(form);
+      // Browser GPS is the only source that can report the customer's actual
+      // device location. Keep checkout moving if permission is denied/unavailable.
+      if (navigator.geolocation) {
+        const browserLocation = await new Promise((resolve) => {
+          let settled = false;
+          const finish = (value) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timer);
+            resolve(value);
+          };
+          const timer = window.setTimeout(() => finish(null), 1800);
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => finish({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }),
+            () => finish(null),
+            { enableHighAccuracy: false, maximumAge: 120000, timeout: 1600 },
+          );
+        });
+        if (browserLocation) {
+          formData.set("browserGeoLatitude", String(browserLocation.latitude));
+          formData.set("browserGeoLongitude", String(browserLocation.longitude));
+          formData.set("browserGeoAccuracy", String(browserLocation.accuracy));
+        }
+      }
       if (session?.user?.id) formData.append("userId", session.user.id);
       formData.append("paymentMethod", paymentSelection.paymentMethod);
       if (paymentSelection.paymentGatewayId) formData.append("paymentGatewayId", paymentSelection.paymentGatewayId);

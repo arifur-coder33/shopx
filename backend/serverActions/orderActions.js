@@ -263,7 +263,7 @@ export async function createOrder(formData) {
   const ip = getIP(h);
   const userAgent = h.get("user-agent") || "";
   const originValue = (...names) => names.map((name) => h.get(name)).find(Boolean) || null;
-  const orderOrigin = {
+  let orderOrigin = {
     city: originValue("x-vercel-ip-city", "cf-ipcity"),
     region: originValue("x-vercel-ip-country-region", "cf-region"),
     country: originValue("x-vercel-ip-country", "cf-ipcountry"),
@@ -274,6 +274,21 @@ export async function createOrder(formData) {
   if (!Object.values(orderOrigin).some(Boolean)) orderOrigin.city = null;
   try {
     const data = Object.fromEntries(formData.entries());
+    const browserLatitude = Number(data.browserGeoLatitude);
+    const browserLongitude = Number(data.browserGeoLongitude);
+    if (Number.isFinite(browserLatitude) && browserLatitude >= -90 && browserLatitude <= 90 &&
+        Number.isFinite(browserLongitude) && browserLongitude >= -180 && browserLongitude <= 180) {
+      const accuracy = Number(data.browserGeoAccuracy);
+      orderOrigin = {
+        city: null,
+        region: null,
+        country: null,
+        latitude: browserLatitude,
+        longitude: browserLongitude,
+        accuracy: Number.isFinite(accuracy) && accuracy >= 0 ? Math.round(accuracy) : null,
+        source: "Browser GPS",
+      };
+    }
     const orderItems = JSON.parse(data?.products);
     const paymentMethod = String(data.paymentMethod || "").toUpperCase();
     if (

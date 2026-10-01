@@ -81,8 +81,8 @@ export default function OrderRiskAssessment({ order }) {
       <div className="mt-3 grid gap-2 rounded-lg bg-surface-muted/50 p-2.5 sm:grid-cols-2">
         <div className="min-w-0 rounded-lg bg-surface p-2.5">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-text-primary"><MapPin className="h-3.5 w-3.5 text-primary" />অর্ডার করার আনুমানিক জায়গা</div>
-          <p className="mt-1 break-words text-xs text-text-secondary">{originName || (isLocalIp ? "এটি local/test IP; এখান থেকে আসল শহর জানা যাবে না" : "এই IP থেকে শহর/অঞ্চলের তথ্য পাওয়া যায়নি")}</p>
-          {origin.source && <p className="mt-0.5 text-[10px] text-text-muted">তথ্যের উৎস: {origin.source}</p>}
+          <p className="mt-1 break-words text-xs text-text-secondary">{origin.source === "Browser GPS" ? "ব্রাউজারের location permission থেকে পাওয়া device coordinates" : originName || (isLocalIp ? "এটি local/test IP; এখান থেকে আসল শহর জানা যাবে না" : "এই IP থেকে শহর/অঞ্চলের তথ্য পাওয়া যায়নি")}</p>
+          {origin.source && <p className="mt-0.5 text-[10px] text-text-muted">তথ্যের উৎস: {origin.source}{origin.accuracy != null ? ` · নির্ভুলতা প্রায় ${origin.accuracy} মিটার` : ""}</p>}
           {originMapQuery && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(originMapQuery)}`} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-[11px] font-semibold text-primary underline">Map-এ দেখুন</a>}
           {order?.ipAddress && !isLocalIp && <p className="mt-1 break-all text-[10px] text-text-muted">IP: {order.ipAddress}</p>}
         </div>
