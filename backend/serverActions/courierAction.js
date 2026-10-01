@@ -6,6 +6,7 @@ import {
   createSteadfastOrder,
   getSteadfastDeliveryStatus,
 } from "../lib/courier/steadfast";
+import { getOrFetchSteadfastHistory } from "@/backend/services/steadfastFraudService";
 import { createPathaoOrder, getPathaoOrderInfo } from "../lib/pathao";
 import { updateOrderStatusAction } from "./orderActions";
 import { actionError, requireProcurementPermission } from "../utils/procurement";
@@ -162,12 +163,13 @@ export async function createCourierDeliveryAction({ formData }) {
         if (steadfastResponse.success) {
           orderResponseData = {
             cn: steadfastResponse?.data?.consignment_id.toString(),
+            trackingCode: steadfastResponse?.data?.tracking_code,
+            trackingLink: steadfastResponse?.data?.tracking_link,
             status: steadfastResponse?.data?.status,
             date: steadfastResponse?.data?.created_at,
             courierName: provider.name,
             storeName: pickupPoint?.name || "",
-
-            merchantOrderId: "N/A",
+            merchantOrderId: steadfastResponse?.data?.invoice || data.invoice,
           };
         } else {
           throw new Error(
@@ -200,10 +202,41 @@ export async function createCourierDeliveryAction({ formData }) {
         cod: Number(data.price) || 0,
       },
     });
+    if (provider.adapterKey === "STEADFAST" && orderResponseData.trackingCode) {
+      const currentOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        select: { fraudRiskFactors: true },
+      });
+      const factors = Array.isArray(currentOrder?.fraudRiskFactors) ? currentOrder.fraudRiskFactors : [];
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          fraudRiskFactors: [
+            ...factors.filter((factor) => factor?.code !== "STEADFAST_TRACKING"),
+            {
+              code: "STEADFAST_TRACKING",
+              points: 0,
+              trackingCode: orderResponseData.trackingCode,
+              trackingLink: orderResponseData.trackingLink || null,
+              status: orderResponseData.status || "in_review",
+              invoice: orderResponseData.merchantOrderId,
+            },
+          ],
+        },
+      });
+    }
     // Confirming the sale and creating its courier consignment is one action.
     // Packing/stock allocation happens later from the Delivery Queue.
     await updateOrderStatusAction(order.id, "PROCESSING");
-    return { success: true, data: shippingdata || courierData };
+    return {
+      success: true,
+      data: {
+        ...(shippingdata || courierData),
+        status: orderResponseData.status || "in_review",
+        ...(orderResponseData.trackingCode ? { trackingCode: orderResponseData.trackingCode } : {}),
+        ...(orderResponseData.trackingLink ? { trackingLink: orderResponseData.trackingLink } : {}),
+      },
+    };
   } catch (error) {
     return { success: false, message: error.message };
   }
@@ -328,5 +361,15 @@ export async function getCourierDeliveryStatusAction({
     return { success: true, data: { status } };
   } catch (error) {
     return { success: false, message: error.message };
+  }
+}
+
+export async function getSteadfastFraudCheckAction(orderId) {
+  try {
+    await requireProcurementPermission("order", "view");
+    if (!orderId) throw new Error("অর্ডার পাওয়া যায়নি।");
+    return await getOrFetchSteadfastHistory(orderId);
+  } catch (error) {
+    return { success: false, error: error.message || "Steadfast fraud check করা যায়নি।" };
   }
 }

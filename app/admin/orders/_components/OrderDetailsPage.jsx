@@ -18,6 +18,7 @@ import OrderSummary from "./components/OrderSummary";
 import OrderTimelineClient from "./components/OrderTimelineClient";
 import PaymentSummary from "./components/PaymentSummary";
 import CourierManagement from "./courier/CourierManagement";
+import OrderRiskAssessment from "./OrderRiskAssessment";
 
 // Server component ke lazy load kora hocche
 const OrderTimelineServer = dynamic(
@@ -106,6 +107,7 @@ export default function OrderDetailsPage({ order, children }) {
           status={status}
           date={order.createdAt || "N/A"}
         />
+        <OrderRiskAssessment order={order} />
 
         {/* Timeline Section
         <OrderTimeline status={status} /> */}

@@ -391,6 +391,9 @@ model Order {
   appliedCampaignNames      String[]         @default([])
   appliedCampaignBreakdown  Json?
   viewedBy                  String[]         @default([])
+  fraudRiskScore            Int?
+  fraudRiskLevel            String?
+  fraudRiskFactors          Json?
   appliedCouponCode         String?
   orderWeight               Float?
   adminDiscount             Float?
@@ -430,6 +433,8 @@ model Order {
 
   @@index([selectedPaymentGatewayId])
   @@index([selectedCourierProviderId])
+  @@index([phoneNumber, createdAt])
+  @@index([ipAddress, createdAt])
 }
 
 model OrderItem {

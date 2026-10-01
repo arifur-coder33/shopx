@@ -3,6 +3,11 @@ import { downloadAWBPDF } from "../components/GenerateAWB";
 import GetCourierStatus from "./GetCourierStatus";
 
 export default function CourierStatus({ details, onCancel, order, status }) {
+  const steadfastBooking = order?.fraudRiskFactors?.find((factor) => factor?.code === "STEADFAST_TRACKING");
+  const savedTrackingCode = steadfastBooking?.trackingCode;
+  const trackingCode = details.trackingCode || savedTrackingCode;
+  const trackingLink = details.trackingLink || steadfastBooking?.trackingLink;
+  const parcelStatus = details.status || steadfastBooking?.status;
   const invoiceData = {
     shopId: "1181689",
     invoice: order.orderNo,
@@ -21,7 +26,7 @@ export default function CourierStatus({ details, onCancel, order, status }) {
       <div className="flex justify-between items-start">
         <div>
           <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-            {details.status}
+            {parcelStatus || "Booked"}
           </span>
           <h4 className="mt-2 font-bold text-slate-800 text-lg uppercase">
             {details.courierName}
@@ -51,6 +56,11 @@ export default function CourierStatus({ details, onCancel, order, status }) {
           <p className="text-sm font-semibold">{details.storeName}</p>
         </div>
       </div>
+      {trackingCode && <div className="rounded-lg bg-slate-50 px-3 py-2">
+        <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">Tracking code</p>
+        <p className="mt-0.5 font-mono text-sm font-bold text-slate-800">{trackingCode}</p>
+        {trackingLink && <a href={trackingLink} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-semibold text-indigo-600 underline">Track parcel</a>}
+      </div>}
       <div>
         <div className="text-base font-bold  tracking-tighter mb-2">
           Current Courier Status :{" "}

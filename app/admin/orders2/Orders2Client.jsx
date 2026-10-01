@@ -8,6 +8,8 @@ import { toast } from "react-toastify";
 import { getRecentOrdersForAdmin, markOrderViewedAction, updateOrderStatusAction } from "@/backend/serverActions/orderActions";
 import { createOrderRealtimeToken, getOrderPushConfig, getOrderCardForAdminAction, saveOrderPushSubscriptionAction, removeOrderPushSubscriptionAction, sendOrderPushTestAction } from "@/backend/serverActions/realtimeActions";
 import { useRealtimeConnection } from "@/hooks/useRealtimeConnection";
+import { OrderRiskBadge } from "../orders/_components/OrderRiskAssessment";
+import CustomerOrderHistoryButton from "../orders/_components/CustomerOrderHistoryButton";
 
 const PAGE_SIZE = 50;
 function urlBase64ToUint8Array(value) {
@@ -195,8 +197,9 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
     }
     if (statusFilter !== "ALL" && payload.status !== statusFilter) return;
     setOrders((current) => [payload, ...current.filter((order) => order.id !== payload.id)]);
+    refresh();
     if (notificationsEnabled) showNewOrderAlert(payload);
-  }, [notificationsEnabled, showNewOrderAlert, statusFilter, viewerId]);
+  }, [notificationsEnabled, refresh, showNewOrderAlert, statusFilter, viewerId]);
   const realtimeStatus = useRealtimeConnection({ enabled: true, getAccessToken: createOrderRealtimeToken, onEvent: handleRealtimeEvent });
 
   useEffect(() => {
@@ -232,11 +235,12 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
       if (!order || (statusFilter !== "ALL" && order.status !== statusFilter) || knownIds.current.has(order.id)) return;
       knownIds.current.add(order.id);
       setOrders((current) => [order, ...current]);
+      refresh();
       if (notificationsEnabled) showNewOrderAlert(order);
     };
     navigator.serviceWorker.addEventListener("message", onWorkerMessage);
     return () => navigator.serviceWorker.removeEventListener("message", onWorkerMessage);
-  }, [notificationsEnabled, showNewOrderAlert, statusFilter, viewerId]);
+  }, [notificationsEnabled, refresh, showNewOrderAlert, statusFilter, viewerId]);
 
   const loadMore = async () => {
     if (!hasMore || loadingMore || !orders.length) return;
@@ -424,6 +428,8 @@ export default function Orders2Client({ initialOrders, initialHasMore, initialUn
           return <article key={order.id} role="link" tabIndex={0} onClick={(event) => openOrderFromCard(event, order)} onPointerEnter={() => router.prefetch(`/admin/orders2/${order.id}`)} onTouchStart={() => router.prefetch(`/admin/orders2/${order.id}`)} onKeyDown={(event) => { if (event.key === "Enter") openOrderFromCard(event, order); }} className={`flex min-w-0 cursor-pointer flex-col rounded-xl border p-3 shadow-sm transition-shadow hover:shadow-md ${viewed ? "border-border bg-surface" : "border-primary/35 bg-primary/5"}`}>
             <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-bold text-text-primary">#{order.orderNo} · {order.customerName}</p><div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px]"><span className="text-text-muted">{date(order.createdAt)}</span><span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 font-semibold text-primary ring-1 ring-primary/10"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{relativeTime(order.createdAt)}</span></div></div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${statusStyle[order.status] || "bg-slate-100 text-slate-700"}`}>{order.status?.replaceAll("_", " ")}</span></div>
             <div className="mt-2 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1"><a className="truncate text-xs font-medium text-primary" href={`tel:${order.phoneNumber}`} aria-label="Call customer"><Phone className="mr-1 inline h-3.5 w-3.5" />{order.phoneNumber}</a><button type="button" onClick={() => copyPhone(order.phoneNumber)} title="নম্বর কপি" aria-label="Copy phone number" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:bg-white/70"><Copy className="h-3.5 w-3.5" /></button></div><span className="shrink-0 text-sm font-bold text-text-primary">{money(order.orderPrice + (order.deliveryCharge || 0))}</span></div>
+            <div className="mt-1"><OrderRiskBadge score={order.fraudRiskScore} level={order.fraudRiskLevel} compact /></div>
+            <div className="mt-1.5"><CustomerOrderHistoryButton phoneNumber={order.phoneNumber} /></div>
             <div className="mt-2 space-y-1 border-t border-black/5 pt-2">{(order.orderItems || []).slice(0, 2).map((item) => <div key={item.id} className="flex min-w-0 items-center gap-2 text-xs"><div className="h-9 w-9 shrink-0 overflow-hidden rounded-md bg-white">{item.thumbnail ? <Imagecustom src={item.thumbnail} alt={item.productName || "পণ্য"} w={36} h={36} sizes="36px" imageClassName="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[8px] text-text-muted">ছবি নেই</div>}</div><span className="line-clamp-1 min-w-0 flex-1 text-text-primary">{item.productName} <span className="text-text-muted">×{item.quantity}</span></span></div>)}{order.orderItems?.length > 2 && <p className="pl-10 text-[10px] text-text-muted">আরও {order.orderItems.length - 2}টি পণ্য</p>}</div>
             <div className="mt-auto flex items-center justify-between gap-2 border-t border-black/5 pt-2"><span className="text-[10px] text-text-muted">{viewed ? "দেখা হয়েছে" : "নতুন · দেখা হয়নি"}</span><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${order.paymentStatus === "PAID" ? "bg-emerald-100 text-emerald-800" : order.paymentStatus === "PARTIALLY_PAID" ? "bg-orange-100 text-orange-800" : "bg-rose-100 text-rose-800"}`}>{order.paymentStatus === "PAID" ? "পেমেন্ট সম্পন্ন" : order.paymentStatus === "PARTIALLY_PAID" ? `আংশিক · জমা ${money(order.paidAmount)}` : order.paymentStatus === "FAILED" ? "পেমেন্ট ব্যর্থ" : "পেমেন্ট বাকি"}</span></div>
             {canUpdate && <div className="mt-1.5 flex items-center gap-2"><label htmlFor={`status-${order.id}`} className="text-[10px] text-text-muted">স্ট্যাটাস</label><select id={`status-${order.id}`} value={order.status} onChange={(event) => changeStatus(order, event.target.value)} className="min-h-8 min-w-0 flex-1 rounded-lg border border-border bg-white/80 px-2 text-[10px]"><option value={order.status}>{order.status?.replaceAll("_", " ")}</option>{statuses.filter((status) => status !== order.status).map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}</select></div>}

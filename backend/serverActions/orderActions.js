@@ -10,6 +10,10 @@ import { notifyOrderCreated } from "@/backend/services/orderRealtimeService";
 import { deleteAbandonedCheckoutLeadByPhone } from "@/backend/services/abandonedCheckoutService";
 import { headers } from "next/headers";
 import { getIP } from "../utils/getIp";
+import { assessOrderRisk } from "../utils/orderRisk";
+import { updateRecentOrderRiskScores } from "@/backend/services/orderRiskService";
+import { enrichOrderOrigin } from "@/backend/services/orderGeoService";
+import { getOrFetchSteadfastHistory } from "@/backend/services/steadfastFraudService";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
 import { getUserId, hasPermission } from "../utils/hasPermission";
@@ -257,6 +261,17 @@ const statusMap = {
 export async function createOrder(formData) {
   const [h, userId] = await Promise.all([headers(), getUserId()]);
   const ip = getIP(h);
+  const userAgent = h.get("user-agent") || "";
+  const originValue = (...names) => names.map((name) => h.get(name)).find(Boolean) || null;
+  const orderOrigin = {
+    city: originValue("x-vercel-ip-city", "cf-ipcity"),
+    region: originValue("x-vercel-ip-country-region", "cf-region"),
+    country: originValue("x-vercel-ip-country", "cf-ipcountry"),
+    latitude: originValue("x-vercel-ip-latitude", "cf-iplatitude"),
+    longitude: originValue("x-vercel-ip-longitude", "cf-iplongitude"),
+    source: h.get("cf-ipcity") ? "Cloudflare" : h.get("x-vercel-ip-city") ? "Vercel" : null,
+  };
+  if (!Object.values(orderOrigin).some(Boolean)) orderOrigin.city = null;
   try {
     const data = Object.fromEntries(formData.entries());
     const orderItems = JSON.parse(data?.products);
@@ -280,6 +295,23 @@ export async function createOrder(formData) {
     if (paymentMethod !== "COD" && !data.paymentGatewayId) {
       throw new Error("Select an online payment gateway.");
     }
+    const historySince = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const riskHistoryPromise = paymentMethod === "COD" ? prisma.order.findMany({
+      where: {
+        createdAt: { gte: historySince },
+        OR: [
+          { phoneNumber: data.phoneNumber },
+          ...(ip && userAgent ? [{ ipAddress: ip, userAgent }] : []),
+        ],
+      },
+      select: {
+        id: true, phoneNumber: true, ipAddress: true, userAgent: true, status: true, paymentMethod: true, createdAt: true,
+        orderPrice: true, deliveryCharge: true, deliveryAddress: true, city: true, thana: true,
+        fraudRiskFactors: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }) : Promise.resolve([]);
     const variationIds = orderItems.map((item) => item.variation.id);
     const campaignsPromise = getActiveCampaigns({ couponCode: data.campaignCode, includeComboDisplayNames: false });
     const deliveryRatesPromise = getCheckoutDeliveryRates();
@@ -306,7 +338,7 @@ export async function createOrder(formData) {
         },
       },
     });
-    const [variations, activeCampaigns, deliveryRates, provider] = await Promise.all([variationsPromise, campaignsPromise, deliveryRatesPromise, providerPromise]);
+    const [variations, activeCampaigns, deliveryRates, provider, riskHistory] = await Promise.all([variationsPromise, campaignsPromise, deliveryRatesPromise, providerPromise, riskHistoryPromise]);
     const providerConfiguration = provider ? getProviderRuntimeConfiguration("gateway", provider) : null;
     if (!providerConfiguration?.ready) throw new Error(paymentMethod === "COD" ? "Cash on Delivery is currently disabled." : "The selected provider is unavailable or not fully configured.");
     if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") throw new Error("Installment payment is available only through SSLCommerz.");
@@ -452,6 +484,18 @@ export async function createOrder(formData) {
       const totalDeliveryDiscount = deliveryPricing.discount + paymentDeliveryPricing.discount;
       const merchandiseTotal = paymentPricing.subtotal;
       const totalAmount = merchandiseTotal + deliveryCharge;
+      const riskAssessment = assessOrderRisk({
+        paymentMethod,
+        orderAmount: totalAmount,
+        phoneNumber: data.phoneNumber,
+        ipAddress: ip,
+        userAgent,
+        deliveryAddress: data.deliveryAddress,
+        city: data.district,
+        thana: data.thana,
+        history: riskHistory,
+        orderCreatedAt: new Date(),
+      });
       const appliedCampaigns = [
         ...pricedItems.map(({ pricing }) => pricing.campaign),
         ...comboCampaignsUsed.values(),
@@ -497,6 +541,12 @@ export async function createOrder(formData) {
           appliedCampaignIds: [...new Set(appliedCampaigns.map((campaign) => campaign.id))],
           appliedCampaignNames: [...new Set(appliedCampaigns.map((campaign) => campaign.name))],
           appliedCampaignBreakdown: [...campaignDiscounts.values()],
+          fraudRiskScore: riskAssessment.score,
+          fraudRiskLevel: riskAssessment.level,
+          fraudRiskFactors: [
+            ...riskAssessment.factors,
+            ...(Object.values(orderOrigin).some(Boolean) ? [{ code: "ORDER_ORIGIN", points: 0, origin: orderOrigin }] : []),
+          ],
           appliedCouponCode: data.campaignCode ? String(data.campaignCode).trim().toUpperCase() : null,
           orderWeight: serverOrderWeight,
           deliveryAddress: data.deliveryAddress,
@@ -512,7 +562,7 @@ export async function createOrder(formData) {
           fbp: data?.fbp,
           gclid: data?.gclid,
           ttclid: data?.ttclid,
-          userAgent: data?.userAgent,
+          userAgent,
           ipAddress: ip,
           orderItems: {
             create: pricedItems.map(({ item, variation, pricing }, i) => ({
@@ -571,6 +621,10 @@ export async function createOrder(formData) {
       };
     });
     after(async () => {
+      await updateRecentOrderRiskScores({ orderId: result.id, history: riskHistory });
+      await enrichOrderOrigin({ orderId: result.id, ipAddress: ip });
+      const steadfastHistory = await getOrFetchSteadfastHistory(result.id);
+      if (!steadfastHistory.success) console.warn("Steadfast history was not saved for this order:", steadfastHistory.error);
       await Promise.all([
         notifyOrderCreated(result.id),
         deleteAbandonedCheckoutLeadByPhone(data.phoneNumber),
@@ -595,6 +649,7 @@ export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status, in
       id: true, orderNo: true, status: true, customerName: true, phoneNumber: true,
       deliveryAddress: true, thana: true, city: true, orderPrice: true,
       deliveryCharge: true, paymentMethod: true, paymentStatus: true, paidAmount: true, dueAmount: true, createdAt: true, viewedBy: true,
+      fraudRiskScore: true, fraudRiskLevel: true, fraudRiskFactors: true,
       orderItems: { select: { id: true, productName: true, price: true, quantity: true, thumbnail: true } },
     },
   });
@@ -762,7 +817,46 @@ export async function getOrderById(orderId) {
         payments: { include: { paymentGateway: true, courierProvider: true, moneyAccount: true } },
       },
     });
-    return { success: true, data };
+    if (!data) return { success: true, data: null };
+    const customerHistory = await getCustomerOrderHistoryForAdmin(data.phoneNumber);
+    return { success: true, data: { ...data, customerHistory: customerHistory.data || null } };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getCustomerOrderHistoryForAdmin(phoneNumber, offset = 0) {
+  try {
+    await hasPermission("order", "view");
+    const phone = String(phoneNumber || "").trim();
+    if (!phone) return { success: false, error: "Customer phone is required." };
+    const safeOffset = Math.max(0, Number.parseInt(offset, 10) || 0);
+    const returnedStatuses = ["RETURNING", "RETURNED", "FAILED_RETURNING", "FAILED_RETURN_RECEIVED"];
+    const [total, delivered, returned, data] = await Promise.all([
+      prisma.order.count({ where: { phoneNumber: phone } }),
+      prisma.order.count({ where: { phoneNumber: phone, status: "DELIVERED" } }),
+      prisma.order.count({ where: { phoneNumber: phone, status: { in: returnedStatuses } } }),
+      prisma.order.findMany({
+        where: { phoneNumber: phone },
+        orderBy: { createdAt: "desc" },
+        skip: safeOffset,
+        take: 30,
+        select: {
+          id: true, orderNo: true, status: true, createdAt: true,
+          orderPrice: true, deliveryCharge: true,
+          orderItems: { select: { id: true, productName: true, quantity: true } },
+        },
+      }),
+    ]);
+    return {
+      success: true,
+      data: {
+        total, delivered, returned,
+        orders: data,
+        nextOffset: safeOffset + data.length,
+        hasMore: safeOffset + data.length < total,
+      },
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }
