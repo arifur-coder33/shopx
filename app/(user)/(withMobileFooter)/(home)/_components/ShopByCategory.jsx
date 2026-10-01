@@ -34,7 +34,7 @@ export default function ShopByCategory({ categories }) {
             id="shop-by-category-title"
             className="text-xl font-bold sm:text-2xl"
           >
-            ক্যাটাগরি অনুযায়ী কিনুন
+            Top Categories
           </h2>
         </div>
       </div>

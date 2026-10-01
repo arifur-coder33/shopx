@@ -181,6 +181,141 @@
 .home-product-reveal { animation: product-reveal 320ms ease-out both; }
 .storefront-page-enter { animation: storefront-page-enter 160ms ease-out both; }
 
+.campaign-live-card { animation: campaign-card-glow 3.2s ease-in-out infinite; }
+.campaign-live-indicator { animation: campaign-live-bob 1.25s ease-in-out infinite; }
+.campaign-live-art::after {
+  position: absolute;
+  inset: -40% auto -40% -45%;
+  width: 32%;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 10%), transparent);
+  transform: skewX(-18deg);
+  animation: campaign-light-sweep 8s ease-in-out infinite;
+}
+.campaign-has-banner::after { display: none; }
+.campaign-burst {
+  background:
+    radial-gradient(ellipse at 78% 30%, color-mix(in srgb, var(--brand-accent) 23%, transparent) 0 16%, transparent 38%),
+    radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--brand-primary-soft) 16%, transparent) 0 20%, transparent 46%);
+  opacity: 0.8;
+}
+.campaign-balloon {
+  position: absolute;
+  z-index: 0;
+  width: 1.8rem;
+  height: 2.25rem;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 52% 48% 48% 52% / 42% 44% 56% 58%;
+  background: radial-gradient(ellipse at 32% 23%, rgb(255 255 255 / 68%), transparent 16%), linear-gradient(145deg, color-mix(in srgb, var(--brand-primary-soft) 92%, white), color-mix(in srgb, var(--brand-accent) 48%, var(--brand-secondary)));
+  box-shadow: inset -4px -6px 10px rgb(30 20 80 / 12%), 0 5px 12px rgb(20 10 50 / 12%);
+  animation: campaign-balloon-float 4.2s ease-in-out infinite;
+}
+.campaign-balloon::before {
+  position: absolute;
+  bottom: -0.28rem;
+  left: calc(50% - 0.2rem);
+  width: 0.4rem;
+  height: 0.4rem;
+  content: "";
+  background: color-mix(in srgb, var(--brand-accent) 72%, var(--brand-secondary));
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+}
+.campaign-balloon::after {
+  position: absolute;
+  top: calc(100% + 0.08rem);
+  left: 50%;
+  width: 1px;
+  height: 1.4rem;
+  content: "";
+  background: rgb(255 255 255 / 55%);
+  transform: rotate(5deg);
+  transform-origin: top;
+}
+.campaign-balloon-one { top: 18%; right: 14%; opacity: 0.48; animation-delay: -1s; }
+.campaign-balloon-two { top: 48%; right: 5%; width: 1.45rem; height: 1.85rem; opacity: 0.38; animation-delay: -2.5s; }
+.campaign-bubble {
+  position: absolute;
+  z-index: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, white, color-mix(in srgb, var(--brand-primary-soft) 35%, transparent) 32%, color-mix(in srgb, var(--brand-accent) 48%, transparent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--brand-primary-soft) 40%, transparent);
+  animation: campaign-bubble-drift 3.6s ease-in-out infinite;
+}
+.campaign-bubble-one { top: 12%; right: 28%; opacity: 0.5; }
+.campaign-bubble-two { right: 23%; bottom: 15%; width: 0.4rem; height: 0.4rem; opacity: 0.4; animation-delay: -1.8s; }
+.campaign-flip-unit {
+  display: inline-flex;
+  min-width: 1.75rem;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--brand-text) 94%, black);
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--brand-text) 16%, transparent), inset 0 1px rgb(255 255 255 / 9%);
+  color: white;
+  line-height: 1;
+}
+.campaign-flip-digit {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0.22rem 0.25rem 0.16rem;
+  color: white;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: center;
+  animation: campaign-digit-flip 360ms ease-out both;
+}
+.campaign-flip-unit small {
+  width: 100%;
+  border-top: 1px solid rgb(255 255 255 / 15%);
+  padding: 0.14rem 0.2rem 0.18rem;
+  color: color-mix(in srgb, white 78%, var(--brand-primary-soft));
+  font-size: 0.54rem;
+  font-weight: 700;
+  text-align: center;
+}
+@keyframes campaign-card-glow {
+  0%, 100% { box-shadow: 0 8px 22px color-mix(in srgb, var(--brand-primary) 8%, transparent); }
+  50% { box-shadow: 0 9px 24px color-mix(in srgb, var(--brand-primary) 14%, transparent); }
+}
+@keyframes campaign-live-bob {
+  0%, 100% { box-shadow: 0 3px 10px rgb(22 163 74 / 22%); transform: translateY(0); }
+  50% { box-shadow: 0 5px 15px rgb(22 163 74 / 48%); transform: translateY(-3px); }
+}
+@keyframes campaign-light-sweep {
+  0%, 38% { left: -45%; }
+  72%, 100% { left: 130%; }
+}
+@keyframes campaign-burst-pulse {
+  0%, 100% { opacity: 0.42; transform: scale(0.96); }
+  50% { opacity: 0.85; transform: scale(1.04); }
+}
+@keyframes campaign-balloon-float {
+  0%, 100% { transform: translate3d(0, 5px, 0) rotate(-4deg); }
+  50% { transform: translate3d(-5px, -8px, 0) rotate(5deg); }
+}
+@keyframes campaign-bubble-drift {
+  0%, 100% { opacity: 0.45; transform: translate3d(0, 6px, 0) scale(0.9); }
+  50% { opacity: 0.95; transform: translate3d(-5px, -9px, 0) scale(1.1); }
+}
+@keyframes campaign-digit-flip {
+  from { opacity: 0.35; transform: perspective(80px) rotateX(-55deg) translateY(-4px); }
+  to { opacity: 1; transform: perspective(80px) rotateX(0) translateY(0); }
+}
+
+@media (min-width: 640px) {
+  .campaign-flip-unit { min-width: 2.5rem; border-radius: 0.65rem; }
+  .campaign-flip-digit { padding: 0.28rem 0.35rem 0.2rem; font-size: 1.12rem; }
+  .campaign-flip-unit small { padding: 0.16rem 0.25rem 0.22rem; font-size: 0.66rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *:not(.Toastify__progress-bar):not(.animate-spin), *:not(.Toastify__progress-bar):not(.animate-spin)::before, *:not(.Toastify__progress-bar):not(.animate-spin)::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

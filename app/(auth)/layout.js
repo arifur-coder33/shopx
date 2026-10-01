@@ -1,21 +1,26 @@
 import BackButton from "@/components/BackButton";
+import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function AuthLayout({ children }) {
+export default async function AuthLayout({ children }) {
+  const identity = await getPublicSiteIdentity();
   return (
     <>
       <div className="w-full mx-auto bg-slate-700 ">
-        <div className="mx-6 sm:max-w-xs sm:mx-auto flex items-center justify-center h-screen">
-          <div className="relative w-full bg-slate-900 p-8 rounded-2xl shadow-xl shadow-purple-500">
+        <div className="mx-6 sm:max-w-xs sm:mx-auto flex items-center justify-center min-h-screen py-20">
+          <div className="relative w-full bg-slate-900 p-5 sm:p-8 rounded-2xl shadow-xl shadow-purple-500">
             <div className="flex flex-row gap-2 items-center justify-center text-4xl  w-full absolute -top-16  left-0">
               <div className=" h-24 w-24 flex items-center text-center justify-center rounded-full  bg-gray-700 text-purple-500 font-bold border-b-4 border-l-4 border-r-4 border-purple-500 shadow-inner m-2 ring-purple-500">
                 <Link href={"/"}>
                   <Image
-                    src={"/images/default.png"}
-                    width={100}
-                    height={100}
-                    alt="logo"
+                    src={identity.logoUrl || "/images/default-64.webp"}
+                    width={72}
+                    height={72}
+                    alt={identity.name}
+                    priority
+                    unoptimized
+                    className="h-16 w-16 rounded-full object-contain"
                   />
                 </Link>
               </div>

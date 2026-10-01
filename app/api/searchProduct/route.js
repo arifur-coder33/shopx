@@ -1,5 +1,4 @@
-import prisma from "@/lib/prisma";
-import { normalizeText } from "@/utils/normalize";
+import { findSearchProducts } from "@/backend/utils/findSearchProducts";
 import { NextResponse } from "next/server";
 
 export async function GET(req) {
@@ -9,28 +8,18 @@ export async function GET(req) {
   if (!q) {
     return NextResponse.json({ products: [] });
   }
-  const variations = [q, q.slice(0, -1), q.slice(0, -2)];
-  const query = normalizeText(q);
-
-  const products = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      OR: variations.map((v) => ({
-        searchText: { contains: v },
-      })),
-    },
-    select: {
+  const products = await findSearchProducts(
+    q,
+    {
       id: true,
       title: true,
       slug: true,
       thumbnail: {
-        select: {
-          name: true,
-        },
+        select: { name: true },
       },
     },
-    take: 10,
-  });
+    10,
+  );
 
   return NextResponse.json({ products });
 }

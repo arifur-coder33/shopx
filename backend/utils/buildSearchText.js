@@ -16,5 +16,7 @@ export function buildSearchText({
     ${seoKeyWord || ""}
   `;
 
-  return normalizeText(raw);
+  const normalized = normalizeText(raw);
+  const compactTitle = normalizeText(title || "").replace(/\s/g, "");
+  return compactTitle ? `${normalized} ${compactTitle}` : normalized;
 }

@@ -11,7 +11,7 @@ import { buildSearchText } from "../utils/buildSearchText";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { hasPermission } from "../utils/hasPermission";
-import { normalizeText } from "../utils/search";
+import { findSearchProducts } from "../utils/findSearchProducts";
 import { saveProductSpecifications } from "../services/specificationService";
 import { getActiveCampaigns, getProductCardCampaignData } from "../services/campaignService";
 import {
@@ -1978,26 +1978,17 @@ export const updateProductStatus = async ({ id, value }) => {
 };
 
 export const searchProducts = async (rawQuery) => {
-  const q = normalizeText(rawQuery);
-  const variations = [q, q.slice(0, -1), q.slice(0, -2)];
   const [products, campaigns] = await Promise.all([
-    prisma.product.findMany({
-      where: {
-        isActive: true,
-        OR: variations.map((value) => ({ searchText: { contains: value } })),
-      },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        categoryId: true,
-        hasVariations: true,
-        thumbnail: { select: { name: true } },
-        variations: { select: { regularPrice: true, discountPrice: true } },
-        category: { select: { name: true, slug: true } },
-      },
-      take: 10,
-    }),
+    findSearchProducts(rawQuery, {
+      id: true,
+      title: true,
+      slug: true,
+      categoryId: true,
+      hasVariations: true,
+      thumbnail: { select: { name: true } },
+      variations: { select: { regularPrice: true, discountPrice: true } },
+      category: { select: { name: true, slug: true } },
+    }, 10),
     getActiveCampaigns(),
   ]);
 

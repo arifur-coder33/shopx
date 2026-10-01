@@ -2,7 +2,6 @@
 
 import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
-import { normalizeText } from "@/utils/normalize";
 import { Search, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -40,9 +39,8 @@ export default function SearchBox() {
     const delay = setTimeout(async () => {
       setLoading(true);
       try {
-        const normalizedQuery = normalizeText(searchText);
         const response = await fetch(
-          `/api/searchProduct?q=${encodeURIComponent(normalizedQuery)}`,
+          `/api/searchProduct?q=${encodeURIComponent(searchText)}`,
           { signal: controller.signal },
         );
         if (!response.ok) throw new Error("Search request failed");
@@ -63,7 +61,7 @@ export default function SearchBox() {
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
-    }, 300);
+    }, 180);
 
     return () => {
       clearTimeout(delay);

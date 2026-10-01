@@ -20,7 +20,7 @@ export default function CampaignCountdown({ startAt, endAt, className = "", comp
 
   useEffect(() => {
     setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    const timer = window.setInterval(() => setNow(Date.now()), 10000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -62,12 +62,14 @@ export default function CampaignCountdown({ startAt, endAt, className = "", comp
       [seconds, "সে"],
     ];
     return <span title={countdown.label} className={"flex min-w-0 items-center gap-1.5 whitespace-nowrap " + className}>
-      <span className="shrink-0 text-xs font-semibold sm:text-sm">{countdown.label}</span>
-      <span aria-hidden="true" className="text-primary/50">·</span>
-      {cardUnits.map(([value, label]) => <span key={label} className="inline-flex items-baseline gap-0.5">
-        <strong className="text-lg font-bold tabular-nums text-foreground sm:text-xl">{replaceNumbers(String(value).padStart(2, "0"))}</strong>
-        <small className="text-xs font-medium sm:text-sm">{label}</small>
+      <span className="hidden shrink-0 text-xs font-semibold sm:inline sm:text-sm">{countdown.label}</span>
+      <span aria-hidden="true" className="hidden text-primary/50 sm:inline">·</span>
+      <span className="flex min-w-0 items-center gap-1">
+      {cardUnits.map(([value, label]) => <span key={label} className="campaign-flip-unit">
+        <strong key={`${label}-${value}`} className="campaign-flip-digit">{replaceNumbers(String(value).padStart(2, "0"))}</strong>
+        <small>{label}</small>
       </span>)}
+      </span>
     </span>;
   }
 

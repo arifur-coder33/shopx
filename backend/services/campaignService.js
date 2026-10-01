@@ -99,9 +99,9 @@ export async function getActiveCampaigns({ couponCode, includeComboDisplayNames 
   return includeComboDisplayNames ? withComboDisplayNames(activeCampaigns) : activeCampaigns;
 }
 
-export async function getPublicCampaigns() {
+export async function getPublicCampaigns({ take } = {}) {
   const now = new Date();
-  return prisma.campaign.findMany({
+  const campaigns = await prisma.campaign.findMany({
     where: {
       status: "PUBLISHED",
       AND: [
@@ -127,10 +127,91 @@ export async function getPublicCampaigns() {
       paymentMethods: true,
       couponCode: true,
       priority: true,
+      ...(Number.isInteger(take) && take > 0 ? {
+        products: {
+          take: 3,
+          orderBy: { createdAt: "desc" },
+          where: { product: { isActive: true } },
+          select: {
+            product: {
+              select: {
+                id: true,
+                title: true,
+                thumbnail: { select: { name: true } },
+                gallery: { take: 2, select: { media: { select: { name: true } } } },
+                variations: { take: 1, select: { thumbnail: { select: { name: true } } } },
+              },
+            },
+          },
+        },
+        categories: {
+          take: 2,
+          select: {
+            category: {
+              select: {
+                products: {
+                  take: 2,
+                  where: { isActive: true },
+                  orderBy: { createdAt: "desc" },
+                  select: {
+                    id: true,
+                    title: true,
+                    thumbnail: { select: { name: true } },
+                    gallery: { take: 2, select: { media: { select: { name: true } } } },
+                    variations: { take: 1, select: { thumbnail: { select: { name: true } } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      } : {}),
       _count: { select: { products: true, categories: true } },
     },
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+    ...(Number.isInteger(take) && take > 0 ? { take } : {}),
   });
+
+  if (!Number.isInteger(take) || take < 1) return campaigns;
+
+  const productIdsByCampaign = new Map(campaigns.map((campaign) => {
+    const configuration = campaign.configuration || {};
+    const pairProductIds = (configuration.productPairs || []).flatMap((pair) => [
+      ...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])),
+      ...(pair.rewardProductIds || (pair.rewardProductId ? [pair.rewardProductId] : [])),
+    ]);
+    const ids = [...new Set([
+      ...(configuration.requiredProductIds || []),
+      ...(configuration.rewardProductIds || []),
+      ...pairProductIds,
+    ].filter((id) => /^[a-f\d]{24}$/i.test(String(id || ""))))].slice(0, 3);
+    return [campaign.id, ids];
+  }));
+  const configuredProductIds = [...new Set([...productIdsByCampaign.values()].flat())];
+  if (!configuredProductIds.length) return campaigns;
+
+  const configuredProducts = await prisma.product.findMany({
+    where: { id: { in: configuredProductIds }, isActive: true },
+    select: {
+      id: true,
+      title: true,
+      thumbnail: { select: { name: true } },
+      gallery: { take: 2, select: { media: { select: { name: true } } } },
+      variations: { take: 1, select: { thumbnail: { select: { name: true } } } },
+    },
+  });
+  const configuredProductsById = new Map(configuredProducts.map((product) => [product.id, product]));
+
+  return campaigns.map((campaign) => ({
+    ...campaign,
+    products: [
+      ...(campaign.products || []),
+      ...(productIdsByCampaign.get(campaign.id) || [])
+        .map((id) => configuredProductsById.get(id))
+        .filter(Boolean)
+        .map((product) => ({ product })),
+    ],
+  }));
 }
 
 export async function getPublicCampaignProducts(campaignId, page = 1, pageSize = 40) {

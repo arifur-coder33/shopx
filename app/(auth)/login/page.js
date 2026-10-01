@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import LoginForm from "@/components/auth/LoginForm";
+import { redirect } from "next/navigation";
 export default async function LoginPage() {
   const session = await auth();
   const userId = session?.user?.id;
@@ -18,7 +19,10 @@ export default async function LoginPage() {
             </div>
             <BackButton /> */}
 
-      <LoginForm />
+      <LoginForm
+        googleEnabled={Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET)}
+        facebookEnabled={Boolean(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET)}
+      />
       {/* <div className="text-[14px] text-blue-500 hover:underline decoration-blue-500 mt-2 text-right">
               পাসওয়ার্ড ভুলে গেছেন?{" "}
               <Link href={"/forgot-password"}>পুনরায় সেট করুন</Link>

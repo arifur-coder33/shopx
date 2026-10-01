@@ -2,12 +2,13 @@
 
 import { auth } from "@/auth"; // your auth function
 import { fetchSingleData } from "@/backend/serverActions/fetchDataActon";
+import prisma from "@/lib/prisma";
 import Button from "@/components/button";
 import ImageCustomServer from "@/components/images/ImageCustomServer";
+import SocialAccountLinkButton from "@/components/auth/SocialAccountLinkButton";
 import LazyModalButton from "@/components/modal/LazyModalButton";
 import Link from "next/link";
 import { Suspense } from "react";
-export const dynamic = "force-static";
 export default async function ProfilePage() {
   const session = await auth();
   const userId = session?.user?.id;
@@ -27,6 +28,12 @@ export default async function ProfilePage() {
   });
 
   const user = res?.data;
+  const [googleAccount, facebookAccount] = userId
+    ? await Promise.all([
+        prisma.account.findFirst({ where: { userId, provider: "google" }, select: { id: true } }),
+        prisma.account.findFirst({ where: { userId, provider: "facebook" }, select: { id: true } }),
+      ])
+    : [null, null];
 
   if (!user) return <p>User not found.</p>;
 
@@ -108,6 +115,15 @@ export default async function ProfilePage() {
           >
             Change Password
           </Link>
+        </div>
+        <div className="mt-4 flex flex-col items-center gap-2 border-t border-border pt-4">
+          <SocialAccountLinkButton
+            provider="google"
+            connected={Boolean(googleAccount)}
+            enabled={Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET)}
+          />
+          <SocialAccountLinkButton provider="facebook" connected={Boolean(facebookAccount)} enabled={Boolean(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET)} />
+          <p className="text-center text-xs text-text-muted">Connect once with your current email/password login. After that, Google will open this same account.</p>
         </div>
       </div>
     </div>

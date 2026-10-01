@@ -7,7 +7,8 @@ export const metadata = {
 };
 
 export default async function SearchPage({ searchParams }) {
-  const rawQuery = searchParams.q || "";
+  const { q } = await searchParams;
+  const rawQuery = typeof q === "string" ? q : "";
 
   const { data, success } = await searchProducts(rawQuery);
   return (

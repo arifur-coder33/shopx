@@ -1,17 +1,56 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Facebook from "next-auth/providers/facebook";
+import Google from "next-auth/providers/google";
 import { authConfig } from "./auth.config";
 import prisma from "./lib/prisma";
 const permissionCache = new Map();
+const baseAdapter = PrismaAdapter(prisma);
+const authAdapter = {
+  ...baseAdapter,
+  async createUser(profile) {
+    const email = String(profile.email || "").trim().toLowerCase();
+    if (!email) throw new Error("Google did not return an email address");
+
+    const defaultRole = await prisma.role.upsert({
+      where: { name: "USER" },
+      update: {},
+      create: { name: "USER" },
+    });
+    const password = await bcrypt.hash(randomBytes(32).toString("hex"), 10);
+
+    return prisma.user.create({
+      data: {
+        email,
+        name: profile.name || null,
+        password,
+        roleId: defaultRole.id,
+      },
+    });
+  },
+  async getUserByEmail(email) {
+    return prisma.user.findUnique({
+      where: { email: String(email || "").trim().toLowerCase() },
+    });
+  },
+  async updateUser({ id, email, name }) {
+    const data = {};
+    if (email !== undefined) data.email = String(email).trim().toLowerCase();
+    if (name !== undefined) data.name = name;
+    return prisma.user.update({ where: { id }, data });
+  },
+};
+
 export const {
   handlers: { GET, POST },
   auth,
   signIn,
   signOut,
 } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: authAdapter,
 
   ...authConfig,
 
@@ -54,29 +93,57 @@ export const {
         };
       },
     }),
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+      ? [Google({
+          clientId: process.env.AUTH_GOOGLE_ID,
+          clientSecret: process.env.AUTH_GOOGLE_SECRET,
+        })]
+      : []),
+    ...(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET
+      ? [Facebook({
+          clientId: process.env.AUTH_FACEBOOK_ID,
+          clientSecret: process.env.AUTH_FACEBOOK_SECRET,
+        })]
+      : []),
   ],
 
   callbacks: {
+    async signIn({ account, profile }) {
+      if (account?.provider === "google") return profile?.email_verified === true;
+      if (account?.provider === "facebook") return typeof profile?.email === "string" && profile.email.length > 0;
+      return true;
+    },
+
     async jwt({ token, user }) {
-      // 🔹 Login: attach user + permissions
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.roleId = user.roleId;
-        token.tokenVersion = user.tokenVersion;
+      if (user?.id) {
+        const authUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            id: true,
+            roleId: true,
+            tokenVersion: true,
+            role: { select: { name: true } },
+          },
+        });
+        if (!authUser) return {};
+
+        token.id = authUser.id;
+        token.role = authUser.role?.name ?? null;
+        token.roleId = authUser.roleId;
+        token.tokenVersion = authUser.tokenVersion;
 
         // Fetch permissions, use cache if available
-        if (user.role === "SUPER_ADMIN") {
+        if (token.role === "SUPER_ADMIN") {
           token.permissions = ["*"];
-        } else if (user.roleId) {
-          let permissions = permissionCache.get(user.roleId);
+        } else if (authUser.roleId) {
+          let permissions = permissionCache.get(authUser.roleId);
           if (!permissions) {
             const perms = await prisma.rolePermission.findMany({
-              where: { roleId: user.roleId, allowed: true },
+              where: { roleId: authUser.roleId, allowed: true },
               include: { resource: true, action: true },
             });
             permissions = perms.map((p) => `${p.resource.key}:${p.action.key}`);
-            permissionCache.set(user.roleId, permissions);
+            permissionCache.set(authUser.roleId, permissions);
           }
           token.permissions = permissions;
         } else {
@@ -97,7 +164,11 @@ export const {
           // 🔥 Fetch full fresh user
           const freshUser = await prisma.user.findUnique({
             where: { id: token.id },
-            include: { role: true },
+            select: {
+              tokenVersion: true,
+              roleId: true,
+              role: { select: { name: true } },
+            },
           });
 
           if (!freshUser) return {};

@@ -95,14 +95,12 @@ export default async function HomeStorefront() {
       {result.featured.products.length > 0 && (
         <section className="mt-7" aria-labelledby="featured-products-title">
           <div className="mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              আমাদের পছন্দ
-            </p>
+          
             <h2
               id="featured-products-title"
               className="text-xl font-bold sm:text-2xl"
             >
-              ফিচার্ড পণ্য
+             Featured Products
             </h2>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">
@@ -120,7 +118,7 @@ export default async function HomeStorefront() {
             id="all-products-title"
             className="mb-3 text-xl font-bold sm:text-2xl"
           >
-            সকল পণ্য
+            All Products
           </h2>
           <InfiniteProductGrid
             initialProducts={result.regular.products}
