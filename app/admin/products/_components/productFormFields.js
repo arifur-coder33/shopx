@@ -26,6 +26,12 @@ export const productFormFields = ({
     name: "allowOutOfStockOrder",
     colSpan: "2",
   },
+  { type: "radioGroup", label: "Cash on Delivery (COD)", name: "codAvailable", colSpan: "full", defaultValue: "true", options: [{ value: "true", label: "COD available" }, { value: "false", label: "COD unavailable" }] },
+  { type: "radioGroup", label: "Advance payment", name: "advancePaymentType", colSpan: "full", defaultValue: "NONE", options: [{ value: "NONE", label: "No advance" }, { value: "DELIVERY_FEE", label: "Delivery fee advance" }, { value: "PARTIAL", label: "Partial pay" }] },
+  { type: "radioGroup", label: "Partial amount type", name: "advancePaymentValueType", colSpan: "full", defaultValue: "FIXED", showWhen: { field: "advancePaymentType", value: "PARTIAL" }, options: [{ value: "PERCENT", label: "Percentage (%)" }, { value: "FIXED", label: "Fixed amount (৳)" }] },
+  { type: "number", label: "Partial advance amount", name: "advancePaymentValue", colSpan: "2", min: 0, step: "0.01", showWhen: { field: "advancePaymentType", value: "PARTIAL" } },
+  { type: "number", label: "Minimum delivery days", name: "deliveryMinDays", colSpan: "1", defaultValue: 2, min: 1, max: 365, step: 1 },
+  { type: "number", label: "Maximum delivery days", name: "deliveryMaxDays", colSpan: "1", defaultValue: 5, min: 1, max: 365, step: 1 },
   {
     type: "file",
     label: "Main Image",

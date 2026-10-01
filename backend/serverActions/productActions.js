@@ -18,6 +18,26 @@ import {
   normalizeProductVideos,
   parseProductVideosInput,
 } from "../utils/productVideos";
+
+function parseProductFulfillmentSettings(data) {
+  const advancePaymentType = ["DELIVERY_FEE", "PARTIAL"].includes(data.advancePaymentType) ? data.advancePaymentType : "NONE";
+  const advancePaymentValueType = data.advancePaymentValueType === "PERCENT" ? "PERCENT" : "FIXED";
+  const rawValue = String(data.advancePaymentValue ?? "").trim();
+  const advancePaymentValue = rawValue ? Number(rawValue) : null;
+  const deliveryMinDays = rawDays(data.deliveryMinDays, 2);
+  const deliveryMaxDays = rawDays(data.deliveryMaxDays, 5);
+  if (rawValue && (!Number.isFinite(advancePaymentValue) || advancePaymentValue < 0)) throw new Error("অগ্রিম পেমেন্টের পরিমাণ সঠিকভাবে দিন।");
+  if (advancePaymentType === "PARTIAL" && (!(advancePaymentValue > 0) || (advancePaymentValueType === "PERCENT" && advancePaymentValue > 100))) throw new Error("Partial payment-এর জন্য ০-এর বেশি এবং percentage হলে ১০০-এর মধ্যে পরিমাণ দিন।");
+  if (deliveryMinDays < 1 || deliveryMaxDays > 365 || deliveryMaxDays < deliveryMinDays) throw new Error("সর্বোচ্চ delivery দিন ৩৬৫-এর মধ্যে এবং ন্যূনতম দিনের সমান বা বেশি হতে হবে।");
+  return { codAvailable: data.codAvailable === "true" || data.codAvailable === "on" || data.codAvailable === true, advancePaymentType, advancePaymentValueType, advancePaymentValue, deliveryMinDays, deliveryMaxDays };
+}
+
+function rawDays(value, fallback) {
+  if (value == null || String(value).trim() === "") return fallback;
+  const number = Number(value);
+  return Number.isInteger(number) ? number : -1;
+}
+
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
     return [];
@@ -306,6 +326,7 @@ export async function createProductAction(formData) {
   try {
     await hasPermission("product", "create");
     let data = Object.fromEntries(formData.entries());
+    const fulfillmentSettings = parseProductFulfillmentSettings(data);
 
     // --- Basic Validation ---
     if (!data?.title || !data?.thumbnail) {
@@ -413,6 +434,8 @@ export async function createProductAction(formData) {
           data?.isFeatured === "on" || data?.isFeatured === true,
         ),
         allowOutOfStockOrder: Boolean(data?.allowOutOfStockOrder === "on" || data?.allowOutOfStockOrder === true),
+
+        ...fulfillmentSettings,
 
         // Keep the first URL in the legacy column while all titled videos live
         // in ProductVideo. This keeps older integrations backward-compatible.
@@ -1563,6 +1586,7 @@ export async function updateProductAction({ id: productId, formData }) {
 
   try {
     const data = Object.fromEntries(formData.entries());
+    const fulfillmentSettings = parseProductFulfillmentSettings(data);
     console.log("update data", data);
 
     if (!data?.title || !data?.thumbnail) {
@@ -1630,6 +1654,7 @@ export async function updateProductAction({ id: productId, formData }) {
         isFeatured: Boolean(data.isFeatured === "on"),
         isActive: Boolean(data.isActive === "on"),
         allowOutOfStockOrder: Boolean(data.allowOutOfStockOrder === "on"),
+        ...fulfillmentSettings,
         hasVariations: hasSubmittedVariations,
         google_Category_id: data.google_Category_id || null,
         searchText: searchText,

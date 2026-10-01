@@ -62,6 +62,12 @@ export default function BuyNowCheckout({ data, deliveryRates, checkoutProviders,
       : variations[0].weight,
     sku: getSku,
     productCode: data?.productCode,
+    codAvailable: data?.codAvailable !== false,
+    advancePaymentType: data?.advancePaymentType || "NONE",
+    advancePaymentValueType: data?.advancePaymentValueType || "FIXED",
+    advancePaymentValue: data?.advancePaymentValue ?? null,
+    deliveryMinDays: data?.deliveryMinDays ?? 2,
+    deliveryMaxDays: data?.deliveryMaxDays ?? 5,
   };
 
   return (

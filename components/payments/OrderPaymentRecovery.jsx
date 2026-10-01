@@ -10,7 +10,6 @@ import PaymentMethodSelector from "../checkout/PaymentMethodSelector";
 
 const blockedPaymentStatuses = new Set([
   "PAID",
-  "PARTIALLY_PAID",
   "PARTIALLY_REFUNDED",
   "REFUNDED",
 ]);
@@ -27,8 +26,8 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
   const canManage = useMemo(
     () =>
       localOrder?.status === "PENDING" &&
-      Number(localOrder?.paidAmount || 0) <= 0 &&
       Number(localOrder?.dueAmount || 0) > 0 &&
+      (Number(localOrder?.paidAmount || 0) <= 0 || localOrder?.paymentMethod === "ONLINE") &&
       !blockedPaymentStatuses.has(localOrder?.paymentStatus),
     [localOrder],
   );
@@ -99,7 +98,7 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
         </div>
         {canManage && (
           <div className="flex flex-wrap gap-2">
-            <button
+            {(Number(localOrder?.paidAmount || 0) <= 0 || localOrder?.paymentMethod === "ONLINE") && <button
               type="button"
               disabled={pending}
               onClick={() => {
@@ -108,9 +107,9 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
               }}
               className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              <CreditCard className="h-4 w-4" /> আবার পেমেন্ট করুন
-            </button>
-            <button
+              <CreditCard className="h-4 w-4" /> {Number(localOrder?.paidAmount || 0) > 0 ? "বাকি টাকা পরিশোধ করুন" : "আবার পেমেন্ট করুন"}
+            </button>}
+            {Number(localOrder?.paidAmount || 0) <= 0 && <button
               type="button"
               disabled={pending}
               onClick={() => {
@@ -120,7 +119,7 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
               className="inline-flex items-center gap-2 rounded-xl border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50"
             >
               <Ban className="h-4 w-4" /> অর্ডার বাতিল করুন
-            </button>
+            </button>}
           </div>
         )}
       </div>
@@ -133,7 +132,7 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
 
       {showMethods && canManage && (
         <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
-          <PaymentMethodSelector setPaymentSelection={setPaymentSelection} />
+          <PaymentMethodSelector setPaymentSelection={setPaymentSelection} hideCod={Number(localOrder?.paidAmount || 0) > 0 && localOrder?.paymentMethod === "ONLINE"} />
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"

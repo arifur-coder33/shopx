@@ -5,6 +5,8 @@ import ProductHeader from "./ProductHeader";
 import ProductDescription from "@/components/products/productDescription";
 import ProductSpecifications from "@/components/products/ProductSpecifications";
 import ProductInfoTabs from "./ProductInfoTabs";
+import { Truck } from "lucide-react";
+import { replaceNumbers } from "@/utils/engToBanNumber";
 
 export default function ProductDataView({
   data,
@@ -49,6 +51,12 @@ export default function ProductDataView({
     <>
       <section className="grid grid-cols-1 gap-4 overflow-hidden rounded-2xl border border-border bg-surface p-2 shadow-sm sm:p-4 md:grid-cols-2 md:gap-6">
         <ProductHeader data={data} imageProps={imageProps} campaignOffers={campaignOffers} />
+      </section>
+      <section className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border bg-surface p-3 text-sm text-text-secondary">
+        <span className="inline-flex items-center gap-1.5 font-semibold text-text-primary"><Truck className="h-4 w-4 text-primary" />ডেলিভারি সময়: {replaceNumbers(String(data.deliveryMinDays ?? 2))}–{replaceNumbers(String(data.deliveryMaxDays ?? 5))} দিন</span>
+        <span>{data.codAvailable === false ? "এই পণ্যে COD নেই" : data.advancePaymentType && data.advancePaymentType !== "NONE" ? "অগ্রিমের পর বাকি COD-তে দেওয়া যাবে" : "Cash on Delivery পাওয়া যাবে"}</span>
+        {data.advancePaymentType === "DELIVERY_FEE" && <span>ডেলিভারি চার্জ অগ্রিম দিতে হবে</span>}
+        {data.advancePaymentType === "PARTIAL" && <span>অগ্রিম: {data.advancePaymentValueType === "PERCENT" ? `${data.advancePaymentValue}%` : `৳${data.advancePaymentValue}`}</span>}
       </section>
       <DeliveryInfo />
       <div

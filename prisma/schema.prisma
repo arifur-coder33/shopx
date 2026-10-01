@@ -171,6 +171,12 @@ model Product {
   isFeatured           Boolean?           @default(false) // Indicates if the product is featured
   isActive             Boolean?           @default(true) // Marks if the product is active
   allowOutOfStockOrder Boolean            @default(false)
+  codAvailable         Boolean?           @default(true)
+  advancePaymentType  String?            @default("NONE")
+  advancePaymentValueType String?         @default("FIXED")
+  advancePaymentValue Float?
+  deliveryMinDays     Int?               @default(2)
+  deliveryMaxDays     Int?               @default(5)
   status               ProductStatus?     @default(ACTIVE) // Product status enumeration
   hasVariations        Boolean?           @default(false)
   google_Category_id   String?

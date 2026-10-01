@@ -148,8 +148,11 @@ export async function retryCustomerOrderPayment({
       if (order.status !== "PENDING") {
         throw new Error("Payment method can be changed only before order confirmation.");
       }
-      if ((order.paidAmount || 0) > 0 || !order.dueAmount || order.dueAmount <= 0) {
+      if (!order.dueAmount || order.dueAmount <= 0) {
         throw new Error("This order has no unpaid balance.");
+      }
+      if ((order.paidAmount || 0) > 0 && (order.paymentMethod !== "ONLINE" || method === "COD")) {
+        throw new Error("The remaining balance for this order must be paid online.");
       }
       if (order.shipping?.cn) {
         throw new Error("A courier-assigned order cannot change its payment method.");
@@ -197,8 +200,8 @@ export async function retryCustomerOrderPayment({
       await tx.order.update({
         where: { id: order.id },
         data: {
-          paymentMethod: method,
-          paymentStatus: "PENDING",
+          paymentMethod: Number(order.paidAmount || 0) > 0 ? "ONLINE" : method,
+          ...(Number(order.paidAmount || 0) <= 0 ? { paymentStatus: "PENDING" } : {}),
           selectedPaymentGatewayId: method !== "COD" ? gateway.id : null,
         },
       });

@@ -290,7 +290,9 @@ export async function createOrder(formData) {
       };
     }
     const orderItems = JSON.parse(data?.products);
-    const paymentMethod = String(data.paymentMethod || "").toUpperCase();
+    const requestedPaymentMethod = String(data.paymentMethod || "").toUpperCase();
+    const paymentPlan = String(data.paymentPlan || "FULL").toUpperCase();
+    let paymentMethod = requestedPaymentMethod;
     if (
       !data?.customerName ||
       !data?.phoneNumber ||
@@ -304,14 +306,16 @@ export async function createOrder(formData) {
         "আপনার নাম, মোবাইল নাম্বার, জেলা, থানা এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
       );
     }
-    if (!["COD", "ONLINE", "EMI"].includes(paymentMethod)) {
+    if (!["COD", "ONLINE", "EMI"].includes(requestedPaymentMethod)) {
       throw new Error("Select a valid payment method.");
     }
-    if (paymentMethod !== "COD" && !data.paymentGatewayId) {
+    if (!["FULL", "MINIMUM"].includes(paymentPlan)) throw new Error("Select a valid payment plan.");
+    if (requestedPaymentMethod !== "COD" && !data.paymentGatewayId) {
       throw new Error("Select an online payment gateway.");
     }
+    if (paymentPlan === "MINIMUM" && requestedPaymentMethod === "COD") throw new Error("Select an online payment gateway for the advance payment.");
     const historySince = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    const riskHistoryPromise = paymentMethod === "COD" ? prisma.order.findMany({
+    const riskHistoryPromise = (requestedPaymentMethod === "COD" || paymentPlan === "MINIMUM") ? prisma.order.findMany({
       where: {
         createdAt: { gte: historySince },
         OR: [
@@ -333,6 +337,9 @@ export async function createOrder(formData) {
     const providerPromise = paymentMethod !== "COD"
       ? prisma.paymentGateway.findUnique({ where: { id: data.paymentGatewayId }, include: { moneyAccount: true } })
       : prisma.paymentGateway.findFirst({ where: { adapterKey: "COD", isActive: true } });
+    const codProviderPromise = paymentPlan === "MINIMUM"
+      ? prisma.paymentGateway.findFirst({ where: { adapterKey: "COD", isActive: true }, include: { moneyAccount: true } })
+      : Promise.resolve(null);
     const variationsPromise = prisma.productVariation.findMany({
       where: { id: { in: variationIds } },
       select: {
@@ -349,11 +356,29 @@ export async function createOrder(formData) {
             productCode: true,
             categoryId: true,
             allowOutOfStockOrder: true,
+            codAvailable: true,
+            advancePaymentType: true,
+            advancePaymentValueType: true,
+            advancePaymentValue: true,
           },
         },
       },
     });
-    const [variations, activeCampaigns, deliveryRates, provider, riskHistory] = await Promise.all([variationsPromise, campaignsPromise, deliveryRatesPromise, providerPromise, riskHistoryPromise]);
+    const [variations, activeCampaigns, deliveryRates, provider, riskHistory, codProvider] = await Promise.all([variationsPromise, campaignsPromise, deliveryRatesPromise, providerPromise, riskHistoryPromise, codProviderPromise]);
+    const paymentRuleProducts = variations.map((variation) => variation.product);
+    const requiresProductPaymentPlan = paymentRuleProducts.some((product) => product.codAvailable === false || ["DELIVERY_FEE", "PARTIAL"].includes(product.advancePaymentType));
+    const allProductsAllowCod = paymentRuleProducts.every((product) => product.codAvailable !== false);
+    if (requestedPaymentMethod === "COD" && (requiresProductPaymentPlan || !allProductsAllowCod)) {
+      throw new Error("এই পণ্যের জন্য COD নির্বাচন করা যাবে না। ন্যূনতম বা পুরো অনলাইন পেমেন্ট বেছে নিন।");
+    }
+    if (requiresProductPaymentPlan) {
+      if (requestedPaymentMethod === "COD") throw new Error("এই পণ্যের জন্য advance payment plan নির্বাচন করুন।");
+      const canCollectRemainderByCod = paymentPlan === "MINIMUM" && allProductsAllowCod && getProviderRuntimeConfiguration("gateway", codProvider).ready;
+      paymentMethod = canCollectRemainderByCod ? "COD" : paymentPlan === "MINIMUM" ? "ONLINE" : requestedPaymentMethod;
+    } else {
+      if (paymentPlan === "MINIMUM") throw new Error("এই পণ্যের জন্য minimum advance নির্ধারিত নেই।");
+      paymentMethod = requestedPaymentMethod;
+    }
     const providerConfiguration = provider ? getProviderRuntimeConfiguration("gateway", provider) : null;
     if (!providerConfiguration?.ready) throw new Error(paymentMethod === "COD" ? "Cash on Delivery is currently disabled." : "The selected provider is unavailable or not fully configured.");
     if (paymentMethod === "EMI" && provider?.adapterKey !== "SSLCOMMERZ") throw new Error("Installment payment is available only through SSLCommerz.");
@@ -499,6 +524,22 @@ export async function createOrder(formData) {
       const totalDeliveryDiscount = deliveryPricing.discount + paymentDeliveryPricing.discount;
       const merchandiseTotal = paymentPricing.subtotal;
       const totalAmount = merchandiseTotal + deliveryCharge;
+      const requiredAdvance = (paymentRuleProducts.some((product) => product.advancePaymentType === "DELIVERY_FEE") ? deliveryCharge : 0) + pricedItems.reduce((sum, { item, variation, pricing }) => {
+        const product = variation.product;
+        if (product.advancePaymentType !== "PARTIAL") return sum;
+        const value = Math.max(0, Number(product.advancePaymentValue) || 0);
+        const quantity = Number(item.quantity) || 1;
+        const lineAmount = pricing.price * quantity;
+        const lineAdvance = product.advancePaymentValueType === "PERCENT"
+          ? lineAmount * Math.min(100, value) / 100
+          : value * quantity;
+        return sum + lineAdvance;
+      }, 0);
+      const minimumPaymentAmount = Math.min(totalAmount, Math.max(0, Math.round(requiredAdvance * 100) / 100));
+      if (paymentPlan === "MINIMUM" && (!requiresProductPaymentPlan || minimumPaymentAmount <= 0 || minimumPaymentAmount >= totalAmount)) {
+        throw new Error("এই পণ্যের minimum payment amount সঠিকভাবে সেট করা নেই।");
+      }
+      const initialPaymentAmount = paymentPlan === "MINIMUM" ? minimumPaymentAmount : totalAmount;
       const riskAssessment = assessOrderRisk({
         paymentMethod,
         orderAmount: totalAmount,
@@ -604,11 +645,11 @@ export async function createOrder(formData) {
           },
           payments: {
             create: {
-              gateway: paymentMethod !== "COD" ? provider.code : "COD",
-              paymentMethod,
-              paymentGatewayId: paymentMethod !== "COD" ? provider.id : null,
+              gateway: paymentPlan === "MINIMUM" || paymentMethod !== "COD" ? provider.code : "COD",
+              paymentMethod: paymentPlan === "MINIMUM" ? "ONLINE" : paymentMethod,
+              paymentGatewayId: paymentPlan === "MINIMUM" || paymentMethod !== "COD" ? provider.id : null,
               courierProviderId: null,
-              amount: totalAmount,
+              amount: initialPaymentAmount,
               status: "PENDING",
             },
           },

@@ -72,9 +72,13 @@ export default function PaymentMethodSelector({
   initialProviders,
   paymentDeliveryCampaigns = [],
   cartItems = [],
+  deliveryCharge = 0,
+  orderTotal = 0,
+  hideCod = false,
 }) {
-  const [mode, setMode] = useState("");
+  const [mode, setMode] = useState(cartItems.some((item) => item.codAvailable === false || (item.advancePaymentType && item.advancePaymentType !== "NONE")) ? "ONLINE" : "");
   const [selectedKey, setSelectedKey] = useState("");
+  const [paymentPlan, setPaymentPlan] = useState("FULL");
   const [providers, setProviders] = useState(
     initialProviders || EMPTY_PROVIDERS,
   );
@@ -93,6 +97,7 @@ export default function PaymentMethodSelector({
     };
   }, [initialProviders]);
 
+
   const visiblePaymentDeliveryCampaigns = paymentDeliveryCampaigns.filter((campaign) => {
     const productTargets = campaign.products || [];
     const categoryTargets = campaign.categories || [];
@@ -110,6 +115,22 @@ export default function PaymentMethodSelector({
     if (!selectedMethods.length) return providers.codEnabled || onlineCodes.length > 0;
     return (providers.codEnabled && selectedMethods.includes("COD")) || selectedMethods.some((code) => onlineCodes.includes(code));
   });
+  const hasProductPaymentRules = cartItems.some((item) => item.codAvailable === false || (item.advancePaymentType && item.advancePaymentType !== "NONE"));
+  const requiresDeliveryAdvance = cartItems.some((item) => item.advancePaymentType === "DELIVERY_FEE");
+  const estimatedOrderTotal = Number(orderTotal) || cartItems.reduce((sum, item) => sum + (Number(item.discountPrice || item.price || item.regularPrice) || 0) * (Number(item.quantity) || 1), 0) + (Number(deliveryCharge) || 0);
+  const minimumAdvance = Math.min(estimatedOrderTotal, Math.max(0,
+    (requiresDeliveryAdvance ? Number(deliveryCharge) || 0 : 0) + cartItems.reduce((sum, item) => {
+      if (item.advancePaymentType !== "PARTIAL") return sum;
+      const quantity = Number(item.quantity) || 1;
+      const price = Number(item.discountPrice || item.price || item.regularPrice) || 0;
+      const value = Number(item.advancePaymentValue) || 0;
+      return sum + (item.advancePaymentValueType === "PERCENT" ? price * quantity * Math.min(100, value) / 100 : value * quantity);
+    }, 0),
+  ));
+  const hasMinimumOption = hasProductPaymentRules && minimumAdvance > 0 && minimumAdvance < estimatedOrderTotal;
+  useEffect(() => {
+    if (hasProductPaymentRules) setMode("ONLINE");
+  }, [hasProductPaymentRules]);
 
   const selectMode = (nextMode) => {
     setMode(nextMode);
@@ -123,6 +144,7 @@ export default function PaymentMethodSelector({
     setPaymentSelection({
       paymentMethod,
       paymentGatewayId: provider.id,
+      ...(hasProductPaymentRules ? { paymentPlan } : {}),
     });
   };
 
@@ -156,7 +178,7 @@ export default function PaymentMethodSelector({
         </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
-          {providers.codEnabled && (
+          {providers.codEnabled && !hasProductPaymentRules && !hideCod && (
             <PaymentCard
               id="payment-mode-cod"
               title="ক্যাশ অন ডেলিভারি"
@@ -166,7 +188,7 @@ export default function PaymentMethodSelector({
               onSelect={() => selectMode("COD")}
             />
           )}
-          {providers.gateways.length > 0 && (
+          {providers.gateways.length > 0 && !hasProductPaymentRules && (
             <PaymentCard
               id="payment-mode-online"
               title="অনলাইন পেমেন্ট"
@@ -184,6 +206,24 @@ export default function PaymentMethodSelector({
           কোনো পেমেন্ট মেথড বর্তমানে চালু নেই।
         </p>
       )}
+      {!loading && hasProductPaymentRules && !providers.gateways.length && (
+        <p className="mt-2 rounded-xl bg-red-50 p-3 text-sm font-normal text-red-600">এই পণ্যের অগ্রিম/অনলাইন পেমেন্টের জন্য কোনো gateway চালু নেই।</p>
+      )}
+
+      {hasProductPaymentRules && <div className="mt-3 rounded-xl border border-primary/20 bg-primary-soft p-3">
+        <p className="text-sm font-semibold text-text-primary">এই পণ্যের পেমেন্ট শর্ত</p>
+        <p className="mt-1 text-xs text-text-muted">{cartItems.some((item) => item.codAvailable === false) ? "এই পণ্যে COD নেই। বাকি টাকা অর্ডার dispatch-এর আগে অনলাইনে পরিশোধ করতে হবে।" : providers.codEnabled ? "ন্যূনতম অগ্রিম পেমেন্টের পর বাকি টাকা ডেলিভারির সময় COD-তে দিতে পারবেন।" : "স্টোরে COD চালু নেই; বাকি টাকা dispatch-এর আগে অনলাইনে দিতে হবে।"}</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {hasMinimumOption && <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-3 ${paymentPlan === "MINIMUM" ? "border-primary bg-white" : "border-border bg-surface"}`}>
+            <input type="radio" name="paymentPlanChoice" checked={paymentPlan === "MINIMUM"} onChange={() => { setPaymentPlan("MINIMUM"); setMode("ONLINE"); setSelectedKey(""); setPaymentSelection(null); }} />
+            <span><strong className="block text-sm">ন্যূনতম পেমেন্ট</strong><small className="text-text-muted">এখন ৳{minimumAdvance.toLocaleString("en-BD")} দিন</small></span>
+          </label>}
+          <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-3 ${paymentPlan === "FULL" ? "border-primary bg-white" : "border-border bg-surface"}`}>
+            <input type="radio" name="paymentPlanChoice" checked={paymentPlan === "FULL"} onChange={() => { setPaymentPlan("FULL"); setMode("ONLINE"); setSelectedKey(""); setPaymentSelection(null); }} />
+            <span><strong className="block text-sm">পুরো পেমেন্ট</strong><small className="text-text-muted">সম্পূর্ণ বিল অনলাইনে দিন</small></span>
+          </label>
+        </div>
+      </div>}
 
       {mode === "COD" && (
         <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-normal text-emerald-800">
@@ -220,7 +260,7 @@ export default function PaymentMethodSelector({
                       selected={selectedKey === regularKey}
                       onSelect={() => selectProvider(provider)}
                     />
-                    {supportsEmi && (
+                    {supportsEmi && paymentPlan !== "MINIMUM" && (
                       <PaymentCard
                         id={`gateway-${provider.id}-emi`}
                         title="Installment / EMI"

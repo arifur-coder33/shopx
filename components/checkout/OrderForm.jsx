@@ -377,6 +377,7 @@ export default function OrderForm({
       }
       if (session?.user?.id) formData.append("userId", session.user.id);
       formData.append("paymentMethod", paymentSelection.paymentMethod);
+      if (paymentSelection.paymentPlan) formData.append("paymentPlan", paymentSelection.paymentPlan);
       if (paymentSelection.paymentGatewayId) formData.append("paymentGatewayId", paymentSelection.paymentGatewayId);
       formData.append("orderPrice", totalPrice);
       formData.append("deliveryCharge", deliveryCharge);
@@ -497,6 +498,8 @@ export default function OrderForm({
             initialProviders={checkoutProviders}
             paymentDeliveryCampaigns={paymentDeliveryCampaigns}
             cartItems={products || []}
+            deliveryCharge={deliveryCharge}
+            orderTotal={totalPrice}
           />
         </div>
         <div className="w-full md:w-1/2">

@@ -3,7 +3,7 @@
 import { useModalContext } from "@/context/ModalContext";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import Imagecustom from "../images/ImageCustom";
 import VariationInput from "../input/VariationInput";
@@ -46,6 +46,15 @@ export default function DynamicForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [formValues, setFormValues] = useState({});
+
+  useEffect(() => {
+    setFormValues({
+      codAvailable: String(data?.codAvailable ?? true),
+      advancePaymentType: data?.advancePaymentType || "NONE",
+      advancePaymentValueType: data?.advancePaymentValueType || "FIXED",
+    });
+  }, [data]);
 
   const router = useRouter();
 
@@ -119,20 +128,42 @@ export default function DynamicForm({
       )}
       <div className="md:grid md:grid-cols-6 gap-2 text-base ">
         {fromFields?.map((field, index) => {
+          if (field.showWhen && formValues[field.showWhen.field] !== field.showWhen.value) return null;
           switch (field.type) {
+            case "radioGroup": {
+              const selectedValue = formValues[field.name] ?? String(data?.[field.name] ?? field.defaultValue ?? "");
+              return (
+                <fieldset key={field.name} className={`my-2 min-w-0 rounded-2xl border border-border bg-surface p-3 shadow-sm ${field.colSpan === "full" ? "col-span-full" : "md:col-span-2"}`}>
+                  <legend className="px-1 text-sm font-bold text-text-primary">{field.label}</legend>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {(field.options || []).map((option) => {
+                      const selected = selectedValue === option.value;
+                      return (
+                        <label key={option.value} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${selected ? "border-primary bg-primary-soft text-primary ring-1 ring-primary/20" : "border-border bg-surface text-text-secondary hover:border-primary/50 hover:bg-surface-muted"}`}>
+                          <input type="radio" name={field.name} value={option.value} checked={selected} onChange={() => setFormValues((current) => ({ ...current, [field.name]: option.value }))} className="h-4 w-4 shrink-0 accent-primary" />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              );
+            }
             case "checkbox":
               return (
+                <div key={field.name} className={`col-span-${field.colSpan || "1"}`}>
+                <input type="hidden" name={field.name} value="off" />
                 <CheckBox
                   index={index}
-                  key={field.name}
                   label={field.label}
                   name={field.name}
-                  value={data?.[field.name] || field.defaultChecked}
+                  value={data?.[field.name] ?? field.defaultChecked}
                   colSpan={field.colSpan}
                   action={field.toggleAction}
                   id={data?.id}
                   required={field.required}
                 />
+                </div>
               );
             case "text":
             case "number":
@@ -151,6 +182,9 @@ export default function DynamicForm({
                     field.name === "mainImage" ? handleMainImageChange : null
                   }
                   required={field.required}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
                 />
               );
             case "password":
@@ -204,6 +238,15 @@ export default function DynamicForm({
                     data={field.data}
                   /> */}
                 </div>
+              );
+            case "nativeSelect":
+              return (
+                <label key={field.name} className="my-3 grid gap-1 text-left text-sm font-medium md:col-span-2">
+                  <span>{field.label}</span>
+                  <select name={field.name} defaultValue={data?.[field.name] ?? field.defaultValue} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                    {(field.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
               );
             case "editor":
               return (
