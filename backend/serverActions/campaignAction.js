@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { hasPermission, getUserId } from "../utils/hasPermission";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
+import { isDatabaseId } from "@/lib/databaseId";
 
 const TYPES = new Set(["PRODUCT_DISCOUNT", "CART_DISCOUNT", "DELIVERY_DISCOUNT", "DELIVERY", "PAYMENT_DISCOUNT", "COUPON", "COMBO"]);
 const STATUSES = new Set(["DRAFT", "PUBLISHED", "PAUSED", "EXPIRED"]);
@@ -17,7 +18,7 @@ const resultError = (error) => ({
 function parseIds(value) {
   const parsed = JSON.parse(String(value || "[]"));
   if (!Array.isArray(parsed)) throw new Error("Invalid campaign targets.");
-  return [...new Set(parsed.map(String).filter((id) => /^[a-f\d]{24}$/i.test(id)))];
+  return [...new Set(parsed.map(String).filter(isDatabaseId))];
 }
 
 function parseProductPairs(value) {
@@ -177,7 +178,7 @@ export async function saveCampaign(formData) {
     data.paymentMethods = selectedPaymentMethods;
     const bannerMediaId = String(formData.get("bannerMedia") || "").split(",")[0];
     if (bannerMediaId) {
-      if (!/^[a-f\d]{24}$/i.test(bannerMediaId)) throw new Error("Select a valid campaign banner.");
+      if (!isDatabaseId(bannerMediaId)) throw new Error("Select a valid campaign banner.");
       const media = await prisma.media.findUnique({ where: { id: bannerMediaId }, select: { name: true } });
       if (!media) throw new Error("The selected campaign banner was not found.");
       data.bannerUrl = media.name;
@@ -206,9 +207,9 @@ export async function saveCampaign(formData) {
     if (data.type === "COMBO" && !data.configuration.productPairs.length) throw new Error("Add at least one complete buy/get product pair.");
     if (data.type === "COMBO" && data.configuration.productPairs.some((pair) => {
       const rewards = pair.rewardProductIds || [];
-      if (!rewards.length || rewards.some((productId) => !/^[a-f\d]{24}$/i.test(productId))) return true;
-      if (pair.triggerType === "PRODUCT") return !pair.requiredProductIds.length || pair.requiredProductIds.some((productId) => !/^[a-f\d]{24}$/i.test(productId)) || pair.requiredProductIds.some((productId) => rewards.includes(productId)) || !!pair.requiredCategoryIds.length;
-      if (pair.triggerType === "CATEGORY") return !pair.requiredCategoryIds.length || pair.requiredCategoryIds.some((categoryId) => !/^[a-f\d]{24}$/i.test(categoryId)) || !!pair.requiredProductIds.length;
+      if (!rewards.length || rewards.some((productId) => !isDatabaseId(productId))) return true;
+      if (pair.triggerType === "PRODUCT") return !pair.requiredProductIds.length || pair.requiredProductIds.some((productId) => !isDatabaseId(productId)) || pair.requiredProductIds.some((productId) => rewards.includes(productId)) || !!pair.requiredCategoryIds.length;
+      if (pair.triggerType === "CATEGORY") return !pair.requiredCategoryIds.length || pair.requiredCategoryIds.some((categoryId) => !isDatabaseId(categoryId)) || !!pair.requiredProductIds.length;
       return pair.triggerType !== "ALL" || !!pair.requiredProductIds.length || !!pair.requiredCategoryIds.length;
     })) throw new Error("Choose valid buy conditions and one or more valid reward products for every combo rule.");
     const saved = await prisma.$transaction(async (tx) => {
@@ -269,7 +270,7 @@ export async function saveCampaign(formData) {
 export async function deleteCampaign(id) {
   try {
     await hasPermission("campaign", "delete");
-    if (!/^[a-f\d]{24}$/i.test(String(id || ""))) throw new Error("Invalid campaign.");
+    if (!isDatabaseId(String(id || ""))) throw new Error("Invalid campaign.");
     const existing = await prisma.campaign.findUnique({ where: { id }, include: { _count: { select: { usages: true } } } });
     if (!existing) throw new Error("Campaign not found.");
     if (existing._count.usages > 0) throw new Error("A campaign already used by an order cannot be deleted.");
@@ -287,7 +288,7 @@ export async function deleteCampaign(id) {
 export async function setCampaignStatus(id, status) {
   try {
     await hasPermission("campaign", "update");
-    if (!/^[a-f\d]{24}$/i.test(String(id || ""))) throw new Error("Invalid campaign.");
+    if (!isDatabaseId(String(id || ""))) throw new Error("Invalid campaign.");
     const nextStatus = String(status || "").toUpperCase();
     if (!["PUBLISHED", "PAUSED", "DRAFT", "EXPIRED"].includes(nextStatus)) throw new Error("Invalid campaign status.");
     const campaign = await prisma.campaign.update({ where: { id }, data: { status: nextStatus, updatedBy: await getUserId() } });

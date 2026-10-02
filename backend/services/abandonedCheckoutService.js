@@ -1,5 +1,6 @@
 import "server-only";
 import prisma from "@/lib/prisma";
+import { isDatabaseId } from "@/lib/databaseId";
 
 function normalizePhone(value) {
   let phone = String(value || "").replace(/\D/g, "").slice(0, 13);
@@ -55,7 +56,7 @@ export async function listAbandonedCheckoutLeads(limit = 250) {
 }
 
 export async function deleteAbandonedCheckoutLead(id) {
-  if (!/^[a-f\d]{24}$/i.test(String(id || ""))) return false;
+  if (!isDatabaseId(String(id || ""))) return false;
   const result = await prisma.abandonedCheckoutLead.deleteMany({ where: { id } });
   return result.count > 0;
 }

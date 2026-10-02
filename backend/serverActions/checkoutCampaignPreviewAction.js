@@ -14,6 +14,7 @@ import {
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import prisma from "@/lib/prisma";
+import { isDatabaseId } from "@/lib/databaseId";
 
 const money = (value) =>
   Math.round(Math.max(0, Number(value) || 0) * 100) / 100;
@@ -50,7 +51,7 @@ export async function getCheckoutCampaignPreview({
         quantity: Math.max(0, Number(item.quantity) || 0),
       }))
       .filter(
-        (item) => /^[a-f\d]{24}$/i.test(item.variationId) && item.quantity > 0,
+        (item) => isDatabaseId(item.variationId) && item.quantity > 0,
       );
     if (!requestedItems.length)
       return { success: true, data: { rows: [], total: 0 } };

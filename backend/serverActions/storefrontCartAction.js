@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { isDatabaseId } from "@/lib/databaseId";
 
 // A deliberately small action for quick-add buttons. Keeping it separate from
 // the admin product action bundle prevents every storefront page compiling it.
@@ -68,7 +69,7 @@ export async function getStorefrontCartItem(slug) {
 
 export async function getStorefrontCategoryIds(productIds = []) {
   const ids = [...new Set((Array.isArray(productIds) ? productIds : [])
-    .map(String).filter((id) => /^[a-f\d]{24}$/i.test(id)).slice(0, 100))];
+    .map(String).filter(isDatabaseId).slice(0, 100))];
   if (!ids.length) return {};
   const products = await prisma.product.findMany({
     where: { id: { in: ids }, isActive: true },

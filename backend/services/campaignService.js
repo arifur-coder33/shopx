@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { isDatabaseId } from "@/lib/databaseId";
 import { getComboRewardBadge, comboPairMatchesProduct } from "@/components/campaign/comboOfferText";
 
 const money = (value) => Math.round(Math.max(0, Number(value) || 0) * 100) / 100;
@@ -184,7 +185,7 @@ export async function getPublicCampaigns({ take } = {}) {
       ...(configuration.requiredProductIds || []),
       ...(configuration.rewardProductIds || []),
       ...pairProductIds,
-    ].filter((id) => /^[a-f\d]{24}$/i.test(String(id || ""))))].slice(0, 3);
+    ].filter((id) => isDatabaseId(String(id || ""))))].slice(0, 3);
     return [campaign.id, ids];
   }));
   const configuredProductIds = [...new Set([...productIdsByCampaign.values()].flat())];
@@ -215,7 +216,7 @@ export async function getPublicCampaigns({ take } = {}) {
 }
 
 export async function getPublicCampaignProducts(campaignId, page = 1, pageSize = 40) {
-  if (!/^[a-f\d]{24}$/i.test(String(campaignId || ""))) return null;
+  if (!isDatabaseId(String(campaignId || ""))) return null;
   const now = new Date();
   let campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },

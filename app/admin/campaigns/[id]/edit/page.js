@@ -3,13 +3,14 @@ import prisma from "@/lib/prisma";
 import { hasPermission } from "@/backend/utils/hasPermission";
 import CampaignForm from "../../components/CampaignForm";
 import { getCampaignEditorOptions } from "../../campaignPageData";
+import { isDatabaseId } from "@/lib/databaseId";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditCampaignPage({ params }) {
   await hasPermission("campaign", "update");
   const { id } = await params;
-  if (!/^[a-f\d]{24}$/i.test(id || "")) notFound();
+  if (!isDatabaseId(id)) notFound();
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {

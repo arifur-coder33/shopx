@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { hasPermission } from "../utils/hasPermission";
 import { revalidatePath } from "next/cache";
+import { isDatabaseId } from "@/lib/databaseId";
 
 async function requireCatalogRead() {
   const session = await auth();
@@ -22,7 +23,7 @@ export async function getSpecifications() {
 export async function getCategorySpecifications(categoryId) {
   try {
     await requireCatalogRead();
-    if (!/^[a-f\d]{24}$/i.test(categoryId || "")) return { success: true, data: [] };
+    if (!isDatabaseId(categoryId || "")) return { success: true, data: [] };
     return { success: true, data: await prisma.categorySpecification.findMany({ where: { categoryId }, orderBy: { sortOrder: "asc" }, include: { specification: { include: { parent: true } } } }) };
   } catch (error) { return failure(error); }
 }
