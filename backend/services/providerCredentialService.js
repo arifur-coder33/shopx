@@ -4,7 +4,7 @@ import {
   createHash,
   randomBytes,
 } from "node:crypto";
-import { getProviderEndpointConfiguration } from "@/backend/config/providerEndpoints";
+import { getProviderEndpointConfiguration } from "../config/providerEndpoints.js";
 
 const COURIER_RATE_CONFIG = [
   { key: "insideDhakaCharge", label: "Inside Dhaka charge", type: "number", defaultValue: "100" },

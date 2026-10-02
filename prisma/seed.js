@@ -184,14 +184,10 @@ async function main() {
      1️⃣ ROLES
   ====================== */
   const roles = ["SUPER_ADMIN", "ADMIN", "MANAGER", "USER"];
-
-  for (const role of roles) {
-    await prisma.role.upsert({
-      where: { name: role },
-      update: {},
-      create: { name: role },
-    });
-  }
+  await prisma.role.createMany({
+    data: roles.map((name) => ({ name })),
+    skipDuplicates: true,
+  });
 
   /* ======================
      2️⃣ RESOURCES
@@ -225,26 +221,20 @@ async function main() {
     "campaign",
   ];
 
-  for (const key of resources) {
-    await prisma.resource.upsert({
-      where: { key },
-      update: {},
-      create: { key },
-    });
-  }
+  await prisma.resource.createMany({
+    data: resources.map((key) => ({ key })),
+    skipDuplicates: true,
+  });
 
   /* ======================
      3️⃣ ACTIONS
   ====================== */
   const actions = ["create", "view", "update", "delete"];
 
-  for (const key of actions) {
-    await prisma.action.upsert({
-      where: { key },
-      update: {},
-      create: { key },
-    });
-  }
+  await prisma.action.createMany({
+    data: actions.map((key) => ({ key })),
+    skipDuplicates: true,
+  });
 
   /* ======================
      4️⃣ SUPER_ADMIN PERMISSIONS (ALL)
@@ -256,26 +246,19 @@ async function main() {
   const allResources = await prisma.resource.findMany();
   const allActions = await prisma.action.findMany();
 
-  for (const resource of allResources) {
-    for (const action of allActions) {
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_resourceId_actionId: {
-            roleId: superAdminRole.id,
-            resourceId: resource.id,
-            actionId: action.id,
-          },
-        },
-        update: { allowed: true },
-        create: {
-          roleId: superAdminRole.id,
-          resourceId: resource.id,
-          actionId: action.id,
-          allowed: true,
-        },
-      });
-    }
-  }
+  await prisma.rolePermission.updateMany({
+    where: { roleId: superAdminRole.id },
+    data: { allowed: true },
+  });
+  await prisma.rolePermission.createMany({
+    data: allResources.flatMap((resource) => allActions.map((action) => ({
+      roleId: superAdminRole.id,
+      resourceId: resource.id,
+      actionId: action.id,
+      allowed: true,
+    }))),
+    skipDuplicates: true,
+  });
 
   /* ======================
      5️⃣ SUPER_ADMIN USER (ENV)

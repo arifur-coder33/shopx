@@ -26,16 +26,19 @@ export async function findSearchProducts(rawQuery, select, take = 10) {
   if (products.length >= take || joined.length < 2) return products;
 
   // Older products may not have the compact title in searchText yet.
-  const flexibleTitle = [...joined.slice(0, 64)]
-    .join("[^a-z0-9অ-৿]*");
-  const matches = await prisma.product.findRaw({
-    filter: { isActive: true, title: { $regex: flexibleTitle, $options: "i" } },
-    options: { projection: { _id: 1 }, limit: take + products.length },
-  });
+  // Legacy products may not have compact searchText. Normalize punctuation
+  // inside PostgreSQL so queries such as "i-pho-ne" still match "iPhone".
+  const matches = await prisma.$queryRaw`
+    SELECT "id" FROM "Product"
+    WHERE "isActive" = TRUE
+      AND regexp_replace(lower(coalesce("title", '')), '[^[:alnum:]অ-৿]', '', 'g')
+        LIKE ${`%${joined.slice(0, 64)}%`}
+    LIMIT ${take + products.length}
+  `;
 
   const existing = new Set(products.map((product) => product.id));
   const missingIds = matches
-    .map((match) => match._id?.$oid)
+    .map((match) => match.id)
     .filter((id) => !existing.has(id))
     .slice(0, take - products.length);
   if (!missingIds.length) return products;

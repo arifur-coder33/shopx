@@ -28,7 +28,7 @@ Use `TenantMembership` to connect users, stores and tenant-specific roles.
 ## 1. Current architecture
 
 - Next.js 16 App Router and React 19.
-- MongoDB through Prisma 6.19.
+- PostgreSQL through Prisma 6.19 (migrated from MongoDB in the `postgresql` branch).
 - Public ecommerce routes live in `app/(user)` and currently map directly to
   `/`, `/product/[slug]`, `/category/[...slug]`, `/checkout` and related URLs.
 - The customer admin lives in `app/admin` and maps to `/admin`; its layout is
@@ -261,8 +261,8 @@ This keeps customer URLs clean and preserves fast ISR without mixing tenants.
 
 ## 10. Safe existing-data migration strategy
 
-MongoDB/Prisma requires a staged migration. Do not make `tenantId` required in
-the first schema push.
+Future tenant rollout requires a staged schema migration. Do not make
+`tenantId` required in the first schema migration.
 
 ### Stage A — additive
 

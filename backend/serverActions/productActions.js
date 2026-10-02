@@ -548,7 +548,7 @@ export async function createProductAction(formData) {
       }
 
       return product;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     // --- Revalidation ---
     revalidatePath("/admin/product");
@@ -1902,7 +1902,7 @@ export async function updateProductAction({ id: productId, formData }) {
 
       console.log("Updated product with variations:", updatedProduct);
       return updatedProduct; // This 'result' is the updated product
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     revalidatePath("/admin/products");
     revalidatePath("/");

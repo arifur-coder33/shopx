@@ -1,4 +1,4 @@
-const objectId = /^[a-f\d]{24}$/i;
+const validRecordId = (value) => typeof value === "string" && value.length >= 8 && value.length <= 64;
 
 export function parseSpecificationRows(raw) {
   let rows;
@@ -7,7 +7,7 @@ export function parseSpecificationRows(raw) {
   if (!Array.isArray(rows) || rows.length > 100) throw new Error("Specifications must contain at most 100 rows.");
   const seen = new Set();
   for (const row of rows) {
-    if (!row || !objectId.test(row.specificationId) || seen.has(row.specificationId)) {
+    if (!row || !validRecordId(row.specificationId) || seen.has(row.specificationId)) {
       throw new Error("Select each specification only once.");
     }
     seen.add(row.specificationId);

@@ -62,7 +62,6 @@ const regularProductWhere = {
   OR: [
     { isFeatured: false },
     { isFeatured: null },
-    { isFeatured: { isSet: false } },
   ],
 };
 

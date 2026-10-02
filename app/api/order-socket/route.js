@@ -1,7 +1,7 @@
 import { experimental_upgradeWebSocket } from "@vercel/functions";
 import jwt from "jsonwebtoken";
 import prisma from "@/lib/prisma";
-import { subscribeToMongoChanges } from "@/lib/realtime/mongoChangeFeed";
+import { subscribeToPostgresChanges } from "@/lib/realtime/postgresPollingFeed";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -68,7 +68,7 @@ export async function GET(request) {
           if (claims.scope !== "orders:view" || !claims.sub) throw new Error("Unauthorized");
           userId = claims.sub;
           clearTimeout(authTimeout);
-          unsubscribeOrders = await subscribeToMongoChanges(
+          unsubscribeOrders = await subscribeToPostgresChanges(
             "Order",
             ORDER_PIPELINE,
             async (change) => {
@@ -95,7 +95,7 @@ export async function GET(request) {
           const unauthorized = error?.name === "JsonWebTokenError"
             || error?.name === "TokenExpiredError"
             || error?.message === "Unauthorized";
-          send(ws, "realtime:error", { code: unauthorized ? "unauthorized" : "change-stream-unavailable" });
+          send(ws, "realtime:error", { code: unauthorized ? "unauthorized" : "database-poll-unavailable" });
           ws.close(unauthorized ? 1008 : 1011, unauthorized ? "Unauthorized" : "Realtime unavailable");
         }
         return;
@@ -103,7 +103,7 @@ export async function GET(request) {
 
       if (message.type !== "subscribe" || message.channel !== "abandoned-checkouts" || unsubscribeAbandoned) return;
       try {
-        unsubscribeAbandoned = await subscribeToMongoChanges(
+        unsubscribeAbandoned = await subscribeToPostgresChanges(
           "AbandonedCheckoutLead",
           ABANDONED_PIPELINE,
           (change) => {

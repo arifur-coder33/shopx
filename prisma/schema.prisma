@@ -1,7 +1,8 @@
-// Data source for MongoDB
+// Data source for PostgreSQL
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -10,7 +11,7 @@ generator client {
 
 // User model with extended features
 model User {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  id     String  @id @default(cuid())
   email  String  @unique
   phone  String? @unique
   name   String?
@@ -19,7 +20,7 @@ model User {
   password     String
   accounts     Account[]
   sessions     Session[]
-  roleId       String    @db.ObjectId
+  roleId       String
   role         Role      @relation(fields: [roleId], references: [id])
   tokenVersion Int       @default(0)
   orders       Order[] // Relationship to track user orders
@@ -28,7 +29,7 @@ model User {
 }
 
 model Role {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  id          String           @id @default(cuid())
   name        String           @unique
   users       User[]
   permissions RolePermission[]
@@ -37,7 +38,7 @@ model Role {
 }
 
 model Resource {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  id          String           @id @default(cuid())
   key         String           @unique // user, product, order
   permissions RolePermission[]
   createdAt   DateTime         @default(now()) // Timestamp for account creation
@@ -45,7 +46,7 @@ model Resource {
 }
 
 model Action {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  id          String           @id @default(cuid())
   key         String           @unique // create, view, update, delete
   permissions RolePermission[]
   createdAt   DateTime         @default(now()) // Timestamp for account creation
@@ -53,10 +54,10 @@ model Action {
 }
 
 model RolePermission {
-  id         String  @id @default(auto()) @map("_id") @db.ObjectId
-  roleId     String  @db.ObjectId
-  resourceId String  @db.ObjectId
-  actionId   String  @db.ObjectId
+  id         String  @id @default(cuid())
+  roleId     String
+  resourceId String
+  actionId   String
   allowed    Boolean @default(true)
 
   role      Role     @relation(fields: [roleId], references: [id])
@@ -70,24 +71,24 @@ model RolePermission {
 
 // Category model for organizing products
 model Category {
-  specifications CategorySpecification[]
+  specifications  CategorySpecification[]
   campaignTargets CampaignCategory[]
-  id            String     @id @default(auto()) @map("_id") @db.ObjectId
-  name          String // Category name
-  slug          String     @unique // Unique slug for URL identification
-  description   String? // Optional category description
+  id              String                  @id @default(cuid())
+  name            String // Category name
+  slug            String                  @unique // Unique slug for URL identification
+  description     String? // Optional category description
   // Banner image for the category
-  thumbnailId   String?    @db.ObjectId
-  thumbnail     Media?     @relation(fields: [thumbnailId], references: [id], name: "categoryThumbnail")
-  bannerId      String?    @db.ObjectId
-  banner        Media?     @relation(fields: [bannerId], references: [id], name: "categoryBanner")
+  thumbnailId     String?
+  thumbnail       Media?                  @relation(fields: [thumbnailId], references: [id], name: "categoryThumbnail")
+  bannerId        String?
+  banner          Media?                  @relation(fields: [bannerId], references: [id], name: "categoryBanner")
   // Self-referencing relation for subcategories
-  subCategories Category[] @relation("ParentChild")
+  subCategories   Category[]              @relation("ParentChild")
 
   // Self-referencing relation for parent category
   parentCategory Category? @relation("ParentChild", fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  parentCategoryId String? @db.ObjectId // Nullable field for subcategories
+  parentCategoryId String? // Nullable field for subcategories
 
   isVariation    Boolean          @default(false) // Flag to check if variations exist
   variations     VariationValue[] // Array of variations
@@ -102,9 +103,9 @@ model Category {
 
 // Variation Model (Size, Color, etc.)
 model VariationName {
-  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  id           String           @id @default(cuid())
   name         String           @unique
-  categoryId   String?          @db.ObjectId
+  categoryId   String?
   category     Category?        @relation(fields: [categoryId], references: [id])
   values       VariationValue[] // Example: "Size", "Color"
   combinations Combination[]
@@ -114,10 +115,10 @@ model VariationName {
 
 // Variation Value Model (Specific options like XL, Red, etc.)
 model VariationValue {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  variationId String        @db.ObjectId
+  id          String        @id @default(cuid())
+  variationId String
   variation   VariationName @relation(fields: [variationId], references: [id])
-  categoryId  String?       @db.ObjectId // Can be nullable if the variation is global
+  categoryId  String? // Can be nullable if the variation is global
   category    Category?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   value       String // Example: "XL", "Red", "L"
   // Many-to-Many Relationship using Join Table
@@ -128,12 +129,12 @@ model VariationValue {
 }
 
 model ProductCodeCounter {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  id              String @id @default(cuid())
   lastProductCode Int
 }
 
 model Media {
-  id                        String             @id @default(auto()) @map("_id") @db.ObjectId
+  id                        String             @id @default(cuid())
   url                       String
   name                      String
   host                      String
@@ -150,91 +151,91 @@ model Media {
 }
 
 model Product {
-  specifications ProductSpecificationValue[]
+  specifications  ProductSpecificationValue[]
   campaignTargets CampaignProduct[]
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  productCode  String?   @unique
-  title        String // Product title
-  slug         String    @unique // Unique slug for URL identification
-  description  String? // Optional detailed description
-  categoryId   String?   @db.ObjectId // Foreign key for Category
-  category     Category? @relation(fields: [categoryId], references: [id]) // Relation to Category
-  canonicalUrl String?
+  id              String                      @id @default(cuid())
+  productCode     String?                     @unique
+  title           String // Product title
+  slug            String                      @unique // Unique slug for URL identification
+  description     String? // Optional detailed description
+  categoryId      String? // Foreign key for Category
+  category        Category?                   @relation(fields: [categoryId], references: [id]) // Relation to Category
+  canonicalUrl    String?
 
-  thumbnailId          String?            @db.ObjectId
-  thumbnail            Media?             @relation(fields: [thumbnailId], references: [id])
-  videoUrl             String? // Optional video URL for the product
-  videos               ProductVideo[]
-  gallery              ProductGallery[]
-  seoKeyWord           String?
-  seoDescription       String?
-  isFeatured           Boolean?           @default(false) // Indicates if the product is featured
-  isActive             Boolean?           @default(true) // Marks if the product is active
-  allowOutOfStockOrder Boolean            @default(false)
-  codAvailable         Boolean?           @default(true)
-  advancePaymentType  String?            @default("NONE")
-  advancePaymentValueType String?         @default("FIXED")
-  advancePaymentValue Float?
-  deliveryMinDays     Int?               @default(2)
-  deliveryMaxDays     Int?               @default(5)
-  status               ProductStatus?     @default(ACTIVE) // Product status enumeration
-  hasVariations        Boolean?           @default(false)
-  google_Category_id   String?
-  gender               String?
-  ageGroup             String?
-  variations           ProductVariation[]
-  orders               OrderItem[]
-  searchText           String?
-  Purchase             PurchaseItem[]
-  createdAt            DateTime           @default(now()) // Timestamp for product creation
-  updatedAt            DateTime           @updatedAt // Auto-updated timestamp
+  thumbnailId             String?
+  thumbnail               Media?             @relation(fields: [thumbnailId], references: [id])
+  videoUrl                String? // Optional video URL for the product
+  videos                  ProductVideo[]
+  gallery                 ProductGallery[]
+  seoKeyWord              String?
+  seoDescription          String?
+  isFeatured              Boolean?           @default(false) // Indicates if the product is featured
+  isActive                Boolean?           @default(true) // Marks if the product is active
+  allowOutOfStockOrder    Boolean            @default(false)
+  codAvailable            Boolean?           @default(true)
+  advancePaymentType      String?            @default("NONE")
+  advancePaymentValueType String?            @default("FIXED")
+  advancePaymentValue     Float?
+  deliveryMinDays         Int?               @default(2)
+  deliveryMaxDays         Int?               @default(5)
+  status                  ProductStatus?     @default(ACTIVE) // Product status enumeration
+  hasVariations           Boolean?           @default(false)
+  google_Category_id      String?
+  gender                  String?
+  ageGroup                String?
+  variations              ProductVariation[]
+  orders                  OrderItem[]
+  searchText              String?
+  Purchase                PurchaseItem[]
+  createdAt               DateTime           @default(now()) // Timestamp for product creation
+  updatedAt               DateTime           @updatedAt // Auto-updated timestamp
 
   @@index([searchText])
 }
 
 // Roots can carry values directly; children are optional, reusable fields.
 model Specification {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  name String
-  key String @unique
-  parentId String? @db.ObjectId
-  parent Specification? @relation("SpecificationTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children Specification[] @relation("SpecificationTree")
+  id         String                      @id @default(cuid())
+  name       String
+  key        String                      @unique
+  parentId   String?
+  parent     Specification?              @relation("SpecificationTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children   Specification[]             @relation("SpecificationTree")
   categories CategorySpecification[]
-  values ProductSpecificationValue[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  values     ProductSpecificationValue[]
+  createdAt  DateTime                    @default(now())
+  updatedAt  DateTime                    @updatedAt
 
   @@index([parentId])
 }
 
 model CategorySpecification {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  categoryId String @db.ObjectId
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  specificationId String @db.ObjectId
-  specification Specification @relation(fields: [specificationId], references: [id])
-  options String[] @default([])
-  sortOrder Int @default(0)
+  id              String        @id @default(cuid())
+  categoryId      String
+  category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  specificationId String
+  specification   Specification @relation(fields: [specificationId], references: [id])
+  options         String[]      @default([])
+  sortOrder       Int           @default(0)
 
   @@unique([categoryId, specificationId])
 }
 
 model ProductSpecificationValue {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  productId String @db.ObjectId
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  specificationId String @db.ObjectId
-  specification Specification @relation(fields: [specificationId], references: [id])
-  value String
-  sortOrder Int @default(0)
+  id              String        @id @default(cuid())
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  specificationId String
+  specification   Specification @relation(fields: [specificationId], references: [id])
+  value           String
+  sortOrder       Int           @default(0)
 
   @@unique([productId, specificationId])
 }
 
 model ProductVideo {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  productId String   @db.ObjectId
+  id        String   @id @default(cuid())
+  productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   header    String
   url       String
@@ -246,9 +247,9 @@ model ProductVideo {
 }
 
 model ProductGallery {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  productId String @db.ObjectId
-  mediaId   String @db.ObjectId
+  id        String @id @default(cuid())
+  productId String
+  mediaId   String
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   media   Media   @relation(fields: [mediaId], references: [id])
@@ -257,15 +258,15 @@ model ProductGallery {
 }
 
 model ProductVariation {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  productId     String?  @db.ObjectId // Foreign key for Category
+  id            String   @id @default(cuid())
+  productId     String? // Foreign key for Category
   product       Product? @relation(fields: [productId], references: [id], onDelete: Cascade) // Relation to Category
   sku           String
   weight        Float?
   dimensions    String?
   regularPrice  Float? // Regular price of the product
   discountPrice Float? // Optional discount price
-  thumbnailId   String?  @db.ObjectId
+  thumbnailId   String?
   thumbnail     Media?   @relation(fields: [thumbnailId], references: [id])
   matcherId     String
 
@@ -281,42 +282,42 @@ model ProductVariation {
 // A campaign is a time-bound, server-evaluated promotion. Prices are never
 // trusted from the browser; checkout recalculates the active campaign.
 model Campaign {
-  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
-  name                String
-  description         String?
-  group               String            @default("PRODUCT_DISCOUNT") // PRODUCT_DISCOUNT, CART_DISCOUNT, DELIVERY_DISCOUNT, PAYMENT_DISCOUNT, COUPON, COMBO
-  type                String            @default("PRODUCT_DISCOUNT") // PRODUCT_DISCOUNT, DELIVERY, COUPON
-  status              String            @default("DRAFT") // DRAFT or PUBLISHED
-  bannerUrl           String?
-  startAt             DateTime?
-  endAt               DateTime?
-  discountType        String?           // PERCENT or FIXED
-  discountValue       Float?
-  specialPrice        Float?
-  maxDiscountAmount   Float?
-  minimumQuantity     Int?
-  stackable           Boolean           @default(false)
-  exclusive           Boolean           @default(false)
-  discountBase        String?           // PRODUCT_SUBTOTAL or ELIGIBLE_SUBTOTAL
-  deliveryZone        String?
-  shippingMethod      String?
-  terms               String?
-  cashbackType        String?
-  configuration       Json?
-  minimumOrderAmount  Float?
-  paymentMethod       String?
-  paymentMethods      String[]          @default([])
-  couponCode          String?
-  usageLimit          Int?
-  perCustomerLimit    Int?
-  priority            Int               @default(0)
-  createdBy           String?
-  updatedBy           String?
-  products            CampaignProduct[]
-  categories          CampaignCategory[]
-  usages              CampaignUsage[]
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  id                 String             @id @default(cuid())
+  name               String
+  description        String?
+  group              String             @default("PRODUCT_DISCOUNT") // PRODUCT_DISCOUNT, CART_DISCOUNT, DELIVERY_DISCOUNT, PAYMENT_DISCOUNT, COUPON, COMBO
+  type               String             @default("PRODUCT_DISCOUNT") // PRODUCT_DISCOUNT, DELIVERY, COUPON
+  status             String             @default("DRAFT") // DRAFT or PUBLISHED
+  bannerUrl          String?
+  startAt            DateTime?
+  endAt              DateTime?
+  discountType       String? // PERCENT or FIXED
+  discountValue      Float?
+  specialPrice       Float?
+  maxDiscountAmount  Float?
+  minimumQuantity    Int?
+  stackable          Boolean            @default(false)
+  exclusive          Boolean            @default(false)
+  discountBase       String? // PRODUCT_SUBTOTAL or ELIGIBLE_SUBTOTAL
+  deliveryZone       String?
+  shippingMethod     String?
+  terms              String?
+  cashbackType       String?
+  configuration      Json?
+  minimumOrderAmount Float?
+  paymentMethod      String?
+  paymentMethods     String[]           @default([])
+  couponCode         String?
+  usageLimit         Int?
+  perCustomerLimit   Int?
+  priority           Int                @default(0)
+  createdBy          String?
+  updatedBy          String?
+  products           CampaignProduct[]
+  categories         CampaignCategory[]
+  usages             CampaignUsage[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   @@index([status, startAt, endAt])
   @@index([type, status])
@@ -324,9 +325,9 @@ model Campaign {
 }
 
 model CampaignProduct {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId String   @db.ObjectId
-  productId  String   @db.ObjectId
+  id         String   @id @default(cuid())
+  campaignId String
+  productId  String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
@@ -336,9 +337,9 @@ model CampaignProduct {
 }
 
 model CampaignCategory {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId String   @db.ObjectId
-  categoryId String   @db.ObjectId
+  id         String   @id @default(cuid())
+  campaignId String
+  categoryId String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
@@ -348,25 +349,25 @@ model CampaignCategory {
 }
 
 model CampaignUsage {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId String   @db.ObjectId
-  orderId    String   @db.ObjectId
+  id          String   @id @default(cuid())
+  campaignId  String
+  orderId     String
   customerKey String?
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
 
   @@unique([campaignId, orderId])
   @@index([campaignId, customerKey])
 }
 
 model Combination {
-  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
-  productVariationId String           @db.ObjectId
+  id                 String           @id @default(cuid())
+  productVariationId String
   productVariation   ProductVariation @relation(fields: [productVariationId], references: [id], onDelete: Cascade)
-  variationNameId    String?          @db.ObjectId
+  variationNameId    String?
   variationName      VariationName?   @relation(fields: [variationNameId], references: [id])
-  variationValueId   String?          @db.ObjectId
+  variationValueId   String?
   variationValue     VariationValue?  @relation(fields: [variationValueId], references: [id])
   orderItems         OrderItem[] // Relationship to OrderItem
   // Additional fields can be added as needed
@@ -375,11 +376,11 @@ model Combination {
 }
 
 model Order {
-  id                        String           @id @default(auto()) @map("_id") @db.ObjectId
+  id                        String           @id @default(cuid())
   orderNo                   String           @unique
   orderItems                OrderItem[]
   campaignUsages            CampaignUsage[]
-  userId                    String?          @db.ObjectId // Foreign key for User
+  userId                    String? // Foreign key for User
   user                      User?            @relation(fields: [userId], references: [id]) // Relation to User
   customerName              String
   phoneNumber               String
@@ -419,9 +420,9 @@ model Order {
   note                      String?
   status                    OrderStatus      @default(PENDING) // Order status enumeration
   shipping                  Shipping?
-  selectedPaymentGatewayId  String?          @db.ObjectId
+  selectedPaymentGatewayId  String?
   selectedPaymentGateway    PaymentGateway?  @relation("OrderPaymentGateway", fields: [selectedPaymentGatewayId], references: [id])
-  selectedCourierProviderId String?          @db.ObjectId
+  selectedCourierProviderId String?
   selectedCourierProvider   CourierProvider? @relation("OrderCourierProvider", fields: [selectedCourierProviderId], references: [id])
   timeline                  OrderTimeline[]
   payments                  Payment[]
@@ -444,41 +445,41 @@ model Order {
 }
 
 model OrderItem {
-  id            String           @id @default(auto()) @map("_id") @db.ObjectId
-  orderId       String           @db.ObjectId
-  order         Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderNo       String
-  orderItemNo   Int
-  productName   String
-  campaignName  String?
-  campaignDiscount Float @default(0)
-  sku           String
-  productCode   String?
-  thumbnail     String?
-  price         Float
-  quantity      Int // Foreign key for Product
-  productId     String           @db.ObjectId
-  product       Product          @relation(fields: [productId], references: [id]) // Relation to Product
-  combinations  String? // JSON string to store combination details
-  combinationId String?          @db.ObjectId
-  combination   Combination?     @relation(fields: [combinationId], references: [id])
-  variationId   String           @db.ObjectId
-  variation     ProductVariation @relation(fields: [variationId], references: [id])
-  deliveryItems DeliveryItem[]
-  status        OrderStatus      @default(PENDING)
-  createdAt     DateTime         @default(now()) // Timestamp for order placement
-  updatedAt     DateTime         @updatedAt // Auto-updated timestamp
+  id               String           @id @default(cuid())
+  orderId          String
+  order            Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderNo          String
+  orderItemNo      Int
+  productName      String
+  campaignName     String?
+  campaignDiscount Float            @default(0)
+  sku              String
+  productCode      String?
+  thumbnail        String?
+  price            Float
+  quantity         Int // Foreign key for Product
+  productId        String
+  product          Product          @relation(fields: [productId], references: [id]) // Relation to Product
+  combinations     String? // JSON string to store combination details
+  combinationId    String?
+  combination      Combination?     @relation(fields: [combinationId], references: [id])
+  variationId      String
+  variation        ProductVariation @relation(fields: [variationId], references: [id])
+  deliveryItems    DeliveryItem[]
+  status           OrderStatus      @default(PENDING)
+  createdAt        DateTime         @default(now()) // Timestamp for order placement
+  updatedAt        DateTime         @updatedAt // Auto-updated timestamp
 }
 
 model OrderCounter {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  id              String @id @default(cuid())
   idNo            Int    @unique
   lastOrderNumber Int
 }
 
 model OrderPushSubscription {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId       String   @db.ObjectId
+  id           String   @id @default(cuid())
+  userId       String
   endpoint     String   @unique
   subscription Json
   createdAt    DateTime @default(now())
@@ -488,7 +489,7 @@ model OrderPushSubscription {
 }
 
 model Counter {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
   name String @unique // SUPPLIER, PRODUCT, PURCHASE_ORDER
 
@@ -503,13 +504,13 @@ model Counter {
 }
 
 model Shipping {
-  id                     String           @id @default(auto()) @map("_id") @db.ObjectId
-  orderId                String           @unique @db.ObjectId
+  id                     String           @id @default(cuid())
+  orderId                String           @unique
   order                  Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderNo                String?
   cn                     String?
   courierName            String?
-  courierProviderId      String?          @db.ObjectId
+  courierProviderId      String?
   courierProvider        CourierProvider? @relation(fields: [courierProviderId], references: [id])
   deliveryFee            Float?
   cod                    Float?
@@ -524,13 +525,13 @@ model Shipping {
 }
 
 model PaymentGateway {
-  id                   String        @id @default(auto()) @map("_id") @db.ObjectId
+  id                   String        @id @default(cuid())
   name                 String
   code                 String        @unique
   adapterKey           String        @default("MANUAL")
   isActive             Boolean       @default(false)
   sortOrder            Int           @default(0)
-  moneyAccountId       String?       @db.ObjectId
+  moneyAccountId       String?
   moneyAccount         MoneyAccount? @relation(fields: [moneyAccountId], references: [id])
   encryptedCredentials String?
   credentialVersion    Int           @default(1)
@@ -548,13 +549,13 @@ model PaymentGateway {
 }
 
 model CourierProvider {
-  id                   String               @id @default(auto()) @map("_id") @db.ObjectId
+  id                   String               @id @default(cuid())
   name                 String
   code                 String               @unique
   adapterKey           String               @default("MANUAL")
   isActive             Boolean              @default(false)
   sortOrder            Int                  @default(0)
-  moneyAccountId       String?              @db.ObjectId
+  moneyAccountId       String?
   moneyAccount         MoneyAccount?        @relation(fields: [moneyAccountId], references: [id])
   encryptedCredentials String?
   credentialVersion    Int                  @default(1)
@@ -577,23 +578,23 @@ model CourierProvider {
 // server-side conversion APIs. Access tokens/secrets are stored together in
 // encryptedSecrets; they are never returned with public storefront settings.
 model SocialTrackingSetting {
-  id                       String   @id @map("_id")
-  facebookPixelId          String?
-  googleTagId              String?
-  googleAnalyticsId        String?
-  tiktokPixelId            String?
-  encryptedSecrets         String?
-  secretsUpdatedAt         DateTime?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-  createdBy                String?
-  updatedBy                String?
+  id                String    @id
+  facebookPixelId   String?
+  googleTagId       String?
+  googleAnalyticsId String?
+  tiktokPixelId     String?
+  encryptedSecrets  String?
+  secretsUpdatedAt  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdBy         String?
+  updatedBy         String?
 }
 
 model OrderTimeline {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  orderId String @db.ObjectId
+  orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   orderNo String
@@ -618,9 +619,9 @@ enum PaymentMethod {
 }
 
 model Payment {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  orderId String @db.ObjectId
+  orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   transactionId     String?
@@ -629,11 +630,11 @@ model Payment {
   gateway       String
   paymentMethod PaymentMethod?
 
-  paymentGatewayId  String?          @db.ObjectId
+  paymentGatewayId  String?
   paymentGateway    PaymentGateway?  @relation(fields: [paymentGatewayId], references: [id])
-  courierProviderId String?          @db.ObjectId
+  courierProviderId String?
   courierProvider   CourierProvider? @relation(fields: [courierProviderId], references: [id])
-  moneyAccountId    String?          @db.ObjectId
+  moneyAccountId    String?
   moneyAccount      MoneyAccount?    @relation(fields: [moneyAccountId], references: [id])
 
   amount      Float
@@ -675,14 +676,14 @@ enum RefundStatus {
 }
 
 model Refund {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  orderId String @db.ObjectId
+  orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  paymentId      String?       @db.ObjectId
+  paymentId      String?
   payment        Payment?      @relation(fields: [paymentId], references: [id])
-  moneyAccountId String?       @db.ObjectId
+  moneyAccountId String?
   moneyAccount   MoneyAccount? @relation(fields: [moneyAccountId], references: [id])
 
   amount Float
@@ -706,12 +707,12 @@ model Refund {
 }
 
 model Ledger {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  orderId String @db.ObjectId
+  orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  paymentId String?  @db.ObjectId
+  paymentId String?
   payment   Payment? @relation(fields: [paymentId], references: [id])
 
   type LedgerType
@@ -730,12 +731,12 @@ model Ledger {
 }
 
 model CourierPickupPoint {
-  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  id                String           @id @default(cuid())
   name              String
   address           String
   storeId           String?
   courierName       String?
-  courierProviderId String?          @db.ObjectId
+  courierProviderId String?
   courierProvider   CourierProvider? @relation(fields: [courierProviderId], references: [id])
   phoneNumber       String?
   email             String?
@@ -746,23 +747,23 @@ model CourierPickupPoint {
 }
 
 model SiteSetting {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  name         String?
-  slogan       String?
-  seoTitle     String?
-  seoDescription String?
-  logo         String?
-  favicon      String?
-  phoneNumber1 String?
-  phoneNumber2 String?
-  adress1      String?
-  adress2      String?
-  googleMap    String?
-  email        String?
-  fbLink       String?
-  messengerLink String?
-  whatsappNumber String?
-  youTubeLink  String?
+  id              String   @id @default(cuid())
+  name            String?
+  slogan          String?
+  seoTitle        String?
+  seoDescription  String?
+  logo            String?
+  favicon         String?
+  phoneNumber1    String?
+  phoneNumber2    String?
+  adress1         String?
+  adress2         String?
+  googleMap       String?
+  email           String?
+  fbLink          String?
+  messengerLink   String?
+  whatsappNumber  String?
+  youTubeLink     String?
   primaryColor    String?
   secondaryColor  String?
   accentColor     String?
@@ -774,12 +775,12 @@ model SiteSetting {
   darkText        String?
   baseFontSize    Int?
   borderRadius    Int?
-  createdAt    DateTime @default(now()) // Timestamp for order placement
-  updatedAt    DateTime @updatedAt // Auto-updated timestamp
+  createdAt       DateTime @default(now()) // Timestamp for order placement
+  updatedAt       DateTime @updatedAt // Auto-updated timestamp
 }
 
 model ContentPage {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  id              String   @id @default(cuid())
   slug            String   @unique
   title           String
   content         String
@@ -795,7 +796,7 @@ model ContentPage {
 }
 
 model Notice {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  id        String    @id @default(cuid())
   notice    String?
   start     DateTime?
   end       DateTime?
@@ -804,8 +805,8 @@ model Notice {
 }
 
 model banner {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  thumbnailId String?  @db.ObjectId
+  id          String   @id @default(cuid())
+  thumbnailId String?
   thumbnail   Media?   @relation(fields: [thumbnailId], references: [id])
   name        String?
   createdAt   DateTime @default(now()) // Timestamp for order placement
@@ -815,13 +816,13 @@ model banner {
 // Home slider is separate from the legacy single banner so the old banner can
 // remain available without being rendered on the storefront.
 model HeroSlide {
-  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  id        String           @id @default(cuid())
   title     String?
   link      String?
   sortOrder Int              @default(0)
   isActive  Boolean          @default(true)
   motion    HeroSlideMotion? @default(FADE)
-  imageId   String           @db.ObjectId
+  imageId   String
   image     Media            @relation(fields: [imageId], references: [id])
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
@@ -893,17 +894,17 @@ enum LedgerDirection {
 // }
 
 model Account {
-  id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String  @db.ObjectId
+  id                String  @id @default(cuid())
+  userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.String
-  access_token      String? @db.String
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.String
+  id_token          String?
   session_state     String?
 
   createdAt DateTime @default(now())
@@ -915,9 +916,9 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  id           String   @id @default(cuid())
   sessionToken String   @unique
-  userId       String   @db.ObjectId
+  userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -926,7 +927,7 @@ model Session {
 }
 
 model VerificationToken {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  id         String   @id @default(cuid())
   identifier String
   token      String
   expires    DateTime
@@ -935,7 +936,7 @@ model VerificationToken {
 }
 
 model Supplier {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
   supplierCode String? @unique
 
@@ -970,9 +971,9 @@ model Supplier {
 }
 
 model SupplierDocument {
-  id         String @id @default(auto()) @map("_id") @db.ObjectId
-  supplierId String @db.ObjectId
-  mediaId    String @db.ObjectId
+  id         String @id @default(cuid())
+  supplierId String
+  mediaId    String
 
   supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   media    Media    @relation(fields: [mediaId], references: [id])
@@ -987,11 +988,11 @@ enum SupplierStatus {
 }
 
 model PurchaseOrder {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
   poNo String @unique
 
-  supplierId String   @db.ObjectId
+  supplierId String
   supplier   Supplier @relation(fields: [supplierId], references: [id])
 
   status PurchaseStatus @default(DRAFT)
@@ -1029,15 +1030,15 @@ model PurchaseOrder {
 }
 
 model PurchaseItem {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  purchaseOrderId String        @db.ObjectId
+  purchaseOrderId String
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
-  productId String  @db.ObjectId
+  productId String
   product   Product @relation(fields: [productId], references: [id])
 
-  variationId String           @db.ObjectId
+  variationId String
   variation   ProductVariation @relation(fields: [variationId], references: [id])
 
   quantity Float
@@ -1057,7 +1058,7 @@ model PurchaseItem {
 }
 
 model Warehouse {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
   code String @unique
 
@@ -1084,15 +1085,15 @@ model Warehouse {
 }
 
 model GoodsReceipt {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
   grnNo String @unique
 
-  purchaseOrderId String @db.ObjectId
+  purchaseOrderId String
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
 
-  warehouseId String @db.ObjectId
+  warehouseId String
 
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
 
@@ -1111,13 +1112,13 @@ model GoodsReceipt {
 }
 
 model GoodsReceiptItem {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  goodsReceiptId String? @db.ObjectId
+  goodsReceiptId String?
 
   goodsReceipt GoodsReceipt? @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
 
-  variationId String @db.ObjectId
+  variationId String
 
   variation ProductVariation @relation(fields: [variationId], references: [id])
 
@@ -1136,11 +1137,11 @@ model GoodsReceiptItem {
 }
 
 model Delivery {
-  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  id          String         @id @default(cuid())
   deliveryNo  String         @unique
-  orderId     String         @db.ObjectId
+  orderId     String
   order       Order          @relation(fields: [orderId], references: [id])
-  warehouseId String         @db.ObjectId
+  warehouseId String
   warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
   status      DeliveryStatus @default(PACKED)
   note        String?
@@ -1156,14 +1157,14 @@ model Delivery {
 }
 
 model DeliveryItem {
-  id                 String           @id @default(auto()) @map("_id") @db.ObjectId
-  deliveryId         String           @db.ObjectId
+  id                 String           @id @default(cuid())
+  deliveryId         String
   delivery           Delivery         @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  orderItemId        String           @db.ObjectId
+  orderItemId        String
   orderItem          OrderItem        @relation(fields: [orderItemId], references: [id])
-  goodsReceiptItemId String           @db.ObjectId
+  goodsReceiptItemId String
   goodsReceiptItem   GoodsReceiptItem @relation(fields: [goodsReceiptItemId], references: [id])
-  variationId        String           @db.ObjectId
+  variationId        String
   variation          ProductVariation @relation(fields: [variationId], references: [id])
   quantity           Float
 
@@ -1173,12 +1174,12 @@ model DeliveryItem {
 }
 
 model InventoryTransaction {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  variationId String           @db.ObjectId
+  variationId String
   variation   ProductVariation @relation(fields: [variationId], references: [id])
 
-  warehouseId String    @db.ObjectId
+  warehouseId String
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
   type InventoryType
@@ -1201,12 +1202,12 @@ model InventoryTransaction {
 }
 
 model Stock {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  warehouseId String    @db.ObjectId
+  warehouseId String
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
-  variationId String           @db.ObjectId
+  variationId String
   variation   ProductVariation @relation(fields: [variationId], references: [id])
 
   quantity Float @default(0)
@@ -1223,7 +1224,7 @@ model Stock {
 }
 
 model ExpenseCategory {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
   name String @unique
 
@@ -1233,9 +1234,9 @@ model ExpenseCategory {
 }
 
 model Expense {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  categoryId String          @db.ObjectId
+  categoryId String
   category   ExpenseCategory @relation(fields: [categoryId], references: [id])
 
   amount Float
@@ -1246,7 +1247,7 @@ model Expense {
 
   paymentMethod String?
 
-  moneyAccountId    String?            @db.ObjectId
+  moneyAccountId    String?
   moneyAccount      MoneyAccount?      @relation(fields: [moneyAccountId], references: [id])
   moneyTransactions MoneyTransaction[]
 
@@ -1259,17 +1260,17 @@ model Expense {
 }
 
 model SupplierPayment {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
 
-  supplierId String @db.ObjectId
+  supplierId String
 
   supplier Supplier @relation(fields: [supplierId], references: [id])
 
-  purchaseOrderId String? @db.ObjectId
+  purchaseOrderId String?
 
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
-  moneyAccountId    String?            @db.ObjectId
+  moneyAccountId    String?
   moneyAccount      MoneyAccount?      @relation(fields: [moneyAccountId], references: [id])
   moneyTransactions MoneyTransaction[]
 
@@ -1291,7 +1292,7 @@ model SupplierPayment {
 }
 
 model FinancialAccount {
-  id        String               @id @default(auto()) @map("_id") @db.ObjectId
+  id        String               @id @default(cuid())
   code      String               @unique
   name      String
   type      FinancialAccountType
@@ -1304,7 +1305,7 @@ model FinancialAccount {
 }
 
 model MoneyAccount {
-  id                   String             @id @default(auto()) @map("_id") @db.ObjectId
+  id                   String             @id @default(cuid())
   name                 String
   type                 MoneyAccountType
   accountNumber        String?
@@ -1335,23 +1336,23 @@ enum MoneyAccountType {
 }
 
 model MoneyTransaction {
-  id                String               @id @default(auto()) @map("_id") @db.ObjectId
+  id                String               @id @default(cuid())
   transactionNo     String               @unique
   type              MoneyTransactionType
   amount            Float
-  fromAccountId     String?              @db.ObjectId
+  fromAccountId     String?
   fromAccount       MoneyAccount?        @relation("MoneyTransactionFrom", fields: [fromAccountId], references: [id])
-  toAccountId       String?              @db.ObjectId
+  toAccountId       String?
   toAccount         MoneyAccount?        @relation("MoneyTransactionTo", fields: [toAccountId], references: [id])
-  shareholderId     String?              @db.ObjectId
+  shareholderId     String?
   shareholder       Shareholder?         @relation(fields: [shareholderId], references: [id])
-  supplierPaymentId String?              @db.ObjectId
+  supplierPaymentId String?
   supplierPayment   SupplierPayment?     @relation(fields: [supplierPaymentId], references: [id])
-  expenseId         String?              @db.ObjectId
+  expenseId         String?
   expense           Expense?             @relation(fields: [expenseId], references: [id])
-  paymentId         String?              @db.ObjectId
+  paymentId         String?
   payment           Payment?             @relation(fields: [paymentId], references: [id])
-  refundId          String?              @db.ObjectId
+  refundId          String?
   refund            Refund?              @relation(fields: [refundId], references: [id])
   idempotencyKey    String?
   reference         String?
@@ -1371,7 +1372,7 @@ model MoneyTransaction {
 }
 
 model Shareholder {
-  id              String             @id @default(auto()) @map("_id") @db.ObjectId
+  id              String             @id @default(cuid())
   name            String
   phone           String?
   email           String?
@@ -1399,7 +1400,7 @@ enum MoneyTransactionType {
 }
 
 model FinancialYear {
-  id        String             @id @default(auto()) @map("_id") @db.ObjectId
+  id        String             @id @default(cuid())
   name      String             @unique
   startDate DateTime
   endDate   DateTime
@@ -1412,8 +1413,8 @@ model FinancialYear {
 }
 
 model AccountingPeriod {
-  id              String                 @id @default(auto()) @map("_id") @db.ObjectId
-  financialYearId String                 @db.ObjectId
+  id              String                 @id @default(cuid())
+  financialYearId String
   financialYear   FinancialYear          @relation(fields: [financialYearId], references: [id])
   name            String
   startDate       DateTime
@@ -1434,7 +1435,7 @@ enum AccountingPeriodStatus {
 }
 
 model JournalEntry {
-  id            String              @id @default(auto()) @map("_id") @db.ObjectId
+  id            String              @id @default(cuid())
   entryNo       String              @unique
   entryDate     DateTime
   description   String
@@ -1452,10 +1453,10 @@ model JournalEntry {
 }
 
 model JournalLine {
-  id             String           @id @default(auto()) @map("_id") @db.ObjectId
-  journalEntryId String           @db.ObjectId
+  id             String           @id @default(cuid())
+  journalEntryId String
   journalEntry   JournalEntry     @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  accountId      String           @db.ObjectId
+  accountId      String
   account        FinancialAccount @relation(fields: [accountId], references: [id])
   debit          Float            @default(0)
   credit         Float            @default(0)
@@ -1533,7 +1534,7 @@ enum InventoryReference {
 }
 
 model AbandonedCheckoutLead {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  id              String   @id @default(cuid())
   phoneNumber     String   @unique
   customerName    String?
   district        String?

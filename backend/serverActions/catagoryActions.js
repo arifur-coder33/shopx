@@ -709,7 +709,7 @@ export async function getCategoryTree() {
       : getCachedNavigationCategories());
   } catch (error) {
     // Category navigation is non-critical. Keep the storefront available when
-    // MongoDB is temporarily unreachable and let the next request retry.
+    // The database may be temporarily unreachable; let the next request retry.
     if (process.env.NODE_ENV === "development") {
       console.error("Category navigation is unavailable:", error.message);
     }
