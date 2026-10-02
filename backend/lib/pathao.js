@@ -21,6 +21,18 @@ const pathaoSettings = (providerConfiguration) => {
   return { baseUrl, ...credentials };
 };
 
+async function readPathaoResponse(response, operation) {
+  const result = await response.json().catch(() => null);
+  const code = Number(result?.code);
+  if (!response.ok || code !== 200) {
+    const detail = result?.message || result?.data?.message || result?.errors?.message;
+    throw new Error(
+      `Pathao ${operation} failed (${response.status}${Number.isFinite(code) ? `, code ${code}` : ""})${detail ? `: ${detail}` : "."}`,
+    );
+  }
+  return result;
+}
+
 /**
  * ✅ Issue Access Token (OAuth 2.0)
  */
@@ -49,11 +61,10 @@ export async function getAccessToken(providerConfiguration) {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error("❌ Failed to get Pathao access token");
+  const data = await readPathaoResponse(response, "token request");
+  if (!data?.access_token) {
+    throw new Error("Pathao token request succeeded without an access token.");
   }
-
-  const data = await response.json();
   tokenCache.set(cacheKey, {
     token: data.access_token,
     expiresAt: now + data.expires_in * 1000 - 60000,
@@ -190,10 +201,7 @@ export async function createPathaoOrder(orderData, providerConfiguration) {
     body: JSON.stringify(orderData),
   });
 
-  const result = await response.json();
-  if (result.code !== 200) {
-    throw new Error("❌ Failed to create order");
-  }
+  const result = await readPathaoResponse(response, "order booking");
 
   return result; // ✅ Returns order info (consignment_id, delivery_fee, etc.)
 }

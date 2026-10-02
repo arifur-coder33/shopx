@@ -20,8 +20,17 @@ export default function CampaignCountdown({ startAt, endAt, className = "", comp
 
   useEffect(() => {
     setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 10000);
-    return () => window.clearInterval(timer);
+    // Keep the countdown in sync with wall clock time. Browsers may throttle
+    // intervals in background tabs, so refresh immediately when the tab returns.
+    const updateNow = () => setNow(Date.now());
+    const timer = window.setInterval(updateNow, 1000);
+    window.addEventListener("focus", updateNow);
+    document.addEventListener("visibilitychange", updateNow);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", updateNow);
+      document.removeEventListener("visibilitychange", updateNow);
+    };
   }, []);
 
   useEffect(() => {

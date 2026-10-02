@@ -80,7 +80,7 @@ export async function validateSSLcommerzPayment(validationId, providerConfigurat
   url.searchParams.set("format", "json");
   const response = await fetch(url, { cache: "no-store" });
   const result = await response.json();
-  if (!response.ok || !["VALID", "VALIDATED"].includes(result.status)) {
+  if (!response.ok || !["VALID", "VALIDATED", "FAILED", "CANCELLED", "CANCEL"].includes(result.status)) {
     throw new Error("SSLCommerz payment verification failed.");
   }
   return result;

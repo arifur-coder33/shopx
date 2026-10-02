@@ -57,6 +57,9 @@ async function handleSSL(req) {
       throw new Error("SSLCommerz credentials are unavailable.");
     }
     const data = await validateSSLcommerzPayment(val_id, providerConfiguration);
+    if (!["VALID", "VALIDATED"].includes(data.status)) {
+      throw new Error(`SSLCommerz reported ${data.status || "an invalid status"}.`);
+    }
     if (tran_id && data.tran_id && data.tran_id !== tran_id) {
       throw new Error("SSLCommerz transaction ID mismatch.");
     }

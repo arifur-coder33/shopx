@@ -65,7 +65,6 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         required
         largeMobile
       />
-      <p className="col-span-full -mt-2 text-xs text-gray-500">অর্ডার অসম্পূর্ণ থাকলে যোগাযোগের জন্য এই নম্বরটি সংরক্ষণ করা হতে পারে।</p>
 
       {/* <SearchableDropdown
         defaultId={division}

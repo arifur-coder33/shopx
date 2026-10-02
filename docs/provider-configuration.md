@@ -43,6 +43,12 @@ payment base URL; if the selected environment URL is absent, that provider is no
 ready and cannot be enabled. Live/Sandbox selection is saved per provider in the
 database.
 
+For SSLCommerz, configure the IPN listener in both the sandbox and live merchant
+panels to the deployed site's `/api/py/sslc/ipn` URL. The listener validates each
+notification against SSLCommerz before posting it, so a customer browser or
+network disconnect after payment does not leave a successful transaction
+unrecorded. A local `localhost` URL cannot receive provider-to-server IPNs.
+
 Disabling a provider preserves its mapping, balance, transactions, payments,
 refunds, settlements, and journals. Account-to-account transfers continue through
 the Money Accounts page and use the central transaction/journal posting service.
