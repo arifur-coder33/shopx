@@ -1,6 +1,6 @@
 "use server";
 
-import { getSiteUrl } from "@/lib/siteUrl";
+import { getPaymentCallbackSiteUrl } from "@/lib/siteUrl";
 
 import {
   constants,
@@ -181,7 +181,7 @@ export async function createNagadPayment({ payment, providerConfiguration }) {
 
   const callbackUrl = new URL(
     "/api/py/nagad/callback",
-    await getSiteUrl(),
+    await getPaymentCallbackSiteUrl(),
   );
   callbackUrl.searchParams.set("paymentId", payment.id);
   const completePayload = {

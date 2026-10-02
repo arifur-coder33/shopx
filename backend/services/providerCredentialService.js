@@ -4,6 +4,7 @@ import {
   createHash,
   randomBytes,
 } from "node:crypto";
+import { getProviderEndpointConfiguration } from "@/backend/config/providerEndpoints";
 
 const COURIER_RATE_CONFIG = [
   { key: "insideDhakaCharge", label: "Inside Dhaka charge", type: "number", defaultValue: "100" },
@@ -264,39 +265,6 @@ const valuePresent = (value) =>
 
 const enabledValue = (value) => value === true || String(value) === "true";
 
-const sharedEndpointConfig = (adapterKey, config) => {
-  const isLive = enabledValue(config.isLive);
-  switch (adapterKey) {
-    case "BKASH":
-      return {
-        baseUrl: isLive
-          ? process.env.BKASH_LIVE_URL || process.env.BKASH_BASE_URL || ""
-          : process.env.BKASH_TEST_URL || process.env.BKASH_BASE_URL || "",
-      };
-    case "NAGAD":
-      return {
-        baseUrl: isLive
-          ? process.env.NAGAD_LIVE_URL || ""
-          : process.env.NAGAD_TEST_URL || "",
-      };
-    case "STEADFAST":
-      return {
-        baseUrl:
-          process.env.STEADFAST_BASE_URL ||
-          "https://portal.packzy.com/api/v1",
-      };
-    case "PATHAO":
-      return {
-        baseUri: isLive
-          ? process.env.PATHAO_LIVE_URL || "https://api-hermes.pathao.com"
-          : process.env.PATHAO_TEST_URL ||
-            "https://courier-api-sandbox.pathao.com",
-      };
-    default:
-      return {};
-  }
-};
-
 export function getProviderRuntimeConfiguration(kind, provider) {
   const definition = definitionFor(kind, provider?.adapterKey);
   if (!definition) {
@@ -341,7 +309,10 @@ export function getProviderRuntimeConfiguration(kind, provider) {
       ? storedConfig[field.key]
       : field.defaultValue;
   }
-  Object.assign(config, sharedEndpointConfig(provider?.adapterKey, config));
+  Object.assign(
+    config,
+    getProviderEndpointConfiguration(provider?.adapterKey, config),
+  );
 
   const missingCredentialFields = definition.credentials
     .filter((field) => field.required !== false && !valuePresent(credentials[field.key]))

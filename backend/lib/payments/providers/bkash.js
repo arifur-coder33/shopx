@@ -1,6 +1,6 @@
 "use server";
 
-import { getSiteUrl } from "@/lib/siteUrl";
+import { getPaymentCallbackSiteUrl } from "@/lib/siteUrl";
 
 /**
  * bKash hosted checkout adapter.
@@ -76,7 +76,7 @@ export async function getBkashToken(providerConfiguration) {
 export async function createBkashPayment({ payment, providerConfiguration }) {
   const token = await getBkashToken(providerConfiguration);
   const { appKey, baseUrl } = configurationValues(providerConfiguration);
-  const callbackURL = `${await getSiteUrl()}/api/py/bkash/callback`;
+  const callbackURL = `${await getPaymentCallbackSiteUrl()}/api/py/bkash/callback`;
   const response = await fetch(`${baseUrl}/tokenized/checkout/create`, {
     method: "POST",
     headers: headers(token, appKey),

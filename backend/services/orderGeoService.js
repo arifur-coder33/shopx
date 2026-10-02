@@ -1,5 +1,64 @@
 import { isIP } from "node:net";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import prisma from "@/lib/prisma";
+
+const ORDER_ORIGIN_CAPABILITY_TTL_MS = 10 * 60 * 1000;
+
+function originCapabilitySecret() {
+  return process.env.AUTH_SECRET || process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY || "";
+}
+
+export function createOrderOriginCapability(orderId) {
+  const secret = originCapabilitySecret();
+  if (!secret || !orderId) return null;
+  const expiresAt = Date.now() + ORDER_ORIGIN_CAPABILITY_TTL_MS;
+  const payload = `${orderId}.${expiresAt}`;
+  const signature = createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+export function verifyOrderOriginCapability(orderId, capability) {
+  try {
+    const secret = originCapabilitySecret();
+    const [tokenOrderId, expiresAtText, signature, extra] = String(capability || "").split(".");
+    const expiresAt = Number(expiresAtText);
+    if (!secret || extra || tokenOrderId !== orderId || !Number.isSafeInteger(expiresAt) || expiresAt < Date.now()) return false;
+    const expected = createHmac("sha256", secret).update(`${tokenOrderId}.${expiresAtText}`).digest();
+    const actual = Buffer.from(signature, "base64url");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
+
+export async function saveBrowserOrderOrigin({ orderId, latitude, longitude, accuracy }) {
+  const lat = coordinate(latitude, -90, 90);
+  const lon = coordinate(longitude, -180, 180);
+  if (!orderId || lat == null || lon == null) return false;
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { fraudRiskFactors: true } });
+  if (!order) return false;
+  const factors = Array.isArray(order.fraudRiskFactors) ? order.fraudRiskFactors : [];
+  const safeAccuracy = Number(accuracy);
+  const origin = {
+    city: null,
+    region: null,
+    country: null,
+    latitude: lat,
+    longitude: lon,
+    accuracy: Number.isFinite(safeAccuracy) && safeAccuracy >= 0 ? Math.round(safeAccuracy) : null,
+    source: "Browser GPS",
+  };
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      fraudRiskFactors: [
+        ...factors.filter((factor) => factor?.code !== "ORDER_ORIGIN"),
+        { code: "ORDER_ORIGIN", points: 0, origin },
+      ],
+    },
+  });
+  return true;
+}
 
 function isPublicIp(ip) {
   const kind = isIP(ip);

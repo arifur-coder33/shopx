@@ -6,16 +6,14 @@ const tokenCache = new Map();
 
 const pathaoSettings = (providerConfiguration) => {
   const credentials = providerConfiguration?.credentials || {};
-  const baseUrl =
-    providerConfiguration?.config?.baseUri ||
-    "https://api-hermes.pathao.com";
+  const baseUrl = providerConfiguration?.config?.baseUri;
   const required = [
     credentials.clientId,
     credentials.clientSecret,
     credentials.username,
     credentials.password,
   ];
-  if (required.some((value) => !value)) {
+  if (!baseUrl || required.some((value) => !value)) {
     throw new Error("Pathao credentials are not configured on the server.");
   }
   return { baseUrl, ...credentials };

@@ -1,8 +1,6 @@
 // utils/steadfast.js
 
-const getBaseUrl = (providerConfiguration) =>
-  providerConfiguration?.config?.baseUrl ||
-  "https://portal.packzy.com/api/v1";
+const getBaseUrl = (providerConfiguration) => providerConfiguration?.config?.baseUrl;
 
 const getHeaders = (providerConfiguration) => ({
   "Api-Key": providerConfiguration?.credentials?.apiKey,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, Check, ShieldCheck, ShoppingBag, Sparkles } from "lucide-react";
+import { ArrowRight, Check, CreditCard, ShieldCheck, Sparkles } from "lucide-react";
 
 const contentByStep = {
   creating: {
@@ -11,14 +11,19 @@ const contentByStep = {
     description: "পণ্য, দাম ও ডেলিভারি তথ্য মিলিয়ে অর্ডারটি নিরাপদে সংরক্ষণ করা হচ্ছে।",
   },
   "preparing-payment": {
-    eyebrow: "অর্ডার নেওয়া হয়েছে",
-    title: "পেমেন্ট প্রস্তুত হচ্ছে",
-    description: "আপনার অর্ডার নম্বর তৈরি হয়েছে। এখন নিরাপদ পেমেন্ট পেজ খোলা হচ্ছে।",
+    eyebrow: "নিরাপদ পেমেন্ট",
+    title: "পেমেন্ট পেজ প্রস্তুত হচ্ছে",
+    description: "আপনার নির্বাচিত পেমেন্ট গেটওয়েতে নিয়ে যাচ্ছি।",
   },
   redirecting: {
-    eyebrow: "প্রায় হয়ে গেছে",
+    eyebrow: "অর্ডার নেওয়া হয়েছে",
     title: "পেমেন্ট পেজে যাচ্ছেন",
     description: "পেমেন্ট সম্পন্ন করতে পরের পেজের নির্দেশনা অনুসরণ করুন।",
+  },
+  "order-complete": {
+    eyebrow: "অর্ডার নিশ্চিত",
+    title: "অর্ডার সম্পন্ন",
+    description: "আপনার অর্ডারটি নেওয়া হয়েছে। এখন পেমেন্ট পেজে যাচ্ছি।",
   },
   success: {
     eyebrow: "ধন্যবাদ!",
@@ -30,7 +35,7 @@ const contentByStep = {
 export default function CheckoutProgressOverlay({ step, orderNo }) {
   const [takingLonger, setTakingLonger] = useState(false);
   const content = contentByStep[step];
-  const complete = step === "success";
+  const complete = step === "success" || step === "order-complete";
 
   useEffect(() => {
     if (!step) return undefined;
@@ -67,9 +72,17 @@ export default function CheckoutProgressOverlay({ step, orderNo }) {
         </div>
 
         <div className="relative -mt-10 rounded-t-[26px] bg-white px-6 pb-7 pt-0 text-center sm:px-8">
-          <div className={`relative mx-auto -mt-8 grid h-20 w-20 place-items-center rounded-[24px] border-[5px] border-white shadow-xl ${complete ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-violet-100 text-violet-700 shadow-violet-200"}`}>
-            {complete ? <Check className="h-10 w-10" strokeWidth={3} /> : <ShoppingBag className="h-9 w-9" strokeWidth={2.2} />}
-            {!complete && <span className="absolute -right-2 -top-2 h-6 w-6 animate-spin rounded-full border-[3px] border-violet-200 border-t-violet-700" aria-hidden="true" />}
+          <div className="mx-auto -mt-8 flex w-fit items-center gap-2">
+            <div className={`relative grid place-items-center rounded-[26px] border-[5px] border-white shadow-xl transition-all duration-300 ${complete ? "h-24 w-24 bg-emerald-500 text-white shadow-emerald-200" : "h-20 w-20 bg-violet-100 text-violet-700 shadow-violet-200"}`}>
+              {complete ? <Check className="h-14 w-14" strokeWidth={3} /> : <CreditCard className="h-10 w-10 animate-pulse" strokeWidth={2.2} />}
+              {!complete && <span className="pointer-events-none absolute -inset-3" aria-hidden="true">
+                <svg viewBox="0 0 100 100" className="h-full w-full animate-spin" role="presentation">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeOpacity=".16" strokeWidth="4" />
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="url(#checkout-loading-ring)" strokeWidth="4.5" strokeLinecap="round" strokeDasharray="76 207" />
+                  <defs><linearGradient id="checkout-loading-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#7c3aed" /><stop offset="100%" stopColor="#e879f9" /></linearGradient></defs>
+                </svg>
+              </span>}
+            </div>
           </div>
           <h2 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{content.title}</h2>
           <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-slate-600">{content.description}</p>

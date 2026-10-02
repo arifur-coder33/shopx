@@ -12,7 +12,7 @@ import { headers } from "next/headers";
 import { getIP } from "../utils/getIp";
 import { assessOrderRisk } from "../utils/orderRisk";
 import { updateRecentOrderRiskScores } from "@/backend/services/orderRiskService";
-import { enrichOrderOrigin } from "@/backend/services/orderGeoService";
+import { createOrderOriginCapability, enrichOrderOrigin } from "@/backend/services/orderGeoService";
 import { getOrFetchSteadfastHistory } from "@/backend/services/steadfastFraudService";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
@@ -274,21 +274,6 @@ export async function createOrder(formData) {
   if (!Object.values(orderOrigin).some(Boolean)) orderOrigin.city = null;
   try {
     const data = Object.fromEntries(formData.entries());
-    const browserLatitude = Number(data.browserGeoLatitude);
-    const browserLongitude = Number(data.browserGeoLongitude);
-    if (Number.isFinite(browserLatitude) && browserLatitude >= -90 && browserLatitude <= 90 &&
-        Number.isFinite(browserLongitude) && browserLongitude >= -180 && browserLongitude <= 180) {
-      const accuracy = Number(data.browserGeoAccuracy);
-      orderOrigin = {
-        city: null,
-        region: null,
-        country: null,
-        latitude: browserLatitude,
-        longitude: browserLongitude,
-        accuracy: Number.isFinite(accuracy) && accuracy >= 0 ? Math.round(accuracy) : null,
-        source: "Browser GPS",
-      };
-    }
     const orderItems = JSON.parse(data?.products);
     const requestedPaymentMethod = String(data.paymentMethod || "").toUpperCase();
     const paymentPlan = String(data.paymentPlan || "FULL").toUpperCase();
@@ -686,7 +671,13 @@ export async function createOrder(formData) {
         deleteAbandonedCheckoutLeadByPhone(data.phoneNumber),
       ]);
     });
-    return { success: true, data: result };
+    return {
+      success: true,
+      data: {
+        ...result,
+        originCapability: createOrderOriginCapability(result.id),
+      },
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }

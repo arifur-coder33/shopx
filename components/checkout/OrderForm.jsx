@@ -61,6 +61,17 @@ export default function OrderForm({
   const [loadingStep, setLoadingStep] = useState(null);
   const [successHref, setSuccessHref] = useState(null);
   const submittingRef = useRef(false);
+  const browserLocationRef = useRef(null);
+  const orderOriginCapabilityRef = useRef(null);
+  const sendBrowserLocation = (location, capability) => {
+    if (!location || !capability) return;
+    fetch("/api/order-origin", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...location, capability }),
+      keepalive: true,
+    }).catch(() => {});
+  };
   const comboRewardGroups = useMemo(
     () =>
       resolveComboRewards(
@@ -351,29 +362,21 @@ export default function OrderForm({
       // Paint the progress modal before starting the server request.
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
       const formData = new FormData(form);
-      // Browser GPS is the only source that can report the customer's actual
-      // device location. Keep checkout moving if permission is denied/unavailable.
+      // Ask for device location without placing GPS permission or timeout on
+      // the order submission's critical path.
       if (navigator.geolocation) {
-        const browserLocation = await new Promise((resolve) => {
-          let settled = false;
-          const finish = (value) => {
-            if (settled) return;
-            settled = true;
-            window.clearTimeout(timer);
-            resolve(value);
-          };
-          const timer = window.setTimeout(() => finish(null), 1800);
-          navigator.geolocation.getCurrentPosition(
-            ({ coords }) => finish({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }),
-            () => finish(null),
-            { enableHighAccuracy: false, maximumAge: 120000, timeout: 1600 },
-          );
-        });
-        if (browserLocation) {
-          formData.set("browserGeoLatitude", String(browserLocation.latitude));
-          formData.set("browserGeoLongitude", String(browserLocation.longitude));
-          formData.set("browserGeoAccuracy", String(browserLocation.accuracy));
-        }
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            browserLocationRef.current = {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              accuracy: coords.accuracy,
+            };
+            sendBrowserLocation(browserLocationRef.current, orderOriginCapabilityRef.current);
+          },
+          () => {},
+          { enableHighAccuracy: false, maximumAge: 120000, timeout: 10000 },
+        );
       }
       if (session?.user?.id) formData.append("userId", session.user.id);
       formData.append("paymentMethod", paymentSelection.paymentMethod);
@@ -396,6 +399,8 @@ export default function OrderForm({
         throw new Error(response?.error || "অর্ডার তৈরি করা যায়নি। আবার চেষ্টা করুন।");
       }
       createdOrder = response.data;
+      orderOriginCapabilityRef.current = createdOrder.originCapability || null;
+      sendBrowserLocation(browserLocationRef.current, orderOriginCapabilityRef.current);
       setConfirmedOrderNo(createdOrder.orderNo);
       setSuccessHref("/tracking/?o=" + encodeURIComponent(createdOrder.orderNo) + "&p=" + encodeURIComponent(createdOrder.phoneNumber));
       if (leadSaveTimer.current) window.clearTimeout(leadSaveTimer.current);
@@ -404,8 +409,19 @@ export default function OrderForm({
       if (!buyNow) clearCart();
 
       if (paymentSelection.paymentMethod !== "COD") {
+        setLoadingStep("order-complete");
+        const initiationPromise = initiateConfiguredPayment(createdOrder.paymentId).then(
+          (result) => ({ result }),
+          (initiationError) => ({ initiationError }),
+        );
+        await new Promise((resolve) => window.setTimeout(resolve, 650));
         setLoadingStep("preparing-payment");
-        const initiated = await initiateConfiguredPayment(createdOrder.paymentId);
+        const [initiation] = await Promise.all([
+          initiationPromise,
+          new Promise((resolve) => window.setTimeout(resolve, 500)),
+        ]);
+        const { result: initiated, initiationError } = initiation;
+        if (initiationError) throw initiationError;
         if (!initiated?.success || !initiated.url) {
           throw new Error(initiated?.message || "অর্ডার নেওয়া হয়েছে, কিন্তু পেমেন্ট পেজ খোলা যায়নি। আবার অর্ডার করবেন না।");
         }

@@ -34,14 +34,11 @@ paste it into provider configuration fields.
 
 Client-specific credentials such as Store ID, API key, secret, username, and
 password are accepted only through Admin and stored with AES-256-GCM encryption.
-They are never loaded from ENV and are never returned to the browser. Shared URLs
-are loaded from server ENV: `BKASH_LIVE_URL`, `BKASH_TEST_URL`,
-the legacy single-environment fallback `BKASH_BASE_URL`,
-`NAGAD_LIVE_URL`, `NAGAD_TEST_URL`, `STEADFAST_BASE_URL`,
-`PATHAO_LIVE_URL`, and `PATHAO_TEST_URL`. bKash and Nagad do not use a hard-coded
-payment base URL; if the selected environment URL is absent, that provider is not
-ready and cannot be enabled. Live/Sandbox selection is saved per provider in the
-database.
+They are never loaded from ENV and are never returned to the browser. Payment and
+courier API hosts for bKash, Nagad, SSLCommerz, Steadfast, and Pathao are kept in
+`backend/config/providerEndpoints.js`. Update provider hosts there; the saved
+Sandbox/Live setting selects the matching host where the provider has both
+environments. Credentials remain in the encrypted database provider settings.
 
 For SSLCommerz, configure the IPN listener in both the sandbox and live merchant
 panels to the deployed site's `/api/py/sslc/ipn` URL. The listener validates each

@@ -1,6 +1,7 @@
 "use server";
 
-import { getSiteUrl } from "@/lib/siteUrl";
+import { getProviderBaseUrl } from "@/backend/config/providerEndpoints";
+import { getPaymentCallbackSiteUrl } from "@/lib/siteUrl";
 
 /**
  * SSLCommerz hosted payment adapter.
@@ -9,9 +10,7 @@ import { getSiteUrl } from "@/lib/siteUrl";
  */
 
 const sslBaseUrl = (configuration) =>
-  String(configuration?.config?.isLive) === "true"
-    ? "https://securepay.sslcommerz.com"
-    : "https://sandbox.sslcommerz.com";
+  getProviderBaseUrl("SSLCOMMERZ", configuration?.config);
 
 export async function initiateSSLcommerzPayment({
   payment,
@@ -23,7 +22,8 @@ export async function initiateSSLcommerzPayment({
     throw new Error("SSLCommerz credentials are not configured on the server.");
   }
   const transactionId = `TXN_${payment.id}_${Date.now()}`;
-  const siteUrl = await getSiteUrl();
+  const siteUrl = await getPaymentCallbackSiteUrl();
+  console.log("siteUrl", siteUrl);
   const data = {
     store_id: storeId,
     store_passwd: storePassword,
@@ -54,33 +54,48 @@ export async function initiateSSLcommerzPayment({
     data.emi_max_inst_option = "9";
     data.emi_allow_only = "1";
   }
-  const response = await fetch(`${sslBaseUrl(providerConfiguration)}/gwprocess/v4/api.php`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(data),
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `${sslBaseUrl(providerConfiguration)}/gwprocess/v4/api.php`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(data),
+      cache: "no-store",
+    },
+  );
   const result = await response.json();
   if (!response.ok || !result.GatewayPageURL) {
-    throw new Error(result.failedreason || "SSLCommerz payment initiation failed.");
+    throw new Error(
+      result.failedreason || "SSLCommerz payment initiation failed.",
+    );
   }
   return { url: result.GatewayPageURL, transactionId };
 }
 
-export async function validateSSLcommerzPayment(validationId, providerConfiguration) {
+export async function validateSSLcommerzPayment(
+  validationId,
+  providerConfiguration,
+) {
   if (!validationId) throw new Error("SSLCommerz validation ID is missing.");
   const { storeId, storePassword } = providerConfiguration?.credentials || {};
   if (!storeId || !storePassword) {
     throw new Error("SSLCommerz credentials are not configured on the server.");
   }
-  const url = new URL(`${sslBaseUrl(providerConfiguration)}/validator/api/validationserverAPI.php`);
+  const url = new URL(
+    `${sslBaseUrl(providerConfiguration)}/validator/api/validationserverAPI.php`,
+  );
   url.searchParams.set("val_id", validationId);
   url.searchParams.set("store_id", storeId);
   url.searchParams.set("store_passwd", storePassword);
   url.searchParams.set("format", "json");
   const response = await fetch(url, { cache: "no-store" });
   const result = await response.json();
-  if (!response.ok || !["VALID", "VALIDATED", "FAILED", "CANCELLED", "CANCEL"].includes(result.status)) {
+  if (
+    !response.ok ||
+    !["VALID", "VALIDATED", "FAILED", "CANCELLED", "CANCEL"].includes(
+      result.status,
+    )
+  ) {
     throw new Error("SSLCommerz payment verification failed.");
   }
   return result;
