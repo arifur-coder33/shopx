@@ -55,7 +55,10 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
     ).values(),
   );
   const poster = photos[0]?.name
-    ? cloudinaryDetailImage(photos[0].name, 1200)
+    ? cloudinaryDetailImage(photos[0].name, 640)
+    : undefined;
+  const posterSrcSet = photos[0]?.name
+    ? [320, 480, 640, 960, 1200].map((width) => `${cloudinaryDetailImage(photos[0].name, width)} ${width}w`).join(", ")
     : undefined;
 
   const showVideos = only !== "photos" && videoItems.length > 0;
@@ -75,6 +78,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
               source={video.source}
               title={`${title} — ${video.header}`}
               poster={poster}
+              posterSrcSet={posterSrcSet}
             />
           </div>
         </div>
@@ -104,6 +108,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
                   className="absolute inset-0 h-full w-full object-contain"
                   loading="lazy"
                   decoding="async"
+                  fetchPriority="low"
                 />
               </figure>
             ))}

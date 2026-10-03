@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Play } from "lucide-react";
 import { useState } from "react";
 
@@ -18,7 +17,7 @@ function withAutoplay(src) {
  * Keeps third-party video players out of the initial page request.
  * YouTube/Vimeo scripts are downloaded only after the customer presses play.
  */
-export default function DeferredVideo({ source, title, poster }) {
+export default function DeferredVideo({ source, title, poster, posterSrcSet }) {
   const [playing, setPlaying] = useState(false);
 
   if (playing) {
@@ -58,14 +57,17 @@ export default function DeferredVideo({ source, title, poster }) {
       aria-label={`${title} চালান`}
     >
       {poster ? (
-        <Image
+        <img
           src={poster}
+          srcSet={posterSrcSet}
           alt=""
-          fill
-          sizes="(max-width: 1024px) 100vw, 1024px"
-          className="object-cover opacity-70 transition-transform duration-500 group-hover:scale-[1.02]"
+          width={1200}
+          height={675}
+          sizes="(max-width: 1024px) calc(100vw - 48px), 1024px"
+          className="absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-[1.02]"
           loading="lazy"
-          unoptimized
+          decoding="async"
+          fetchPriority="low"
         />
       ) : (
         <span className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-black" />

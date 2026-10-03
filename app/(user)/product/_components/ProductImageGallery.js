@@ -3,6 +3,7 @@
 
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import { productImageSources } from "@/utils/productImage";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -111,7 +112,10 @@ export default function ProductImageGallery({
         setActiveIndex(index);
       };
       preloader.onload = showLoadedImage;
-      preloader.src = cloudinaryMainImage(media.name, 600, 600);
+      const sources = productImageSources(media.name);
+      preloader.sizes = sources.sizes;
+      preloader.srcset = sources.srcSet;
+      preloader.src = sources.src;
       if (preloader.complete) showLoadedImage();
 
       return () => {
@@ -205,6 +209,17 @@ export default function ProductImageGallery({
     y: 0.5,
   });
   const galleryRef = useRef(null);
+  const showingInitialImage = Boolean(initialImage) && !isVideoActive && imageSrc === imageProps.initialSrc;
+
+  useEffect(() => {
+    if (!showingInitialImage) return undefined;
+    const image = galleryRef.current?.querySelector(`.${styles.serverInitialImage} img`);
+    if (!image) return undefined;
+    const loaded = () => setMainImageLoaded(true);
+    if (image.complete && image.naturalWidth > 0) loaded();
+    image.addEventListener("load", loaded);
+    return () => image.removeEventListener("load", loaded);
+  }, [showingInitialImage]);
 
   const ZOOM_LEVEL = 2;
   const lensSize = useMemo(
@@ -287,14 +302,8 @@ export default function ProductImageGallery({
                 : undefined
             }
           >
-            {initialImage && (
-              <div
-                aria-hidden={mainImageLoaded}
-                className={styles.serverInitialImage}
-                style={{ opacity: mainImageLoaded ? 0 : 1 }}
-              >
-                {initialImage}
-              </div>
+            {showingInitialImage && (
+              <div className={styles.serverInitialImage}>{initialImage}</div>
             )}
             {!isVideoActive && (
               <div
@@ -323,30 +332,17 @@ export default function ProductImageGallery({
                 </div>
               )
             ) : (
-              // React.cloneElement(children, {
-              //   src: cloudinaryMainImage(activeMedia?.name, 800, 800),
-              //   alt: activeMedia.alt,
-              //   priority: activeIndex === 0,
-              // })
-              // <Image
-              //   src={cloudinaryMainImage(activeMedia?.name, 600, 600)}
-              //   alt={activeMedia.alt}
-              //   priority={activeIndex === 0}
-              //   fill
-              //   style={{ objectFit: "cover" }}
-              // />
-              <Image
-                src={cloudinaryMainImage(imageSrc, 600, 600)}
-                fill
-                alt={activeMedia.alt || imageProps.alt}
-                onLoad={() => setMainImageLoaded(true)}
-                priority={activeIndex === 0}
-                fetchPriority={activeIndex === 0 ? "high" : undefined}
-                sizes="(max-width:768px)100vw,40vw"
-                className={`${styles.mainProductImage} rounded-md object-contain`}
-                style={{ opacity: mainImageLoaded ? 1 : 0 }}
-                unoptimized
-              />
+              !showingInitialImage && (
+                <img
+                  {...productImageSources(imageSrc)}
+                  width={1200}
+                  height={1200}
+                  alt={activeMedia.alt || imageProps.alt}
+                  onLoad={() => setMainImageLoaded(true)}
+                  decoding="async"
+                  className={`${styles.mainProductImage} absolute inset-0 h-full w-full rounded-md object-contain`}
+                />
+              )
             )}
           </div>
           {isMobile && !isVideoActive && (
@@ -391,6 +387,9 @@ export default function ProductImageGallery({
                       width={60}
                       height={60}
                       className={styles.thumbnailImage}
+                      unoptimized
+                      loading="lazy"
+                      fetchPriority="low"
                     />
                     <VideoThumbnailIcon />
                   </div>
@@ -401,6 +400,9 @@ export default function ProductImageGallery({
                     width={60}
                     height={60}
                     className={styles.thumbnailImage}
+                      unoptimized
+                      loading="lazy"
+                      fetchPriority="low"
                   />
                 )}
               </button>
@@ -411,11 +413,11 @@ export default function ProductImageGallery({
       <div
         className={styles.desktopZoomPanel}
         style={{
-          backgroundImage: `url(${cloudinaryMainImage(
+          backgroundImage: desktopZoomActive && !isVideoActive ? `url(${cloudinaryMainImage(
             activeMedia.name,
             zoomImageReady ? 1800 : 600,
             zoomImageReady ? 1800 : 600,
-          )})`,
+          )})` : undefined,
           backgroundSize: `${ZOOM_LEVEL * 100}%`,
           // --- START: THE FIX ---
           // Use the new, corrected position calculation here.

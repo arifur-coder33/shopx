@@ -7,6 +7,8 @@ import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
 import { Suspense } from "react";
 import ProductInitialImage from "./ProductInitialImage";
 import { CampaignOfferList } from "@/components/campaign/CampaignOfferList";
+import ProductStaticGallery from "./ProductStaticGallery";
+import ProductInfoServer from "./ProductInfoServer";
 
 async function ProductEmiAvailability() {
   const providers = await getCheckoutProviders();
@@ -90,29 +92,32 @@ export default function ProductHeader({ data, imageProps, campaignOffers = [] })
     hasVariations: clientData.hasVariations,
   };
 
+  const initialImage = <ProductInitialImage imageId={imageProps.initialSrc} alt={imageProps.alt} />;
+  const titleComponent = (
+    <div className="flex items-start gap-3 border-b border-border pb-3">
+      <h1 className="min-w-0 flex-1 text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">{title}</h1>
+      <WishlistButton product={wishlistProduct} />
+    </div>
+  );
+  const bottomComponent = <><CampaignOfferList campaigns={campaignOffers} title="এই পণ্যে চলমান অফার" /><Suspense fallback={null}><ProductEmiAvailability /></Suspense></>;
+
   return (
     <>
       <ProductClientShell
+        key={data.id}
         imageProps={imageProps}
         data={clientData}
-        initialImage={
-          <ProductInitialImage
-            imageId={imageProps.initialSrc}
-            alt={imageProps.alt}
-          />
-        }
-        titleComponent={
-          <div className="flex items-start gap-3 border-b border-border pb-3">
-            <h1
-              key={title}
-              className="min-w-0 flex-1 text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl"
-            >
-              {title}
-            </h1>
-            <WishlistButton product={wishlistProduct} />
+        initialImage={initialImage}
+        titleComponent={titleComponent}
+        bottomComponent={bottomComponent}
+        initialContent={<>
+          <div className="min-w-0 md:col-span-1"><ProductStaticGallery data={clientData} initialImage={initialImage} /></div>
+          <div className="min-w-0 rounded-2xl bg-surface p-3 sm:p-5 md:col-span-1">
+            {titleComponent}
+            <ProductInfoServer product={clientData} />
+            {bottomComponent}
           </div>
-        }
-        bottomComponent={<><CampaignOfferList campaigns={campaignOffers} title="এই পণ্যে চলমান অফার" /><Suspense fallback={null}><ProductEmiAvailability /></Suspense></>}
+        </>}
       />
       <WishlistHydrationSync />
     </>

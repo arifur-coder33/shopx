@@ -26,8 +26,7 @@
   background-color: var(--brand-surface-muted, #f3f4f6);
 }
 
-/* The server-rendered first image remains visible until the hydrated image
-   confirms it is ready. This avoids a blank gallery during JS startup. */
+/* Keep the original server image visible until the customer selects other media. */
 .serverInitialImage {
   position: absolute;
   inset: 0;

@@ -1,22 +1,28 @@
 // Server component: keep the first product image in the initial HTML.
 // The interactive gallery hydrates over this image after JavaScript is ready.
-import Image from "next/image";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import { preload } from "react-dom";
+import { productImageSources } from "@/utils/productImage";
 
 export default function ProductInitialImage({ imageId, alt }) {
   if (!imageId) return null;
+  const sources = productImageSources(imageId);
+  preload(sources.src, {
+    as: "image",
+    imageSrcSet: sources.srcSet,
+    imageSizes: sources.sizes,
+    fetchPriority: "high",
+  });
 
   return (
-    <Image
-      // Match the hydrated gallery URL so the client reuses this request.
-      src={cloudinaryMainImage(imageId, 600, 600)}
+    // Native responsive HTML: the browser chooses a size before JS loads.
+    <img
+      {...sources}
       alt={alt || "Product image"}
-      fill
-      priority
+      width={1200}
+      height={1200}
+      loading="eager"
       fetchPriority="high"
-      sizes="(max-width: 768px) 100vw, 40vw"
-      className="rounded-md object-contain"
-      unoptimized
+      className="absolute inset-0 h-full w-full rounded-md object-contain"
     />
   );
 }

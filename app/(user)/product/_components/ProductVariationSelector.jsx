@@ -10,8 +10,9 @@ const ProductVariationSelector = ({
   hasVariations,
   allowOutOfStockOrder = false,
   onVariationChange,
+  initialOptions,
 }) => {
-  const [selectedOptions, setSelectedOptions] = useState({});
+  const [selectedOptions, setSelectedOptions] = useState(initialOptions || {});
 
   // --- LOGIC (No major changes here, just removal of one useEffect) ---
 
