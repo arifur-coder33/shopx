@@ -2,6 +2,7 @@
 "use client";
 
 import useMediaQuery from "@/hooks/useMediaQuery";
+import { useSwipe } from "@/hooks/useSwipe";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { productImageSources } from "@/utils/productImage";
 import dynamic from "next/dynamic";
@@ -209,6 +210,27 @@ export default function ProductImageGallery({
     y: 0.5,
   });
   const galleryRef = useRef(null);
+  const ignoreNextTap = useRef(false);
+  const resetTapTimer = useRef(null);
+
+  useEffect(() => () => window.clearTimeout(resetTapTimer.current), []);
+
+  const changeImageBySwipe = useCallback((direction) => {
+    if (isModalOpen || allMedia.length < 2) return;
+    const nextIndex = (activeIndex + direction + allMedia.length) % allMedia.length;
+    ignoreNextTap.current = true;
+    window.clearTimeout(resetTapTimer.current);
+    resetTapTimer.current = window.setTimeout(() => {
+      ignoreNextTap.current = false;
+    }, 500);
+    selectMedia(nextIndex);
+  }, [activeIndex, allMedia.length, isModalOpen, selectMedia]);
+
+  const mainImageSwipe = useSwipe({
+    enabled: isMobile && !isModalOpen && allMedia.length > 1,
+    onSwipeLeft: () => changeImageBySwipe(1),
+    onSwipeRight: () => changeImageBySwipe(-1),
+  });
   const showingInitialImage = Boolean(initialImage) && !isVideoActive && imageSrc === imageProps.initialSrc;
 
   useEffect(() => {
@@ -287,7 +309,16 @@ export default function ProductImageGallery({
             !isMobile && !isVideoActive && setDesktopZoomActive(true)
           }
           onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
-          onClick={openModal}
+          onTouchStart={mainImageSwipe.onTouchStart}
+          onTouchEnd={mainImageSwipe.onTouchEnd}
+          onClick={() => {
+            if (ignoreNextTap.current) {
+              ignoreNextTap.current = false;
+              window.clearTimeout(resetTapTimer.current);
+              return;
+            }
+            openModal();
+          }}
           >
           <div
             className={styles.transitionContainer}

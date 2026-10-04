@@ -22,6 +22,7 @@ export default function ProductInitialImage({ imageId, alt }) {
       height={1200}
       loading="eager"
       fetchPriority="high"
+      decoding="async"
       className="absolute inset-0 h-full w-full rounded-md object-contain"
     />
   );

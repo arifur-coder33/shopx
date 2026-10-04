@@ -12,6 +12,8 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import { DEFAULT_BLUR_DATA_URL } from "@/utils/cloudinaryUrl";
 import { notFound } from "next/navigation";
 import ProductDataView from "../_components/ProductDataView";
+import { Suspense } from "react";
+import ProductImageFirstPreview from "../_components/ProductImageFirstPreview";
 
 export const revalidate = 60;
 export const dynamic = "force-static";
@@ -140,10 +142,27 @@ export async function generateStaticParams() {
 
 export default async function ProductPage({ params }) {
   const { slug } = await params;
-  const [{ result, seo }, activeCampaigns] = await Promise.all([
+  // Start all work together; only the product itself gates the first photo.
+  // React cache shares this product query with metadata and productContext.
+  const detailsPromise = Promise.allSettled([
     productContext(slug),
     getActiveCampaigns(),
   ]);
+  const result = await getStorefrontProductBySlug(slug);
+  if (!result?.success || !result.data) notFound();
+
+  return (
+    <Suspense fallback={<ProductImageFirstPreview product={result.data} />}>
+      <ProductPageContent detailsPromise={detailsPromise} />
+    </Suspense>
+  );
+}
+
+async function ProductPageContent({ detailsPromise }) {
+  const details = await detailsPromise;
+  const failure = details.find((item) => item.status === "rejected");
+  if (failure) throw failure.reason;
+  const [{ result, seo }, activeCampaigns] = details.map((item) => item.value);
   if (!result?.success || !seo) notFound();
   const data = result.data;
   const productCampaigns = activeCampaigns.filter((campaign) => {
