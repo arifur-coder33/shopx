@@ -28,7 +28,7 @@ const OrderTimelineServer = dynamic(
   },
 );
 
-export default function OrderDetailsPage({ order, children }) {
+export default function OrderDetailsPage({ order, children, shopName }) {
   // Global State for the order
   const { data: session } = useSession();
   const permissions = session?.user?.permissions;
@@ -54,6 +54,7 @@ export default function OrderDetailsPage({ order, children }) {
   const handleDownloadAWB = order.shipping?.cn
     ? () =>
         downloadAWBPDF({
+          shopName,
           shopId: process.env.NEXT_PUBLIC_PATHAO_STORE_ID || "",
           invoice: order.orderNo,
           sfId: order.shipping.cn,
@@ -138,6 +139,7 @@ export default function OrderDetailsPage({ order, children }) {
                 setStatus={setStatus}
                 status={status}
                 order={order}
+                shopName={shopName}
               />
             )}
             {/* Mobile-first: Customer info stays with details usually, or move to sidebar */}
@@ -175,7 +177,7 @@ export default function OrderDetailsPage({ order, children }) {
               onDownload={() => handleDownloadInvoice("download")}
               onView={() => handleDownloadInvoice("view")}
               onAWB={handleDownloadAWB}
-              onPacking={() => generatePackingListPDF(order)}
+              onPacking={() => generatePackingListPDF(order, shopName)}
             />
             <InvoiceButton orderData={order} actionType={"print"} />
           </div>

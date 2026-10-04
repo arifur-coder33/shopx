@@ -51,6 +51,7 @@
 // ('use client";');
 
 import { getOrderById } from "@/backend/serverActions/orderActions";
+import { getSiteSetting } from "@/backend/serverActions/siteSettingAction";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useEffect, useState } from "react";
 import OrderDetailsPage from "./OrderDetailsPage";
@@ -58,12 +59,17 @@ export default function OrderView({ id }) {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [shopName, setShopName] = useState("");
 
   useEffect(() => {
     const getData = async () => {
       try {
-        const fatchData = await getOrderById(id);
+        const [fatchData, siteSettingResult] = await Promise.all([
+          getOrderById(id),
+          getSiteSetting(),
+        ]);
         setData(fatchData.data);
+        setShopName(siteSettingResult?.data?.name || "");
       } catch (error) {
         setError("Failed to load product data.");
         setData(null);
@@ -82,5 +88,5 @@ export default function OrderView({ id }) {
     );
   if (error) return <div>{error}</div>;
   if (!data) return <div>No Data Found</div>;
-  return <OrderDetailsPage order={data} />;
+  return <OrderDetailsPage order={data} shopName={shopName} />;
 }

@@ -13,7 +13,7 @@ import CourierSelector from "./CourierSelector";
 import CourierStatus from "./CourierStatus";
 
 import { useSession } from "next-auth/react";
-export default function CourierManagement({ order, status, setStatus }) {
+export default function CourierManagement({ order, status, setStatus, shopName }) {
   const [view, setView] = useState(order?.shipping ? "status" : "list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
   const [error, setError] = useState(null);
@@ -117,6 +117,7 @@ export default function CourierManagement({ order, status, setStatus }) {
           <CourierStatus
             status={status}
             order={order}
+            shopName={shopName}
             details={courierDetails}
             onCancel={handleCancle}
           />

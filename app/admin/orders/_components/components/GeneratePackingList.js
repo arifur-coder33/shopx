@@ -2,12 +2,12 @@ import { addSiyamrupaliFont } from "@/app/fonts/Siyamrupali-normal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export function generatePackingListPDF(order) {
+export function generatePackingListPDF(order, databaseShopName) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   addSiyamrupaliFont(doc);
   doc.setFont("Siyamrupali");
 
-  const shopName = process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop";
+  const shopName = databaseShopName || process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop";
   doc.setFontSize(18);
   doc.text("PACKING LIST", 105, 16, { align: "center" });
   doc.setFontSize(10);

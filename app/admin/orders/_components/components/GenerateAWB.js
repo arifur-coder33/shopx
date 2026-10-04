@@ -10,7 +10,7 @@ export const downloadAWBPDF = async (data) => {
     format: [100, 150],
   });
 
-  const shopName = process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop Name";
+  const shopName = data.shopName || process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop Name";
 
   addSiyamrupaliFont(doc);
   doc.setFont("Siyamrupali");

@@ -2,13 +2,14 @@ import { Calendar, Truck, XCircle } from "lucide-react";
 import { downloadAWBPDF } from "../components/GenerateAWB";
 import GetCourierStatus from "./GetCourierStatus";
 
-export default function CourierStatus({ details, onCancel, order, status }) {
+export default function CourierStatus({ details, onCancel, order, status, shopName }) {
   const steadfastBooking = order?.fraudRiskFactors?.find((factor) => factor?.code === "STEADFAST_TRACKING");
   const savedTrackingCode = steadfastBooking?.trackingCode;
   const trackingCode = details.trackingCode || savedTrackingCode;
   const trackingLink = details.trackingLink || steadfastBooking?.trackingLink;
   const parcelStatus = details.status || steadfastBooking?.status;
   const invoiceData = {
+    shopName,
     shopId: "1181689",
     invoice: order.orderNo,
     sfId: details.cn,
