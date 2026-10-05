@@ -205,16 +205,15 @@ export default function LoginForm({ googleEnabled = false, facebookEnabled = fal
         {loading ? "লগইন হচ্ছে..." : "লগইন করুন"}
       </Button>
 
-      <div className="my-4 flex items-center gap-3 text-xs text-white/60">
+      {(googleEnabled || facebookEnabled) && <div className="my-4 flex items-center gap-3 text-xs text-white/60">
         <span className="h-px flex-1 bg-white/20" />
         <span>অথবা</span>
         <span className="h-px flex-1 bg-white/20" />
-      </div>
-      <button
+      </div>}
+      {googleEnabled && <button
         type="button"
         onClick={handleGoogleSignIn}
-        disabled={!googleEnabled || googleLoading || loading}
-        title={!googleEnabled ? "Google OAuth credentials are not configured" : undefined}
+        disabled={googleLoading || loading}
         className="flex min-h-11 w-full whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-2.5 text-[13px] font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:gap-2 sm:px-4 sm:text-sm"
       >
         <svg aria-hidden="true" viewBox="0 0 48 48" className="h-5 w-5 shrink-0">
@@ -224,21 +223,18 @@ export default function LoginForm({ googleEnabled = false, facebookEnabled = fal
           <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.9-5.8l-7.62-5.91c-2.12 1.42-4.83 2.26-8.28 2.26-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z" transform="translate(0 -4)" />
         </svg>
         {googleLoading ? "Google-এ যাচাই হচ্ছে..." : "Google দিয়ে লগইন করুন"}
-      </button>
-      {!googleEnabled && <p className="mt-2 text-center text-xs text-white/60">Google login চালু করতে OAuth Client ID ও Secret সেট করুন।</p>}
-      <button
+      </button>}
+      {facebookEnabled && <button
         type="button"
         onClick={handleFacebookSignIn}
-        disabled={!facebookEnabled || facebookLoading || loading}
-        title={!facebookEnabled ? "Facebook OAuth credentials are not configured" : undefined}
+        disabled={facebookLoading || loading}
         className="mt-2 flex min-h-11 w-full whitespace-nowrap items-center justify-center gap-2 rounded-lg border border-[#0866ff] bg-[#0866ff] px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#075ce5] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0 fill-current">
           <path d="M13.5 21v-8.2h2.76l.41-3.2H13.5V7.56c0-.93.26-1.56 1.6-1.56h1.7V3.14A22.7 22.7 0 0 0 14.32 3c-2.46 0-4.15 1.5-4.15 4.27V9.6H7.38v3.2h2.79V21h3.33Z" />
         </svg>
         {facebookLoading ? "Facebook-এ যাচাই হচ্ছে..." : "Facebook দিয়ে লগইন করুন"}
-      </button>
-      {!facebookEnabled && <p className="mt-2 text-center text-xs text-white/60">Facebook login চালু করতে App ID ও Secret সেট করুন।</p>}
+      </button>}
     </form>
   );
 }

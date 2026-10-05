@@ -9,6 +9,7 @@ import SocialAccountLinkButton from "@/components/auth/SocialAccountLinkButton";
 import LazyModalButton from "@/components/modal/LazyModalButton";
 import Link from "next/link";
 import { Suspense } from "react";
+import { getSocialAuthAvailability } from "@/backend/services/socialAuthService";
 export default async function ProfilePage() {
   const session = await auth();
   const userId = session?.user?.id;
@@ -28,6 +29,7 @@ export default async function ProfilePage() {
   });
 
   const user = res?.data;
+  const socialLogin = await getSocialAuthAvailability();
   const [googleAccount, facebookAccount] = userId
     ? await Promise.all([
         prisma.account.findFirst({ where: { userId, provider: "google" }, select: { id: true } }),
@@ -117,12 +119,8 @@ export default async function ProfilePage() {
           </Link>
         </div>
         <div className="mt-4 flex flex-col items-center gap-2 border-t border-border pt-4">
-          <SocialAccountLinkButton
-            provider="google"
-            connected={Boolean(googleAccount)}
-            enabled={Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET)}
-          />
-          <SocialAccountLinkButton provider="facebook" connected={Boolean(facebookAccount)} enabled={Boolean(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET)} />
+          {socialLogin.google && <SocialAccountLinkButton provider="google" connected={Boolean(googleAccount)} enabled />}
+          {socialLogin.facebook && <SocialAccountLinkButton provider="facebook" connected={Boolean(facebookAccount)} enabled />}
           <p className="text-center text-xs text-text-muted">Connect once with your current email/password login. After that, Google will open this same account.</p>
         </div>
       </div>

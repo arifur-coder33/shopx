@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSocialAuthAvailability } from "@/backend/services/socialAuthService";
 import LoginForm from "@/components/auth/LoginForm";
 import { redirect } from "next/navigation";
 export default async function LoginPage() {
@@ -7,6 +8,7 @@ export default async function LoginPage() {
   if (userId) {
     redirect("/my-account");
   }
+  const socialLogin = await getSocialAuthAvailability();
   return (
     <>
       {/* <div className="w-full mx-auto bg-slate-700 "> */}
@@ -20,8 +22,8 @@ export default async function LoginPage() {
             <BackButton /> */}
 
       <LoginForm
-        googleEnabled={Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET)}
-        facebookEnabled={Boolean(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET)}
+        googleEnabled={socialLogin.google}
+        facebookEnabled={socialLogin.facebook}
       />
       {/* <div className="text-[14px] text-blue-500 hover:underline decoration-blue-500 mt-2 text-right">
               পাসওয়ার্ড ভুলে গেছেন?{" "}

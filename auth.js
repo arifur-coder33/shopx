@@ -6,9 +6,17 @@ import Credentials from "next-auth/providers/credentials";
 import Facebook from "next-auth/providers/facebook";
 import Google from "next-auth/providers/google";
 import { authConfig } from "./auth.config";
+import { getEnabledSocialAuthProviders } from "./backend/services/socialAuthService";
 import prisma from "./lib/prisma";
 const permissionCache = new Map();
 const baseAdapter = PrismaAdapter(prisma);
+async function getSocialProviders() {
+  const configured = await getEnabledSocialAuthProviders();
+  return [
+    ...(configured.google ? [Google(configured.google)] : []),
+    ...(configured.facebook ? [Facebook(configured.facebook)] : []),
+  ];
+}
 const authAdapter = {
   ...baseAdapter,
   async createUser(profile) {
@@ -49,7 +57,7 @@ export const {
   auth,
   signIn,
   signOut,
-} = NextAuth({
+} = NextAuth(async () => ({
   adapter: authAdapter,
 
   ...authConfig,
@@ -93,18 +101,7 @@ export const {
         };
       },
     }),
-    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
-      ? [Google({
-          clientId: process.env.AUTH_GOOGLE_ID,
-          clientSecret: process.env.AUTH_GOOGLE_SECRET,
-        })]
-      : []),
-    ...(process.env.AUTH_FACEBOOK_ID && process.env.AUTH_FACEBOOK_SECRET
-      ? [Facebook({
-          clientId: process.env.AUTH_FACEBOOK_ID,
-          clientSecret: process.env.AUTH_FACEBOOK_SECRET,
-        })]
-      : []),
+    ...(await getSocialProviders()),
   ],
 
   callbacks: {
@@ -214,4 +211,4 @@ export const {
   pages: {
     signIn: "/login",
   },
-});
+}));
