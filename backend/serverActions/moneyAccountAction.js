@@ -15,6 +15,56 @@ const refresh = () => {
   revalidatePath("/admin/accounts/shareholders");
 };
 
+function getWeightedUnitCostByStock(receiptItems) {
+  const receivedCostByStock = new Map();
+  for (const receiptItem of receiptItems) {
+    const receipt = receiptItem.goodsReceipt;
+    const purchaseOrder = receipt?.purchaseOrder;
+    if (!receipt || !purchaseOrder) continue;
+
+    const orderedQuantity = purchaseOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+    const matchingItems = purchaseOrder.items.filter((item) => item.variationId === receiptItem.variationId);
+    const matchingQuantity = matchingItems.reduce((sum, item) => sum + item.quantity, 0);
+    if (orderedQuantity <= 0 || matchingQuantity <= 0) continue;
+
+    const itemCost = matchingItems.reduce((sum, item) => {
+      const discountPerUnit = item.quantity > 0 ? item.discount / item.quantity : 0;
+      return sum + Math.max(0, item.unitCost - discountPerUnit) * item.quantity;
+    }, 0) / matchingQuantity;
+    const landedFreightPerUnit =
+      (purchaseOrder.shippingCost + purchaseOrder.expenses.reduce((sum, expense) => sum + expense.amount, 0)) /
+      orderedQuantity;
+    const unitCost = itemCost + landedFreightPerUnit;
+    const key = `${receipt.warehouseId}:${receiptItem.variationId}`;
+    const current = receivedCostByStock.get(key) || { quantity: 0, cost: 0 };
+    current.quantity += receiptItem.quantity;
+    current.cost += receiptItem.quantity * unitCost;
+    receivedCostByStock.set(key, current);
+  }
+
+  return new Map(
+    [...receivedCostByStock].map(([key, value]) => [
+      key,
+      value.quantity > 0 ? value.cost / value.quantity : 0,
+    ]),
+  );
+}
+
+function calculateCostOfGoodsSold(salesOutflows, weightedUnitCosts) {
+  return salesOutflows.reduce((total, outflow) => {
+    const unitCost = weightedUnitCosts.get(`${outflow.warehouseId}:${outflow.variationId}`);
+    if (!unitCost) return total;
+    return total + Math.abs(outflow.quantity) * unitCost;
+  }, 0);
+}
+
+function calculateInventoryAsset(stocks, weightedUnitCosts) {
+  return stocks.reduce((total, stock) => {
+    const unitCost = weightedUnitCosts.get(`${stock.warehouseId}:${stock.variationId}`);
+    return total + stock.quantity * (unitCost || 0);
+  }, 0);
+}
+
 export async function getMoneyManagement(params = {}) {
   try {
     await requireProcurementPermission("accounting", "view");
@@ -30,7 +80,7 @@ export async function getMoneyManagement(params = {}) {
       ...(params.reference && { reference: { contains: String(params.reference), mode: "insensitive" } }),
       ...(MOVEMENT_TYPES.includes(params.transactionType) && { type: params.transactionType }),
     };
-    const [accounts, accountCount, allAccounts, transactions, transactionCount, shareholders, financialAccounts, balances, periodTransactions, inventoryQuantity] = await Promise.all([
+    const [accounts, accountCount, allAccounts, transactions, transactionCount, shareholders, financialAccounts, balances, periodTransactions, stocks, salesOutflows, receiptItems] = await Promise.all([
       prisma.moneyAccount.findMany({ where: accountWhere, skip: (accountPage - 1) * limit, take: limit, orderBy: [{ isActive: "desc" }, { name: "asc" }], include: { _count: { select: { incomingTransactions: true, outgoingTransactions: true, supplierPayments: true, expenses: true, paymentGateways: true, courierProviders: true, payments: true, refunds: true } } } }),
       prisma.moneyAccount.count({ where: accountWhere }),
       prisma.moneyAccount.findMany({ orderBy: [{ type: "asc" }, { name: "asc" }] }),
@@ -40,17 +90,46 @@ export async function getMoneyManagement(params = {}) {
       prisma.financialAccount.findMany({ where: { isActive: true } }),
       prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED" } }, _sum: { debit: true, credit: true } }),
       prisma.moneyTransaction.groupBy({ by: ["type"], _sum: { amount: true } }),
-      prisma.stock.aggregate({ _sum: { quantity: true } }),
+      prisma.stock.findMany({ select: { variationId: true, warehouseId: true, quantity: true } }),
+      prisma.inventoryTransaction.groupBy({ by: ["variationId", "warehouseId"], where: { type: "OUT", referenceType: "SALE" }, _sum: { quantity: true } }),
+      prisma.goodsReceiptItem.findMany({
+        where: { goodsReceipt: { isNot: null } },
+        select: {
+          variationId: true,
+          quantity: true,
+          goodsReceipt: {
+            select: {
+              warehouseId: true,
+              purchaseOrder: {
+                select: {
+                  shippingCost: true,
+                  items: { select: { variationId: true, quantity: true, unitCost: true, discount: true } },
+                  expenses: { select: { amount: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
     const financialMap = new Map(financialAccounts.map((account) => [account.id, account]));
     const totals = { assets: 0, liabilities: 0, equity: 0, income: 0, expenses: 0 };
     balances.forEach((row) => { const account = financialMap.get(row.accountId); if (!account) return; const debit = row._sum.debit || 0, credit = row._sum.credit || 0; const value = ["ASSET", "EXPENSE"].includes(account.type) ? debit - credit : credit - debit; const key = { ASSET: "assets", LIABILITY: "liabilities", EQUITY: "equity", INCOME: "income", EXPENSE: "expenses" }[account.type]; totals[key] += value; });
     const movementTotals = Object.fromEntries(periodTransactions.map((row) => [row.type, row._sum.amount || 0]));
     const typeBalances = allAccounts.reduce((result, account) => ({ ...result, [account.type]: (result[account.type] || 0) + account.balance }), {});
+    const weightedUnitCosts = getWeightedUnitCostByStock(receiptItems);
+    const costOfGoodsSold = calculateCostOfGoodsSold(
+      salesOutflows.map((row) => ({ ...row, quantity: row._sum.quantity || 0 })),
+      weightedUnitCosts,
+    );
     const inventoryAccount = financialAccounts.find((account) => account.code === "1200");
     const inventoryBalance = balances.find((row) => row.accountId === inventoryAccount?.id);
-    const inventoryAsset = inventoryBalance ? (inventoryBalance._sum.debit || 0) - (inventoryBalance._sum.credit || 0) : 0;
-    const report = { ...totals, inventoryAsset, inventoryQuantity: inventoryQuantity._sum.quantity || 0, liquidFunds: allAccounts.reduce((sum, account) => sum + account.balance, 0), activeAccounts: allAccounts.filter((account) => account.isActive).length, deposits: (movementTotals.FUND_ADD || 0) + (movementTotals.CUSTOMER_PAYMENT || 0), withdrawals: movementTotals.WITHDRAWAL || 0, supplierPayments: movementTotals.SUPPLIER_PAYMENT || 0, netProfit: totals.income - totals.expenses, byType: Object.entries(typeBalances).map(([type, balance]) => ({ type, balance })) };
+    const ledgerInventoryAsset = inventoryBalance
+      ? (inventoryBalance._sum.debit || 0) - (inventoryBalance._sum.credit || 0)
+      : 0;
+    const inventoryAsset = calculateInventoryAsset(stocks, weightedUnitCosts);
+    const totalAssets = totals.assets - ledgerInventoryAsset + inventoryAsset;
+    const report = { ...totals, assets: totalAssets, costOfGoodsSold, grossProfit: totals.income - costOfGoodsSold, inventoryAsset, inventoryQuantity: stocks.reduce((sum, stock) => sum + stock.quantity, 0), liquidFunds: allAccounts.reduce((sum, account) => sum + account.balance, 0), activeAccounts: allAccounts.filter((account) => account.isActive).length, deposits: (movementTotals.FUND_ADD || 0) + (movementTotals.CUSTOMER_PAYMENT || 0), withdrawals: movementTotals.WITHDRAWAL || 0, supplierPayments: movementTotals.SUPPLIER_PAYMENT || 0, netProfit: totals.income - costOfGoodsSold - totals.expenses, byType: Object.entries(typeBalances).map(([type, balance]) => ({ type, balance })) };
     return { success: true, data: { accounts, allAccounts, transactions, shareholders, report, pagination: { accounts: { page: accountPage, totalPages: Math.max(1, Math.ceil(accountCount / limit)), total: accountCount }, transactions: { page: transactionPage, totalPages: Math.max(1, Math.ceil(transactionCount / limit)), total: transactionCount }, limit } }, filters: params };
   } catch (error) { return actionError(error, "Failed to load money accounts."); }
 }

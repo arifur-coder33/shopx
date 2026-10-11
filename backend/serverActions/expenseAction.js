@@ -1,5 +1,6 @@
 "use server";
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 import { actionError, refreshProcurement, requireProcurementPermission, toDate, toNumber } from "../utils/procurement";
 import { ACCOUNT_CODES, moneyAccountCode, postJournal } from "../utils/accounting";
 import { generateCode } from "../utils/generateCode";
@@ -34,6 +35,8 @@ export async function createExpense(formData) {
       return expense;
     });
     refreshProcurement();
+    revalidatePath("/admin/accounts");
+    revalidatePath("/admin/accounts/ledger");
     return { success: true, message: "Expense recorded successfully.", data: result };
   } catch (error) { return actionError(error, "Failed to record expense."); }
 }

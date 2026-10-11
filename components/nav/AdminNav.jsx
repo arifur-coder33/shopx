@@ -30,12 +30,12 @@ export default function AdminNavBar({ toggleSidebar, siteSetting }) {
           </div>
         </div>
         <div className="flex flex-row justify-end gap-2 items-center">
-          <div className="hidden sm:block">
-            <UserName />
-          </div>
+          <UserName className="max-w-[35vw] truncate text-sm font-medium text-slate-200" />
           <Link
             className="p-2 rounded-md text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
-            href={"/profile"}
+            href={"/admin/profile"}
+            aria-label="Admin profile"
+            title="Admin profile"
           >
             <User2Icon />
           </Link>

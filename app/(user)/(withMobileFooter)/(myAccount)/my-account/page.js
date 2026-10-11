@@ -10,6 +10,7 @@ import LazyModalButton from "@/components/modal/LazyModalButton";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getSocialAuthAvailability } from "@/backend/services/socialAuthService";
+import ContactVerification from "@/components/account/ContactVerification";
 export default async function ProfilePage() {
   const session = await auth();
   const userId = session?.user?.id;
@@ -23,6 +24,8 @@ export default async function ProfilePage() {
       email: true,
       phone: true,
       gender: true,
+      emailVerifiedAt: true,
+      phoneVerifiedAt: true,
       // dob: true, // date of birth
       // avatar: true, // optional avatar URL
     },
@@ -59,12 +62,6 @@ export default async function ProfilePage() {
         {/* Profile Fields */}
         <div className="space-y-4">
           {[
-            {
-              label: "Email",
-              field: "email",
-              value: user?.email,
-              editable: false,
-            },
             { label: "Name", field: "name", value: user?.name, editable: true },
             {
               label: "Phone",
@@ -76,12 +73,6 @@ export default async function ProfilePage() {
               label: "Gender",
               field: "gender",
               value: user?.gender,
-              editable: true,
-            },
-            {
-              label: "Date of Birth",
-              field: "dob",
-              value: user?.dob,
               editable: true,
             },
           ].map((field) => (
@@ -97,6 +88,12 @@ export default async function ProfilePage() {
             </div>
           ))}
         </div>
+        <ContactVerification
+          email={user.email}
+          emailVerified={Boolean(user.emailVerifiedAt)}
+          phone={user.phone}
+          phoneVerified={Boolean(user.phoneVerifiedAt)}
+        />
         <div className="mt-4 flex justify-center">
           <Suspense>
             <Button>

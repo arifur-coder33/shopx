@@ -9,6 +9,9 @@ import { authConfig } from "./auth.config";
 import { getEnabledSocialAuthProviders } from "./backend/services/socialAuthService";
 import prisma from "./lib/prisma";
 const permissionCache = new Map();
+export function invalidateRolePermissionCache(roleId) {
+  if (roleId) permissionCache.delete(roleId);
+}
 const baseAdapter = PrismaAdapter(prisma);
 async function getSocialProviders() {
   const configured = await getEnabledSocialAuthProviders();
@@ -34,6 +37,7 @@ const authAdapter = {
       data: {
         email,
         name: profile.name || null,
+        emailVerifiedAt: profile.email_verified === true ? new Date() : null,
         password,
         roleId: defaultRole.id,
       },
@@ -46,7 +50,18 @@ const authAdapter = {
   },
   async updateUser({ id, email, name }) {
     const data = {};
-    if (email !== undefined) data.email = String(email).trim().toLowerCase();
+    if (email !== undefined) {
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const existing = await prisma.user.findUnique({ where: { id }, select: { email: true } });
+      data.email = normalizedEmail;
+      if (existing?.email !== normalizedEmail) {
+        data.emailVerifiedAt = null;
+        data.emailVerificationOtpHash = null;
+        data.emailVerificationOtpExpiresAt = null;
+        data.emailVerificationOtpSentAt = null;
+        data.emailVerificationOtpAttempts = 0;
+      }
+    }
     if (name !== undefined) data.name = name;
     return prisma.user.update({ where: { id }, data });
   },
@@ -95,6 +110,7 @@ export const {
         return {
           id: user.id,
           email: user.email,
+          name: user.name,
           role: user.role?.name ?? null,
           roleId: user.roleId ?? null,
           tokenVersion: user.tokenVersion,
@@ -105,8 +121,17 @@ export const {
   ],
 
   callbacks: {
-    async signIn({ account, profile }) {
-      if (account?.provider === "google") return profile?.email_verified === true;
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        if (profile?.email_verified !== true) return false;
+        if (user?.id) {
+          await prisma.user.updateMany({
+            where: { id: user.id, emailVerifiedAt: null },
+            data: { emailVerifiedAt: new Date() },
+          });
+        }
+        return true;
+      }
       if (account?.provider === "facebook") return typeof profile?.email === "string" && profile.email.length > 0;
       return true;
     },
@@ -117,6 +142,8 @@ export const {
           where: { id: user.id },
           select: {
             id: true,
+            name: true,
+            email: true,
             roleId: true,
             tokenVersion: true,
             role: { select: { name: true } },
@@ -125,6 +152,8 @@ export const {
         if (!authUser) return {};
 
         token.id = authUser.id;
+        token.name = authUser.name;
+        token.email = authUser.email;
         token.role = authUser.role?.name ?? null;
         token.roleId = authUser.roleId;
         token.tokenVersion = authUser.tokenVersion;
@@ -162,6 +191,8 @@ export const {
           const freshUser = await prisma.user.findUnique({
             where: { id: token.id },
             select: {
+              name: true,
+              email: true,
               tokenVersion: true,
               roleId: true,
               role: { select: { name: true } },
@@ -171,6 +202,8 @@ export const {
           if (!freshUser) return {};
 
           token.tokenVersion = freshUser.tokenVersion;
+          token.name = freshUser.name;
+          token.email = freshUser.email;
           token.role = freshUser.role?.name ?? null;
           token.roleId = freshUser.roleId;
 
@@ -197,6 +230,8 @@ export const {
     async session({ session, token }) {
       if (session.user && token?.id) {
         session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.email = token.email;
         session.user.role = token.role;
         session.user.roleId = token.roleId;
         session.user.permissions = token.permissions ?? [];

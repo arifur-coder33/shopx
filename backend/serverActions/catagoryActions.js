@@ -692,9 +692,22 @@ const queryNavigationCategories = () =>
     },
   });
 
-const getNavigationCategories = cache(queryNavigationCategories);
+const queryNavigationCategoriesWithRetry = async () => {
+  try {
+    return await queryNavigationCategories();
+  } catch (error) {
+    const isConnectionError =
+      error?.code === "P1001" || /Can't reach database server/i.test(error?.message || "");
+    if (!isConnectionError) throw error;
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return queryNavigationCategories();
+  }
+};
+
+const getNavigationCategories = cache(queryNavigationCategoriesWithRetry);
 const getCachedNavigationCategories = unstable_cache(
-  queryNavigationCategories,
+  queryNavigationCategoriesWithRetry,
   ["navigation-categories-v1"],
   { revalidate: 300, tags: ["categories"] },
 );

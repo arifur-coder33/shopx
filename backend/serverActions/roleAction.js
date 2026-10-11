@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { invalidateRolePermissionCache } from "@/auth";
 
 import { revalidatePath } from "next/cache";
 import { getListCount } from "../utils/getListCount";
@@ -91,6 +92,7 @@ export async function deleteRoleById(id) {
 }
 
 export async function getRolePermissionData(roleId) {
+  await hasPermission("rolePermission", "view");
   const [resources, actions, permissions] = await Promise.all([
     prisma.resource.findMany({
       orderBy: { key: "asc" },
@@ -106,6 +108,7 @@ export async function getRolePermissionData(roleId) {
   return { resources, actions, permissions };
 }
 export async function saveRolePermissions(roleId, matrix) {
+  await hasPermission("rolePermission", "update");
   /*
     matrix structure:
     {
@@ -143,6 +146,7 @@ export async function saveRolePermissions(roleId, matrix) {
   }
 
   await prisma.$transaction(operations);
+  invalidateRolePermissionCache(roleId);
   await prisma.user.updateMany({
     where: { roleId },
     data: { tokenVersion: { increment: 1 } },

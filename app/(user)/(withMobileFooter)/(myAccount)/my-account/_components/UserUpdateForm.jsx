@@ -1,16 +1,9 @@
 "use client";
 import { updateUserAction } from "@/backend/serverActions/authActions";
 import DynamicForm from "@/components/common/DynamicForm";
-export default function UserUpdateForm({ id, data }) {
+export default function UserUpdateForm({ data }) {
   const fromFields = [
-    {
-      label: "Email",
-      name: "email",
-      type: "text",
-      editable: false,
-      colSpan: "full",
-    },
-    { label: "Name", name: "name", type: "text", colSpan: 6 },
+    { label: "Name", name: "name", type: "text", colSpan: "full", editable: true },
 
     {
       label: "Phone",
@@ -22,13 +15,6 @@ export default function UserUpdateForm({ id, data }) {
     {
       label: "Gender",
       name: "gender",
-      type: "text",
-      editable: true,
-      colSpan: "full",
-    },
-    {
-      label: "Date of Birth",
-      name: "dob",
       type: "text",
       editable: true,
       colSpan: "full",

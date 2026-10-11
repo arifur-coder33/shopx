@@ -155,6 +155,8 @@ export default function AccountManager({ result }) {
         <ReportCard label="Liabilities" value={money(report.liabilities)} />
         <ReportCard label="Equity" value={money(report.equity)} />
         <ReportCard label="Income" value={money(report.income)} />
+        <ReportCard label="Cost of goods sold" value={money(report.costOfGoodsSold)} />
+        <ReportCard label="Gross profit" value={money(report.grossProfit)} />
         <ReportCard label="Expenses" value={money(report.expenses)} />
         <ReportCard label="Net profit" value={money(report.netProfit)} />
         <ReportCard

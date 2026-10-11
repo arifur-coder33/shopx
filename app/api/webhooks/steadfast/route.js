@@ -1,14 +1,24 @@
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import prisma from "@/lib/prisma";
 import { postCodCollection } from "@/backend/services/paymentPostingService";
+import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 
 export async function POST(req) {
   try {
-    const body = await req.json();
+    // Verify the exact bytes Steadfast sent before parsing or mutating anything.
+    // The configured Steadfast Secret key is used for X-Signature; Authorization
+    // Bearer is intentionally not required by this receiver.
+    const rawBody = await req.text();
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return Response.json({ status: "error", message: "Invalid JSON." }, { status: 400 });
+    }
 
     const {
       notification_type,
       consignment_id,
-      invoice,
       status,
       tracking_message,
       delivery_charge,
@@ -16,11 +26,27 @@ export async function POST(req) {
       collected_amount,
       cod_amount,
     } = body;
+    const consignments = [
+      ...(consignment_id == null ? [] : [consignment_id]),
+      ...(Array.isArray(body.consignments)
+        ? body.consignments
+            .map((item) =>
+              typeof item === "object" ? item?.consignment_id ?? item?.cn : item,
+            )
+            .filter((id) => id != null)
+        : []),
+    ];
+    const consignmentIds = [...new Set(consignments.map(String))];
 
-    // 🔎 find shipping using consignment id
+    if (consignmentIds.length === 0) {
+      return Response.json({ status: "error", message: "Missing consignment ID." }, { status: 400 });
+    }
+
+    // Find the mapped account so the webhook can be authenticated with its
+    // encrypted SteadFast secret key before any order or finance changes.
     const shipping = await prisma.shipping.findFirst({
       where: {
-        cn: consignment_id.toString(),
+        cn: { in: consignmentIds },
       },
       include: {
         order: true,
@@ -35,7 +61,44 @@ export async function POST(req) {
       );
     }
 
-    const order = shipping.order;
+    if (shipping.courierProvider?.adapterKey !== "STEADFAST") {
+      return Response.json(
+        { status: "error", message: "Consignment is not mapped to SteadFast." },
+        { status: 409 },
+      );
+    }
+
+    const providerConfiguration = getProviderRuntimeConfiguration(
+      "courier",
+      shipping.courierProvider,
+    );
+    const secretKey = providerConfiguration.credentials?.secretKey;
+    const signature = req.headers.get("x-signature") || "";
+    if (!secretKey || !/^[\da-f]{64}$/i.test(signature)) {
+      return Response.json({ status: "error", message: "Unauthorized webhook." }, { status: 401 });
+    }
+    const expected = createHmac("sha256", secretKey).update(rawBody).digest();
+    const received = Buffer.from(signature, "hex");
+    if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+      return Response.json({ status: "error", message: "Unauthorized webhook." }, { status: 401 });
+    }
+
+    const eventDate = updated_at ? new Date(updated_at) : new Date();
+    const validEventDate = Number.isNaN(eventDate.getTime()) ? new Date() : eventDate;
+    const eventKey = `STEADFAST:${body.event_id || req.headers.get("idempotency-key") || createHash("sha256").update(rawBody).digest("hex")}`;
+    const eventTitles = {
+      delivery_status: "Delivery status",
+      tracking_update: "Tracking update",
+      consignment_update: "Consignment changed",
+      return_list_accepted: "Return list accepted",
+      cancel_request: "Cancellation request",
+      return_request: "Return request",
+      pickup_request: "Pickup request",
+    };
+    const eventDetails = { ...body };
+    delete eventDetails.event_id;
+    delete eventDetails.notification_type;
+    const detailText = ` ${JSON.stringify(eventDetails)}`;
 
     // status mapping courier → system
     const statusMap = {
@@ -46,73 +109,75 @@ export async function POST(req) {
       unknown: "SHIPPED",
     };
 
-    const newStatus = statusMap[status];
+    const newStatus = notification_type === "delivery_status" ? statusMap[status] : undefined;
 
-    if (shipping.courierProvider?.adapterKey !== "STEADFAST") {
-      return Response.json(
-        { status: "error", message: "Consignment is not mapped to SteadFast." },
-        { status: 409 },
-      );
-    }
+    for (const currentConsignmentId of consignmentIds) {
+      const currentShipping =
+        currentConsignmentId === String(shipping.cn)
+          ? shipping
+          : await prisma.shipping.findFirst({
+              where: { cn: currentConsignmentId },
+              include: { order: true, courierProvider: true },
+            });
+      if (
+        !currentShipping ||
+        currentShipping.courierProvider?.adapterKey !== "STEADFAST" ||
+        currentShipping.courierProviderId !== shipping.courierProviderId
+      ) continue;
 
-    // Update operational delivery status. This alone is not a financial post.
-    if (newStatus && order.status !== newStatus) {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: newStatus,
-        },
+      const order = currentShipping.order;
+      const currentStatus =
+        notification_type === "delivery_status" ? statusMap[status] : undefined;
+
+      // Only delivery_status changes order state; the other parcel events are
+      // recorded in the timeline without guessing a business-state transition.
+      if (currentStatus && order.status !== currentStatus) {
+        await prisma.order.update({ where: { id: order.id }, data: { status: currentStatus } });
+      }
+      if (notification_type === "delivery_status" && delivery_charge != null) {
+        await prisma.shipping.update({
+          where: { id: currentShipping.id },
+          data: { deliveryFee: Number(delivery_charge) },
+        });
+      }
+
+      const perConsignmentEventKey = `${eventKey}:${currentConsignmentId}`;
+      const duplicateTimeline = await prisma.orderTimeline.findFirst({
+        where: { orderId: order.id, message: { contains: perConsignmentEventKey } },
+        select: { id: true },
       });
-    }
+      if (!duplicateTimeline) {
+        await prisma.orderTimeline.create({
+          data: {
+            orderId: order.id,
+            orderNo: order.orderNo,
+            status: currentStatus || order.status,
+            title: eventTitles[notification_type] || "SteadFast update",
+            message: `${detailText} [${perConsignmentEventKey}]`,
+            createdBy: "courier",
+            createdAt: validEventDate,
+          },
+        });
+      }
 
-    // update delivery charge if provided
-    if (delivery_charge) {
-      await prisma.shipping.update({
-        where: { id: shipping.id },
-        data: {
-          deliveryFee: delivery_charge,
-        },
-      });
-    }
-
-    const eventDate = updated_at ? new Date(updated_at) : new Date();
-    const eventKey = `STEADFAST:${consignment_id}:${notification_type || "status"}:${status}:${updated_at || ""}`;
-    const duplicateTimeline = await prisma.orderTimeline.findFirst({
-      where: { orderId: order.id, message: { contains: eventKey } },
-      select: { id: true },
-    });
-    if (!duplicateTimeline) {
-      await prisma.orderTimeline.create({
-        data: {
+      // A completed delivery is the collection event for a full COD shipment.
+      // Partial delivery is not financially posted without an explicit collected amount.
+      const isFullCollection = notification_type === "delivery_status" && status === "delivered";
+      const hasExplicitPartialCollection =
+        notification_type === "delivery_status" &&
+        status === "partial_delivered" &&
+        Number(collected_amount) > 0;
+      if (order.paymentMethod === "COD" && (isFullCollection || hasExplicitPartialCollection)) {
+        await postCodCollection({
           orderId: order.id,
-          orderNo: order.orderNo,
-          status: newStatus || order.status,
-          title: "Courier Update",
-          message: `${tracking_message || status} [${eventKey}]`,
-          createdBy: "courier",
-          createdAt: eventDate,
-        },
-      });
-    }
-
-    // A completed delivery is the collection event for a full COD shipment.
-    // Partial delivery is not financially posted without an explicit collected amount.
-    const isFullCollection = status === "delivered";
-    const hasExplicitPartialCollection =
-      status === "partial_delivered" && Number(collected_amount) > 0;
-    if (
-      order.paymentMethod === "COD" &&
-      (isFullCollection || hasExplicitPartialCollection)
-    ) {
-      await postCodCollection({
-        orderId: order.id,
-        courierProviderId: shipping.courierProviderId,
-        amount: Number(collected_amount || cod_amount || shipping.cod || order.dueAmount),
-        reference: String(consignment_id),
-        externalEventId: eventKey,
-        collectedAt: eventDate,
-        createdBy: "steadfast-webhook",
-      });
+          courierProviderId: currentShipping.courierProviderId,
+          amount: Number(collected_amount || cod_amount || currentShipping.cod || order.dueAmount),
+          reference: currentConsignmentId,
+          externalEventId: perConsignmentEventKey,
+          collectedAt: validEventDate,
+          createdBy: "steadfast-webhook",
+        });
+      }
     }
 
     return Response.json({

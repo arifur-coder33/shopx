@@ -46,6 +46,21 @@ notification against SSLCommerz before posting it, so a customer browser or
 network disconnect after payment does not leave a successful transaction
 unrecorded. A local `localhost` URL cannot receive provider-to-server IPNs.
 
+For SteadFast, configure the deployed site's `/api/webhooks/steadfast` URL as
+the webhook callback. The receiver verifies `X-Signature` as an HMAC-SHA256 of
+the raw JSON request body using the encrypted SteadFast **Secret key** saved in
+the courier provider settings. It does not rely on an `Authorization: Bearer`
+header. Keep the saved secret key in sync with the key configured for webhook
+signing in SteadFast. Requests without a valid signature are rejected before
+order or COD records are changed. Parcel events with a consignment ID are
+recorded in that order's timeline, including tracking, parcel edits, and cancel,
+return, pickup, or return-list events. Return-list notifications fan out to the
+matching consignments. Only `delivery_status` changes the order status or posts
+a COD collection. Repeated deliveries are deduplicated using the provider event
+ID, `Idempotency-Key`, or a hash of the exact request body. Account-level events
+without a consignment (such as `payment_request` and `user_update`) are outside
+the order timeline.
+
 Disabling a provider preserves its mapping, balance, transactions, payments,
 refunds, settlements, and journals. Account-to-account transfers continue through
 the Money Accounts page and use the central transaction/journal posting service.

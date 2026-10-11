@@ -3,6 +3,7 @@
 import { signIn, signOut } from "@/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
@@ -212,30 +213,181 @@ export async function deleteUserById(id) {
   }
 }
 
-export async function updateUserAction({ id, formData }) {
+export async function updateUserAction({ formData }) {
   try {
-    const formDataObj = Object.fromEntries(formData.entries());
-    const { name, email, phone, gender, dob } = formDataObj;
-
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
+    const authData = await getAuthData();
+    if (!authData?.id) throw new Error("Unauthenticated");
+    const name = String(formData.get("name") || "").trim();
+    const phone = String(formData.get("phone") || "").trim() || null;
+    const gender = String(formData.get("gender") || "").trim() || null;
+    const existingUser = await prisma.user.findUnique({ where: { id: authData.id } });
     if (!existingUser) {
       throw new Error("User not found");
     }
-    const updatedUser = await prisma.user.update({
-      where: { id },
+    const phoneChanged = (existingUser.phone || null) !== phone;
+    await prisma.user.update({
+      where: { id: authData.id },
       data: {
-        name,
+        name: name || null,
         phone,
         gender,
+        ...(phoneChanged ? { phoneVerifiedAt: null } : {}),
+        tokenVersion: { increment: 1 },
       },
     });
     revalidatePath("/my-account");
-    return { success: true };
+    revalidatePath("/admin/profile");
+    return { success: true, message: "Profile updated successfully." };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, message: error.message || "Could not update profile." };
   }
+}
+
+const emailVerificationOtpSecret = () => process.env.JWT_SECRET || process.env.AUTH_SECRET;
+const emailVerificationOtpHash = (userId, email, otp) => {
+  const secret = emailVerificationOtpSecret();
+  if (!secret) throw new Error("Email verification is not configured.");
+  return createHmac("sha256", secret)
+    .update(`${userId}:${email}:${otp}`)
+    .digest("hex");
+};
+
+export async function sendEmailVerificationOTP() {
+  const authData = await getAuthData();
+  if (!authData?.id) return { success: false, message: "Please sign in again." };
+  if (!emailVerificationOtpSecret()) {
+    return { success: false, message: "Email verification is not configured." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: authData.id },
+    select: {
+      id: true,
+      email: true,
+      emailVerifiedAt: true,
+      emailVerificationOtpSentAt: true,
+    },
+  });
+  if (!user?.email) return { success: false, message: "Email address not found." };
+  if (user.emailVerifiedAt) return { success: true, verified: true, message: "Email is already verified." };
+  if (
+    user.emailVerificationOtpSentAt &&
+    Date.now() - user.emailVerificationOtpSentAt.getTime() < 60_000
+  ) {
+    return { success: false, message: "Please wait a minute before requesting another code." };
+  }
+
+  const otp = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const otpHash = emailVerificationOtpHash(user.id, user.email, otp);
+  const expiresAt = new Date(Date.now() + 10 * 60_000);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerificationOtpHash: otpHash,
+      emailVerificationOtpExpiresAt: expiresAt,
+      emailVerificationOtpSentAt: new Date(),
+      emailVerificationOtpAttempts: 0,
+    },
+  });
+
+  try {
+    await sendMail({
+      to: user.email,
+      subject: "Verify your email address",
+      html: `<p>Your email verification code is:</p><p style="font-size:24px;font-weight:bold;letter-spacing:6px">${otp}</p><p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p>`,
+    });
+  } catch (error) {
+    await prisma.user.updateMany({
+      where: { id: user.id, emailVerificationOtpHash: otpHash },
+      data: {
+        emailVerificationOtpHash: null,
+        emailVerificationOtpExpiresAt: null,
+        emailVerificationOtpSentAt: null,
+        emailVerificationOtpAttempts: 0,
+      },
+    });
+    return { success: false, message: error.message || "Could not send verification email." };
+  }
+
+  return { success: true, message: `Verification code sent to ${user.email}.` };
+}
+
+export async function verifyEmailVerificationOTP({ otp }) {
+  const authData = await getAuthData();
+  if (!authData?.id) return { success: false, message: "Please sign in again." };
+  if (!emailVerificationOtpSecret()) {
+    return { success: false, message: "Email verification is not configured." };
+  }
+  const code = String(otp || "").trim();
+  if (!/^\d{6}$/.test(code)) return { success: false, message: "Enter the 6-digit code." };
+
+  const user = await prisma.user.findUnique({
+    where: { id: authData.id },
+    select: {
+      id: true,
+      email: true,
+      emailVerifiedAt: true,
+      emailVerificationOtpHash: true,
+      emailVerificationOtpExpiresAt: true,
+      emailVerificationOtpAttempts: true,
+    },
+  });
+  if (!user) return { success: false, message: "User not found." };
+  if (user.emailVerifiedAt) return { success: true, message: "Email is already verified." };
+  if (!user.emailVerificationOtpHash || !user.emailVerificationOtpExpiresAt) {
+    return { success: false, message: "Request a new verification code." };
+  }
+  if (user.emailVerificationOtpExpiresAt.getTime() < Date.now()) {
+    await prisma.user.updateMany({
+      where: { id: user.id, emailVerificationOtpHash: user.emailVerificationOtpHash },
+      data: { emailVerificationOtpHash: null, emailVerificationOtpExpiresAt: null, emailVerificationOtpAttempts: 0 },
+    });
+    return { success: false, message: "The code expired. Request a new one." };
+  }
+  if (user.emailVerificationOtpAttempts >= 5) {
+    return { success: false, message: "Too many attempts. Request a new code." };
+  }
+
+  const expected = Buffer.from(user.emailVerificationOtpHash, "hex");
+  const received = Buffer.from(emailVerificationOtpHash(user.id, user.email, code), "hex");
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
+    await prisma.user.updateMany({
+      where: {
+        id: user.id,
+        emailVerificationOtpHash: user.emailVerificationOtpHash,
+        emailVerificationOtpAttempts: { lt: 5 },
+      },
+      data: { emailVerificationOtpAttempts: { increment: 1 } },
+    });
+    return { success: false, message: "The verification code is incorrect." };
+  }
+
+  const verified = await prisma.user.updateMany({
+    where: {
+      id: user.id,
+      emailVerifiedAt: null,
+      emailVerificationOtpHash: user.emailVerificationOtpHash,
+    },
+    data: {
+      emailVerifiedAt: new Date(),
+      emailVerificationOtpHash: null,
+      emailVerificationOtpExpiresAt: null,
+      emailVerificationOtpSentAt: null,
+      emailVerificationOtpAttempts: 0,
+    },
+  });
+  if (verified.count === 0) {
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { emailVerifiedAt: true },
+    });
+    if (!refreshedUser?.emailVerifiedAt) {
+      return { success: false, message: "The code was replaced. Request a new one." };
+    }
+  }
+  revalidatePath("/my-account");
+  revalidatePath("/admin/profile");
+  return { success: true, message: "Email verified successfully." };
 }
 
 export async function updatePassword({ formData }) {
