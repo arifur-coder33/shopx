@@ -149,6 +149,8 @@ export default function AccountManager({ result }) {
       </header>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ReportCard label="Total assets" value={money(report.assets)} />
+        <ReportCard label="Inventory assets" value={money(report.inventoryAsset)} />
+        <ReportCard label="Inventory units" value={Number(report.inventoryQuantity || 0).toLocaleString("en-BD")} />
         <ReportCard label="Liquid funds" value={money(report.liquidFunds)} />
         <ReportCard label="Liabilities" value={money(report.liabilities)} />
         <ReportCard label="Equity" value={money(report.equity)} />

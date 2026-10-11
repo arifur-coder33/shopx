@@ -26,7 +26,7 @@ export async function getProcurementSectionData(section, params = {}) {
       [data.suppliers, data.variations, data.purchaseOrders, total] = await Promise.all([
         prisma.supplier.findMany({ where: { isActive: true }, orderBy: { companyName: "asc" }, select: { id: true, companyName: true } }),
         prisma.productVariation.findMany({ where: { productId: { not: null } }, orderBy: { sku: "asc" }, take: 500, include: { product: { select: { title: true } } } }),
-        prisma.purchaseOrder.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" }, include: { supplier: { select: { companyName: true } }, items: { include: { product: { select: { title: true } }, variation: { select: { sku: true } } } }, _count: { select: { receipts: true, supplierPayments: true } } } }),
+        prisma.purchaseOrder.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" }, include: { supplier: { select: { companyName: true } }, items: { include: { product: { select: { title: true } }, variation: { select: { sku: true } } } }, _count: { select: { receipts: true, supplierPayments: true, expenses: true } } } }),
         prisma.purchaseOrder.count({ where }),
       ]);
     } else if (section === "receipts") {
@@ -66,7 +66,7 @@ export async function getProcurementSectionData(section, params = {}) {
       ]);
     } else if (section === "expenses") {
       const where = { ...(date && { expenseDate: date }), ...(search && { OR: [text("description", search), { category: text("name", search) }] }) };
-      [data.expenses, data.expenseCategories, data.moneyAccounts, total] = await Promise.all([prisma.expense.findMany({ where, skip, take: limit, orderBy: { expenseDate: "desc" }, include: { category: true, moneyAccount: true } }), prisma.expenseCategory.findMany({ orderBy: { name: "asc" } }), prisma.moneyAccount.findMany({ where: { isActive: true }, orderBy: [{ type: "asc" }, { name: "asc" }] }), prisma.expense.count({ where })]);
+      [data.expenses, data.expenseCategories, data.moneyAccounts, data.purchaseOrders, total] = await Promise.all([prisma.expense.findMany({ where, skip, take: limit, orderBy: { expenseDate: "desc" }, include: { category: true, moneyAccount: true, purchaseOrder: { select: { id: true, poNo: true } } } }), prisma.expenseCategory.findMany({ orderBy: { name: "asc" } }), prisma.moneyAccount.findMany({ where: { isActive: true }, orderBy: [{ type: "asc" }, { name: "asc" }] }), prisma.purchaseOrder.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, poNo: true, status: true, supplier: { select: { companyName: true } }, items: { select: { id: true, variationId: true, quantity: true, receivedQty: true, product: { select: { title: true } }, variation: { select: { sku: true } } } } } }), prisma.expense.count({ where })]);
     } else if (section === "deliveries") {
       const where = { ...(status && { status }), ...(date && { createdAt: date }), ...(search && { OR: [text("deliveryNo", search), { order: text("orderNo", search) }, { items: { some: { goodsReceiptItem: { OR: [text("batchNumber", search), text("supplierLotNumber", search)] } } } }] }) };
       const queueWhere = {

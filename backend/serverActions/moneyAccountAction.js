@@ -30,7 +30,7 @@ export async function getMoneyManagement(params = {}) {
       ...(params.reference && { reference: { contains: String(params.reference), mode: "insensitive" } }),
       ...(MOVEMENT_TYPES.includes(params.transactionType) && { type: params.transactionType }),
     };
-    const [accounts, accountCount, allAccounts, transactions, transactionCount, shareholders, financialAccounts, balances, periodTransactions] = await Promise.all([
+    const [accounts, accountCount, allAccounts, transactions, transactionCount, shareholders, financialAccounts, balances, periodTransactions, inventoryQuantity] = await Promise.all([
       prisma.moneyAccount.findMany({ where: accountWhere, skip: (accountPage - 1) * limit, take: limit, orderBy: [{ isActive: "desc" }, { name: "asc" }], include: { _count: { select: { incomingTransactions: true, outgoingTransactions: true, supplierPayments: true, expenses: true, paymentGateways: true, courierProviders: true, payments: true, refunds: true } } } }),
       prisma.moneyAccount.count({ where: accountWhere }),
       prisma.moneyAccount.findMany({ orderBy: [{ type: "asc" }, { name: "asc" }] }),
@@ -40,13 +40,17 @@ export async function getMoneyManagement(params = {}) {
       prisma.financialAccount.findMany({ where: { isActive: true } }),
       prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED" } }, _sum: { debit: true, credit: true } }),
       prisma.moneyTransaction.groupBy({ by: ["type"], _sum: { amount: true } }),
+      prisma.stock.aggregate({ _sum: { quantity: true } }),
     ]);
     const financialMap = new Map(financialAccounts.map((account) => [account.id, account]));
     const totals = { assets: 0, liabilities: 0, equity: 0, income: 0, expenses: 0 };
     balances.forEach((row) => { const account = financialMap.get(row.accountId); if (!account) return; const debit = row._sum.debit || 0, credit = row._sum.credit || 0; const value = ["ASSET", "EXPENSE"].includes(account.type) ? debit - credit : credit - debit; const key = { ASSET: "assets", LIABILITY: "liabilities", EQUITY: "equity", INCOME: "income", EXPENSE: "expenses" }[account.type]; totals[key] += value; });
     const movementTotals = Object.fromEntries(periodTransactions.map((row) => [row.type, row._sum.amount || 0]));
     const typeBalances = allAccounts.reduce((result, account) => ({ ...result, [account.type]: (result[account.type] || 0) + account.balance }), {});
-    const report = { ...totals, liquidFunds: allAccounts.reduce((sum, account) => sum + account.balance, 0), activeAccounts: allAccounts.filter((account) => account.isActive).length, deposits: (movementTotals.FUND_ADD || 0) + (movementTotals.CUSTOMER_PAYMENT || 0), withdrawals: movementTotals.WITHDRAWAL || 0, supplierPayments: movementTotals.SUPPLIER_PAYMENT || 0, netProfit: totals.income - totals.expenses, byType: Object.entries(typeBalances).map(([type, balance]) => ({ type, balance })) };
+    const inventoryAccount = financialAccounts.find((account) => account.code === "1200");
+    const inventoryBalance = balances.find((row) => row.accountId === inventoryAccount?.id);
+    const inventoryAsset = inventoryBalance ? (inventoryBalance._sum.debit || 0) - (inventoryBalance._sum.credit || 0) : 0;
+    const report = { ...totals, inventoryAsset, inventoryQuantity: inventoryQuantity._sum.quantity || 0, liquidFunds: allAccounts.reduce((sum, account) => sum + account.balance, 0), activeAccounts: allAccounts.filter((account) => account.isActive).length, deposits: (movementTotals.FUND_ADD || 0) + (movementTotals.CUSTOMER_PAYMENT || 0), withdrawals: movementTotals.WITHDRAWAL || 0, supplierPayments: movementTotals.SUPPLIER_PAYMENT || 0, netProfit: totals.income - totals.expenses, byType: Object.entries(typeBalances).map(([type, balance]) => ({ type, balance })) };
     return { success: true, data: { accounts, allAccounts, transactions, shareholders, report, pagination: { accounts: { page: accountPage, totalPages: Math.max(1, Math.ceil(accountCount / limit)), total: accountCount }, transactions: { page: transactionPage, totalPages: Math.max(1, Math.ceil(transactionCount / limit)), total: transactionCount }, limit } }, filters: params };
   } catch (error) { return actionError(error, "Failed to load money accounts."); }
 }

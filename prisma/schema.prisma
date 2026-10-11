@@ -1028,6 +1028,7 @@ model PurchaseOrder {
 
   receipts         GoodsReceipt[]
   supplierPayments SupplierPayment[]
+  expenses         Expense[]
   createdAt        DateTime          @default(now())
 
   updatedAt DateTime @updatedAt
@@ -1254,6 +1255,9 @@ model Expense {
 
   expenseDate DateTime
 
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+
   paymentMethod String?
 
   moneyAccountId    String?
@@ -1266,6 +1270,7 @@ model Expense {
 
   @@index([categoryId, expenseDate])
   @@index([moneyAccountId, expenseDate])
+  @@index([purchaseOrderId])
 }
 
 model SupplierPayment {

@@ -33,7 +33,9 @@ export async function createGoodsReceipt(formData) {
       const receiptValue = requestedItems.reduce((sum, item) => {
         const source = itemMap.get(item.purchaseItemId);
         const discountPerUnit = source.quantity ? source.discount / source.quantity : 0;
-        return sum + item.quantity * Math.max(0, source.unitCost - discountPerUnit);
+        const totalQuantity = po.items.reduce((quantity, row) => quantity + row.quantity, 0);
+        const freightPerUnit = totalQuantity > 0 ? po.shippingCost / totalQuantity : 0;
+        return sum + item.quantity * Math.max(0, source.unitCost - discountPerUnit + freightPerUnit);
       }, 0);
       if (receiptValue > 0) await postJournal(tx, {
         description: `Goods received against ${po.poNo}`,

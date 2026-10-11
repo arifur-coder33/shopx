@@ -9,22 +9,22 @@ export async function getProcurementDetail(section, id) {
     if (!resource) return { success: false, message: "Unknown procurement section." };
     await requireProcurementPermission(resource, "view");
     let data;
-    if (section === "purchases") data = await prisma.purchaseOrder.findUnique({ where: { id }, include: { supplier: true, items: { include: { product: true, variation: true } }, receipts: { include: { warehouse: true, items: true } }, supplierPayments: true } });
+    if (section === "purchases") data = await prisma.purchaseOrder.findUnique({ where: { id }, include: { supplier: true, items: { include: { product: true, variation: true } }, receipts: { include: { warehouse: true, items: true } }, supplierPayments: true, expenses: { include: { category: true }, orderBy: { expenseDate: "asc" } } } });
     if (section === "receipts") data = await prisma.goodsReceipt.findUnique({ where: { id }, include: { purchaseOrder: { include: { supplier: true } }, warehouse: true, items: { include: { variation: { include: { product: true } }, deliveryItems: { include: { delivery: { include: { order: true } } } } } } } });
     if (section === "deliveries") data = await prisma.delivery.findUnique({ where: { id }, include: { order: true, warehouse: true, items: { include: { orderItem: true, goodsReceiptItem: true } } } });
     if (section === "warehouses") data = await prisma.warehouse.findUnique({ where: { id }, include: { stocks: { include: { variation: { include: { product: true } } } } } });
     if (section === "stock") data = await prisma.stock.findUnique({ where: { id }, include: { warehouse: true, variation: { include: { product: true } } } });
     if (section === "stock" && data) data.transactions = await prisma.inventoryTransaction.findMany({ where: { warehouseId: data.warehouseId, variationId: data.variationId }, orderBy: { createdAt: "desc" }, take: 200 });
     if (section === "ledger") data = await prisma.inventoryTransaction.findUnique({ where: { id }, include: { warehouse: true, variation: { include: { product: true } } } });
-    if (section === "expenses") data = await prisma.expense.findUnique({ where: { id }, include: { category: true } });
+    if (section === "expenses") data = await prisma.expense.findUnique({ where: { id }, include: { category: true, purchaseOrder: true } });
     if (section === "payments") data = await prisma.supplierPayment.findUnique({ where: { id }, include: { supplier: true, purchaseOrder: true } });
     if (!data) return { success: false, message: "Record not found." };
     const auditIds = [...new Set([data.createdBy, data.updatedBy].filter(Boolean))];
     const users = auditIds.length ? await prisma.user.findMany({ where: { id: { in: auditIds } }, select: { id: true, email: true } }) : [];
     let capabilities = { canEdit: false, canDelete: false, reason: "This record is controlled by its workflow." };
     if (section === "purchases") {
-      const locked = data.receipts.length > 0 || data.supplierPayments.length > 0;
-      capabilities = { canEdit: !locked, canDelete: !locked, reason: locked ? "Goods have been received or a supplier payment exists." : "" };
+      const locked = data.receipts.length > 0 || data.supplierPayments.length > 0 || data.expenses.length > 0;
+      capabilities = { canEdit: !locked, canDelete: !locked, reason: locked ? "Goods have been received or a supplier payment or linked expense exists." : "" };
     } else if (section === "receipts") {
       const delivered = data.items.some((item) => item.deliveryItems.length > 0 || item.deliveredQuantity > 0);
       const paid = await prisma.supplierPayment.count({ where: { purchaseOrderId: data.purchaseOrderId } });
@@ -51,7 +51,7 @@ export async function updateProcurementRecord(section, id, formData) {
       if (!values.name?.trim()) throw new Error("Warehouse name is required.");
       await prisma.warehouse.update({ where: { id }, data: { name: values.name.trim(), address: values.address || null, phone: values.phone || null, manager: values.manager || null, updatedBy: userId } });
     } else if (section === "purchases") {
-      const locked = await prisma.goodsReceipt.count({ where: { purchaseOrderId: id } }) || await prisma.supplierPayment.count({ where: { purchaseOrderId: id } });
+      const locked = await prisma.goodsReceipt.count({ where: { purchaseOrderId: id } }) || await prisma.supplierPayment.count({ where: { purchaseOrderId: id } }) || await prisma.expense.count({ where: { purchaseOrderId: id } });
       if (locked) throw new Error("This purchase order is locked because it has a receipt or payment.");
       const current = await prisma.purchaseOrder.findUnique({ where: { id }, include: { items: true } });
       if (!current) throw new Error("Purchase order not found.");
@@ -88,8 +88,8 @@ export async function deleteProcurementRecord(section, id) {
     const resource = PROCUREMENT_RESOURCES[section];
     const userId = await requireProcurementPermission(resource, "delete");
     if (section === "purchases") {
-      const [receipts, payments] = await Promise.all([prisma.goodsReceipt.count({ where: { purchaseOrderId: id } }), prisma.supplierPayment.count({ where: { purchaseOrderId: id } })]);
-      if (receipts || payments) throw new Error("Purchase order cannot be deleted after receipt or payment.");
+      const [receipts, payments, expenses] = await Promise.all([prisma.goodsReceipt.count({ where: { purchaseOrderId: id } }), prisma.supplierPayment.count({ where: { purchaseOrderId: id } }), prisma.expense.count({ where: { purchaseOrderId: id } })]);
+      if (receipts || payments || expenses) throw new Error("Purchase order cannot be deleted after receipt, payment or linked expense.");
       await prisma.purchaseOrder.delete({ where: { id } });
     } else if (section === "receipts") {
       await prisma.$transaction(async (tx) => {
