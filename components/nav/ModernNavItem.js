@@ -63,7 +63,7 @@ export default function ModernNavItem({
             "flex items-center justify-center p-2 rounded-lg cursor-pointer transition-colors duration-200 group",
             (isActive || isParentActive) &&
               "bg-slate-700 text-white font-semibold",
-            "text-slate-300 hover:bg-slate-700"
+            "text-slate-300 hover:bg-slate-700 hover:text-white"
           )}
         >
           {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
@@ -85,7 +85,7 @@ export default function ModernNavItem({
                 "flex items-center justify-center p-2 rounded-lg cursor-pointer transition-colors duration-200 group",
                 (isActive || isParentActive) &&
                   "bg-slate-700 text-white font-semibold",
-                "text-slate-300 hover:bg-slate-700"
+                "text-slate-300 hover:bg-slate-700 hover:text-white"
               )}
             >
               {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
@@ -95,7 +95,7 @@ export default function ModernNavItem({
           <PopoverContent
             side="right"
             align="start"
-            className="w-52 p-2 bg-slate-800 text-white shadow-lg"
+            className="w-52 border border-slate-700 bg-slate-800 p-2 text-slate-100 shadow-lg"
           >
             <div className="mb-2 text-sm font-semibold">{name}</div>
             <ul className="flex flex-col gap-1">
@@ -117,7 +117,7 @@ export default function ModernNavItem({
         onClick={handleClick}
         className={cn(
           "flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors duration-200 group",
-          "text-slate-300 hover:bg-slate-700",
+              "text-slate-300 hover:bg-slate-700 hover:text-white",
           (isActive || isParentActive) &&
             "bg-slate-700 text-white font-semibold"
         )}

@@ -6,7 +6,7 @@ export const ThemeScript = () => {
     (function() {
       try {
         const saved = localStorage.getItem('theme');
-        const dark = saved === 'dark' || (!saved && matchMedia('(prefers-color-scheme: dark)').matches);
+        const dark = saved === 'dark';
         document.documentElement.classList.toggle('dark', dark);
       } catch (e) {}
     })();

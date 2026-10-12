@@ -3,6 +3,7 @@
 "use client";
 
 import Logout from "@/components/auth/Logout";
+import ThemeToggle from "@/components/TheamToggle";
 import { adminMenuItems } from "@/lib/adminMenuItems";
 import { filterMenuByPermission } from "@/lib/filterMenuByPermission";
 import { User } from "lucide-react";
@@ -47,14 +48,22 @@ export default function AdminSideNav({
 
       {/* Fixed bottom section */}
       <div className="flex-shrink-0 p-2">
-        <div className="border-t border-slate-700 pt-2 flex flex-col gap-1">
+        <div className="border-t border-border pt-2 flex flex-col gap-1">
+          {isMobile && (
+            <ThemeToggle
+              showOnMobile
+              sun="Light Mode"
+              moon="Dark Mode"
+              buttonClassName="w-full justify-start gap-3 px-3 text-slate-300 hover:bg-slate-700 hover:text-white"
+            />
+          )}
           {/* Profile Link */}
           <Link
             href="/admin/profile"
             title={isCollapsed ? session?.user?.name || "Profile" : ""}
             className={cn(
               "flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200", // 1. Removed gap-3
-              "text-slate-400 hover:bg-slate-700 hover:text-white",
+              "text-slate-300 hover:bg-slate-700 hover:text-white",
             )}
             style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
             onClick={onLinkClick}
@@ -75,7 +84,7 @@ export default function AdminSideNav({
             className={cn(
               // 1. Removed gap-3 from the wrapper
               "flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200 w-full",
-              "text-slate-400 hover:bg-red-500/80 hover:text-white",
+              "text-slate-300 hover:bg-red-500/80 hover:text-white",
             )}
             style={{ justifyContent: isCollapsed ? "center" : "flex-start" }}
           >
@@ -108,7 +117,7 @@ export default function AdminSideNav({
         )}
         <aside
           className={cn(
-            "fixed top-0 left-0 h-full w-64 bg-slate-900 dark:bg-slate-950 text-slate-200 z-50 transition-transform duration-300 ease-in-out",
+            "fixed top-0 left-0 h-full w-64 border-r border-slate-700 bg-slate-900 text-slate-200 z-50 transition-transform duration-300 ease-in-out",
             isOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
@@ -122,7 +131,7 @@ export default function AdminSideNav({
   return (
     <aside
       className={cn(
-        "hidden sm:flex flex-col h-[calc(100vh-70px)] bg-slate-900 dark:bg-slate-950 text-slate-200 fixed transition-all duration-300 ease-in-out z-10",
+        "hidden sm:flex flex-col h-[calc(100vh-70px)] border-r border-slate-700 bg-slate-900 text-slate-200 fixed transition-all duration-300 ease-in-out z-10",
         isCollapsed ? "w-20" : "w-64",
       )}
     >

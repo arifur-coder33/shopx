@@ -1,13 +1,15 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import prisma from "@/lib/prisma";
-import { postCodCollection } from "@/backend/services/paymentPostingService";
-import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
+import { postCodCollection, postProviderFee } from "@/backend/services/paymentPostingService";
+import {
+  getCourierWebhookSecret,
+} from "@/backend/services/providerCredentialService";
 
 export async function POST(req) {
   try {
     // Verify the exact bytes Steadfast sent before parsing or mutating anything.
-    // The configured Steadfast Secret key is used for X-Signature; Authorization
-    // Bearer is intentionally not required by this receiver.
+    // The configured webhook secret (Steadfast API secret by default) signs
+    // X-Signature; Authorization Bearer is not required by this receiver.
     const rawBody = await req.text();
     let body;
     try {
@@ -22,6 +24,7 @@ export async function POST(req) {
       status,
       tracking_message,
       delivery_charge,
+      delivery_fee,
       updated_at,
       collected_amount,
       cod_amount,
@@ -68,11 +71,7 @@ export async function POST(req) {
       );
     }
 
-    const providerConfiguration = getProviderRuntimeConfiguration(
-      "courier",
-      shipping.courierProvider,
-    );
-    const secretKey = providerConfiguration.credentials?.secretKey;
+    const secretKey = getCourierWebhookSecret(shipping.courierProvider);
     const signature = req.headers.get("x-signature") || "";
     if (!secretKey || !/^[\da-f]{64}$/i.test(signature)) {
       return Response.json({ status: "error", message: "Unauthorized webhook." }, { status: 401 });
@@ -134,10 +133,13 @@ export async function POST(req) {
       if (currentStatus && order.status !== currentStatus) {
         await prisma.order.update({ where: { id: order.id }, data: { status: currentStatus } });
       }
-      if (notification_type === "delivery_status" && delivery_charge != null) {
+      const actualDeliveryFee = Number(delivery_fee ?? delivery_charge);
+      const hasDeliveryFee = (delivery_fee ?? delivery_charge) != null &&
+        Number.isFinite(actualDeliveryFee) && actualDeliveryFee >= 0;
+      if (hasDeliveryFee) {
         await prisma.shipping.update({
           where: { id: currentShipping.id },
-          data: { deliveryFee: Number(delivery_charge) },
+          data: { deliveryFee: actualDeliveryFee },
         });
       }
 
@@ -168,17 +170,44 @@ export async function POST(req) {
         status === "partial_delivered" &&
         Number(collected_amount) > 0;
       if (order.paymentMethod === "COD" && (isFullCollection || hasExplicitPartialCollection)) {
-        await postCodCollection({
-          orderId: order.id,
-          courierProviderId: currentShipping.courierProviderId,
-          amount: Number(collected_amount || cod_amount || currentShipping.cod || order.dueAmount),
+        const reportedCollection = Number(collected_amount || cod_amount || currentShipping.cod || order.dueAmount);
+        const acceptedCollection = Math.min(
+          Math.max(0, Number(order.dueAmount ?? reportedCollection)),
+          reportedCollection,
+        );
+        if (acceptedCollection > 0) {
+          await postCodCollection({
+            orderId: order.id,
+            courierProviderId: currentShipping.courierProviderId,
+            amount: acceptedCollection,
+            reference: currentConsignmentId,
+            externalEventId: perConsignmentEventKey,
+            collectedAt: validEventDate,
+            createdBy: "steadfast-webhook",
+          });
+        }
+      }
+
+      const isFeeFinal =
+        notification_type === "delivery_status" &&
+        ["delivered", "partial_delivered", "cancelled"].includes(status);
+      if (isFeeFinal && hasDeliveryFee && actualDeliveryFee > 0) {
+        await postProviderFee({
+          moneyAccountId: currentShipping.courierProvider.moneyAccountId,
+          amount: actualDeliveryFee,
+          providerName: currentShipping.courierProvider.name,
           reference: currentConsignmentId,
-          externalEventId: perConsignmentEventKey,
-          collectedAt: validEventDate,
+          feeDate: validEventDate,
+          externalEventId: `STEADFAST:${currentConsignmentId}:DELIVERY_FEE`,
           createdBy: "steadfast-webhook",
         });
       }
     }
+
+    await prisma.courierProvider.update({
+      where: { id: shipping.courierProviderId },
+      data: { webhookLastReceivedAt: new Date() },
+    });
 
     return Response.json({
       status: "success",

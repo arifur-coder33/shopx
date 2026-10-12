@@ -48,18 +48,30 @@ unrecorded. A local `localhost` URL cannot receive provider-to-server IPNs.
 
 For SteadFast, configure the deployed site's `/api/webhooks/steadfast` URL as
 the webhook callback. The receiver verifies `X-Signature` as an HMAC-SHA256 of
-the raw JSON request body using the encrypted SteadFast **Secret key** saved in
-the courier provider settings. It does not rely on an `Authorization: Bearer`
-header. Keep the saved secret key in sync with the key configured for webhook
-signing in SteadFast. Requests without a valid signature are rejected before
-order or COD records are changed. Parcel events with a consignment ID are
+the raw JSON request body using the encrypted custom webhook secret, or the
+SteadFast **Secret key** by default, from the courier provider settings. It does
+not rely on an `Authorization: Bearer` header. Requests without a valid
+signature are rejected before order or COD records are changed. Parcel events with a consignment ID are
 recorded in that order's timeline, including tracking, parcel edits, and cancel,
 return, pickup, or return-list events. Return-list notifications fan out to the
 matching consignments. Only `delivery_status` changes the order status or posts
-a COD collection. Repeated deliveries are deduplicated using the provider event
+a COD collection. Delivered/partial-delivery fees are saved on the shipping
+record and posted once as courier-fee expenses. Repeated deliveries are deduplicated using the provider event
 ID, `Idempotency-Key`, or a hash of the exact request body. Account-level events
 without a consignment (such as `payment_request` and `user_update`) are outside
 the order timeline.
+
+Pathao's callback URL is `/api/webhooks/pathao`. It verifies the configured
+Pathao signature secret and returns the integration header required by Pathao's
+merchant webhook flow. The saved Pathao API client secret is the default;
+generating a webhook secret stores an encrypted override. Pathao parcel
+callbacks update order timelines and mapped delivery statuses. Delivery and
+partial-delivery callbacks post the reported COD collection amount. Reported
+courier fees are saved on the shipping record and posted once as a courier-fee
+expense, so the courier account balance and net profit reflect the fee. The
+courier settings screen shows the canonical site URL,
+copyable callback and secret, and last accepted webhook time. Apply the new
+Prisma migration to each deployment database to enable webhook receipt times.
 
 Disabling a provider preserves its mapping, balance, transactions, payments,
 refunds, settlements, and journals. Account-to-account transfers continue through

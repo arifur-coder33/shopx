@@ -131,7 +131,12 @@ export default function CategoryTree({ initialData = [], setIsOpen }) {
           অর্ডার ট্র্যাক করুন
         </Link>
         <div className="rounded-xl px-3 transition-colors hover:bg-primary-soft">
-          <ThemeToggle sun="Light Mode" moon="Dark Mode" />
+          <ThemeToggle
+            showOnMobile
+            sun="Light Mode"
+            moon="Dark Mode"
+            buttonClassName="w-full justify-start gap-2 px-3 text-text"
+          />
         </div>
         <div className="rounded-xl px-3 transition-colors hover:bg-primary-soft">
           <Logout className="flex items-center gap-2">Sign Out</Logout>

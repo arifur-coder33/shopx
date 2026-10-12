@@ -191,9 +191,18 @@ export async function createCourierDeliveryAction({ formData }) {
 
         break;
     }
-    const shippingdata = await prisma.shipping.create({
-      data: {
+    const shippingdata = await prisma.shipping.upsert({
+      where: { orderId: order.id },
+      create: {
         orderId: order.id,
+        orderNo: data.invoice,
+        cn: orderResponseData.cn,
+        courierName: orderResponseData.courierName,
+        courierProviderId: provider.id,
+        deliveryFee: orderResponseData?.deliveryFee,
+        cod: Number(data.price) || 0,
+      },
+      update: {
         orderNo: data.invoice,
         cn: orderResponseData.cn,
         courierName: orderResponseData.courierName,

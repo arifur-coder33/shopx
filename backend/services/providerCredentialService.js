@@ -260,6 +260,15 @@ export function decryptProviderCredentials(payload) {
   return JSON.parse(decrypted);
 }
 
+export function getCourierWebhookSecret(provider) {
+  if (!provider?.encryptedCredentials) return "";
+  const credentials = decryptProviderCredentials(provider.encryptedCredentials);
+  if (valuePresent(credentials.webhookSecret)) return String(credentials.webhookSecret);
+  if (provider.adapterKey === "STEADFAST") return String(credentials.secretKey || "");
+  if (provider.adapterKey === "PATHAO") return String(credentials.clientSecret || "");
+  return "";
+}
+
 const valuePresent = (value) =>
   value !== undefined && value !== null && String(value).trim() !== "";
 

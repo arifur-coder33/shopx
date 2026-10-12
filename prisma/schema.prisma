@@ -567,6 +567,7 @@ model CourierProvider {
   credentialVersion    Int                  @default(1)
   credentialsUpdatedAt DateTime?
   nonSecretConfig      Json?
+  webhookLastReceivedAt DateTime?
   orders               Order[]              @relation("OrderCourierProvider")
   shippings            Shipping[]
   pickupPoints         CourierPickupPoint[]

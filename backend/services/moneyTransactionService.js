@@ -26,6 +26,7 @@ export async function postMoneyTransaction(
     note,
     transactionDate = new Date(),
     createdBy,
+    allowNegativeFromAccount = false,
   },
 ) {
   const amount = positiveAmount(rawAmount);
@@ -55,12 +56,21 @@ export async function postMoneyTransaction(
   const toAccount = accounts.find((account) => account.id === toAccountId);
 
   if (fromAccount) {
-    const debited = await tx.moneyAccount.updateMany({
-      where: { id: fromAccount.id, isActive: true, balance: { gte: amount } },
-      data: { balance: { decrement: amount }, updatedBy: createdBy },
-    });
-    if (debited.count !== 1) {
-      throw new Error(`Insufficient balance in ${fromAccount.name}.`);
+    if (allowNegativeFromAccount) {
+      // Courier balances represent settlements due from/to the provider; a
+      // withheld courier fee can exceed that consignment's COD collection.
+      await tx.moneyAccount.update({
+        where: { id: fromAccount.id },
+        data: { balance: { decrement: amount }, updatedBy: createdBy },
+      });
+    } else {
+      const debited = await tx.moneyAccount.updateMany({
+        where: { id: fromAccount.id, isActive: true, balance: { gte: amount } },
+        data: { balance: { decrement: amount }, updatedBy: createdBy },
+      });
+      if (debited.count !== 1) {
+        throw new Error(`Insufficient balance in ${fromAccount.name}.`);
+      }
     }
   }
   if (toAccount) {

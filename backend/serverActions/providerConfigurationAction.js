@@ -1,14 +1,19 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+
 import {
   decryptProviderCredentials,
+  encryptProviderCredentials,
   extractProviderNonSecretConfig,
+  getCourierWebhookSecret as resolveCourierWebhookSecret,
   getProviderAccountType,
   getProviderRuntimeConfiguration,
   getPublicAdapterDefinitions,
   prepareProviderCredentialUpdate,
 } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
+import { getSiteUrl } from "@/lib/siteUrl";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import {
   actionError,
@@ -214,6 +219,9 @@ export async function getProviderConfiguration(kind, params = {}) {
         credentialEncryptionReady: Boolean(
           process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY?.length >= 32,
         ),
+        ...(kind === "courier" && {
+          webhookBaseUrl: getSiteUrl(),
+        }),
       },
       filters: params,
       pagination: {
@@ -225,6 +233,57 @@ export async function getProviderConfiguration(kind, params = {}) {
     };
   } catch (error) {
     return actionError(error, "Failed to load provider configuration.");
+  }
+}
+
+export async function getCourierWebhookSecret(providerId) {
+  try {
+    await requireProcurementPermission("provider", "update");
+    const provider = await prisma.courierProvider.findUnique({
+      where: { id: providerId },
+      select: { adapterKey: true, encryptedCredentials: true },
+    });
+    if (!provider || !["STEADFAST", "PATHAO"].includes(provider.adapterKey)) {
+      return { success: false, message: "Courier webhook is unavailable." };
+    }
+    const value = resolveCourierWebhookSecret(provider);
+    return value
+      ? { success: true, data: { value, customized: Boolean(decryptProviderCredentials(provider.encryptedCredentials).webhookSecret) } }
+      : { success: false, message: "Configure the courier API secret first." };
+  } catch (error) {
+    return actionError(error, "Failed to load courier webhook secret.");
+  }
+}
+
+export async function generateCourierWebhookSecret(providerId) {
+  try {
+    const userId = await requireProcurementPermission("provider", "update");
+    const provider = await prisma.courierProvider.findUnique({
+      where: { id: providerId },
+      select: { adapterKey: true, encryptedCredentials: true },
+    });
+    if (!provider || !["STEADFAST", "PATHAO"].includes(provider.adapterKey)) {
+      return { success: false, message: "Courier webhook is unavailable." };
+    }
+    if (!process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY || process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY.length < 32) {
+      return { success: false, message: "Configure the provider credential encryption key first." };
+    }
+    const credentials = provider.encryptedCredentials
+      ? decryptProviderCredentials(provider.encryptedCredentials)
+      : {};
+    const secret = randomBytes(32).toString("base64url");
+    await prisma.courierProvider.update({
+      where: { id: providerId },
+      data: {
+        encryptedCredentials: encryptProviderCredentials({ ...credentials, webhookSecret: secret }),
+        credentialsUpdatedAt: new Date(),
+        updatedBy: userId,
+      },
+    });
+    revalidatePath("/admin/settings/couriers");
+    return { success: true, message: "New webhook secret generated and saved.", data: { value: secret, customized: true } };
+  } catch (error) {
+    return actionError(error, "Failed to generate courier webhook secret.");
   }
 }
 

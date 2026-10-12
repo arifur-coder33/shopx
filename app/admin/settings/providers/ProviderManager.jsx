@@ -1,12 +1,14 @@
 "use client";
 
 import {
+  generateCourierWebhookSecret,
+  getCourierWebhookSecret,
   revealProviderCredential,
   saveProviderConfiguration,
 } from "@/backend/serverActions/providerConfigurationAction";
 import Modal from "@/components/modal/Modal";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { Eye, EyeOff, Settings2, X } from "lucide-react";
+import { Copy, Eye, EyeOff, RefreshCw, Settings2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -59,12 +61,16 @@ export default function ProviderManager({ kind, result }) {
   const [visibleCredentials, setVisibleCredentials] = useState({});
   const [credentialValues, setCredentialValues] = useState({});
   const [revealingCredential, setRevealingCredential] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [webhookCustomized, setWebhookCustomized] = useState(false);
+  const [webhookBusy, setWebhookBusy] = useState(false);
   const [pending, startTransition] = useTransition();
   if (!result.success) {
     return <main className="p-5"><div className="card">{result.message}</div></main>;
   }
 
   const { providers, adapters, adapterDefinitions, credentialEncryptionReady } = result.data;
+  const webhookBaseUrl = result.data.webhookBaseUrl || "";
   const filters = result.filters || {};
   const canUpdate = hasUIPermission(
     session?.user?.permissions || [],
@@ -74,17 +80,52 @@ export default function ProviderManager({ kind, result }) {
   const selectedDefinition = adapterDefinitions.find(
     (adapter) => adapter.key === editing?.adapterKey,
   );
-  const openEditor = (provider) => {
+  const openEditor = async (provider) => {
     setVisibleCredentials({});
     setCredentialValues({});
     setRevealingCredential("");
+    setWebhookSecret("");
+    setWebhookCustomized(false);
     setEditing(provider);
+    if (kind === "courier" && ["STEADFAST", "PATHAO"].includes(provider.adapterKey)) {
+      setWebhookBusy(true);
+      const response = await getCourierWebhookSecret(provider.id);
+      setWebhookBusy(false);
+      if (response.success) {
+        setWebhookSecret(response.data.value);
+        setWebhookCustomized(response.data.customized);
+      }
+    }
   };
   const closeEditor = () => {
     setVisibleCredentials({});
     setCredentialValues({});
     setRevealingCredential("");
+    setWebhookSecret("");
     setEditing(null);
+  };
+  const copyValue = async (value, label) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied.`);
+    } catch {
+      toast.error(`Could not copy ${label.toLowerCase()}.`);
+    }
+  };
+  const generateWebhookSecret = () => {
+    setWebhookBusy(true);
+    startTransition(async () => {
+      const response = await generateCourierWebhookSecret(editing.id);
+      setWebhookBusy(false);
+      if (response.success) {
+        setWebhookSecret(response.data.value);
+        setWebhookCustomized(true);
+        toast.success(response.message);
+        router.refresh();
+      } else {
+        toast.error(response.message);
+      }
+    });
   };
   const toggleCredentialVisibility = async (credential) => {
     const key = credential.key;
@@ -278,6 +319,32 @@ export default function ProviderManager({ kind, result }) {
                   {selectedDefinition.configFields.map((config) => (
                     <label key={config.key} className="grid gap-1 text-sm font-semibold">{config.label}{config.type === "boolean" ? <select className={field} name={`config_${config.key}`} defaultValue={String(editing.nonSecretConfig?.[config.key] ?? config.defaultValue)}><option value="true">{config.trueLabel || "Yes"}</option><option value="false">{config.falseLabel || "No"}</option></select> : <input className={field} type={config.type === "number" ? "number" : "text"} min={config.type === "number" ? "0" : undefined} step={config.type === "number" ? "0.01" : undefined} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue} />}</label>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {kind === "courier" && ["STEADFAST", "PATHAO"].includes(editing.adapterKey) && (
+              <section className="space-y-3 rounded-brand border border-primary/30 bg-primary-soft p-3">
+                <div>
+                  <h3 className="font-bold">Webhook</h3>
+                  <p className="text-xs text-text-muted">Copy these into your courier account’s webhook settings. The default secret is the saved API secret; generating a new one saves a separate webhook secret.</p>
+                </div>
+                <label className="grid gap-1 text-sm font-semibold">Callback URL
+                  <span className="flex gap-2">
+                    <input readOnly className={field} value={`${webhookBaseUrl}/api/webhooks/${editing.adapterKey.toLowerCase()}`} />
+                    <button type="button" className="button shrink-0" onClick={() => copyValue(`${webhookBaseUrl}/api/webhooks/${editing.adapterKey.toLowerCase()}`, "Callback URL")}><Copy className="h-4 w-4" /> Copy</button>
+                  </span>
+                </label>
+                <label className="grid gap-1 text-sm font-semibold">Webhook secret
+                  <span className="flex gap-2">
+                    <input readOnly className={field} type="text" value={webhookSecret} placeholder={webhookBusy ? "Loading secret…" : "Save API credentials first"} />
+                    <button type="button" disabled={!webhookSecret} className="button shrink-0 disabled:opacity-40" onClick={() => copyValue(webhookSecret, "Webhook secret")}><Copy className="h-4 w-4" /> Copy</button>
+                  </span>
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button type="button" disabled={webhookBusy || pending || !credentialEncryptionReady} className="button disabled:opacity-40" onClick={generateWebhookSecret}><RefreshCw className={`h-4 w-4 ${webhookBusy ? "animate-spin" : ""}`} /> Generate new & save</button>
+                  <span className="text-xs text-text-muted">{webhookCustomized ? "Custom webhook secret" : "Using API secret by default"}</span>
+                  <span className="text-xs text-text-muted">Last received: {editing.webhookLastReceivedAt ? new Date(editing.webhookLastReceivedAt).toLocaleString() : "Never"}</span>
                 </div>
               </section>
             )}

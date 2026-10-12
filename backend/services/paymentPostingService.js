@@ -285,9 +285,17 @@ export async function postCodCollection({
       throw new Error("The collection Money Account is unavailable.");
     }
     const collectionAmount = money(amount ?? order.dueAmount);
+    if (externalEventId) {
+      const priorPayment = await tx.payment.findFirst({
+        where: { orderId: order.id, paymentMethod: "COD", externalEventId },
+      });
+      if (priorPayment && priorPayment.status !== "PENDING") {
+        return { payment: priorPayment, duplicate: true };
+      }
+    }
     let payment = await tx.payment.findFirst({
-      where: { orderId: order.id, paymentMethod: "COD" },
-      orderBy: { createdAt: "desc" },
+      where: { orderId: order.id, paymentMethod: "COD", status: "PENDING" },
+      orderBy: { createdAt: "asc" },
     });
     if (!payment) {
       payment = await tx.payment.create({
@@ -298,12 +306,17 @@ export async function postCodCollection({
           courierProviderId: courier?.id || null,
           amount: collectionAmount,
           status: "PENDING",
+          externalEventId: externalEventId || null,
         },
       });
-    } else if (courier && !payment.courierProviderId) {
+    } else {
       payment = await tx.payment.update({
         where: { id: payment.id },
-        data: { courierProviderId: courier.id, gateway: courier.code },
+        data: {
+          amount: collectionAmount,
+          ...(externalEventId && { externalEventId }),
+          ...(courier && { courierProviderId: courier.id, gateway: courier.code }),
+        },
       });
     }
     const posted = await postCustomerPaymentInTransaction(tx, {
@@ -323,7 +336,9 @@ export async function postCodCollection({
         data: {
           ...(courier && { courierProviderId: courier.id }),
           codCollectedAt: collectedAt,
-          codCollectedAmount: collectionAmount,
+          codCollectedAmount: money(
+            Number(order.shipping.codCollectedAmount || 0) + collectionAmount,
+          ),
           codCollectionReference: reference || externalEventId || null,
         },
       });
@@ -339,9 +354,20 @@ export async function postProviderFee({
   reference,
   feeDate = new Date(),
   createdBy,
+  externalEventId,
 }) {
   return prisma.$transaction(async (tx) => {
     const amount = money(rawAmount);
+    const idempotencyKey = externalEventId
+      ? `PROVIDER_FEE:${externalEventId}`
+      : undefined;
+    if (idempotencyKey) {
+      const previous = await tx.moneyTransaction.findFirst({
+        where: { idempotencyKey },
+        include: { expense: true },
+      });
+      if (previous) return { expense: previous.expense, transaction: previous, duplicate: true };
+    }
     const account = await tx.moneyAccount.findUnique({
       where: { id: moneyAccountId },
     });
@@ -372,12 +398,13 @@ export async function postProviderFee({
       amount,
       fromAccountId: account.id,
       transactionNo: `FEE-${expense.id}`,
-      idempotencyKey: `PROVIDER_FEE:${expense.id}`,
+      idempotencyKey: idempotencyKey || `PROVIDER_FEE:${expense.id}`,
       expenseId: expense.id,
       reference,
       note: expense.description,
       transactionDate: feeDate,
       createdBy,
+      allowNegativeFromAccount: account.type === "COURIER",
     });
     await postJournal(tx, {
       entryDate: feeDate,
