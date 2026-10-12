@@ -989,6 +989,9 @@ export async function updateOrderStatusAction(orderId, status, note) {
         paymentMethod: true,
         dueAmount: true,
         selectedCourierProviderId: true,
+        adminNote: true,
+        orderItems: { select: { variationId: true, quantity: true } },
+        deliveries: { select: { id: true }, take: 1 },
         shipping: {
           select: { cn: true, cod: true, courierProviderId: true },
         },
@@ -1034,11 +1037,25 @@ export async function updateOrderStatusAction(orderId, status, note) {
     }
 
     // ✅ update order status
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: orderId }, data: { status } });
+      const reservedPosMatch = order.adminNote?.match(/^POS_WAREHOUSE:([^:]+):RESERVED$/);
+      if (status === "CANCELLED" && reservedPosMatch && order.deliveries.length === 0) {
+        const warehouseId = reservedPosMatch[1];
+        for (const item of order.orderItems) {
+          await tx.stock.updateMany({
+            where: {
+              warehouseId,
+              variationId: item.variationId,
+              reserved: { gte: item.quantity },
+            },
+            data: {
+              reserved: { decrement: item.quantity },
+              available: { increment: item.quantity },
+            },
+          });
+        }
+      }
     });
 
     // 🧠 dynamic title বানানো
@@ -1077,6 +1094,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
 
     // 🔄 revalidate
     revalidatePath("/admin/orders");
+    revalidatePath("/admin/procurement/stock");
     revalidateTag("order");
 
     return {

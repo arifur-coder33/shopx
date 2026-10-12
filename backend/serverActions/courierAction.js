@@ -51,7 +51,13 @@ export async function getAvailableCourierProvidersForOrder() {
 export async function createCourierDeliveryAction({ formData }) {
   // Simulate API call to create a courier delivery
   try {
-    await requireProcurementPermission("order", "update");
+    let posOnlyPermission = false;
+    try {
+      await requireProcurementPermission("order", "update");
+    } catch (permissionError) {
+      await requireProcurementPermission("pos", "create");
+      posOnlyPermission = true;
+    }
     let data = Object.fromEntries(formData.entries());
 
     const order = await prisma.order.findUnique({
@@ -64,6 +70,15 @@ export async function createCourierDeliveryAction({ formData }) {
         success: false,
         message: "No order found with the provided invoice number.",
       };
+    }
+    if (posOnlyPermission) {
+      const posOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        select: { adminNote: true },
+      });
+      if (!posOrder?.adminNote?.startsWith("POS_WAREHOUSE:")) {
+        throw new Error("You do not have permission to book a courier for this order.");
+      }
     }
     if (order.shipping) {
       throw new Error("A courier order has already been created for this order.");
@@ -236,7 +251,9 @@ export async function createCourierDeliveryAction({ formData }) {
     }
     // Confirming the sale and creating its courier consignment is one action.
     // Packing/stock allocation happens later from the Delivery Queue.
-    await updateOrderStatusAction(order.id, "PROCESSING");
+    if (order.status !== "PROCESSING") {
+      await updateOrderStatusAction(order.id, "PROCESSING");
+    }
     return {
       success: true,
       data: {

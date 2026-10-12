@@ -18,8 +18,10 @@ export async function fireFacebookCAPI(data, configuredSettings) {
       ? data?.eventTime
       : Math.floor(Date.now() / 1000),
     event_id: data.eventId,
-    event_source_url: data.src,
-    action_source: "website",
+    ...(data.actionSource === "phone_call"
+      ? {}
+      : { event_source_url: data.src }),
+    action_source: data.actionSource || "website",
 
     user_data: {
       client_ip_address: data.user.ip,

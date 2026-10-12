@@ -23,6 +23,8 @@ export async function fireGoogleServer(data, configuredSettings) {
         params: {
           value: data.value,
           currency: data.currency,
+          transaction_id: data.eventId,
+          source: data.actionSource || "website",
 
           items: data.items.map((i) => ({
             item_id: i.id,

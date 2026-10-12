@@ -6,7 +6,7 @@ import { fireGoogleServer } from "../utils/SocialServerEvent/fireGoogleServer";
 import { fireTikTokServer } from "../utils/SocialServerEvent/fireTikTokServer";
 import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
-export async function firePurchaseServer({ orderNo, orderId }) {
+export async function firePurchaseServer({ orderNo, orderId, actionSource = "website" }) {
   try {
     const order = await prisma.order.findUnique({
       where: orderNo ? { orderNo } : { id: orderId },
@@ -14,6 +14,7 @@ export async function firePurchaseServer({ orderNo, orderId }) {
       select: {
         id: true,
         orderPrice: true,
+        adminDiscount: true,
         email: true,
         phoneNumber: true,
         createdAt: true,
@@ -51,8 +52,9 @@ export async function firePurchaseServer({ orderNo, orderId }) {
       event: EVENTS.PURCHASE,
       eventId,
       eventTime: Math.floor(new Date(order.createdAt).getTime() / 1000),
-      value: order.orderPrice,
+      value: Math.max(0, Number(order.orderPrice || 0) - Number(order.adminDiscount || 0)),
       currency: "BDT",
+      actionSource,
       src: "/payment/success",
       items: order.orderItems.map((item) => ({
         id: item.sku,

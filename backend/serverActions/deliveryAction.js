@@ -30,6 +30,7 @@ export async function createDelivery(formData) {
       if (!order.shipping?.courierProviderId) {
         throw new Error("Create the courier order before preparing delivery.");
       }
+      const isPosReservedOrder = order.adminNote === `POS_WAREHOUSE:${values.warehouseId}:RESERVED`;
       if (order.deliveries.length) {
         throw new Error("A delivery document already exists for this order.");
       }
@@ -67,9 +68,20 @@ export async function createDelivery(formData) {
       const result = await tx.delivery.create({ data: { deliveryNo, orderId: order.id, warehouseId: values.warehouseId, status: values.status || "PACKED", note: values.note || null, createdBy: userId, updatedBy: userId, items: { create: rows } } });
       for (const row of rows) {
         const stock = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId: values.warehouseId, variationId: row.variationId } } });
-        if (!stock || stock.available < row.quantity) throw new Error("Warehouse stock is insufficient for this delivery.");
+        if (!stock || (isPosReservedOrder ? stock.reserved < row.quantity : stock.available < row.quantity)) {
+          throw new Error(isPosReservedOrder ? "Reserved warehouse stock is insufficient for this delivery." : "Warehouse stock is insufficient for this delivery.");
+        }
         const balanceAfter = stock.quantity - row.quantity;
-        await tx.stock.update({ where: { id: stock.id }, data: { quantity: { decrement: row.quantity }, available: { decrement: row.quantity }, updatedBy: userId } });
+        await tx.stock.update({
+          where: { id: stock.id },
+          data: {
+            quantity: { decrement: row.quantity },
+            ...(isPosReservedOrder
+              ? { reserved: { decrement: row.quantity } }
+              : { available: { decrement: row.quantity } }),
+            updatedBy: userId,
+          },
+        });
         await tx.goodsReceiptItem.update({ where: { id: row.goodsReceiptItemId }, data: { deliveredQuantity: { increment: row.quantity } } });
         await tx.inventoryTransaction.create({ data: { warehouseId: values.warehouseId, variationId: row.variationId, type: "OUT", quantity: -row.quantity, balanceAfter, referenceType: "SALE", referenceId: result.id, remarks: `Delivery ${deliveryNo} for order ${order.orderNo}`, createdBy: userId } });
       }

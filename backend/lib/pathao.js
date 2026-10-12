@@ -23,7 +23,8 @@ async function readPathaoResponse(response, operation) {
   const result = await response.json().catch(() => null);
   const code = Number(result?.code);
   if (!response.ok || code !== 200) {
-    const detail = result?.message || result?.data?.message || result?.errors?.message;
+    const detail =
+      result?.message || result?.data?.message || result?.errors?.message;
     throw new Error(
       `Pathao ${operation} failed (${response.status}${Number.isFinite(code) ? `, code ${code}` : ""})${detail ? `: ${detail}` : "."}`,
     );
@@ -46,19 +47,20 @@ export async function getAccessToken(providerConfiguration) {
   if (cached?.token && now < cached.expiresAt) {
     return cached.token;
   }
-
-  const response = await fetch(`${settings.baseUrl}/aladdin/api/v1/issue-token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: settings.clientId,
-      client_secret: settings.clientSecret,
-      grant_type: "password",
-      username: settings.username,
-      password: settings.password,
-    }),
-  });
-
+  const response = await fetch(
+    `${settings.baseUrl}/aladdin/api/v1/issue-token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: settings.clientId,
+        client_secret: settings.clientSecret,
+        grant_type: "password",
+        username: settings.username,
+        password: settings.password,
+      }),
+    },
+  );
   const data = await readPathaoResponse(response, "token request");
   if (!data?.access_token) {
     throw new Error("Pathao token request succeeded without an access token.");
@@ -80,7 +82,7 @@ export async function calculateDeliveryCharge(
   const token = await getAccessToken(providerConfiguration);
   const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${baseUrl}/merchant/price-plan`, {
+  const response = await fetch(`${baseUrl}/aladdin/api/v1/merchant/price-plan`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -111,7 +113,7 @@ export async function getCities_Pathao(providerConfiguration) {
   const token = await getAccessToken(providerConfiguration);
   const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${baseUrl}/city-list`, {
+  const response = await fetch(`${baseUrl}/aladdin/api/v1/city-list`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -131,7 +133,7 @@ export async function getZones(city_id, providerConfiguration) {
   const token = await getAccessToken(providerConfiguration);
   const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${baseUrl}/cities/${city_id}/zone-list`, {
+  const response = await fetch(`${baseUrl}/aladdin/api/v1/cities/${city_id}/zone-list`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -151,7 +153,7 @@ export async function getAreas(zone_id, providerConfiguration) {
   const token = await getAccessToken(providerConfiguration);
   const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${baseUrl}/zones/${zone_id}/area-list`, {
+  const response = await fetch(`${baseUrl}/aladdin/api/v1/zones/${zone_id}/area-list`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -171,7 +173,7 @@ export async function getStores(providerConfiguration) {
   const token = await getAccessToken(providerConfiguration);
   const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${baseUrl}/stores`, {
+  const response = await fetch(`${baseUrl}/aladdin/api/v1/stores`, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -211,7 +213,7 @@ export async function createBulkOrder(ordersArray, providerConfiguration) {
   const token = await getAccessToken(providerConfiguration);
   const { baseUrl } = pathaoSettings(providerConfiguration);
 
-  const response = await fetch(`${baseUrl}/orders/bulk`, {
+  const response = await fetch(`${baseUrl}/aladdin/api/v1/orders/bulk`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -231,7 +233,10 @@ export async function createBulkOrder(ordersArray, providerConfiguration) {
 /**
  * ✅ Get Order Info by Consignment ID
  */
-export async function getPathaoOrderInfo(consignment_id, providerConfiguration) {
+export async function getPathaoOrderInfo(
+  consignment_id,
+  providerConfiguration,
+) {
   const token = await getAccessToken(providerConfiguration);
   const { baseUrl } = pathaoSettings(providerConfiguration);
 
@@ -240,7 +245,7 @@ export async function getPathaoOrderInfo(consignment_id, providerConfiguration) 
     {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
-    }
+    },
   );
 
   const result = await response.json();

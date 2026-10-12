@@ -23,6 +23,7 @@ export async function POST(req) {
       value: body.value,
       currency: "BDT",
       src: body.src,
+      actionSource: body.actionSource,
       extra,
       items: items.map((item) => ({
         id: item.id,
