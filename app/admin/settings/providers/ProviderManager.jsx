@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  createManualCourierProvider,
+  deleteManualCourierProvider,
   generateCourierWebhookSecret,
   getCourierWebhookSecret,
   revealProviderCredential,
@@ -8,7 +10,7 @@ import {
 } from "@/backend/serverActions/providerConfigurationAction";
 import Modal from "@/components/modal/Modal";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { Copy, Eye, EyeOff, RefreshCw, Settings2, X } from "lucide-react";
+import { Copy, Eye, EyeOff, Plus, RefreshCw, Settings2, Trash2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,6 +60,7 @@ export default function ProviderManager({ kind, result }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [editing, setEditing] = useState(null);
+  const [addingManualCourier, setAddingManualCourier] = useState(false);
   const [visibleCredentials, setVisibleCredentials] = useState({});
   const [credentialValues, setCredentialValues] = useState({});
   const [revealingCredential, setRevealingCredential] = useState("");
@@ -77,6 +80,8 @@ export default function ProviderManager({ kind, result }) {
     "provider",
     "update",
   );
+  const canCreate = hasUIPermission(session?.user?.permissions || [], "provider", "create");
+  const canDelete = hasUIPermission(session?.user?.permissions || [], "provider", "delete");
   const selectedDefinition = adapterDefinitions.find(
     (adapter) => adapter.key === editing?.adapterKey,
   );
@@ -174,21 +179,44 @@ export default function ProviderManager({ kind, result }) {
       }
     });
   };
+  const submitManualCourier = (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    startTransition(async () => {
+      const response = await createManualCourierProvider(new FormData(form));
+      if (response.success) {
+        toast.success(response.message);
+        setAddingManualCourier(false);
+        router.refresh();
+      } else toast.error(response.message);
+    });
+  };
+  const removeManualCourier = (provider) => {
+    if (!window.confirm(`Delete ${provider.name} and its zero-balance account?`)) return;
+    startTransition(async () => {
+      const response = await deleteManualCourierProvider(provider.id);
+      if (response.success) {
+        toast.success(response.message);
+        router.refresh();
+      } else toast.error(response.message);
+    });
+  };
 
   return (
     <main className="space-y-5 p-3 sm:p-5">
       <header>
-        <h1 className="text-2xl font-bold">{copy.title}</h1>
-        <p className="text-sm text-text-muted">
-          Providers listed here are integrations registered in the server code. Configure and enable the ones this site uses.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><h1 className="text-2xl font-bold">{copy.title}</h1>
+            <p className="text-sm text-text-muted">Configure Pathao and Steadfast, or add your own courier company for manual booking.</p></div>
+          {kind === "courier" && <button type="button" disabled={!canCreate} onClick={() => setAddingManualCourier(true)} className="button disabled:opacity-40"><Plus className="h-4 w-4" /> Add manual courier</button>}
+        </div>
       </header>
 
       <section className="rounded-brand border border-primary/30 bg-primary-soft p-3 text-sm">
         {kind === "gateway" ? (
           <><strong>Gateway accounts:</strong> COD is built in and needs no Money Account. Enabling an online gateway creates or reuses its PAYMENT_GATEWAY account.</>
         ) : (
-          <><strong>Courier accounts:</strong> Configure whether the courier collects COD. Enabling a COD-capable courier creates or reuses its COURIER Money Account.</>
+          <><strong>Courier accounts:</strong> Each manual courier gets its own COURIER Money Account with a zero opening balance. Its delivery fee conditions are saved with the courier. Delete is available only when the account has zero balance and no operational or financial history.</>
         )}
       </section>
 
@@ -240,9 +268,9 @@ export default function ProviderManager({ kind, result }) {
                   </td>
                   <td className="p-3"><span className={provider.readiness.credentialsConfigured ? "text-success" : "text-danger"}>{needsCredentials ? (provider.readiness.credentialsConfigured ? "Configured" : "Not configured") : "Not required"}</span>{needsCredentials && <small className="block text-text-muted">{provider.readiness.credentialSource.replaceAll("_", " ")}</small>}</td>
                   <td className="p-3">{kind === "courier" ? (provider.readiness.supportsCod ? "Available" : "Not available") : provider.adapterKey === "COD" ? "Built in" : "—"}</td>
-                  <td className="p-3">{provider.moneyAccount ? `${provider.moneyAccount.name} · ${provider.moneyAccount.type}` : provider.readiness.moneyAccountRequired ? <span className="text-text-muted">Created when enabled</span> : <span className="text-text-muted">Not required</span>}</td>
+                  <td className="p-3">{provider.moneyAccount ? <>{provider.moneyAccount.name} · {provider.moneyAccount.type}{provider.adapterKey === "MANUAL" && <small className="block text-text-muted">Balance: ৳{Number(provider.moneyAccount.balance || 0).toLocaleString("en-BD")}</small>}</> : provider.readiness.moneyAccountRequired ? <span className="text-text-muted">Created when enabled</span> : <span className="text-text-muted">Not required</span>}</td>
                   <td className="p-3"><span className={provider.isActive ? "text-success" : "text-danger"}>{provider.isActive ? "ENABLED" : "DISABLED"}</span><small className="block text-text-muted">{provider.readiness.ready ? "Ready" : "Not ready"}</small></td>
-                  <td className="p-3"><button disabled={!canUpdate} onClick={() => openEditor(provider)} className="button disabled:opacity-40"><Settings2 className="h-4 w-4" /> Configure</button></td>
+                  <td className="p-3"><div className="flex gap-2"><button disabled={!canUpdate} onClick={() => openEditor(provider)} className="button disabled:opacity-40"><Settings2 className="h-4 w-4" /> Configure</button>{kind === "courier" && provider.adapterKey === "MANUAL" && provider.code !== "MANUAL" && canDelete && <button type="button" title="Delete when balance and history are clear" onClick={() => removeManualCourier(provider)} className="button border-danger/30 text-danger"><Trash2 className="h-4 w-4" /></button>}</div></td>
                 </tr>
               );
             })}
@@ -251,6 +279,22 @@ export default function ProviderManager({ kind, result }) {
       </section>
       {!providers.length && <div className="card text-center text-text-muted">No registered provider records were found. Run the Prisma seed for this site.</div>}
       <Pagination pagination={result.pagination} path={copy.path} filters={filters} />
+
+      <Modal isOpen={addingManualCourier} onClose={() => setAddingManualCourier(false)}>
+        <form onSubmit={submitManualCourier} className="mx-auto max-w-2xl space-y-4">
+          <div><h2 className="text-xl font-bold">Add manual courier</h2><p className="text-sm text-text-muted">This courier will appear by its name when booking an order. No API credentials are needed.</p></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-semibold">Courier name<input required maxLength={100} className={field} name="name" placeholder="e.g. Local Express" /></label>
+            <label className="grid gap-1 text-sm font-semibold">Sort order<input className={field} name="sortOrder" type="number" defaultValue="0" /></label>
+            <label className="grid gap-1 text-sm font-semibold">Inside Dhaka fee (৳)<input required className={field} name="insideDhakaCharge" type="number" min="0" step="0.01" defaultValue="100" /></label>
+            <label className="grid gap-1 text-sm font-semibold">Outside Dhaka fee (৳)<input required className={field} name="outsideDhakaCharge" type="number" min="0" step="0.01" defaultValue="120" /></label>
+            <label className="grid gap-1 text-sm font-semibold">Each additional kg (৳)<input required className={field} name="additionalKgCharge" type="number" min="0" step="0.01" defaultValue="20" /></label>
+            <label className="grid gap-1 text-sm font-semibold">COD collection<select className={field} name="supportsCod" defaultValue="true"><option value="true">Available</option><option value="false">Not available</option></select></label>
+          </div>
+          <p className="rounded-brand bg-surface-muted p-3 text-sm text-text-muted">Courier fee condition: base fee covers up to 1 kg; each kg above that adds the configured extra charge. The courier account is created with ৳0 balance.</p>
+          <button disabled={pending} className="button w-full">{pending ? "Adding…" : "Add courier"}</button>
+        </form>
+      </Modal>
 
       <Modal isOpen={editing !== null} onClose={closeEditor}>
         {editing && (

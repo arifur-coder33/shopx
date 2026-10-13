@@ -21,9 +21,6 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
   return (
     <div
       role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 transition-opacity duration-300 ease-in-out sm:p-4 ${
         isOpen ? "opacity-100" : "opacity-0"
       }`}
@@ -38,6 +35,7 @@ const Modal = ({ isOpen, onClose, children, isLoading }) => {
       >
         {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
           aria-label="Close dialog"
           className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted text-text-muted hover:text-text"

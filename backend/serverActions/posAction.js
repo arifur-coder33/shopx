@@ -10,6 +10,7 @@ import { notifyOrderCreated } from "@/backend/services/orderRealtimeService";
 import { firePurchaseServer } from "@/backend/serverActions/SocialPurchaseEventAction";
 import { generateCode } from "../utils/generateCode";
 import { actionError, requireProcurementPermission } from "../utils/procurement";
+import { findSearchProducts } from "../utils/findSearchProducts";
 
 const clean = (value) => String(value || "").trim();
 const DHAKA_OFFSET = 6 * 60 * 60 * 1000;
@@ -79,6 +80,7 @@ export async function getPosSales(params = {}) {
           paymentStatus: true,
           status: true,
           note: true,
+          user: { select: { name: true } },
           createdAt: true,
           orderItems: { select: { id: true, productName: true, sku: true, quantity: true, price: true } },
           deliveries: { take: 1, select: { warehouse: { select: { name: true, address: true } } } },
@@ -118,13 +120,67 @@ export async function searchPosProducts({ warehouseId, query = "", page = 1 }) {
     const currentPage = Math.max(1, Number(page) || 1);
     const limit = 12;
     if (!selectedWarehouseId) throw new Error("Select a warehouse first.");
+    const select = {
+      id: true,
+      available: true,
+      variation: {
+        select: {
+          id: true,
+          sku: true,
+          regularPrice: true,
+          discountPrice: true,
+          weight: true,
+          product: { select: { id: true, title: true, productCode: true, thumbnail: { select: { name: true } } } },
+        },
+      },
+    };
+    const baseWhere = { warehouseId: selectedWarehouseId, available: { gt: 0 } };
+    // Scanners usually type the SKU and finish with Enter. Resolve the exact
+    // SKU first so it cannot be hidden by the normal search pagination.
+    if (search) {
+      const exactSku = await prisma.stock.findFirst({
+        where: { ...baseWhere, variation: { is: { sku: { equals: search, mode: "insensitive" } } } },
+        select,
+      });
+      if (exactSku) {
+        return { success: true, data: [exactSku], barcodeMatch: "sku", pagination: { page: 1, total: 1, totalPages: 1 } };
+      }
+    }
+    const productCodeStocks = search ? await prisma.stock.findMany({
+      where: {
+        ...baseWhere,
+        variation: {
+          is: {
+            product: {
+              is: { productCode: { equals: search, mode: "insensitive" } },
+            },
+          },
+        },
+      },
+      take: 2,
+      select,
+    }) : [];
+    if (productCodeStocks.length === 1) {
+      return { success: true, data: productCodeStocks, barcodeMatch: "productCode", pagination: { page: 1, total: 1, totalPages: 1 } };
+    }
+    const matchingProducts = search ? await findSearchProducts(search, { id: true }, 50) : [];
+    const matchingProductIds = matchingProducts.map((product) => product.id);
     const where = {
-      warehouseId: selectedWarehouseId,
-      available: { gt: 0 },
+      ...baseWhere,
       ...(search && {
         OR: [
           { variation: { is: { sku: { contains: search, mode: "insensitive" } } } },
           { variation: { is: { product: { is: { title: { contains: search, mode: "insensitive" } } } } } },
+          {
+            variation: {
+              is: {
+                product: {
+                  is: { productCode: { equals: search, mode: "insensitive" } },
+                },
+              },
+            },
+          },
+          ...(matchingProductIds.length ? [{ variation: { is: { productId: { in: matchingProductIds } } } }] : []),
         ],
       }),
     };
@@ -134,26 +190,14 @@ export async function searchPosProducts({ warehouseId, query = "", page = 1 }) {
         skip: (currentPage - 1) * limit,
         take: limit,
         orderBy: { updatedAt: "desc" },
-        select: {
-          id: true,
-          available: true,
-          variation: {
-            select: {
-              id: true,
-              sku: true,
-              regularPrice: true,
-              discountPrice: true,
-              weight: true,
-              product: { select: { id: true, title: true, productCode: true } },
-            },
-          },
-        },
+        select,
       }),
       prisma.stock.count({ where }),
     ]);
     return {
       success: true,
       data: stocks,
+      ...(productCodeStocks.length > 1 && { barcodeMatch: "ambiguous" }),
       pagination: {
         page: currentPage,
         total,
@@ -169,55 +213,20 @@ export async function getPosPageData(params = {}) {
   try {
     await requireProcurementPermission("pos", params.tab === "sales" ? "view" : "create");
     const warehouseId = clean(params.warehouseId);
-    const productName = clean(params.productName);
-    const sku = clean(params.sku);
-    const page = Math.max(1, Number(params.page) || 1);
-    const limit = 12;
     const warehouses = await prisma.warehouse.findMany({
       orderBy: [{ isDefault: "desc" }, { name: "asc" }],
       select: { id: true, code: true, name: true, address: true, isDefault: true },
     });
     if (!warehouseId) {
-      return { success: true, data: { warehouses, stocks: [], accounts: [], couriers: [], siteSetting: null }, pagination: { page: 1, total: 0, totalPages: 1 }, filters: params };
+      return { success: true, data: { warehouses, stocks: [], accounts: [], couriers: [], manualCouriers: [], siteSetting: null }, pagination: { page: 1, total: 0, totalPages: 1 }, filters: params };
     }
     if (!warehouses.some((warehouse) => warehouse.id === warehouseId)) {
       throw new Error("Selected warehouse was not found.");
     }
     if (params.tab === "sales") {
-      return { success: true, data: { warehouses, stocks: [], accounts: [], couriers: [], siteSetting: null }, pagination: { page: 1, total: 0, totalPages: 1 }, filters: params };
+      return { success: true, data: { warehouses, stocks: [], accounts: [], couriers: [], manualCouriers: [], siteSetting: null }, pagination: { page: 1, total: 0, totalPages: 1 }, filters: params };
     }
-    const where = {
-      warehouseId,
-      available: { gt: 0 },
-      ...((sku || productName) && {
-        AND: [
-          ...(sku ? [{ variation: { is: { sku: { contains: sku, mode: "insensitive" } } } }] : []),
-          ...(productName ? [{ variation: { is: { product: { is: { title: { contains: productName, mode: "insensitive" } } } } } }] : []),
-        ],
-      }),
-    };
-    const [stocks, total, accounts, providerRows, siteSetting] = await Promise.all([
-      prisma.stock.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { updatedAt: "desc" },
-        select: {
-          id: true,
-          available: true,
-          variation: {
-            select: {
-              id: true,
-              sku: true,
-              regularPrice: true,
-              discountPrice: true,
-              weight: true,
-              product: { select: { id: true, title: true, productCode: true } },
-            },
-          },
-        },
-      }),
-      prisma.stock.count({ where }),
+    const [accounts, providerRows, siteSetting] = await Promise.all([
       prisma.moneyAccount.findMany({
         where: {
           isActive: true,
@@ -235,8 +244,16 @@ export async function getPosPageData(params = {}) {
         select: { name: true, slogan: true, phoneNumber1: true, phoneNumber2: true, adress1: true, adress2: true, email: true },
       }),
     ]);
+    const manualCouriers = providerRows
+      .filter((provider) => provider.isActive && provider.code !== "MANUAL")
+      .map((provider) => ({
+        id: provider.id,
+        name: provider.name,
+        adapterKey: provider.adapterKey,
+        deliveryFeeConfig: provider.adapterKey === "MANUAL" ? provider.nonSecretConfig || {} : null,
+      }));
     const couriers = providerRows
-      .filter((provider) => getProviderRuntimeConfiguration("courier", provider).ready)
+      .filter((provider) => provider.adapterKey !== "MANUAL" && getProviderRuntimeConfiguration("courier", provider).ready)
       .map((provider) => ({
         id: provider.id,
         name: provider.name,
@@ -245,8 +262,8 @@ export async function getPosPageData(params = {}) {
       }));
     return {
       success: true,
-      data: { warehouses, stocks, accounts, couriers, siteSetting },
-      pagination: { page, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      data: { warehouses, stocks: [], accounts, couriers, manualCouriers, siteSetting },
+      pagination: { page: 1, total: 0, totalPages: 1 },
       filters: params,
     };
   } catch (error) {
@@ -261,6 +278,8 @@ export async function createPosSale(formData) {
     const warehouseId = clean(values.warehouseId);
     const moneyAccountId = clean(values.moneyAccountId);
     const fulfillment = values.fulfillment === "COURIER" ? "COURIER" : "CUSTOMER_PICKUP";
+    const courierDispatch = values.courierDispatch === "DIRECT" ? "DIRECT" : "QUEUE";
+    const manualEntry = values.manualEntry === "true";
     const requested = JSON.parse(values.items || "[]");
     const quantities = new Map();
     for (const item of requested) {
@@ -276,6 +295,10 @@ export async function createPosSale(formData) {
     if (fulfillment === "COURIER" && !clean(values.courierProviderId)) {
       throw new Error("Select a courier provider.");
     }
+    if (fulfillment === "COURIER" && manualEntry && !clean(values.cn)) {
+      throw new Error("Enter the courier consignment number.");
+    }
+    const seller = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
 
     const sale = await prisma.$transaction(async (tx) => {
       const [warehouse, account, stocks] = await Promise.all([
@@ -328,6 +351,7 @@ export async function createPosSale(formData) {
       const order = await tx.order.create({
         data: {
           orderNo,
+          userId,
           customerName: clean(values.customerName) || "Walk-in customer",
           phoneNumber: clean(values.phoneNumber) || "N/A",
           email: clean(values.email),
@@ -429,6 +453,7 @@ export async function createPosSale(formData) {
           warehouseAddress: warehouse.address,
           accountName: receivedNow > 0 ? account.name : "Courier COD",
           accountType: receivedNow > 0 ? account.type : "COD",
+          sellerName: seller?.name || "Admin",
           subtotal,
           discount,
           deliveryCharge,
@@ -456,6 +481,10 @@ export async function createPosSale(formData) {
       const courierForm = new FormData();
       courierForm.set("courierProviderId", clean(values.courierProviderId));
       courierForm.set("pickupPointId", clean(values.pickupPointId));
+      if (manualEntry) {
+        courierForm.set("manualEntry", "true");
+        courierForm.set("cn", clean(values.cn));
+      }
       courierForm.set("invoice", sale.order.orderNo);
       courierForm.set("name", sale.order.customerName);
       courierForm.set("phone", sale.order.phoneNumber);
@@ -477,7 +506,13 @@ export async function createPosSale(formData) {
     revalidatePath("/admin/accounts");
     return {
       success: true,
-      message: courierWarning ? `Sale completed, but courier booking failed: ${courierWarning}` : `POS sale ${sale.order.orderNo} completed.`,
+      message: courierWarning
+        ? `Sale completed, but courier booking failed: ${courierWarning}`
+        : fulfillment === "COURIER" && courierDispatch === "QUEUE"
+          ? `POS sale ${sale.order.orderNo} confirmed and added to the delivery queue.`
+          : fulfillment === "COURIER"
+            ? `POS sale ${sale.order.orderNo} completed and courier booking submitted.`
+            : `POS sale ${sale.order.orderNo} completed.`,
       data: { orderId: sale.order.id, orderNo: sale.order.orderNo, total: sale.total, receivedNow: sale.receivedNow, codAmount: sale.codAmount, receipt: sale.receipt, courierWarning },
     };
   } catch (error) {

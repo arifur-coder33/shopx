@@ -129,7 +129,9 @@ const DEFINITIONS = {
   },
   courier: {
     MANUAL: {
-      label: "Manual Delivery",
+      // Internal adapter shared by custom courier companies without an API.
+      // There is no built-in, generic Manual Delivery provider record.
+      label: "Manual courier",
       code: "MANUAL",
       integrationAvailable: true,
       accountPolicy: "WHEN_COD",
@@ -407,16 +409,18 @@ export function getProviderAccountType(kind, adapterKey) {
 }
 
 export function getProviderSeedDefinitions(kind) {
-  return Object.entries(DEFINITIONS[kind] || {}).map(([adapterKey, definition], index) => ({
-    name: definition.label,
-    code: definition.code || adapterKey,
-    adapterKey,
-    sortOrder: index,
-    defaultActive: adapterKey === "COD" || adapterKey === "MANUAL",
-    defaultConfig: Object.fromEntries(
-      definition.config.map((field) => [field.key, field.defaultValue ?? ""]),
-    ),
-  }));
+  return Object.entries(DEFINITIONS[kind] || {})
+    .filter(([adapterKey]) => !(kind === "courier" && adapterKey === "MANUAL"))
+    .map(([adapterKey, definition], index) => ({
+      name: definition.label,
+      code: definition.code || adapterKey,
+      adapterKey,
+      sortOrder: index,
+      defaultActive: adapterKey === "COD" || adapterKey === "MANUAL",
+      defaultConfig: Object.fromEntries(
+        definition.config.map((field) => [field.key, field.defaultValue ?? ""]),
+      ),
+    }));
 }
 
 export function prepareProviderCredentialUpdate({

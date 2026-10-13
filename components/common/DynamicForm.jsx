@@ -269,6 +269,7 @@ export default function DynamicForm({
                   name={field.name}
                   defaultValue={data?.[field.name]}
                   multipleSelect={field.multiple}
+                  recommendedSize={field.recommendedSize}
                 />
               );
             case "videos":

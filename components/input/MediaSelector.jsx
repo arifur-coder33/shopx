@@ -187,6 +187,10 @@ const MediaItem = memo(
           className="object-cover w-full h-full transition-transform duration-200 group-hover:scale-105"
         />
 
+        <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 px-1.5 py-1 text-left text-[10px] leading-tight text-white">
+          <span className="block truncate font-medium">{item.displayName || item.name}</span>
+          <span className="block truncate opacity-80">{item.width && item.height ? `${item.width} × ${item.height} px` : "Dimensions unavailable"}{item.sizeBytes ? ` · ${(item.sizeBytes / (1024 * 1024)).toFixed(2)} MB` : ""}</span>
+        </div>
         {/* Selection Indicator */}
         {isSelected && (
           <div className="absolute inset-0 bg-blue-500/50 bg-opacity-40 flex items-center justify-center">

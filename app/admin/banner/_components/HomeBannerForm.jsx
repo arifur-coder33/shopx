@@ -74,7 +74,7 @@ export default function HomePageBannerForm({ data }) {
           colSpan={"full"}
           onChange={(e) => handlemainImagechange(e.target.files[0])}
         /> */}
-        <FileInput defaultValue={data?.image?.name} name={"image"} />
+        <FileInput defaultValue={data?.image?.name} name={"image"} label="Home banner" recommendedSize="1920 × 600 px recommended" />
         {/* <div className="flex gap-6 col-span-full">
           {uploadedMainimage && (
             <div className=" relative">

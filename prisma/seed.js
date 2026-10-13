@@ -105,6 +105,45 @@ async function seedFinanceProviders() {
       }
     }
   }
+
+  // Retire the old generic "Manual Delivery" option. Remove its empty,
+  // unused account safely; keep it inactive when historical records refer
+  // to it. Custom manual couriers are created by name in courier settings.
+  await prisma.courierProvider.updateMany({
+    where: { code: "MANUAL" },
+    data: { isActive: false, updatedBy: "seed" },
+  });
+  const legacyManual = await prisma.courierProvider.findUnique({
+    where: { code: "MANUAL" },
+    include: { moneyAccount: true },
+  });
+  if (legacyManual?.moneyAccount && Number(legacyManual.moneyAccount.balance || 0) === 0) {
+    const accountId = legacyManual.moneyAccount.id;
+    const [orders, shippings, pickupPoints, providerPayments, transactions, supplierPayments, expenses, accountPayments, refunds] = await Promise.all([
+      prisma.order.count({ where: { selectedCourierProviderId: legacyManual.id } }),
+      prisma.shipping.count({ where: { courierProviderId: legacyManual.id } }),
+      prisma.courierPickupPoint.count({ where: { courierProviderId: legacyManual.id } }),
+      prisma.payment.count({ where: { courierProviderId: legacyManual.id } }),
+      prisma.moneyTransaction.count({ where: { OR: [{ fromAccountId: accountId }, { toAccountId: accountId }] } }),
+      prisma.supplierPayment.count({ where: { moneyAccountId: accountId } }),
+      prisma.expense.count({ where: { moneyAccountId: accountId } }),
+      prisma.payment.count({ where: { moneyAccountId: accountId } }),
+      prisma.refund.count({ where: { moneyAccountId: accountId } }),
+    ]);
+    if (![orders, shippings, pickupPoints, providerPayments, transactions, supplierPayments, expenses, accountPayments, refunds].some(Boolean)) {
+      await prisma.$transaction(async (tx) => {
+        await tx.courierProvider.delete({ where: { id: legacyManual.id } });
+        await tx.moneyAccount.delete({ where: { id: accountId } });
+      });
+    } else {
+      // Keep references intact for reports, but remove the unused legacy
+      // account from active account selectors.
+      await prisma.moneyAccount.update({
+        where: { id: accountId },
+        data: { isActive: false, updatedBy: "seed" },
+      });
+    }
+  }
 }
 
 async function seedSocialTrackingSettings() {

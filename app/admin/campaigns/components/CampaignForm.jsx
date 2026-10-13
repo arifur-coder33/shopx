@@ -240,7 +240,7 @@ export default function CampaignForm({ products, categories, paymentGateways, in
       </div>
       <textarea name="description" defaultValue={initialCampaign?.description || ""} placeholder="Campaign description" className={`${inputClass} md:col-span-2`} rows={2} />
       <select name="status" defaultValue={initialCampaign?.status || "DRAFT"} className={inputClass}><option value="DRAFT">Draft</option><option value="PUBLISHED">Active</option><option value="PAUSED">Paused</option><option value="EXPIRED">Expired</option></select>
-      <FileInput name="bannerMedia" label="Campaign banner" defaultValue={initialCampaign?.bannerMedia || undefined} w={320} h={120} />
+      <FileInput name="bannerMedia" label="Campaign banner" recommendedSize="1200 × 450 px recommended" defaultValue={initialCampaign?.bannerMedia || undefined} w={320} h={120} />
       <CampaignInput name="startAt" label="Starts" type="datetime-local" defaultValue={initialCampaign?.startAt ? new Date(initialCampaign.startAt).toISOString().slice(0, 16) : ""} />
       <CampaignInput name="endAt" label="Ends" type="datetime-local" defaultValue={initialCampaign?.endAt ? new Date(initialCampaign.endAt).toISOString().slice(0, 16) : ""} />
       <CampaignInput name="priority" label="Priority" type="number" defaultValue={initialCampaign?.priority ?? 0} />

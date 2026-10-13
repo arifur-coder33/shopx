@@ -1,5 +1,5 @@
 export const categoryFormFields = ({ dropdownList, loadDropDownLists }) => [
-  { type: "file", label: "Thumbnail", name: "thumbnail", colSpan: "4" },
+  { type: "file", label: "Thumbnail", recommendedSize: "600 × 600 px recommended", name: "thumbnail", colSpan: "4" },
   { type: "text", label: "Category Name", name: "name", colSpan: "2" },
   {
     type: "text",
@@ -16,7 +16,7 @@ export const categoryFormFields = ({ dropdownList, loadDropDownLists }) => [
     dropDownLists: dropdownList,
     addForm: "",
   },
-  { type: "file", label: "Category Banner", name: "banner", colSpan: "full" },
+  { type: "file", label: "Category Banner", recommendedSize: "1600 × 600 px recommended", name: "banner", colSpan: "full" },
   { type: "categorySpecifications", label: "Specifications", name: "specifications", colSpan: "full" },
   // {
   //   type: "checkbox",

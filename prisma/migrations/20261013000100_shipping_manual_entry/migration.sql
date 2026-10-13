@@ -1,0 +1,1 @@
+ALTER TABLE "Shipping" ADD COLUMN "isManualEntry" BOOLEAN NOT NULL DEFAULT false;

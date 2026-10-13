@@ -2,114 +2,114 @@
 
 import { uploadImagesAction } from "@/backend/serverActions/fileUploadAction";
 import { useModalContext } from "@/context/ModalContext";
-import { Upload, X } from "lucide-react";
-import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { ImagePlus, Upload, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "react-toastify";
-export default function ImageUploader({ multiple = false, onUpload }) {
+
+async function inspectImage(file) {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new window.Image();
+    image.onload = () => {
+      resolve({ preview: objectUrl, width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onerror = () => resolve({ preview: objectUrl, width: null, height: null });
+    image.src = objectUrl;
+  });
+}
+
+const megabytes = (bytes) => `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+
+export default function FileUploader({ multiple = false, onUpload }) {
   const [images, setImages] = useState([]);
+  const imagesRef = useRef(images);
   const [uploading, setUploading] = useState(false);
   const { closeModal } = useModalContext();
-  const [success, setSuccess] = useState(false);
-  useEffect(() => {
-    if (success) {
-      closeModal();
-    }
-  }, [success, closeModal]);
-  const onDrop = useCallback(
-    (acceptedFiles) => {
-      const newImages = acceptedFiles.map((file) => ({
-        file,
-        preview: URL.createObjectURL(file),
-      }));
 
-      setImages(multiple ? [...images, ...newImages] : newImages);
-    },
-    [images, multiple]
-  );
+  useEffect(() => { imagesRef.current = images; }, [images]);
+  useEffect(() => () => imagesRef.current.forEach(({ preview }) => URL.revokeObjectURL(preview)), []);
+
+  const onDrop = useCallback(async (acceptedFiles) => {
+    const inspected = await Promise.all(acceptedFiles.map(async (file) => ({
+      file,
+      displayName: file.name.replace(/\.[^.]+$/, ""),
+      ...(await inspectImage(file)),
+    })));
+    setImages((current) => {
+      const next = multiple ? [...current, ...inspected] : inspected;
+      if (!multiple) current.forEach(({ preview }) => URL.revokeObjectURL(preview));
+      return next;
+    });
+  }, [multiple]);
+
+  const updateName = (index, displayName) => {
+    setImages((current) => current.map((image, i) => i === index ? { ...image, displayName } : image));
+  };
 
   const removeImage = (index) => {
-    setImages(images.filter((_, i) => i !== index));
+    setImages((current) => {
+      const removed = current[index];
+      if (removed?.preview) URL.revokeObjectURL(removed.preview);
+      return current.filter((_, i) => i !== index);
+    });
   };
 
   const handleUpload = async () => {
-    if (images.length === 0) return;
+    if (!images.length || uploading) return;
     const formData = new FormData();
-    images.forEach(({ file }) => {
+    images.forEach(({ file, displayName }) => {
       formData.append("imageGallery", file);
+      formData.append("imageGalleryName", displayName.trim());
     });
-
     setUploading(true);
     try {
       const result = await uploadImagesAction(formData);
-      setUploading(false);
-      console.log(result);
-
-      if (result.success) {
-        setImages([]);
-        setSuccess(true);
-        toast.success(result.message || "Upload successful!");
-        if (onUpload) {
-          onUpload(new Date());
-        }
-      } else {
-        toast.warn(result.message || "Image not uploaded!");
+      if (!result.success) {
+        toast.error(result.message || "Image upload failed.");
+        return;
       }
+      toast.success(result.message || "Upload successful.");
+      onUpload?.(result.data);
+      images.forEach(({ preview }) => URL.revokeObjectURL(preview));
+      setImages([]);
+      closeModal();
     } catch (error) {
-      console.error("Upload failed:", error);
+      toast.error(error?.message || "Upload failed.");
+    } finally {
       setUploading(false);
     }
   };
 
-  const { getRootProps, getInputProps } = useDropzone({
-    onDrop,
-    accept: { "image/*": [] },
-    multiple: multiple,
-  });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { "image/*": [] }, multiple });
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div
-        {...getRootProps()}
-        className="cursor-pointer p-4 flex flex-col items-center justify-center border-2 border-dashed rounded-lg hover:border-gray-500 bg-gray-100"
-      >
+    <div className="mx-auto flex max-h-[78vh] w-full max-w-4xl flex-col gap-4 p-1">
+      <header><h2 className="text-xl font-bold">Upload media</h2><p className="text-sm text-text-muted">Add a searchable name, then review each image’s dimensions and file size.</p></header>
+      <div {...getRootProps()} className={`cursor-pointer rounded-xl border-2 border-dashed p-7 text-center transition-colors ${isDragActive ? "border-primary bg-primary-soft" : "border-border bg-surface-muted hover:border-primary"}`}>
         <input {...getInputProps()} />
-        <Upload size={40} className="text-gray-500" />
-        <p className="text-gray-500 text-xs">Drag & Drop or Click to Upload</p>
+        <Upload className="mx-auto mb-2 h-8 w-8 text-primary" />
+        <p className="font-medium">{isDragActive ? "Drop images here" : "Drag images here or click to choose"}</p>
+        <p className="mt-1 text-xs text-text-muted">PNG, JPG, WebP and other image formats</p>
       </div>
 
-      {images.length > 0 && (
-        <div className="flex gap-4 flex-wrap">
-          {images.map((img, index) => (
-            <div key={index} className="relative w-24 h-24">
-              <Image
-                src={img.preview}
-                alt="Uploaded preview"
-                className="w-full h-full object-cover rounded-md"
-                height={100}
-                width={100}
-              />
-              <button
-                onClick={() => removeImage(index)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-              >
-                <X size={16} />
-              </button>
+      {images.length > 0 && <div className="grid gap-3 overflow-y-auto sm:grid-cols-2">
+        {images.map((image, index) => (
+          <article key={`${image.file.name}-${index}`} className="flex gap-3 rounded-xl border border-border bg-surface p-3">
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-surface-muted"><img src={image.preview} alt={image.displayName || "Selected image"} className="h-full w-full object-cover" /><button type="button" onClick={() => removeImage(index)} className="absolute right-1 top-1 rounded-full bg-slate-950/75 p-1 text-white" aria-label="Remove image"><X size={14} /></button></div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <label className="block text-xs font-medium">Media name<input maxLength={120} value={image.displayName} onChange={(event) => updateName(index, event.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm" placeholder="Enter a searchable name" /></label>
+              <p className="text-xs text-text-muted">{image.width && image.height ? `${image.width} × ${image.height} px` : "Dimensions unavailable"} · {megabytes(image.file.size)}</p>
+              <p className="truncate text-[11px] text-text-muted" title={image.file.name}>{image.file.name}</p>
             </div>
-          ))}
-        </div>
-      )}
+          </article>
+        ))}
+      </div>}
 
-      {images.length > 0 && (
-        <button
-          onClick={handleUpload}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50"
-          disabled={uploading}
-        >
-          {uploading ? "Uploading..." : "Upload Images"}
-        </button>
-      )}
+      <div className="flex items-center justify-between border-t border-border pt-3">
+        <span className="text-sm text-text-muted">{images.length} image{images.length === 1 ? "" : "s"} selected</span>
+        <button type="button" onClick={handleUpload} disabled={!images.length || uploading || images.some((image) => !image.displayName.trim())} className="button disabled:cursor-not-allowed disabled:opacity-50"><ImagePlus size={17} />{uploading ? "Uploading…" : "Upload"}</button>
+      </div>
     </div>
   );
 }

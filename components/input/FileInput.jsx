@@ -1,6 +1,7 @@
 "use client";
 import { ImagePlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { getAllMediaByIds } from "@/backend/serverActions/fileUploadAction";
 
 // Assuming ImageCustom accepts className and applies it to the underlying img tag
 // or has props for object-fit. We'll add object-cover styling.
@@ -14,6 +15,7 @@ export default function FileInput({
   multipleSelect,
   colSpan = "col-span-full", // Default colSpan
   onImageSelect,
+  recommendedSize,
   w = 96,
   h = 96,
 }) {
@@ -32,6 +34,18 @@ export default function FileInput({
   useEffect(() => {
     setInputValue(images.map((img) => img.id).join(","));
   }, [images]);
+
+  const imageIds = images.map((image) => image?.id).filter(Boolean).join(",");
+  useEffect(() => {
+    if (!imageIds) return;
+    let active = true;
+    getAllMediaByIds(imageIds.split(",")).then(({ data = [] }) => {
+      if (!active || !data.length) return;
+      const byId = new Map(data.map((item) => [item.id, item]));
+      setImages((current) => current.map((image) => ({ ...byId.get(image?.id), ...image })));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [imageIds]);
 
   // Handle image selection from MediaSelector
   const onSelect = (selectedImages) => {
@@ -64,12 +78,12 @@ export default function FileInput({
 
   return (
     <div className={`${colSpan} flex flex-col space-y-2`}>
-      {label && (
+      {(label || recommendedSize) && (
         <label
           htmlFor={name}
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          {label}
+          <span>{label || "Image"}{recommendedSize ? <span className="ml-1 font-normal text-text-muted">({recommendedSize})</span> : null}</span>
         </label>
       )}
 
@@ -93,6 +107,9 @@ export default function FileInput({
               h={h}
               alt={image?.alt || `Selected image ${image?.id}`} // Add alt text
             />
+            <span className="absolute inset-x-0 bottom-0 truncate rounded-b-md bg-slate-950/75 px-1 py-0.5 text-[10px] text-white" title={image?.displayName || image?.name}>
+              {image?.displayName || image?.name}{image?.width && image?.height ? ` · ${image.width}×${image.height}` : ""}{image?.sizeBytes ? ` · ${(image.sizeBytes / (1024 * 1024)).toFixed(2)} MB` : ""}
+            </span>
             <button
               type="button" // Prevent form submission
               onClick={() => removeImage(image?.id)}

@@ -65,7 +65,9 @@ export default function CourierStatus({ details, onCancel, order, status, shopNa
       <div>
         <div className="text-base font-bold  tracking-tighter mb-2">
           Current Courier Status :{" "}
-          {details.courierName !== "Manual Delivery" ? (
+          {details.isManualEntry ? (
+            <span className="rounded-3xl bg-slate-200 px-2">Manual CN entry · status sync unavailable</span>
+          ) : details.courierName !== "Manual Delivery" ? (
             <GetCourierStatus
               courierId={details.cn}
               courierProviderId={details.courierProviderId}

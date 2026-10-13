@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 export default function CourierManagement({ order, status, setStatus, shopName }) {
   const [view, setView] = useState(order?.shipping ? "status" : "list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
+  const [manualEntry, setManualEntry] = useState(Boolean(order?.shipping?.isManualEntry));
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [courierDetails, setCourierDetails] = useState(order?.shipping || null);
@@ -38,6 +39,7 @@ export default function CourierManagement({ order, status, setStatus, shopName }
     const formData = new FormData(form);
     formData.append("courierProviderId", selectedCourier.id);
     formData.append("invoice", order?.orderNo);
+    if (manualEntry) formData.set("manualEntry", "true");
     const response = await createCourierDeliveryAction({ formData });
 
     if (response.success) {
@@ -104,7 +106,7 @@ export default function CourierManagement({ order, status, setStatus, shopName }
         </h3>
         {view === "form" && hasUIPermission(permissions, "order", "update") && (
           <button
-            onClick={() => setView("list")}
+            onClick={() => { setView("list"); setManualEntry(false); }}
             className="text-xs font-bold text-red-600 uppercase"
           >
             <Undo2 /> Back
@@ -125,8 +127,9 @@ export default function CourierManagement({ order, status, setStatus, shopName }
           hasUIPermission(permissions, "order", "update") &&
           (view === "list" ? (
             <CourierSelector
-              onSelect={(c) => {
+              onSelect={(c, isManualEntry = false) => {
                 setSelectedCourier(c);
+                setManualEntry(isManualEntry);
                 setView("form");
               }}
               activeCourierId={courierDetails?.courierProviderId}
@@ -137,6 +140,7 @@ export default function CourierManagement({ order, status, setStatus, shopName }
               data={data}
               onSubmit={handleCreate}
               loading={loading}
+              manualEntry={manualEntry}
             />
           ))
         )}

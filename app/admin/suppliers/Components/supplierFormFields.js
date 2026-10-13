@@ -31,6 +31,7 @@ export const supplierFormFields = () => [
   {
     type: "file",
     label: "Documnent Upload",
+    recommendedSize: "A4 scan, about 1240 × 1754 px",
     multiple: true,
     name: "documents",
     colSpan: "full",

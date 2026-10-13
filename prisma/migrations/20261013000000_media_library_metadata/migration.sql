@@ -1,0 +1,5 @@
+ALTER TABLE "Media"
+ADD COLUMN "displayName" TEXT,
+ADD COLUMN "width" INTEGER,
+ADD COLUMN "height" INTEGER,
+ADD COLUMN "sizeBytes" INTEGER;

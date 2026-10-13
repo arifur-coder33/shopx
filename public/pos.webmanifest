@@ -1,0 +1,22 @@
+{
+  "id": "/admin/pos-app",
+  "name": "Shopzy POS",
+  "short_name": "POS",
+  "description": "Shopzy point of sale",
+  "start_url": "/admin/pos?source=installed-pos",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "categories": ["business", "shopping"],
+  "icons": [
+    { "src": "/pos-app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pos-app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/pos-app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New sale", "short_name": "New sale", "url": "/admin/pos", "icons": [{ "src": "/pos-app-icon-192.png", "sizes": "192x192" }] },
+    { "name": "Sales history", "short_name": "Sales", "url": "/admin/pos?tab=sales", "icons": [{ "src": "/pos-app-icon-192.png", "sizes": "192x192" }] }
+  ]
+}

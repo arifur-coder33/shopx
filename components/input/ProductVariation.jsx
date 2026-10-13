@@ -871,6 +871,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                                   <FileInput
                                     multipleSelect={false}
                                     defaultValue={row.image}
+                                    recommendedSize="800 × 800 px recommended"
                                     onImageSelect={(selectedImages) =>
                                       handleImageChange(
                                         selectedImages,

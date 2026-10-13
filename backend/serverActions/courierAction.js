@@ -15,7 +15,7 @@ export async function getAvailableCourierProvidersForOrder() {
   try {
     await requireProcurementPermission("order", "view");
     const providers = await prisma.courierProvider.findMany({
-      where: { isActive: true },
+      where: { isActive: true, NOT: { code: "MANUAL" } },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -35,16 +35,43 @@ export async function getAvailableCourierProvidersForOrder() {
         (provider) =>
           getProviderRuntimeConfiguration("courier", provider).ready,
       )
-      .map(({ id, name, code, adapterKey, pickupPoints }) => ({
+      .map(({ id, name, code, adapterKey, pickupPoints, nonSecretConfig }) => ({
         id,
         name,
         code,
         adapterKey,
         pickupPoints,
+        deliveryFeeConfig: adapterKey === "MANUAL" ? nonSecretConfig || {} : null,
       }));
     return { success: true, data };
   } catch (error) {
     return actionError(error, "Failed to load couriers.");
+  }
+}
+
+export async function getCourierProvidersForManualEntryAction() {
+  try {
+    await requireProcurementPermission("order", "view");
+    const providers = await prisma.courierProvider.findMany({
+      where: { isActive: true, NOT: { code: "MANUAL" } },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        adapterKey: true,
+        nonSecretConfig: true,
+      },
+    });
+    return {
+      success: true,
+      data: providers.map(({ nonSecretConfig, ...provider }) => ({
+        ...provider,
+        deliveryFeeConfig: provider.adapterKey === "MANUAL" ? nonSecretConfig || {} : null,
+      })),
+    };
+  } catch (error) {
+    return actionError(error, "Failed to load courier list for manual entry.");
   }
 }
 
@@ -90,11 +117,15 @@ export async function createCourierDeliveryAction({ formData }) {
       where: { id: data.courierProviderId },
       include: { moneyAccount: true },
     });
+    if (!provider || !provider.isActive) {
+      throw new Error("Selected courier is unavailable.");
+    }
+    const manualEntry = data.manualEntry === "true";
     const providerConfiguration = getProviderRuntimeConfiguration(
       "courier",
       provider,
     );
-    if (!providerConfiguration.ready) {
+    if (!manualEntry && !providerConfiguration.ready) {
       throw new Error("Selected courier is unavailable or not fully configured.");
     }
     const courierName = provider.adapterKey;
@@ -107,16 +138,16 @@ export async function createCourierDeliveryAction({ formData }) {
           select: { id: true, name: true, address: true, storeId: true },
         })
       : null;
-    if (data.pickupPointId && !pickupPoint) {
+    if (!manualEntry && data.pickupPointId && !pickupPoint) {
       throw new Error("The selected pickup point does not belong to this courier.");
     }
-    if (courierName === "PATHAO" && !pickupPoint?.storeId) {
+    if (!manualEntry && courierName === "PATHAO" && !pickupPoint?.storeId) {
       throw new Error("Create and select a Pathao pickup point before booking.");
     }
 
     const pathaoStoreId = pickupPoint?.storeId ? Number(pickupPoint.storeId) : null;
     if (
-      courierName === "PATHAO" &&
+      !manualEntry && courierName === "PATHAO" &&
       (!Number.isInteger(pathaoStoreId) || pathaoStoreId <= 0)
     ) {
       throw new Error("The selected Pathao pickup point has an invalid Store ID.");
@@ -124,7 +155,29 @@ export async function createCourierDeliveryAction({ formData }) {
 
     let courierData = {};
     let orderResponseData = null;
-    switch (courierName) {
+    if (manualEntry) {
+      const cn = String(data.cn || "").trim();
+      if (!cn) throw new Error("Enter the consignment number from the courier.");
+      let deliveryFee;
+      if (courierName === "MANUAL") {
+        const config = providerConfiguration.config;
+        const location = `${data.city || ""} ${data.address || ""}`.toLowerCase();
+        const insideDhaka = location.includes("dhaka") || location.includes("ঢাকা");
+        const baseFee = Number(insideDhaka ? config.insideDhakaCharge : config.outsideDhakaCharge) || 0;
+        const weight = Math.max(0, Number(data.weight) || 0);
+        deliveryFee = baseFee + Math.max(0, Math.ceil(weight - 1)) * (Number(config.additionalKgCharge) || 0);
+      }
+      orderResponseData = {
+        cn,
+        status: "MANUALLY_BOOKED",
+        date: new Date().toLocaleDateString(),
+        courierName: provider.name,
+        storeName: pickupPoint?.name || "",
+        deliveryFee,
+        merchantOrderId: data.invoice,
+        isManualEntry: true,
+      };
+    } else switch (courierName) {
       case "PATHAO":
         courierData = {
           store_id: pathaoStoreId,
@@ -151,7 +204,7 @@ export async function createCourierDeliveryAction({ formData }) {
             cn: response.data?.consignment_id,
             status: response.data.order_status,
             date: new Date().toLocaleDateString(),
-            courierName: "Pathao",
+            courierName: provider.name,
             storeName: pickupPoint.name,
             deliveryFee: response.data.delivery_fee,
             merchantOrderId: response.data.merchant_order_id,
@@ -193,6 +246,25 @@ export async function createCourierDeliveryAction({ formData }) {
         }
 
         break;
+      case "MANUAL": {
+        const config = providerConfiguration.config;
+        const location = `${data.city || ""} ${data.address || ""}`.toLowerCase();
+        const insideDhaka = location.includes("dhaka") || location.includes("ঢাকা");
+        const baseFee = Number(insideDhaka ? config.insideDhakaCharge : config.outsideDhakaCharge) || 0;
+        const weight = Math.max(0, Number(data.weight) || 0);
+        const additionalKg = Math.max(0, Math.ceil(weight - 1));
+        const deliveryFee = baseFee + additionalKg * (Number(config.additionalKgCharge) || 0);
+        orderResponseData = {
+          cn: data?.cn || "N/A",
+          status: "READY_TO_SHIP",
+          date: new Date().toLocaleDateString(),
+          courierName: provider.name,
+          storeName: pickupPoint?.name || "",
+          deliveryFee,
+          merchantOrderId: data.invoice || "N/A",
+        };
+        break;
+      }
       default:
         orderResponseData = {
           cn: data?.cn || "N/A",
@@ -214,6 +286,7 @@ export async function createCourierDeliveryAction({ formData }) {
         cn: orderResponseData.cn,
         courierName: orderResponseData.courierName,
         courierProviderId: provider.id,
+        isManualEntry: Boolean(orderResponseData.isManualEntry),
         deliveryFee: orderResponseData?.deliveryFee,
         cod: Number(data.price) || 0,
       },
@@ -222,6 +295,7 @@ export async function createCourierDeliveryAction({ formData }) {
         cn: orderResponseData.cn,
         courierName: orderResponseData.courierName,
         courierProviderId: provider.id,
+        isManualEntry: Boolean(orderResponseData.isManualEntry),
         deliveryFee: orderResponseData?.deliveryFee,
         cod: Number(data.price) || 0,
       },
@@ -258,6 +332,7 @@ export async function createCourierDeliveryAction({ formData }) {
       success: true,
       data: {
         ...(shippingdata || courierData),
+        isManualEntry: Boolean(orderResponseData.isManualEntry),
         status: orderResponseData.status || "in_review",
         ...(orderResponseData.trackingCode ? { trackingCode: orderResponseData.trackingCode } : {}),
         ...(orderResponseData.trackingLink ? { trackingLink: orderResponseData.trackingLink } : {}),

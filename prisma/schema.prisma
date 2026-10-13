@@ -143,7 +143,11 @@ model Media {
   id                        String             @id @default(cuid())
   url                       String
   name                      String
+  displayName               String?
   host                      String
+  width                     Int?
+  height                    Int?
+  sizeBytes                 Int?
   categoryThumbnail         Category[]         @relation(name: "categoryThumbnail")
   categoryBanner            Category[]         @relation(name: "categoryBanner")
   // Reverse relations
@@ -518,6 +522,7 @@ model Shipping {
   courierName            String?
   courierProviderId      String?
   courierProvider        CourierProvider? @relation(fields: [courierProviderId], references: [id])
+  isManualEntry          Boolean          @default(false)
   deliveryFee            Float?
   cod                    Float?
   codCollectedAt         DateTime?

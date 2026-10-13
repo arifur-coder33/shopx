@@ -184,6 +184,7 @@ export async function getProviderConfiguration(kind, params = {}) {
     const supportedAdapters = adapterDefinitions.map((adapter) => adapter.key);
     const where = {
       adapterKey: { in: supportedAdapters },
+      ...(kind === "courier" && { NOT: { code: "MANUAL" } }),
       ...(params.name && {
         name: { contains: String(params.name), mode: "insensitive" },
       }),
@@ -233,6 +234,113 @@ export async function getProviderConfiguration(kind, params = {}) {
     };
   } catch (error) {
     return actionError(error, "Failed to load provider configuration.");
+  }
+}
+
+const manualCourierConfig = (values) => {
+  const charge = (key, fallback) => {
+    const parsed = values[key] === undefined || values[key] === "" ? fallback : Number(values[key]);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1_000_000_000) {
+      throw new Error(`Enter a valid non-negative ${key.replaceAll(/([A-Z])/g, " $1").toLowerCase()}.`);
+    }
+    return String(parsed);
+  };
+  return {
+    supportsCod: values.supportsCod !== "false",
+    insideDhakaCharge: charge("insideDhakaCharge", 100),
+    outsideDhakaCharge: charge("outsideDhakaCharge", 120),
+    additionalKgCharge: charge("additionalKgCharge", 20),
+  };
+};
+
+const manualCourierCode = (name) => {
+  const base = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 35);
+  return base || "COURIER";
+};
+
+export async function createManualCourierProvider(formData) {
+  try {
+    const userId = await requireProcurementPermission("provider", "create");
+    const values = Object.fromEntries(formData.entries());
+    const name = String(values.name || "").trim();
+    if (!name || name.length > 100) return { success: false, message: "Courier name must contain 1–100 characters." };
+    const nonSecretConfig = manualCourierConfig(values);
+    const codeBase = manualCourierCode(name);
+    const code = await prisma.$transaction(async (tx) => {
+      let candidate = codeBase;
+      let suffix = 2;
+      while (await tx.courierProvider.findUnique({ where: { code: candidate }, select: { id: true } })) {
+        candidate = `${codeBase.slice(0, 38)}_${suffix++}`;
+      }
+      const account = await tx.moneyAccount.create({
+        data: {
+          name,
+          type: "COURIER",
+          accountNumber: `PROVIDER:COURIER:${candidate}`,
+          isActive: true,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.courierProvider.create({
+        data: {
+          name,
+          code: candidate,
+          adapterKey: "MANUAL",
+          isActive: true,
+          sortOrder: Math.trunc(toNumber(values.sortOrder, 0)),
+          moneyAccountId: account.id,
+          nonSecretConfig,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      return candidate;
+    });
+    refresh(PROVIDER_CONFIG.courier.path);
+    return { success: true, message: `${name} added with an active courier account.`, data: { code } };
+  } catch (error) {
+    return actionError(error, "Failed to add manual courier.");
+  }
+}
+
+export async function deleteManualCourierProvider(providerId) {
+  try {
+    await requireProcurementPermission("provider", "delete");
+    const provider = await prisma.courierProvider.findUnique({
+      where: { id: providerId },
+      include: { moneyAccount: true },
+    });
+    if (!provider || provider.adapterKey !== "MANUAL" || provider.code === "MANUAL") {
+      return { success: false, message: "Only custom manual couriers can be deleted." };
+    }
+    const account = provider.moneyAccount;
+    if (!account || Math.abs(Number(account.balance || 0)) > 0.000001) {
+      return { success: false, message: "The courier account balance must be 0 before deleting this courier." };
+    }
+    const [orders, shippings, pickupPoints, providerPayments, transactions, supplierPayments, expenses, payments, refunds] = await Promise.all([
+      prisma.order.count({ where: { selectedCourierProviderId: provider.id } }),
+      prisma.shipping.count({ where: { courierProviderId: provider.id } }),
+      prisma.courierPickupPoint.count({ where: { courierProviderId: provider.id } }),
+      prisma.payment.count({ where: { courierProviderId: provider.id } }),
+      prisma.moneyTransaction.count({ where: { OR: [{ fromAccountId: account.id }, { toAccountId: account.id }] } }),
+      prisma.supplierPayment.count({ where: { moneyAccountId: account.id } }),
+      prisma.expense.count({ where: { moneyAccountId: account.id } }),
+      prisma.payment.count({ where: { moneyAccountId: account.id } }),
+      prisma.refund.count({ where: { moneyAccountId: account.id } }),
+    ]);
+    if (orders || shippings || pickupPoints || providerPayments || transactions || supplierPayments || expenses || payments || refunds) {
+      return { success: false, message: "This courier has order, pickup, or financial history. Disable it to preserve those records." };
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.courierProvider.delete({ where: { id: provider.id } });
+      await tx.moneyAccount.delete({ where: { id: account.id } });
+    });
+    refresh(PROVIDER_CONFIG.courier.path);
+    return { success: true, message: `${provider.name} and its zero-balance account were deleted.` };
+  } catch (error) {
+    return actionError(error, "Failed to delete manual courier.");
   }
 }
 

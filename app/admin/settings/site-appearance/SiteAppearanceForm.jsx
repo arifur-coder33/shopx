@@ -129,7 +129,7 @@ export default function SiteAppearanceForm({ initialSettings }) {
               <span className="text-sm text-text-muted">Current legacy logo. Selecting a new logo will replace it.</span>
             </div>
           )}
-          <FileInput name="logo" label="Logo image" defaultValue={initialSettings.logoMedia} w={128} h={128} />
+          <FileInput name="logo" label="Logo image" recommendedSize="500 × 500 px recommended" defaultValue={initialSettings.logoMedia} w={128} h={128} />
           {initialSettings.logo && (
             <label className="mt-3 flex items-center gap-2 text-sm text-danger">
               <input type="checkbox" name="removeLogo" value="true" disabled={disabled} /> Remove current logo
@@ -138,7 +138,7 @@ export default function SiteAppearanceForm({ initialSettings }) {
           <div className="my-5 border-t border-border" />
           <h3 className="mb-1 font-bold">Favicon</h3>
           <p className="mb-3 text-sm text-text-muted">Use a square PNG, JPG or WebP image. Recommended size: 64×64 pixels or larger.</p>
-          <FileInput name="favicon" label="Favicon image" defaultValue={initialSettings.faviconMedia} w={64} h={64} />
+          <FileInput name="favicon" label="Favicon image" recommendedSize="64 × 64 px or larger" defaultValue={initialSettings.faviconMedia} w={64} h={64} />
           {initialSettings.favicon && (
             <label className="mt-3 flex items-center gap-2 text-sm text-danger">
               <input type="checkbox" name="removeFavicon" value="true" disabled={disabled} /> Remove current favicon
