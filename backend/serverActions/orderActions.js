@@ -20,6 +20,7 @@ import { getUserId, hasPermission } from "../utils/hasPermission";
 import { addOrderTimeline } from "./orderTimelineActin";
 import { firePurchaseServer } from "./SocialPurchaseEventAction";
 import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyPaymentDeliveryCampaign, applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority } from "@/backend/services/campaignService";
+import { CUSTOMER_ORDER_STATUS_GROUPS } from "@/lib/customerOrderStatus";
 function compatibleCampaigns(campaigns, selectedCampaigns) {
   if (!selectedCampaigns.length) return campaigns;
   const selectedIds = new Set(selectedCampaigns.map((campaign) => campaign.id));
@@ -27,19 +28,7 @@ function compatibleCampaigns(campaigns, selectedCampaigns) {
   return campaigns.filter((campaign) => selectedIds.has(campaign.id) || (canStack && campaign.stackable === true && campaign.exclusive !== true));
 }
 
-const statusMap = {
-  all: null, // no filter
-  running: [
-    "PENDING",
-    "PROCESSING",
-    "READY_TO_SHIP",
-    "SHIPPED",
-    "DELIVERY_FAILED",
-  ],
-  cancelled: ["CANCELLED", "FAILED_RETURNING", "FAILED_RETURN_RECEIVED"],
-  delivered: ["DELIVERED", "RETURNING", "RETURNED"],
-  refunded: ["REFUNDING", "REFUNDED"],
-};
+const statusMap = CUSTOMER_ORDER_STATUS_GROUPS;
 // export async function createOrder(formData) {
 //   const h = await headers();
 //   const ip = getIP(h);
@@ -1270,6 +1259,7 @@ export async function processRefundAction({ orderId, method, trxId, note }) {
 }
 
 export async function getOrderCountsbyUserId(userId) {
+  if (!userId) return { all: 0, running: 0, delivered: 0, cancelled: 0, refunded: 0 };
   const allOrders = await prisma.order.groupBy({
     by: ["status"],
     where: { userId },
@@ -1288,17 +1278,8 @@ export async function getOrderCountsbyUserId(userId) {
   allOrders.forEach((o) => {
     counts.all += o._count.status;
 
-    // Map Prisma enum to dashboard category
-    if (
-      ["PENDING", "PROCESSING", "READY_TO_SHIP", "SHIPPED"].includes(o.status)
-    ) {
-      counts.running += o._count.status;
-    } else if (o.status === "DELIVERED") {
-      counts.delivered += o._count.status;
-    } else if (o.status === "CANCELLED") {
-      counts.cancelled += o._count.status;
-    } else if (["REFUNDING", "REFUNDED"].includes(o.status)) {
-      counts.refunded += o._count.status;
+    for (const [group, statuses] of Object.entries(CUSTOMER_ORDER_STATUS_GROUPS)) {
+      if (group !== "all" && statuses?.includes(o.status)) counts[group] += o._count.status;
     }
   });
 

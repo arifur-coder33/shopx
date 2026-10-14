@@ -4,6 +4,7 @@ import { searchBarcodeProducts } from "@/backend/serverActions/barcodePrintActio
 import JsBarcode from "jsbarcode";
 import { Barcode, Minus, Plus, Printer, Search, Trash2 } from "lucide-react";
 import { playScanBeep } from "@/utils/playScanBeep";
+import Imagecustom from "@/components/images/ImageCustom";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -113,15 +114,22 @@ export default function BarcodePrintPage() {
         <div className="rounded-xl border border-border bg-surface px-4 py-2 text-right"><strong className="block text-lg text-text">{labelCount}</strong><span className="text-xs text-text-muted">labels to print</span></div>
       </header>
 
-      <section className="card space-y-3">
+      <section className="card space-y-3 overflow-visible">
         <label htmlFor="barcode-product-search" className="text-sm font-bold text-text">Add products</label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-          <input id="barcode-product-search" autoFocus value={search} onChange={(event) => setSearch(event.target.value)} className={`${fieldClass} pl-10`} placeholder="Search product name or scan barcode…" autoComplete="off" />
-          {search.trim().length >= 2 && <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-xl border border-border bg-surface shadow-xl">
-            {loading ? <p className="p-3 text-sm text-text-muted">Searching products…</p> : searchError ? <p className="p-3 text-sm text-red-600">{searchError}</p> : results.length ? results.map((product) => <button key={product.id} type="button" onClick={() => addProduct(product)} className="flex w-full items-center justify-between gap-3 border-b border-border p-3 text-left last:border-0 hover:bg-surface-muted"><span className="min-w-0"><strong className="block truncate text-sm text-text">{product.title}</strong><small className="text-text-muted">SKU: {product.sku}</small></span><Plus className="h-4 w-4 shrink-0 text-primary" /></button>) : <p className="p-3 text-sm text-text-muted">No matching products.</p>}
-          </div>}
+        <div className="flex min-h-12 items-center overflow-hidden rounded-brand border border-border bg-background shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+          <Search className="ml-3 h-5 w-5 shrink-0 text-text-muted" />
+          <input id="barcode-product-search" autoFocus value={search} onChange={(event) => { setSearch(event.target.value); setResults([]); setSearchError(""); setLoading(event.target.value.trim().length >= 2); }} className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 py-3 text-sm text-text outline-none placeholder:text-text-muted focus:ring-0" placeholder="Search product name or scan barcode…" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={search.trim().length >= 2} />
         </div>
+        {search.trim().length >= 2 && <div className="max-h-80 space-y-1 overflow-y-auto rounded-brand border border-border bg-surface p-1.5 shadow-lg" role="listbox" aria-label="Product search results">
+          {loading ? <div className="flex items-center gap-3 px-3 py-4 text-sm text-text-muted"><span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />Searching products…</div>
+            : searchError ? <p className="px-3 py-5 text-center text-sm text-red-600">{searchError}</p>
+              : results.length ? results.map((product) => <button key={product.id} type="button" role="option" onClick={() => addProduct(product)} className="flex min-h-16 w-full items-center gap-3 rounded-brand px-2 py-2 text-left transition hover:bg-primary-soft">
+                {product.thumbnail ? <Imagecustom w={48} h={48} src={product.thumbnail} alt={product.title} className="h-12 w-12 shrink-0 rounded-md border border-border object-cover" unoptimized /> : <div className="h-12 w-12 shrink-0 rounded-md bg-surface-muted" />}
+                <span className="line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-5 text-text">{product.title}<small className="mt-0.5 block truncate text-xs text-text-muted">SKU: {product.sku}</small></span>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-primary"><Plus className="h-4 w-4" /></span>
+              </button>)
+                : <p className="px-3 py-5 text-center text-sm text-text-muted">No matching products.</p>}
+        </div>}
         <p className="text-xs text-text-muted">Barcode scanner দিয়ে SKU scan করলে product নিজে থেকেই list-এ যোগ হবে। একই SKU আবার scan করলে label count এক বাড়বে।</p>
       </section>
 

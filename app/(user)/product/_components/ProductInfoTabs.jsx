@@ -1,24 +1,28 @@
 "use client";
 
 import { useRef, useState } from "react";
+import PhotoReviewCarousel from "@/components/reviews/PhotoReviewCarousel";
 
-export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos }) {
+export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos, reviews = [], reviewSubtitle }) {
   const [activeTab, setActiveTab] = useState("description");
   const descriptionRef = useRef(null);
   const specificationsRef = useRef(null);
   const videosRef = useRef(null);
   const photosRef = useRef(null);
+  const reviewsRef = useRef(null);
+  const hasReviews = reviews.length > 0;
 
   const selectTab = (tab) => {
     setActiveTab(tab);
     requestAnimationFrame(() => {
-      const target = tab === "description"
-        ? descriptionRef.current
-        : tab === "specifications"
-          ? specificationsRef.current
-          : tab === "videos"
-            ? videosRef.current
-            : photosRef.current;
+      const targets = {
+        description: descriptionRef,
+        specifications: specificationsRef,
+        videos: videosRef,
+        photos: photosRef,
+        reviews: reviewsRef,
+      };
+      const target = targets[tab]?.current;
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   };
@@ -92,6 +96,22 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
             আরও ছবি
           </button>
         )}
+        {hasReviews && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "reviews"}
+            aria-controls="product-reviews"
+            onClick={() => selectTab("reviews")}
+            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors sm:px-6 sm:text-base ${
+              activeTab === "reviews"
+                ? "border-primary text-primary"
+                : "border-transparent text-text-muted hover:text-text"
+            }`}
+          >
+            Review
+          </button>
+        )}
       </div>
 
       <div ref={descriptionRef} id="product-description-panel" role="tabpanel" className="scroll-mt-24">
@@ -104,6 +124,16 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
       )}
       {videos && <div ref={videosRef} className="scroll-mt-24">{videos}</div>}
       {photos && <div ref={photosRef} className="scroll-mt-24">{photos}</div>}
+      {hasReviews && (
+        <div ref={reviewsRef} id="product-reviews" role="tabpanel" className="scroll-mt-24">
+          <PhotoReviewCarousel
+            reviews={reviews}
+            title="Customer reviews"
+            subtitle={reviewSubtitle}
+            className="my-5 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
+          />
+        </div>
+      )}
     </section>
   );
 }

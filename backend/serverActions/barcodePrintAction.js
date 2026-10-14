@@ -22,7 +22,8 @@ export async function searchBarcodeProducts(query) {
       select: {
         id: true,
         sku: true,
-        product: { select: { title: true } },
+        thumbnail: { select: { name: true } },
+        product: { select: { title: true, thumbnail: { select: { name: true } } } },
       },
     });
 
@@ -32,6 +33,7 @@ export async function searchBarcodeProducts(query) {
         id: variation.id,
         sku: variation.sku,
         title: variation.product?.title || "Product",
+        thumbnail: variation.thumbnail?.name || variation.product?.thumbnail?.name || null,
       })),
     };
   } catch (error) {

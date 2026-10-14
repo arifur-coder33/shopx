@@ -30,7 +30,7 @@ export default async function AccountLayout({ children }) {
       icon: <MapPin size={18} />,
     },
     {
-      name: "Review",
+      name: "My Reviews",
       href: "/my-account/review",
       icon: <Star size={18} />,
     },

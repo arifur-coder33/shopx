@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { productFormFields } from "./productFormFields";
+import ProductPhotoReviewsField from "./ProductPhotoReviewsField";
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
   loading: () => <LoadingSpinner />,
@@ -119,6 +120,8 @@ export default function ProductForm({ actionType, updateAction, id }) {
       createAction={handleCreateAction}
       data={data}
       updateAction={handleUpdateAction}
-    ></DynamicForm>
+    >
+      <ProductPhotoReviewsField reviews={data?.photoReviews || []} />
+    </DynamicForm>
   );
 }

@@ -36,6 +36,7 @@ export async function getContentPagesForAdmin() {
     const rows = await prisma.contentPage.findMany({
       where: { slug: { in: [...CONTENT_PAGE_SLUGS] } },
       orderBy: { slug: "asc" },
+      include: { footerLogo: { select: { id: true, name: true, displayName: true, width: true, height: true, sizeBytes: true } } },
     });
     const bySlug = new Map(rows.map((page) => [page.slug, page]));
     const siteSetting = await prisma.siteSetting.findFirst({
@@ -51,12 +52,13 @@ export async function getContentPagesForAdmin() {
     const data = CONTENT_PAGE_DEFINITIONS.map((definition) => ({
       ...definition,
       id: bySlug.get(definition.slug)?.id || null,
-      title: bySlug.get(definition.slug)?.title || definition.label,
+      title: bySlug.get(definition.slug)?.title ?? (definition.slug === "footer" ? "" : definition.label),
       content: bySlug.get(definition.slug)?.content || "",
       metaTitle: bySlug.get(definition.slug)?.metaTitle || "",
       metaDescription: bySlug.get(definition.slug)?.metaDescription || "",
       isPublished: bySlug.get(definition.slug)?.isPublished ?? true,
       updatedAt: bySlug.get(definition.slug)?.updatedAt || null,
+      ...(definition.slug === "footer" && { footerLogo: bySlug.get("footer")?.footerLogo || null }),
       ...(definition.slug === "contact" && { contactDetails }),
     }));
     return { success: true, data };
@@ -76,11 +78,15 @@ export async function updateContentPage(formData) {
     const content = sanitizeContentPageHtml(values.content);
     const metaTitle = clean(values.metaTitle);
     const metaDescription = clean(values.metaDescription);
-    if (!title || title.length > 120) throw new Error("Title must be between 1 and 120 characters.");
-    if (!content) throw new Error("Page content is required.");
+    const footerLogoId = slug === "footer" ? clean(values.footerLogo).split(",")[0] || null : null;
+    if ((slug !== "footer" && !title) || title.length > 120) throw new Error("Title must be between 1 and 120 characters.");
+    if (slug !== "footer" && !content) throw new Error("Page content is required.");
     if (content.length > 200000) throw new Error("Page content is too large.");
     if (metaTitle.length > 160) throw new Error("SEO title cannot exceed 160 characters.");
     if (metaDescription.length > 320) throw new Error("SEO description cannot exceed 320 characters.");
+    if (slug === "footer" && footerLogoId && !(await prisma.media.findUnique({ where: { id: footerLogoId }, select: { id: true } }))) {
+      throw new Error("Selected footer logo was not found in the media library.");
+    }
 
     const pageData = {
       title,
@@ -89,6 +95,7 @@ export async function updateContentPage(formData) {
       metaDescription: metaDescription || null,
       isPublished: values.isPublished === "true",
       updatedBy: userId,
+      ...(slug === "footer" && { footerLogoId }),
     };
     const contactData = slug === "contact"
       ? {
@@ -103,11 +110,12 @@ export async function updateContentPage(formData) {
       throw new Error("Email address is invalid.");
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.contentPage.upsert({
+    const savedPage = await prisma.$transaction(async (tx) => {
+      const page = await tx.contentPage.upsert({
         where: { slug },
         update: pageData,
         create: { slug, ...pageData, createdBy: userId },
+        include: { footerLogo: { select: { id: true, name: true, displayName: true, width: true, height: true, sizeBytes: true } } },
       });
       if (contactData) {
         const setting = await tx.siteSetting.findFirst({ select: { id: true } });
@@ -117,9 +125,11 @@ export async function updateContentPage(formData) {
           await tx.siteSetting.create({ data: contactData });
         }
       }
+      return page;
     });
 
     revalidateTag("content-pages");
+    if (slug === "footer") revalidatePath("/", "layout");
     if (slug === "contact") {
       revalidateTag("contact-details");
       revalidateTag("site-setting");
@@ -127,7 +137,7 @@ export async function updateContentPage(formData) {
     }
     revalidatePath(`/${slug}`);
     revalidatePath("/admin/settings/content-pages");
-    return { success: true, message: `${title} updated.` };
+    return { success: true, message: `${title || "Footer content"} updated.`, data: { footerLogo: savedPage.footerLogo || null } };
   } catch (error) {
     return { success: false, message: error.message || "Failed to update content page." };
   }

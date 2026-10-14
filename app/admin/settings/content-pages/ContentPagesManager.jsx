@@ -2,6 +2,7 @@
 
 import { updateContentPage } from "@/backend/serverActions/contentPageAction";
 import CustomEditor from "@/components/input/quillEditor/CustomEditor";
+import FileInput from "@/components/input/FileInput";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { ExternalLink, FileText, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -43,6 +44,7 @@ export default function ContentPagesManager({ initialPages }) {
                 metaTitle: String(formData.get("metaTitle") || ""),
                 metaDescription: String(formData.get("metaDescription") || ""),
                 isPublished: formData.get("isPublished") === "true",
+                ...(activeSlug === "footer" && { footerLogo: response.data?.footerLogo || null }),
                 ...(activeSlug === "contact" && {
                   contactDetails: {
                     facebookPage: String(formData.get("facebookPage") || ""),
@@ -73,7 +75,7 @@ export default function ContentPagesManager({ initialPages }) {
         </div>
       </header>
 
-      <nav className="grid grid-cols-1 gap-2 rounded-2xl border border-border bg-surface p-2 sm:grid-cols-3" aria-label="Content page selection">
+      <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-surface p-2 sm:grid-cols-4" aria-label="Content page selection">
         {pages.map((page) => (
           <button
             key={page.slug}
@@ -82,7 +84,7 @@ export default function ContentPagesManager({ initialPages }) {
             className={`min-h-12 rounded-xl px-3 py-2 text-left transition ${page.slug === activeSlug ? "bg-primary text-white shadow-sm" : "hover:bg-surface-muted"}`}
           >
             <strong className="block">{page.label}</strong>
-            <small className={page.slug === activeSlug ? "text-white/75" : "text-text-muted"}>{page.path} · {page.isPublished ? "Published" : "Hidden"}</small>
+            <small className={page.slug === activeSlug ? "text-white/75" : "text-text-muted"}>{page.slug === "footer" ? "Shown on every page" : page.path} · {page.isPublished ? "Published" : "Hidden"}</small>
           </button>
         ))}
       </nav>
@@ -102,8 +104,8 @@ export default function ContentPagesManager({ initialPages }) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">
-              Page title
-              <input name="title" defaultValue={activePage.title} maxLength={120} required disabled={disabled} className={inputClass} />
+              {activeSlug === "footer" ? "Footer heading (optional; defaults to site name)" : "Page title"}
+              <input name="title" defaultValue={activePage.title} maxLength={120} required={activeSlug !== "footer"} disabled={disabled} className={inputClass} />
             </label>
             <label className="grid gap-1.5 text-sm font-semibold">
               Publish status
@@ -119,7 +121,16 @@ export default function ContentPagesManager({ initialPages }) {
           </div>
 
           <div className="mt-5">
-            <CustomEditor name="content" label="Page content" defaultValue={activePage.content} readOnly={disabled} />
+            {activeSlug === "footer" ? (
+              <div className="space-y-3">
+                <p className="text-xs text-text-muted">Choose a separate footer logo below, or leave it empty to use the header site logo automatically.</p>
+                <FileInput name="footerLogo" label="Footer logo" recommendedSize="500 × 500 px recommended" defaultValue={activePage.footerLogo ? [activePage.footerLogo] : []} w={128} h={128} />
+                <label className="grid gap-1.5 text-sm font-semibold">
+                  Footer description
+                  <textarea name="content" defaultValue={activePage.content} maxLength={2000} rows={5} disabled={disabled} className={inputClass} placeholder="Write the short description shown under the shop name in the footer." />
+                </label>
+              </div>
+            ) : <CustomEditor name="content" label="Page content" defaultValue={activePage.content} readOnly={disabled} />}
           </div>
         </section>
 
@@ -152,7 +163,7 @@ export default function ContentPagesManager({ initialPages }) {
           </section>
         )}
 
-        <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+        {activeSlug !== "footer" && <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
           <h2 className="text-lg font-bold">Search engine information</h2>
           <p className="mb-4 text-sm text-text-muted">Optional. The page title is used when the SEO title is empty.</p>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -165,7 +176,7 @@ export default function ContentPagesManager({ initialPages }) {
               <textarea name="metaDescription" defaultValue={activePage.metaDescription} maxLength={320} rows={3} disabled={disabled} className={inputClass} />
             </label>
           </div>
-        </section>
+        </section>}
 
         <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface/95 p-3 shadow-xl backdrop-blur">
           <p className="hidden text-sm text-text-muted sm:block">Published changes appear immediately.</p>

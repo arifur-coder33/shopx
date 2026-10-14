@@ -4,6 +4,11 @@ import { getRecentOrdersForAdmin } from "@/backend/serverActions/orderActions";
 import Orders2Client from "./Orders2Client";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Orders",
+  applicationName: "Shopzy Orders",
+  manifest: "/orders.webmanifest",
+};
 
 export default async function Orders2Page() {
   const session = await auth();

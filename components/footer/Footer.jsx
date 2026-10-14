@@ -1,14 +1,19 @@
 import { getPublicContactDetails } from "@/backend/services/contactDetailsService";
+import { getPublicContentPage } from "@/backend/services/contentPageService";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import Image from "next/image";
+import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { Mail, MessageCircleMore, PhoneCall, Send } from "lucide-react";
 import Link from "next/link";
 
 export default async function Footer() {
-  const [contact, identity] = await Promise.all([
+  const [contact, identity, footerContent] = await Promise.all([
     getPublicContactDetails(),
     getPublicSiteIdentity(),
+    getPublicContentPage("footer"),
   ]);
   const whatsappDigits = contact.whatsappNumber.replace(/\D/g, "");
+  const footerLogo = footerContent?.footerLogo?.name || identity.logo;
 
   return (
     <footer className="bg-slate-950 text-slate-300 mt-10 border-t border-slate-800">
@@ -16,12 +21,19 @@ export default async function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Brand */}
         <div>
+          {footerLogo && <Image
+            src={cloudinaryMainImage(footerLogo, 160)}
+            width={80}
+            height={80}
+            alt={`${identity.name} logo`}
+            unoptimized
+            className="mb-3 h-16 w-16 rounded-brand object-contain"
+          />}
           <h2 className="text-2xl font-semibold text-white mb-3">
-            {identity.name}
+            {footerContent?.title?.trim() || identity.name}
           </h2>
-          <p className="text-sm leading-relaxed">
-            আপনার বিশ্বস্ত অনলাইন শপ — মেশিনারি ও ফ্যাশন পণ্যের জন্য একটি
-            নির্ভরযোগ্য প্ল্যাটফর্ম।
+          <p className="whitespace-pre-line text-sm leading-relaxed">
+            {footerContent?.content || ""}
           </p>
         </div>
 

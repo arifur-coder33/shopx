@@ -1,18 +1,21 @@
 import { getHomeStorefrontData } from "@/backend/serverActions/homeStorefrontActions";
 import { getPublicContactDetails } from "@/backend/services/contactDetailsService";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import { getPublishedSitePhotoReviews } from "@/backend/services/photoReviewService";
 import ProductCard from "@/components/products/ProductCard";
 import JsonLd from "@/components/seo/JsonLd";
 import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
 import { getSiteUrl } from "@/lib/siteUrl";
 import InfiniteProductGrid from "./InfiniteProductGrid";
 import ShopByCategory from "./ShopByCategory";
+import PhotoReviewCarousel from "@/components/reviews/PhotoReviewCarousel";
 
 export default async function HomeStorefront() {
-  const [result, identity, contact] = await Promise.all([
+  const [result, identity, contact, siteReviews] = await Promise.all([
     getHomeStorefrontData(),
     getPublicSiteIdentity(),
     getPublicContactDetails(),
+    getPublishedSitePhotoReviews(),
   ]);
 
   if (!result?.success) {
@@ -126,6 +129,12 @@ export default async function HomeStorefront() {
           />
         </section>
       )}
+
+      <PhotoReviewCarousel
+        reviews={siteReviews}
+        title="Customer reviews"
+        subtitle="Our customers share their experience"
+      />
     </>
   );
 }

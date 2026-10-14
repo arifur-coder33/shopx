@@ -13,6 +13,7 @@ export default function ProductDataView({
   campaignOffers = [],
   blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   adminView,
+  reviews = [],
 }) {
   const mainProductImageId = data?.thumbnail?.name || data?.mainImage;
 
@@ -91,6 +92,8 @@ export default function ProductDataView({
               />
             ) : null
           }
+          reviews={reviews}
+          reviewSubtitle={`Customer experiences with ${title}`}
         />
         {!adminView && <ViewProductEvent product={trackingProduct} />}
       </div>

@@ -14,6 +14,7 @@ import { notFound } from "next/navigation";
 import ProductDataView from "../_components/ProductDataView";
 import { Suspense } from "react";
 import ProductImageFirstPreview from "../_components/ProductImageFirstPreview";
+import { getPublishedProductPhotoReviews } from "@/backend/services/photoReviewService";
 
 export const revalidate = 60;
 export const dynamic = "force-static";
@@ -193,6 +194,7 @@ async function ProductPageContent({ detailsPromise }) {
     });
     return { ...variation, campaignPrice: pricing.campaign ? pricing.price : null, campaignName: pricing.campaign?.name || null };
   });
+  const reviews = await getPublishedProductPhotoReviews(data.id);
 
   return (
     <div className="mb-16 pb-20 sm:pb-0">
@@ -208,7 +210,7 @@ async function ProductPageContent({ detailsPromise }) {
           { label: data.title },
         ]}
       />
-      <ProductDataView data={{ ...data, variations: variationsWithCampaigns }} campaignOffers={campaignOffers} blurDataURL={DEFAULT_BLUR_DATA_URL} />
+      <ProductDataView data={{ ...data, variations: variationsWithCampaigns }} campaignOffers={campaignOffers} blurDataURL={DEFAULT_BLUR_DATA_URL} reviews={reviews} />
     </div>
   );
 }

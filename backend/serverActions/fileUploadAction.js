@@ -17,7 +17,7 @@ async function getUsageIndex(media) {
   const index = new Map(ids.map((id) => [id, []]));
   if (!ids.length) return index;
 
-  const [categories, products, galleries, variations, banners, slides, documents, settings, campaigns] = await Promise.all([
+  const [categories, products, galleries, variations, banners, slides, documents, settings, campaigns, footerPages, photoReviews] = await Promise.all([
     prisma.category.findMany({ where: { OR: [{ thumbnailId: { in: ids } }, { bannerId: { in: ids } }] }, select: { id: true, name: true, thumbnailId: true, bannerId: true } }),
     prisma.product.findMany({ where: { thumbnailId: { in: ids } }, select: { id: true, title: true, thumbnailId: true } }),
     prisma.productGallery.findMany({ where: { mediaId: { in: ids } }, select: { mediaId: true, product: { select: { id: true, title: true } } } }),
@@ -27,6 +27,8 @@ async function getUsageIndex(media) {
     prisma.supplierDocument.findMany({ where: { mediaId: { in: ids } }, select: { mediaId: true, supplier: { select: { id: true, companyName: true } } } }),
     prisma.siteSetting.findMany({ where: { OR: [{ logo: { in: names } }, { favicon: { in: names } }] }, select: { id: true, logo: true, favicon: true } }),
     prisma.campaign.findMany({ where: { bannerUrl: { in: names } }, select: { id: true, name: true, bannerUrl: true } }),
+    prisma.contentPage.findMany({ where: { footerLogoId: { in: ids } }, select: { id: true, title: true, footerLogoId: true } }),
+    prisma.photoReview.findMany({ where: { imageId: { in: ids } }, select: { id: true, imageId: true, customerName: true, product: { select: { title: true } } } }),
   ]);
 
   for (const row of categories) {
@@ -44,6 +46,8 @@ async function getUsageIndex(media) {
     if (row.favicon) addUsage(index, ids[names.indexOf(row.favicon)], { section: "Favicon", title: "Site appearance", href: "/admin/settings/site-appearance" });
   }
   for (const row of campaigns) addUsage(index, ids[names.indexOf(row.bannerUrl)], { section: "Campaign banner", title: row.name, href: `/admin/campaigns/${row.id}/edit` });
+  for (const row of footerPages) addUsage(index, row.footerLogoId, { section: "Footer logo", title: row.title || "Footer content", href: "/admin/settings/content-pages" });
+  for (const row of photoReviews) addUsage(index, row.imageId, { section: row.product ? "Product review photo" : "Site review photo", title: row.product?.title || row.customerName || "Photo review", href: "/admin/site-reviews" });
   return index;
 }
 

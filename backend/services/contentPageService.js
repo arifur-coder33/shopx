@@ -28,6 +28,7 @@ async function queryPublicContentPage(slug) {
       metaDescription: true,
       updatedAt: true,
       isPublished: true,
+      footerLogo: { select: { name: true } },
     },
   });
   if (!page?.isPublished) return null;

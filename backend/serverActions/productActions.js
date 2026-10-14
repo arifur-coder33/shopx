@@ -10,7 +10,7 @@ import { buildCategoryPath } from "../utils/buildCategoryPath";
 import { buildSearchText } from "../utils/buildSearchText";
 import { generateSlug, generateUniqueSlug } from "../utils/generateSlug";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
-import { hasPermission } from "../utils/hasPermission";
+import { getUserId, hasPermission } from "../utils/hasPermission";
 import { findSearchProducts } from "../utils/findSearchProducts";
 import { saveProductSpecifications } from "../services/specificationService";
 import { getActiveCampaigns, getProductCardCampaignData } from "../services/campaignService";
@@ -36,6 +36,25 @@ function rawDays(value, fallback) {
   if (value == null || String(value).trim() === "") return fallback;
   const number = Number(value);
   return Number.isInteger(number) ? number : -1;
+}
+
+function parseProductReviewRows(formData) {
+  const fields = ["productReviewId", "productReviewName", "productReviewMessage", "productReviewRating", "productReviewImage"];
+  const values = Object.fromEntries(fields.map((field) => [field, formData.getAll(field).map((value) => String(value || "").trim())]));
+  const length = Math.max(...fields.map((field) => values[field].length), 0);
+  const rows = [];
+  for (let index = 0; index < length; index += 1) {
+    const row = {
+      id: values.productReviewId[index] || null,
+      customerName: values.productReviewName[index]?.slice(0, 120) || null,
+      reviewText: values.productReviewMessage[index]?.slice(0, 1000) || null,
+      imageId: values.productReviewImage[index] || null,
+      rating: values.productReviewRating[index] ? Number(values.productReviewRating[index]) : null,
+    };
+    if (row.rating !== null && (!Number.isInteger(row.rating) || row.rating < 1 || row.rating > 5)) throw new Error("Product review rating must be from 1 to 5.");
+    if (row.customerName || row.reviewText || row.imageId || row.rating !== null) rows.push(row);
+  }
+  return rows;
 }
 
 function transformVariations(productVariations) {
@@ -325,7 +344,9 @@ export async function createProductActions(formData) {
 export async function createProductAction(formData) {
   try {
     await hasPermission("product", "create");
+    const createdBy = await getUserId();
     let data = Object.fromEntries(formData.entries());
+    const productReviewRows = parseProductReviewRows(formData);
     const fulfillmentSettings = parseProductFulfillmentSettings(data);
 
     // --- Basic Validation ---
@@ -452,6 +473,17 @@ export async function createProductAction(formData) {
       const product = await tx.product.create({
         data: preparedData,
       });
+
+      const reviewImageIds = [...new Set(productReviewRows.map((row) => row.imageId).filter(Boolean))];
+      if (reviewImageIds.length) {
+        const validImageCount = await tx.media.count({ where: { id: { in: reviewImageIds } } });
+        if (validImageCount !== reviewImageIds.length) throw new Error("A selected product review photo could not be found in the media library.");
+        await tx.photoReview.createMany({
+          data: productReviewRows.map(({ id, ...row }) => ({ ...row, productId: product.id, createdBy })),
+        });
+      } else if (productReviewRows.length) {
+        await tx.photoReview.createMany({ data: productReviewRows.map(({ id, ...row }) => ({ ...row, productId: product.id, createdBy })) });
+      }
 
       if (productVideos.length) {
         await tx.productVideo.createMany({
@@ -583,6 +615,11 @@ export async function getProductById(id) {
           },
         },
         videos: { orderBy: { sortOrder: "asc" } },
+        photoReviews: {
+          where: { orderItemId: null },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+          include: { image: { select: { id: true, name: true, displayName: true, width: true, height: true, sizeBytes: true } } },
+        },
         // [UPDATED] New include structure for variations
         variations: {
           include: {
@@ -1586,6 +1623,8 @@ export async function updateProductAction({ id: productId, formData }) {
 
   try {
     const data = Object.fromEntries(formData.entries());
+    const productReviewRows = parseProductReviewRows(formData);
+    const updatedBy = await getUserId();
     const fulfillmentSettings = parseProductFulfillmentSettings(data);
     console.log("update data", data);
 
@@ -1664,6 +1703,25 @@ export async function updateProductAction({ id: productId, formData }) {
         where: { id: productId },
         data: productUpdateData,
       });
+
+      const reviewImageIds = [...new Set(productReviewRows.map((row) => row.imageId).filter(Boolean))];
+      const validImageCount = reviewImageIds.length
+        ? await tx.media.count({ where: { id: { in: reviewImageIds } } })
+        : 0;
+      if (validImageCount !== reviewImageIds.length) throw new Error("A selected product review photo could not be found in the media library.");
+      const currentPhotoReviews = await tx.photoReview.findMany({ where: { productId: updatedProduct.id, orderItemId: null }, select: { id: true } });
+      const currentReviewIds = new Set(currentPhotoReviews.map((review) => review.id));
+      const submittedExistingIds = new Set(productReviewRows.map((row) => row.id).filter(Boolean));
+      if ([...submittedExistingIds].some((reviewId) => !currentReviewIds.has(reviewId))) throw new Error("One of the product reviews no longer exists. Refresh and try again.");
+      await tx.photoReview.deleteMany({ where: { productId: updatedProduct.id, orderItemId: null, ...(submittedExistingIds.size ? { id: { notIn: [...submittedExistingIds] } } : {}) } });
+      for (const row of productReviewRows) {
+        const { id, ...reviewData } = row;
+        if (id) {
+          await tx.photoReview.update({ where: { id }, data: reviewData });
+        } else {
+          await tx.photoReview.create({ data: { ...reviewData, productId: updatedProduct.id, createdBy: updatedBy } });
+        }
+      }
 
       await saveProductSpecifications(tx, updatedProduct.id, updatedProduct.categoryId, data.specifications);
 

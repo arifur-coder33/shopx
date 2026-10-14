@@ -1,30 +1,21 @@
 import OrderItemsTable from "@/app/admin/orders/_components/components/OrderItemsTable";
 import { auth } from "@/auth";
 import { fetchCursorData } from "@/backend/serverActions/fetchDataActon";
+import { CUSTOMER_ORDER_STATUS_GROUPS } from "@/lib/customerOrderStatus";
 import Link from "next/link";
-
-const statusMap = {
-  all: null,
-  running: [
-    "PENDING",
-    "PROCESSING",
-    "READY_TO_SHIP",
-    "SHIPPED",
-    "DELIVERY_FAILED",
-  ],
-  cancelled: ["CANCELLED", "FAILED_RETURNING", "FAILED_RETURN_RECEIVED"],
-  delivered: ["DELIVERED", "RETURNING", "RETURNED"],
-  refunded: ["REFUNDING", "REFUNDED"],
-};
+import { redirect } from "next/navigation";
 
 export default async function UserOrderPage({ params }) {
-  const statusKey = params.params?.[0] || "all";
-  const cursor = params.params?.[1] || null;
+  const routeParams = await params;
+  const requestedStatus = routeParams?.params?.[0] || "all";
+  const statusKey = Object.hasOwn(CUSTOMER_ORDER_STATUS_GROUPS, requestedStatus) ? requestedStatus : "all";
+  const cursor = routeParams?.params?.[1] || null;
 
   const session = await auth();
   const userId = session?.user?.id;
+  if (!userId) redirect(`/login?callbackUrl=${encodeURIComponent("/my-account/orders")}`);
 
-  const statusFilter = statusMap[statusKey];
+  const statusFilter = CUSTOMER_ORDER_STATUS_GROUPS[statusKey];
 
   const fatchData = await fetchCursorData({
     model: "order",
