@@ -86,6 +86,14 @@ export default async function TrafficPage({ searchParams }) {
         <Metric label="Key events" value={report.data?.keyEvents} detail="Selected period" />
       </section>
 
+      {reportReady && report.data.totalUsers === 0 && report.data.sessions === 0 && report.data.pageViews === 0 && (
+        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
+          <h2 className="font-semibold text-text">No GA4 traffic data received for this period</h2>
+          <p className="mt-1 text-sm leading-6 text-text-muted">The Data API connection is working, but this GA4 property returned no events. Check that the GA4 measurement ID on the site belongs to this property, the updated site version is deployed, and GA4 Realtime shows a visit after opening the storefront.</p>
+          <a className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline" href="https://analytics.google.com/" target="_blank" rel="noreferrer">Check GA4 Realtime <ArrowUpRight size={15} /></a>
+        </section>
+      )}
+
       {reportReady ? (
         <>
           <section className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
