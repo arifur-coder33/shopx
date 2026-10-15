@@ -15,6 +15,8 @@ const PUBLIC_FIELDS = [
   "facebookPixelId",
   "googleTagId",
   "googleAnalyticsId",
+  "googleAnalyticsPropertyId",
+  "clarityProjectId",
   "tiktokPixelId",
 ];
 
@@ -24,6 +26,14 @@ const validatePublicId = (value, label) => {
   const normalized = clean(value);
   if (normalized && !/^[A-Za-z0-9._-]+$/.test(normalized)) {
     throw new Error(`${label} contains invalid characters.`);
+  }
+  return normalized || null;
+};
+
+const validateGaPropertyId = (value) => {
+  const normalized = clean(value);
+  if (normalized && !/^[0-9]+$/.test(normalized)) {
+    throw new Error("GA4 Property ID must contain only digits.");
   }
   return normalized || null;
 };
@@ -93,8 +103,22 @@ export async function saveSocialTrackingConfiguration(formData) {
       facebookPixelId: validatePublicId(values.facebookPixelId, "Facebook Pixel ID"),
       googleTagId: validatePublicId(values.googleTagId, "Google Tag Manager ID"),
       googleAnalyticsId: validatePublicId(values.googleAnalyticsId, "Google Analytics ID"),
+      googleAnalyticsPropertyId: validateGaPropertyId(values.googleAnalyticsPropertyId),
+      clarityProjectId: validatePublicId(values.clarityProjectId, "Clarity Project ID"),
       tiktokPixelId: validatePublicId(values.tiktokPixelId, "TikTok Pixel ID"),
     };
+    const serviceAccountJson = clean(nextSecrets.googleAnalyticsServiceAccountJson);
+    if (serviceAccountJson) {
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(serviceAccountJson);
+      } catch {
+        throw new Error("GA4 service account key must be valid JSON.");
+      }
+      if (!serviceAccount.client_email || !serviceAccount.private_key) {
+        throw new Error("GA4 service account JSON must include client_email and private_key.");
+      }
+    }
     const secretsChanged = SOCIAL_SECRET_FIELDS.some(
       (key) => clean(previousSecrets[key]) !== clean(nextSecrets[key]),
     );

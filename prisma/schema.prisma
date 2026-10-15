@@ -599,6 +599,8 @@ model SocialTrackingSetting {
   facebookPixelId   String?
   googleTagId       String?
   googleAnalyticsId String?
+  googleAnalyticsPropertyId String?
+  clarityProjectId  String?
   tiktokPixelId     String?
   encryptedSecrets  String?
   secretsUpdatedAt  DateTime?

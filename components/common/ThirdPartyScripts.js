@@ -5,11 +5,20 @@ export default function ThirdPartyScripts({ settings = {} }) {
   const fbId = settings.facebookPixelId;
   const gtmId = settings.googleTagId;
   const gaId = settings.googleAnalyticsId;
+  const clarityProjectId = settings.clarityProjectId;
   const tiktokId = settings.tiktokPixelId;
 
   return (
     <>
       <SpeedInsights />
+
+      {clarityProjectId && (
+        <Script
+          id="microsoft-clarity"
+          src={`https://www.clarity.ms/tag/${encodeURIComponent(clarityProjectId)}`}
+          strategy="lazyOnload"
+        />
+      )}
 
       {/* 🔵 GTM */}
       {gtmId && (

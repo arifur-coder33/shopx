@@ -45,7 +45,7 @@ const providers = [
     key: "google",
     title: "Google",
     description:
-      "Google Tag Manager, GA4 browser tracking and Measurement Protocol.",
+      "GA4 browser tracking and reporting. For reports, enable the Analytics Data API and grant the saved service account Viewer access to your GA4 property.",
     fields: [
       {
         key: "googleTagId",
@@ -59,10 +59,35 @@ const providers = [
         env: "NEXT_PUBLIC_GOOGLE_ANALYTICS_ID",
       },
       {
+        key: "googleAnalyticsPropertyId",
+        label: "GA4 property ID",
+        env: "Used by server-side Analytics Data API reports",
+      },
+      {
         key: "googleAnalyticsSecret",
         label: "GA4 API secret",
         env: "GOOGLE_ANALYTICS_SECRET",
         secret: true,
+      },
+      {
+        key: "googleAnalyticsServiceAccountJson",
+        label: "GA4 reporting service account JSON key",
+        env: "Encrypted at rest; grant this service account Viewer access to the GA4 property",
+        secret: true,
+        multiline: true,
+        optional: true,
+      },
+    ],
+  },
+  {
+    key: "clarity",
+    title: "Microsoft Clarity",
+    description: "Session recordings and click/scroll heatmaps for visitor behavior.",
+    fields: [
+      {
+        key: "clarityProjectId",
+        label: "Clarity project ID",
+        env: "Loaded asynchronously after the page is idle",
       },
     ],
   },
@@ -117,23 +142,34 @@ function SecretField({ field, configured, disabled, value, setValue }) {
         )}
       </label>
       <div className="relative">
-        <input
-          className={`${inputClass} pr-12`}
-          name={field.key}
-          type={visible ? "text" : "password"}
-          value={value}
-          onChange={(event) => {
-            setValue(event.target.value);
-            setClearValue(false);
-          }}
-          disabled={disabled || clearValue}
-          autoComplete="new-password"
-          placeholder={
-            configured
-              ? "Saved — enter a new value to replace"
-              : "Not configured"
-          }
-        />
+        {field.multiline && visible ? (
+          <textarea
+            className={`${inputClass} min-h-32 resize-y pr-12 font-mono text-xs`}
+            name={field.key}
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setClearValue(false);
+            }}
+            disabled={disabled || clearValue}
+            autoComplete="new-password"
+            placeholder={configured ? "Saved — enter a new JSON key to replace" : "Paste service account JSON key"}
+          />
+        ) : (
+          <input
+            className={`${inputClass} pr-12`}
+            name={field.key}
+            type={visible ? "text" : "password"}
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setClearValue(false);
+            }}
+            disabled={disabled || clearValue}
+            autoComplete="new-password"
+            placeholder={configured ? "Saved — enter a new value to replace" : "Not configured"}
+          />
+        )}
         <button
           type="button"
           onClick={toggleVisibility}

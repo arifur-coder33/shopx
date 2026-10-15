@@ -11,6 +11,7 @@ export const SOCIAL_SECRET_FIELDS = [
   "facebookAccessToken",
   "facebookTestEventCode",
   "googleAnalyticsSecret",
+  "googleAnalyticsServiceAccountJson",
   "tiktokAccessToken",
 ];
 
@@ -18,6 +19,7 @@ const EMPTY_PUBLIC_SETTINGS = Object.freeze({
   facebookPixelId: "",
   googleTagId: "",
   googleAnalyticsId: "",
+  clarityProjectId: "",
   tiktokPixelId: "",
 });
 
@@ -27,6 +29,7 @@ const toPublicSettings = (record) => ({
   facebookPixelId: clean(record?.facebookPixelId),
   googleTagId: clean(record?.googleTagId),
   googleAnalyticsId: clean(record?.googleAnalyticsId),
+  clarityProjectId: clean(record?.clarityProjectId),
   tiktokPixelId: clean(record?.tiktokPixelId),
 });
 
@@ -37,6 +40,7 @@ async function queryPublicSettings() {
       facebookPixelId: true,
       googleTagId: true,
       googleAnalyticsId: true,
+      clarityProjectId: true,
       tiktokPixelId: true,
     },
   });
@@ -89,6 +93,7 @@ export async function getServerSocialTrackingSettings() {
     facebookAccessToken: clean(secrets.facebookAccessToken),
     facebookTestEventCode: clean(secrets.facebookTestEventCode),
     googleAnalyticsSecret: clean(secrets.googleAnalyticsSecret),
+    googleAnalyticsServiceAccountJson: clean(secrets.googleAnalyticsServiceAccountJson),
     tiktokAccessToken: clean(secrets.tiktokAccessToken),
   };
 }
