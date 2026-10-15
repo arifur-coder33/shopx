@@ -90,6 +90,9 @@ export async function getServerSocialTrackingSettings() {
     : {};
   return {
     ...toPublicSettings(record),
+    // The numeric GA4 Property ID is only needed by server-side reporting;
+    // keep it out of the cached storefront settings returned above.
+    googleAnalyticsPropertyId: clean(record?.googleAnalyticsPropertyId),
     facebookAccessToken: clean(secrets.facebookAccessToken),
     facebookTestEventCode: clean(secrets.facebookTestEventCode),
     googleAnalyticsSecret: clean(secrets.googleAnalyticsSecret),
