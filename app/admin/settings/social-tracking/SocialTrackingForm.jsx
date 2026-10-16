@@ -5,7 +5,7 @@ import {
   saveSocialTrackingConfiguration,
 } from "@/backend/serverActions/socialTrackingAction";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { Eye, EyeOff, KeyRound, Save } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -203,11 +203,12 @@ function SecretField({ field, configured, disabled, value, setValue }) {
   );
 }
 
-export default function SocialTrackingForm({ initialSettings }) {
+export default function SocialTrackingForm({ initialSettings, sitemapUrl }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [pending, startTransition] = useTransition();
   const [secretValues, setSecretValues] = useState({});
+  const [sitemapCopied, setSitemapCopied] = useState(false);
   const canUpdate = hasUIPermission(
     session?.user?.permissions || [],
     "socialTracking",
@@ -311,6 +312,41 @@ export default function SocialTrackingForm({ initialSettings }) {
                   ),
                 )}
               </div>
+              {provider.key === "google" && (
+                <div className="mt-5 rounded-xl border border-border bg-surface-muted p-4">
+                  <label htmlFor="google-sitemap-url" className="mb-1.5 block text-sm font-semibold text-text">
+                    Google Search Console sitemap URL
+                  </label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      id="google-sitemap-url"
+                      className={inputClass}
+                      value={sitemapUrl}
+                      readOnly
+                      onFocus={(event) => event.target.select()}
+                    />
+                    <button
+                      type="button"
+                      className="button inline-flex shrink-0 items-center justify-center gap-2"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(sitemapUrl);
+                          setSitemapCopied(true);
+                          window.setTimeout(() => setSitemapCopied(false), 1800);
+                        } catch {
+                          toast.error("Could not copy the sitemap URL. Select and copy it manually.");
+                        }
+                      }}
+                    >
+                      {sitemapCopied ? <Check size={17} /> : <Copy size={17} />}
+                      {sitemapCopied ? "Copied" : "Copy URL"}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-text-muted">
+                    Submit this URL in Google Search Console → Sitemaps.
+                  </p>
+                </div>
+              )}
             </section>
           );
         })}

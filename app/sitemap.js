@@ -25,7 +25,7 @@ export default async function sitemap() {
   };
 
   try {
-    const [products, categories, contentPages] = await Promise.all([
+    const [products, categories, contentPages, campaigns] = await Promise.all([
       prisma.product.findMany({
         where: { isActive: true },
         select: {
@@ -53,10 +53,30 @@ export default async function sitemap() {
         where: { isPublished: true },
         select: { slug: true, updatedAt: true },
       }),
+      prisma.campaign.findMany({
+        where: {
+          status: "PUBLISHED",
+          OR: [{ endAt: null }, { endAt: { gte: new Date() } }],
+        },
+        select: { id: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+      }),
     ]);
 
     return [
       home,
+      {
+        url: absolute("/campaign"),
+        lastModified: new Date(),
+        changeFrequency: "daily",
+        priority: 0.7,
+      },
+      ...campaigns.map((campaign) => ({
+        url: absolute(`/campaign/${encodeURIComponent(campaign.id)}`),
+        lastModified: campaign.updatedAt,
+        changeFrequency: "daily",
+        priority: 0.6,
+      })),
       ...categories.map((category) => ({
         url: categoryUrl(category, siteUrl),
         lastModified: category.updatedAt,
