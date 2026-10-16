@@ -12,6 +12,7 @@ export const SOCIAL_SECRET_FIELDS = [
   "facebookTestEventCode",
   "googleAnalyticsSecret",
   "googleAnalyticsServiceAccountJson",
+  "clarityApiToken",
   "tiktokAccessToken",
 ];
 
@@ -97,6 +98,7 @@ export async function getServerSocialTrackingSettings() {
     facebookTestEventCode: clean(secrets.facebookTestEventCode),
     googleAnalyticsSecret: clean(secrets.googleAnalyticsSecret),
     googleAnalyticsServiceAccountJson: clean(secrets.googleAnalyticsServiceAccountJson),
+    clarityApiToken: clean(secrets.clarityApiToken),
     tiktokAccessToken: clean(secrets.tiktokAccessToken),
   };
 }

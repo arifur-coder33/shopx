@@ -89,6 +89,13 @@ const providers = [
         label: "Clarity project ID",
         env: "Loaded asynchronously after the page is idle",
       },
+      {
+        key: "clarityApiToken",
+        label: "Clarity Data Export API token",
+        env: "Encrypted at rest; used by the admin Clarity insights report",
+        secret: true,
+        optional: true,
+      },
     ],
   },
   {
