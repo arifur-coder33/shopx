@@ -196,7 +196,6 @@
 "use client";
 import {
   cancelOrderById,
-  processRefundAction,
   updateOrderStatusAction,
 } from "@/backend/serverActions/orderActions";
 import { getOrderTimeline } from "@/backend/serverActions/orderTimelineActin";
@@ -210,12 +209,6 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
   const [reasonType, setReasonType] = useState(null);
   const [loading, setLoading] = useState(false);
   const [returnAvailable, setReturnAvailable] = useState(false);
-
-  const [refundData, setRefundData] = useState({
-    method: "bkash",
-    trxId: "",
-    note: "",
-  });
 
   // Check return eligibility after render; server actions must not run in JSX conditions.
   useEffect(() => {
@@ -319,27 +312,6 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
     }
   };
 
-  // ✅ Refund process
-  const handleRefund = async () => {
-    try {
-      setLoading(true);
-
-      const res = await processRefundAction({
-        orderId,
-        ...refundData,
-      });
-
-      if (!res.success) throw new Error(res.message);
-
-      setStatus("REFUNDED");
-      toast.success("Refund completed");
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white border-t shadow-lg z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
@@ -380,43 +352,9 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
           </>
         )}
 
-        {/* ===== REFUND INPUT ===== */}
+        {/* Refund payout is handled by Accounts after MKT approval. */}
         {status === "REFUNDING" && (
-          <>
-            <select
-              onChange={(e) =>
-                setRefundData({ ...refundData, method: e.target.value })
-              }
-              className="border px-2 py-1"
-            >
-              <option value="bkash">bKash</option>
-              <option value="nagad">Nagad</option>
-              <option value="bank">Bank</option>
-              <option value="cash">Cash</option>
-            </select>
-
-            <input
-              placeholder="Transaction ID"
-              onChange={(e) =>
-                setRefundData({ ...refundData, trxId: e.target.value })
-              }
-              className="border px-2 py-1"
-            />
-            <input
-              placeholder="refud note"
-              onChange={(e) =>
-                setRefundData({ ...refundData, note: e.target.value })
-              }
-              className="border px-2 py-1"
-            />
-            <button
-              disabled={loading || !refundData.trxId}
-              onClick={handleRefund}
-              className={`px-4 py-2 bg-green-700 text-white rounded ${!refundData.trxId ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              Confirm Refund
-            </button>
-          </>
+          <p className="text-sm text-text-muted">Record the returned items from <Link href="/admin/returns" className="font-semibold text-primary underline">Return Receiving</Link>. MKT approves the refund request; Accounts pays it.</p>
         )}
 
         {/* ===== ACTION BUTTONS ===== */}
@@ -574,12 +512,7 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
             {/* RETURNED */}
             {status === "RETURNED" && (
               <>
-                <button
-                  onClick={() => handleStatusChange("REFUNDING")}
-                  className="px-4 py-2 bg-blue-600 text-white rounded"
-                >
-                  Approve Refund
-                </button>
+                <Link href="/admin/returns" className="inline-flex items-center rounded bg-blue-600 px-4 py-2 text-white">Receive return &amp; queue refund</Link>
 
                 <button
                   onClick={() => handleStatusChange("DELIVERED")}

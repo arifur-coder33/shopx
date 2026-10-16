@@ -968,6 +968,9 @@ export async function deleteOrderById(orderId) {
 export async function updateOrderStatusAction(orderId, status, note) {
   try {
     await hasPermission("order", "update");
+    if (["REFUNDING", "REFUNDED"].includes(status)) {
+      throw new Error("Refund status is managed through MKT refund approval and Accounts disbursement.");
+    }
     // 🔎 get order first (for orderNo + old status)
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -1196,66 +1199,11 @@ export async function cancelOrderById({
   }
 }
 
-export async function processRefundAction({ orderId, method, trxId, note }) {
-  try {
-    if (!orderId) throw new Error("Order ID required");
-
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-    });
-
-    if (!order) throw new Error("Order not found");
-    if (order.status === "REFUNDED") throw new Error("Already refunded");
-    if (!["RETURNED", "REFUNDING"].includes(order.status))
-      throw new Error("Refund not allowed in this status");
-
-    const refundAmount = order.orderPrice - (order.adminDiscount || 0);
-
-    const refun = await prisma.$transaction([
-      // 1️⃣ Update order status
-      prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: "REFUNDED", // ✅ শুধু status update
-        },
-      }),
-
-      // 2️⃣ Create refund record
-      prisma.refund.create({
-        data: {
-          orderId,
-          amount: refundAmount,
-          method,
-          trxId,
-          note,
-          status: "COMPLETED",
-        },
-      }),
-
-      // 3️⃣ Timeline add
-      prisma.orderTimeline.create({
-        data: {
-          orderId,
-          orderNo: order.orderNo,
-          status: "REFUNDED",
-          title: "Refund processed",
-          message: `Refund via ${method} (${trxId || "no trx"})`,
-          createdBy: "admin",
-        },
-      }),
-    ]);
-
-    console.log("Refund transaction result:", refun);
-
-    // 🔄 Revalidate paths
-    revalidatePath("/admin/orders");
-    revalidatePath(`/admin/orders/${orderId}`);
-
-    return { success: true, message: "Refund completed successfully" };
-  } catch (error) {
-    console.error("Error processing refund:", error);
-    return { success: false, message: error.message || "Refund failed" };
-  }
+export async function processRefundAction() {
+  return {
+    success: false,
+    message: "Refunds must be approved in Marketing & Sales and disbursed from Accounts → Refund Disbursement.",
+  };
 }
 
 export async function getOrderCountsbyUserId(userId) {

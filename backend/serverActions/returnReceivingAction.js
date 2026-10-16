@@ -57,7 +57,7 @@ export async function receiveReturnedOrder(formData) {
       const order = await tx.order.findUnique({ where: { id: orderId }, include: { orderItems: { include: { deliveryItems: true, returnItems: true } }, payments: { where: { status: { in: ["PAID", "PARTIALLY_REFUNDED"] } }, include: { refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } }, refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } });
       const allowedStatuses = reasonType === "DELIVERY_FAIL"
         ? ["RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED"]
-        : ["DELIVERED", "RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED"];
+        : ["DELIVERED", "RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED", "RETURNED", "REFUNDING"];
       if (!order || !allowedStatuses.includes(order.status)) throw new Error("This order is not eligible for the selected return type.");
       const warehouse = await tx.warehouse.findUnique({ where: { id: warehouseId }, select: { id: true } });
       if (!warehouse) throw new Error("Warehouse not found.");

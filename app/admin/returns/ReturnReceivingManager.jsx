@@ -52,7 +52,7 @@ export default function ReturnReceivingManager({ data }) {
       const found = result.data;
       setOrders((current) => current.some((item) => item.id === found.id) ? current : [found, ...current]);
       setOrderId(found.id);
-      setReasonType(found.status === "DELIVERED" ? "CUSTOMER_RETURN" : "DELIVERY_FAIL");
+      setReasonType(["RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED"].includes(found.status) ? "DELIVERY_FAIL" : "CUSTOMER_RETURN");
       setSelected({});
       setMessage(`Order #${found.orderNo} loaded. Select returned items and enter the inspection details.`);
     });
