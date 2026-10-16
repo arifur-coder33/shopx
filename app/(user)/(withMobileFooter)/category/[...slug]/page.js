@@ -149,6 +149,7 @@ export default async function CategoryWithProductPage({ params }) {
       <CategoryProductGrid
         initialProducts={data}
         initialCursor={result.nextCursor}
+        variationOptions={result.variationOptions || []}
         categorySlug={slug[slug.length - 1]}
       />
     </>

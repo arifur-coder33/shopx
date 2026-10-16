@@ -5,7 +5,7 @@ import ProductCard from "@/components/products/ProductCard";
 import ProductFilters from "@/components/products/ProductFilters";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-export default function SearchProductGrid({ query, filters, initialProducts, initialCursor, queryString }) {
+export default function SearchProductGrid({ query, filters, initialProducts, initialCursor, queryString, variationOptions = [] }) {
   const [products, setProducts] = useState(initialProducts);
   const [cursor, setCursor] = useState(initialCursor);
   const [error, setError] = useState("");
@@ -40,7 +40,7 @@ export default function SearchProductGrid({ query, filters, initialProducts, ini
   }, [cursor, error, loadMore]);
 
   return <>
-    <div className="mb-3 flex justify-end"><ProductFilters baseHref="/search" queryString={queryString} activeFilters={filters} /></div>
+    <div className="mb-3 flex justify-end"><ProductFilters baseHref="/search" queryString={queryString} activeFilters={filters} variationOptions={variationOptions} /></div>
     {products.length ? <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
       {products.map((item, index) => <ProductCard key={item.id} product={item} priority={index < 2} />)}
     </div> : <p className="py-8 text-center text-text-muted">এই filter-এ কোনো পণ্য পাওয়া যায়নি।</p>}

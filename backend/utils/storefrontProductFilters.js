@@ -12,6 +12,23 @@ export function normalizeStorefrontFilters(input = {}) {
     maxPrice: maxPrice != null && maxPrice >= (minPrice ?? 0) ? maxPrice : null,
     inStock: input.inStock === true || input.inStock === "1",
     variation: String(input.variation || "").trim().slice(0, 80),
+    variationOptions: (Array.isArray(input.variationOptions)
+      ? input.variationOptions
+      : typeof input.variationOptions === "string"
+        ? input.variationOptions.split(",")
+        : [])
+      .map((option) => {
+        if (typeof option === "string") {
+          const [variationNameId, variationValueId] = option.split(":");
+          return { variationNameId, variationValueId };
+        }
+        return {
+          variationNameId: String(option?.variationNameId || ""),
+          variationValueId: String(option?.variationValueId || ""),
+        };
+      })
+      .filter((option) => option.variationNameId && option.variationValueId)
+      .slice(0, 40),
     rating: Number.isInteger(rating) && rating >= 1 && rating <= 5 ? rating : null,
   };
 }
@@ -57,6 +74,22 @@ export function buildStorefrontProductFilter(input = {}) {
             { variationName: { name: { contains: filters.variation, mode: "insensitive" } } },
             { variationValue: { value: { contains: filters.variation, mode: "insensitive" } } },
           ],
+        },
+      },
+    });
+  }
+  const selectedByName = new Map();
+  for (const option of filters.variationOptions) {
+    const values = selectedByName.get(option.variationNameId) || new Set();
+    values.add(option.variationValueId);
+    selectedByName.set(option.variationNameId, values);
+  }
+  for (const [variationNameId, valueIds] of selectedByName) {
+    variationAnd.push({
+      combinations: {
+        some: {
+          variationNameId,
+          variationValueId: { in: [...valueIds] },
         },
       },
     });

@@ -292,6 +292,7 @@ model ProductVariation {
   transactions      InventoryTransaction[]
   stocks            Stock[]
   deliveryItems     DeliveryItem[]
+  returnItems       ReturnReceiptItem[]
 }
 
 // A campaign is a time-bound, server-evaluated promotion. Prices are never
@@ -434,6 +435,7 @@ model Order {
   dueAmount                 Float?
   note                      String?
   status                    OrderStatus      @default(PENDING) // Order status enumeration
+  customerConfirmedAt       DateTime?
   shipping                  Shipping?
   selectedPaymentGatewayId  String?
   selectedPaymentGateway    PaymentGateway?  @relation("OrderPaymentGateway", fields: [selectedPaymentGatewayId], references: [id])
@@ -444,6 +446,7 @@ model Order {
   refunds                   Refund[]
   ledgers                   Ledger[]
   deliveries                Delivery[]
+  returnReceipts             ReturnReceipt[]
   fbc                       String?
   fbp                       String?
   gclid                     String?
@@ -481,6 +484,7 @@ model OrderItem {
   variationId      String
   variation        ProductVariation @relation(fields: [variationId], references: [id])
   deliveryItems    DeliveryItem[]
+  returnItems      ReturnReceiptItem[]
   photoReview      PhotoReview?
   status           OrderStatus      @default(PENDING)
   createdAt        DateTime         @default(now()) // Timestamp for order placement
@@ -701,10 +705,16 @@ model Refund {
   orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
+  returnReceiptId String?
+  returnReceipt   ReturnReceipt? @relation(fields: [returnReceiptId], references: [id], onDelete: SetNull)
+
   paymentId      String?
   payment        Payment?      @relation(fields: [paymentId], references: [id])
   moneyAccountId String?
   moneyAccount   MoneyAccount? @relation(fields: [moneyAccountId], references: [id])
+
+  refundDestinationType    String?
+  refundDestinationDetails String?
 
   amount Float
 
@@ -724,6 +734,7 @@ model Refund {
 
   @@index([moneyAccountId])
   @@index([externalReference])
+  @@index([returnReceiptId])
 }
 
 model Ledger {
@@ -795,6 +806,8 @@ model SiteSetting {
   darkText        String?
   baseFontSize    Int?
   borderRadius    Int?
+  orderReconfirmEnabled Boolean @default(true)
+  orderReconfirmMessage String? @db.VarChar(500)
   createdAt       DateTime @default(now()) // Timestamp for order placement
   updatedAt       DateTime @updatedAt // Auto-updated timestamp
 }
@@ -1131,6 +1144,7 @@ model Warehouse {
   transactions InventoryTransaction[]
   goodsReceipt GoodsReceipt[]
   deliveries   Delivery[]
+  returnItems  ReturnReceiptItem[]
   createdAt    DateTime               @default(now())
 
   updatedAt DateTime @updatedAt
@@ -1227,6 +1241,37 @@ model DeliveryItem {
   @@index([goodsReceiptItemId])
 }
 
+model ReturnReceipt {
+  id          String             @id @default(cuid())
+  orderId     String
+  order       Order              @relation(fields: [orderId], references: [id])
+  reasonType  ReturnReasonType
+  description String?
+  items       ReturnReceiptItem[]
+  expenses    Expense[]
+  refunds     Refund[]
+  createdAt   DateTime           @default(now())
+  createdBy   String?
+
+  @@index([orderId, createdAt])
+}
+
+model ReturnReceiptItem {
+  id              String            @id @default(cuid())
+  returnReceiptId String
+  returnReceipt   ReturnReceipt     @relation(fields: [returnReceiptId], references: [id], onDelete: Cascade)
+  orderItemId     String
+  orderItem       OrderItem         @relation(fields: [orderItemId], references: [id])
+  variationId     String
+  variation       ProductVariation  @relation(fields: [variationId], references: [id])
+  warehouseId     String
+  warehouse       Warehouse         @relation(fields: [warehouseId], references: [id])
+  quantity        Float
+  disposition     ReturnDisposition
+
+  @@index([orderItemId])
+}
+
 model InventoryTransaction {
   id String @id @default(cuid())
 
@@ -1301,6 +1346,8 @@ model Expense {
 
   purchaseOrderId String?
   purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  returnReceiptId String?
+  returnReceipt   ReturnReceipt? @relation(fields: [returnReceiptId], references: [id])
 
   paymentMethod String?
 
@@ -1570,6 +1617,16 @@ enum DeliveryStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+enum ReturnReasonType {
+  DELIVERY_FAIL
+  CUSTOMER_RETURN
+}
+
+enum ReturnDisposition {
+  RESTOCK
+  DISPOSE
 }
 
 enum InventoryType {

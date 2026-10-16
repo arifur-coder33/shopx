@@ -147,6 +147,14 @@ export default function SiteAppearanceForm({ initialSettings }) {
         </section>
 
         <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+          <h2 className="text-lg font-bold">Order success page</h2>
+          <p className="mb-4 text-sm text-text-muted">Let customers reconfirm their order. Reconfirmation keeps the order status pending and records the customer response for staff.</p>
+          <input type="hidden" name="orderReconfirmEnabled" value="false" />
+          <label className="mb-4 flex items-center gap-3 text-sm font-semibold"><input type="checkbox" name="orderReconfirmEnabled" value="true" checked={settings.orderReconfirmEnabled} onChange={(event) => updateValue("orderReconfirmEnabled", event.target.checked)} disabled={disabled} className="h-4 w-4 accent-primary" />Show the re-confirm button after order placement</label>
+          <label className="grid gap-1.5 text-sm font-semibold">Re-confirm message<textarea name="orderReconfirmMessage" value={settings.orderReconfirmMessage || ""} onChange={(event) => updateValue("orderReconfirmMessage", event.target.value)} maxLength={500} rows={3} disabled={disabled} className={inputClass} placeholder="আপনার অর্ডারটি নিশ্চিত করতে নিচের বাটনে চাপ দিন।" /></label>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
           <h2 className="text-lg font-bold">Theme colors</h2>
           <p className="mb-4 text-sm text-text-muted">Muted, border, hover and soft colors are generated automatically for consistent contrast.</p>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

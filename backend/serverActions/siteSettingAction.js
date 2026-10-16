@@ -106,6 +106,8 @@ export async function getSiteAppearanceForAdmin() {
       data: {
         ...normalizeSiteAppearance(setting),
         ...normalizeSiteIdentity(setting),
+        orderReconfirmEnabled: setting?.orderReconfirmEnabled ?? true,
+        orderReconfirmMessage: setting?.orderReconfirmMessage || "অর্ডারটি নিশ্চিত করতে নিচের বাটনে চাপ দিন।",
         logo: setting?.logo || null,
         logoMedia: byName.get(setting?.logo) || null,
         faviconMedia: byName.get(setting?.favicon) || null,
@@ -167,6 +169,8 @@ export async function updateSiteAppearance(formData) {
       darkText: color(values.darkText, "Dark text"),
       baseFontSize: boundedInteger(values.baseFontSize, "Base font size", 14, 20),
       borderRadius: boundedInteger(values.borderRadius, "Border radius", 0, 24),
+      orderReconfirmEnabled: values.orderReconfirmEnabled === "true",
+      orderReconfirmMessage: clean(values.orderReconfirmMessage).slice(0, 500) || null,
     };
 
     if (existing) {

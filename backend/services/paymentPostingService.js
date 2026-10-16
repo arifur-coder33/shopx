@@ -429,6 +429,10 @@ export async function postProviderFee({
 export async function postPaymentRefund({
   orderId,
   paymentId,
+  pendingRefundId,
+  refundFromAccountId,
+  refundDestinationType,
+  refundDestinationDetails,
   amount: rawAmount,
   reason,
   adminNote,
@@ -441,7 +445,21 @@ export async function postPaymentRefund({
       const existing = await tx.refund.findFirst({
         where: { externalReference, status: "COMPLETED" },
       });
-      if (existing) return { refund: existing, duplicate: true };
+      if (existing) {
+        if (pendingRefundId && existing.id !== pendingRefundId) {
+          throw new Error("This refund transaction reference has already been used.");
+        }
+        return { refund: existing, duplicate: true };
+      }
+    }
+    const queuedRefund = pendingRefundId
+      ? await tx.refund.findUnique({ where: { id: pendingRefundId } })
+      : null;
+    if (pendingRefundId && (!queuedRefund || !["PENDING", "APPROVED"].includes(queuedRefund.status))) {
+      throw new Error("This queued refund is no longer pending.");
+    }
+    if (queuedRefund && (queuedRefund.orderId !== orderId || (queuedRefund.paymentId && queuedRefund.paymentId !== paymentId))) {
+      throw new Error("The queued refund does not match this order and payment.");
     }
     const payment = await tx.payment.findUnique({
       where: { id: paymentId },
@@ -451,9 +469,10 @@ export async function postPaymentRefund({
     if (!["PAID", "PARTIALLY_REFUNDED"].includes(payment.status)) {
       throw new Error("Only a posted payment can be refunded.");
     }
-    if (!payment.moneyAccount?.isActive) {
-      throw new Error("The original payment account is unavailable.");
-    }
+    const refundAccount = refundFromAccountId
+      ? await tx.moneyAccount.findFirst({ where: { id: refundFromAccountId, type: { not: "COURIER" } } })
+      : payment.moneyAccount;
+    if (!refundAccount?.isActive) throw new Error("Select an active account to pay this refund from.");
     const amount = money(rawAmount);
     const previous = await tx.refund.aggregate({
       where: { paymentId, status: "COMPLETED" },
@@ -464,26 +483,36 @@ export async function postPaymentRefund({
       throw new Error("Refund amount exceeds the refundable payment balance.");
     }
     const fullRefund = sameMoney(refunded + amount, payment.amount);
-    const refund = await tx.refund.create({
-      data: {
+    const refundData = {
         orderId,
         paymentId,
-        moneyAccountId: payment.moneyAccount.id,
+        moneyAccountId: refundAccount.id,
+        refundDestinationType: refundDestinationType || queuedRefund?.refundDestinationType || null,
+        refundDestinationDetails: refundDestinationDetails || queuedRefund?.refundDestinationDetails || null,
         amount,
         reason: reason || null,
         adminNote: adminNote || null,
         status: "COMPLETED",
         externalReference: externalReference || null,
         refundedAt,
-      },
-    });
+      };
+    if (queuedRefund) {
+      const claimed = await tx.refund.updateMany({
+        where: { id: queuedRefund.id, status: queuedRefund.status },
+        data: { status: "COMPLETED" },
+      });
+      if (claimed.count !== 1) throw new Error("Another admin has already processed this refund.");
+    }
+    const refund = queuedRefund
+      ? await tx.refund.update({ where: { id: queuedRefund.id }, data: refundData })
+      : await tx.refund.create({ data: refundData });
     const refundTransactionNo = externalReference
       ? `REF-${createHash("sha256").update(externalReference).digest("hex").slice(0, 24)}`
       : `REF-${refund.id}`;
     const movement = await postMoneyTransaction(tx, {
       type: "REFUND",
       amount,
-      fromAccountId: payment.moneyAccount.id,
+      fromAccountId: refundAccount.id,
       transactionNo: refundTransactionNo,
       idempotencyKey: externalReference ? `REFUND:${externalReference}` : `REFUND:${refund.id}`,
       paymentId,
@@ -519,8 +548,8 @@ export async function postPaymentRefund({
       lines: [
         { accountCode: ACCOUNT_CODES.SALES_RETURNS, debit: amount },
         {
-          accountCode: moneyAccountCode(payment.moneyAccount),
-          accountName: `${payment.moneyAccount.type} · ${payment.moneyAccount.name}`,
+          accountCode: moneyAccountCode(refundAccount),
+          accountName: `${refundAccount.type} · ${refundAccount.name}`,
           accountType: "ASSET",
           credit: amount,
         },
@@ -532,7 +561,7 @@ export async function postPaymentRefund({
         orderNo: payment.order.orderNo,
         status: payment.order.status,
         title: "Refund Completed",
-        message: `Refunded ৳${amount} from ${payment.moneyAccount.name}`,
+        message: `Refunded ৳${amount} from ${refundAccount.name}`,
         createdBy: createdBy || "system",
       },
     });

@@ -6,7 +6,7 @@ import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
 import ProductFilters from "@/components/products/ProductFilters";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-export default function CategoryProductGrid({ initialProducts, initialCursor, categorySlug }) {
+export default function CategoryProductGrid({ initialProducts, initialCursor, categorySlug, variationOptions = [] }) {
   const [products, setProducts] = useState(initialProducts);
   const [cursor, setCursor] = useState(initialCursor);
   const [filters, setFilters] = useState({});
@@ -57,7 +57,7 @@ export default function CategoryProductGrid({ initialProducts, initialCursor, ca
 
   return (
     <>
-      <div className="mb-3 flex justify-end"><ProductFilters activeFilters={filters} onApply={applyFilters} onClear={() => applyFilters({})} /></div>
+      <div className="mb-3 flex justify-end"><ProductFilters activeFilters={filters} variationOptions={variationOptions} onApply={applyFilters} onClear={() => applyFilters({})} /></div>
       {products.length ? (
         <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">
           {products.map((product, index) => (

@@ -1321,6 +1321,57 @@ export async function getOrderIdByOrderNoPhoneNo({ orderNo, phoneNumber }) {
   }
 }
 
+export async function getOrderSuccessPageData({ orderNo, phoneNumber }) {
+  if (!orderNo || !phoneNumber) return { success: false };
+  const [order, setting] = await Promise.all([
+    prisma.order.findFirst({
+      where: { orderNo: String(orderNo), phoneNumber: String(phoneNumber) },
+      select: { id: true, orderNo: true, status: true, customerConfirmedAt: true, orderItems: { select: { productId: true, product: { select: { categoryId: true } } } } },
+    }),
+    prisma.siteSetting.findFirst({ select: { orderReconfirmEnabled: true, orderReconfirmMessage: true } }),
+  ]);
+  if (!order) return { success: false };
+  const purchasedIds = [...new Set(order.orderItems.map((item) => item.productId))];
+  const categoryIds = [...new Set(order.orderItems.map((item) => item.product?.categoryId).filter(Boolean))];
+  const products = await prisma.product.findMany({
+    where: { isActive: true, id: { notIn: purchasedIds }, ...(categoryIds.length ? { categoryId: { in: categoryIds } } : {}) },
+    take: 8,
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    select: { id: true, title: true, slug: true, hasVariations: true, thumbnail: { select: { name: true } }, category: { select: { name: true } }, variations: { select: { regularPrice: true, discountPrice: true } } },
+  });
+  return {
+    success: true,
+    order: { id: order.id, orderNo: order.orderNo, status: order.status, confirmed: Boolean(order.customerConfirmedAt) },
+    reconfirm: { enabled: setting?.orderReconfirmEnabled ?? true, message: setting?.orderReconfirmMessage || "অর্ডারটি নিশ্চিত করতে নিচের বাটনে চাপ দিন।" },
+    products: products.map((product) => {
+      const regularPrices = product.variations.map((item) => Number(item.regularPrice) || 0).filter(Boolean);
+      const salePrices = product.variations.map((item) => Number(item.discountPrice) > 0 ? Number(item.discountPrice) : Number(item.regularPrice) || 0).filter(Boolean);
+      const regularPrice = regularPrices.length ? Math.min(...regularPrices) : 0;
+      const bestSale = salePrices.length ? Math.min(...salePrices) : regularPrice;
+      return { id: product.id, title: product.title, slug: product.slug, hasVariations: product.hasVariations, regularPrice, discountPrice: bestSale < regularPrice ? bestSale : 0, thumbnail: { name: product.thumbnail?.name || null }, category: product.category?.name || "" };
+    }),
+  };
+}
+
+export async function reconfirmCustomerOrderAction({ orderNo, phoneNumber }) {
+  if (!orderNo || !phoneNumber) return { success: false, message: "অর্ডারের তথ্য পাওয়া যায়নি।" };
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({ where: { orderNo: String(orderNo), phoneNumber: String(phoneNumber) }, select: { id: true, status: true, customerConfirmedAt: true } });
+      if (!order) return { success: false, message: "অর্ডারটি পাওয়া যায়নি।" };
+      if (order.customerConfirmedAt) return { success: true, message: "আপনার অর্ডারটি আগেই re-confirm করা হয়েছে।" };
+      if (order.status !== "PENDING") return { success: false, message: "এই অর্ডারটি আর re-confirm করা যাবে না।" };
+      const confirmedAt = new Date();
+      const changed = await tx.order.updateMany({ where: { id: order.id, status: "PENDING", customerConfirmedAt: null }, data: { customerConfirmedAt: confirmedAt } });
+      if (!changed.count) return { success: true, message: "আপনার অর্ডারটি আগেই re-confirm করা হয়েছে।" };
+      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: String(orderNo), status: order.status, title: "Customer re-confirmed order", message: "Customer confirmed this order from the order success page.", createdBy: "customer" } });
+      return { success: true, message: "ধন্যবাদ! আপনার অর্ডারটি re-confirm হয়েছে।" };
+    });
+  } catch {
+    return { success: false, message: "এখন re-confirm করা যাচ্ছে না। আবার চেষ্টা করুন।" };
+  }
+}
+
 export async function cancelUnpaidCustomerOrder({
   orderNo,
   phoneNumber,

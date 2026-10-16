@@ -10,6 +10,7 @@ import { categorySpecificationInput } from "../services/specificationService";
 import { hasPermission } from "../utils/hasPermission";
 import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
 import { buildStorefrontProductFilter } from "@/backend/utils/storefrontProductFilters";
+import { getStorefrontVariationOptions } from "@/backend/utils/getStorefrontVariationOptions";
 
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
@@ -913,6 +914,7 @@ export async function getCategoryPageData(slug, cursor = null, rawFilters = {}) 
     return {
       success: true,
       data: filteredProducts,
+      ...(cursor ? {} : { variationOptions: await getStorefrontVariationOptions(categoryIds) }),
       nextCursor: hasMore ? visibleProducts.at(-1)?.id || null : null,
       category: {
         id: targetCategory.id,
