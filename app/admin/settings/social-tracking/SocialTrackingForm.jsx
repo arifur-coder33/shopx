@@ -111,6 +111,31 @@ const providers = [
   },
 ];
 
+function CopyableUrl({ id, label, url, hint }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-5 rounded-xl border border-border bg-surface-muted p-4">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-text">{label}</label>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input id={id} className={inputClass} value={url} readOnly onFocus={(event) => event.target.select()} />
+        <button type="button" className="button inline-flex shrink-0 items-center justify-center gap-2" onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1800);
+          } catch {
+            toast.error(`Could not copy the URL. Select and copy it manually.`);
+          }
+        }}>
+          {copied ? <Check size={17} /> : <Copy size={17} />}
+          {copied ? "Copied" : "Copy URL"}
+        </button>
+      </div>
+      {hint && <p className="mt-1.5 text-xs text-text-muted">{hint}</p>}
+    </div>
+  );
+}
+
 function SecretField({ field, configured, disabled, value, setValue }) {
   const [visible, setVisible] = useState(false);
   const [clearValue, setClearValue] = useState(false);
@@ -203,12 +228,11 @@ function SecretField({ field, configured, disabled, value, setValue }) {
   );
 }
 
-export default function SocialTrackingForm({ initialSettings, sitemapUrl }) {
+export default function SocialTrackingForm({ initialSettings, sitemapUrl, productFeedUrls }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [pending, startTransition] = useTransition();
   const [secretValues, setSecretValues] = useState({});
-  const [sitemapCopied, setSitemapCopied] = useState(false);
   const canUpdate = hasUIPermission(
     session?.user?.permissions || [],
     "socialTracking",
@@ -312,41 +336,12 @@ export default function SocialTrackingForm({ initialSettings, sitemapUrl }) {
                   ),
                 )}
               </div>
-              {provider.key === "google" && (
-                <div className="mt-5 rounded-xl border border-border bg-surface-muted p-4">
-                  <label htmlFor="google-sitemap-url" className="mb-1.5 block text-sm font-semibold text-text">
-                    Google Search Console sitemap URL
-                  </label>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
-                      id="google-sitemap-url"
-                      className={inputClass}
-                      value={sitemapUrl}
-                      readOnly
-                      onFocus={(event) => event.target.select()}
-                    />
-                    <button
-                      type="button"
-                      className="button inline-flex shrink-0 items-center justify-center gap-2"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(sitemapUrl);
-                          setSitemapCopied(true);
-                          window.setTimeout(() => setSitemapCopied(false), 1800);
-                        } catch {
-                          toast.error("Could not copy the sitemap URL. Select and copy it manually.");
-                        }
-                      }}
-                    >
-                      {sitemapCopied ? <Check size={17} /> : <Copy size={17} />}
-                      {sitemapCopied ? "Copied" : "Copy URL"}
-                    </button>
-                  </div>
-                  <p className="mt-1.5 text-xs text-text-muted">
-                    Submit this URL in Google Search Console → Sitemaps.
-                  </p>
-                </div>
-              )}
+              {provider.key === "google" && <>
+                <CopyableUrl id="google-sitemap-url" label="Google Search Console sitemap URL" url={sitemapUrl} hint="Submit this URL in Google Search Console → Sitemaps." />
+                <CopyableUrl id="google-product-feed-url" label="Google Merchant Center product feed (XML)" url={productFeedUrls.google} hint="Add this URL as a scheduled fetch data source in Merchant Center." />
+              </>}
+              {provider.key === "facebook" && <CopyableUrl id="facebook-product-feed-url" label="Facebook / Meta Catalog product feed (CSV)" url={productFeedUrls.facebook} hint="Add this URL in Meta Commerce Manager → Catalog → Data sources." />}
+              {provider.key === "tiktok" && <CopyableUrl id="tiktok-product-feed-url" label="TikTok product feed (CSV)" url={productFeedUrls.tiktok} hint="Add this URL as a scheduled feed in TikTok Seller Center / Catalog." />}
             </section>
           );
         })}

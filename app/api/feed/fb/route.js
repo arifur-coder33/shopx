@@ -9,7 +9,6 @@ export async function GET(request) {
     getProductsForFeed(),
     getPublicSiteIdentity(),
   ]);
-  console.log("product feed", getProductsForFeed);
   const items = socialFormatProducts(products, {
     siteUrl: new URL(request.url).origin,
     brand: identity.name,

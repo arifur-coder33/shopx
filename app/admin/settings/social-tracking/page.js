@@ -9,6 +9,19 @@ export default async function SocialTrackingPage() {
   if (!result.success) {
     return <div className="card p-5 text-danger">{result.message}</div>;
   }
-  return <SocialTrackingForm initialSettings={result.data} sitemapUrl={new URL("/sitemap.xml", getSiteUrl()).toString()} />;
+  const siteUrl = getSiteUrl();
+  const feedUrl = (path) => new URL(path, siteUrl).toString();
+  const productFeedUrls = {
+    google: feedUrl("/api/feed/ggl"),
+    facebook: feedUrl("/api/feed/fb"),
+    tiktok: feedUrl("/api/feed/tt"),
+  };
+  return (
+    <SocialTrackingForm
+      initialSettings={result.data}
+      sitemapUrl={feedUrl("/sitemap.xml")}
+      productFeedUrls={productFeedUrls}
+    />
+  );
 }
 
