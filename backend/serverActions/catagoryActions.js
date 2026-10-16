@@ -9,6 +9,7 @@ import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { categorySpecificationInput } from "../services/specificationService";
 import { hasPermission } from "../utils/hasPermission";
 import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
+import { buildStorefrontProductFilter } from "@/backend/utils/storefrontProductFilters";
 
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
@@ -748,7 +749,7 @@ export async function getCategoryTree() {
 }
 const CATEGORY_PRODUCT_PAGE_SIZE = 24;
 
-export async function getCategoryPageData(slug, cursor = null) {
+export async function getCategoryPageData(slug, cursor = null, rawFilters = {}) {
   try {
     // 1️⃣ all categories (for tree + recursion)
     const categories = await prisma.category.findMany({
@@ -814,6 +815,8 @@ export async function getCategoryPageData(slug, cursor = null) {
       pendingCategoryIds.push(...(childrenByParent.get(categoryId) || []));
     }
 
+    const { productWhere, variationWhere } = buildStorefrontProductFilter(rawFilters);
+
     // 4️⃣ get products (ONLY LIGHT DATA)
     const [products, campaigns] = await Promise.all([prisma.product.findMany({
       where: {
@@ -821,6 +824,7 @@ export async function getCategoryPageData(slug, cursor = null) {
         categoryId: {
           in: categoryIds,
         },
+        ...productWhere,
       },
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }, { id: "desc" }],
       take: CATEGORY_PRODUCT_PAGE_SIZE + 1,
@@ -833,6 +837,7 @@ export async function getCategoryPageData(slug, cursor = null) {
         slug: true,
         hasVariations: true,
         variations: {
+          ...(variationWhere && { where: variationWhere }),
           select: {
             regularPrice: true,
             discountPrice: true,
@@ -852,6 +857,15 @@ export async function getCategoryPageData(slug, cursor = null) {
     const visibleProducts = hasMore
       ? products.slice(0, CATEGORY_PRODUCT_PAGE_SIZE)
       : products;
+    const reviewRows = visibleProducts.length
+      ? await prisma.photoReview.groupBy({
+          by: ["productId"],
+          where: { productId: { in: visibleProducts.map((product) => product.id) }, isPublished: true },
+          _count: { _all: true },
+          _avg: { rating: true },
+        })
+      : [];
+    const reviewsByProductId = new Map(reviewRows.map((row) => [row.productId, { reviewCount: row._count._all, reviewRating: row._avg.rating || 0 }]));
     const filteredProducts = visibleProducts.map((product) => {
       const variations = product.variations || [];
 
@@ -863,6 +877,7 @@ export async function getCategoryPageData(slug, cursor = null) {
           regularPrice: 0,
           discountPrice: 0,
           hasVariations: false,
+          ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
           thumbnail: product.thumbnail?.name || null,
           ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: 0, discountPrice: 0 }),
         };
@@ -888,6 +903,7 @@ export async function getCategoryPageData(slug, cursor = null) {
         regularPrice: minRegular,
         discountPrice: minDiscount,
         hasVariations: product.hasVariations,
+        ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
         thumbnail: { name: product.thumbnail?.name || null },
         ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: minRegular, discountPrice: minDiscount }),
         // gallery: product.gallery.map((g) => g.media),

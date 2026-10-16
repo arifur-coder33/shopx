@@ -1,5 +1,5 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import { Plus, ShoppingCart, Truck } from "lucide-react";
+import { Plus, ShoppingCart, Star, Truck } from "lucide-react";
 import Link from "next/link";
 import ImageCustomServer from "../images/ImageCustomServer";
 import WishlistButton from "../wishlist/WishlistButton";
@@ -86,6 +86,11 @@ export default function ProductCard({ product, priority = false }) {
                 </del>
               )}
             </div>
+            {Number(product.reviewCount) > 0 && <div className="mt-0.5 flex items-center gap-1 text-xs text-text-muted" aria-label={`${Number(product.reviewRating || 0).toFixed(1)} out of 5 from ${product.reviewCount} reviews`}>
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" aria-hidden="true" />
+              <span className="font-semibold text-text">{Number(product.reviewRating || 0).toFixed(1)}</span>
+              <span>({replaceNumbers(String(product.reviewCount))} রিভিউ)</span>
+            </div>}
           </div>
         </Link>
 

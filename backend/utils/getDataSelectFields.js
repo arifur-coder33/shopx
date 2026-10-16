@@ -45,7 +45,7 @@ export const getDataSelectFields = (tableProperties = []) => {
           current = current[key].select;
         }
       }
-    } else if (prop.field && prop.type !== "expand") {
+    } else if (prop.field && prop.type !== "expand" && prop.type !== "computed") {
       // Direct fields
       fields[prop.field] = true;
     }

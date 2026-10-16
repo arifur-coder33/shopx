@@ -3,7 +3,7 @@ import { normalizeText } from "@/utils/normalize";
 
 const compact = (value) => value.replace(/\s/g, "");
 
-export async function findSearchProducts(rawQuery, select, take = 10) {
+export async function findSearchProducts(rawQuery, select, take = 10, extraWhere = {}, cursor = null) {
   const normalized = normalizeText(String(rawQuery || ""));
   const joined = compact(normalized);
   if (!joined) return [];
@@ -17,13 +17,16 @@ export async function findSearchProducts(rawQuery, select, take = 10) {
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
+      ...extraWhere,
       OR: terms.map((term) => ({ searchText: { contains: term } })),
     },
     select,
     take,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   });
 
-  if (products.length >= take || joined.length < 2) return products;
+  if (products.length >= take || joined.length < 2 || cursor || Object.keys(extraWhere).length) return products;
 
   // Older products may not have the compact title in searchText yet.
   // Legacy products may not have compact searchText. Normalize punctuation

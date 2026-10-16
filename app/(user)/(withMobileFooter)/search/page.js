@@ -1,5 +1,6 @@
 import { searchProducts } from "@/backend/serverActions/productActions";
-import ProductCard from "@/components/products/ProductCard";
+import SearchProductGrid from "./SearchProductGrid";
+import { normalizeStorefrontFilters } from "@/backend/utils/storefrontProductFilters";
 
 export const metadata = {
   title: "পণ্য খুঁজুন",
@@ -7,21 +8,15 @@ export const metadata = {
 };
 
 export default async function SearchPage({ searchParams }) {
-  const { q } = await searchParams;
+  const query = await searchParams;
+  const { q } = query;
   const rawQuery = typeof q === "string" ? q : "";
-
-  const { data, success } = await searchProducts(rawQuery);
+  const filters = normalizeStorefrontFilters(query || {});
+  const { data, success, nextCursor } = await searchProducts(rawQuery, filters);
   return (
     <div className="p-5">
       <h1 className="text-xl font-bold mb-4">Search Results for {rawQuery}</h1>
-
-      {data.length === 0 && <div>No products found</div>}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {data.map((item, index) => (
-          <ProductCard key={item.id} product={item} priority={index < 2} />
-        ))}
-      </div>
+      {!success ? <p className="text-danger">পণ্য খোঁজা যায়নি। আবার চেষ্টা করুন।</p> : <SearchProductGrid key={`${rawQuery}:${JSON.stringify(filters)}`} query={rawQuery} filters={filters} initialProducts={data} initialCursor={nextCursor} queryString={new URLSearchParams({ q: rawQuery }).toString()} />}
     </div>
   );
 }

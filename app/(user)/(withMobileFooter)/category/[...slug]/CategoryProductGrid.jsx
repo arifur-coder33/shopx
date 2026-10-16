@@ -3,20 +3,36 @@
 import { getCategoryPageData } from "@/backend/serverActions/catagoryActions";
 import ProductCard from "@/components/products/ProductCard";
 import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
+import ProductFilters from "@/components/products/ProductFilters";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
 export default function CategoryProductGrid({ initialProducts, initialCursor, categorySlug }) {
   const [products, setProducts] = useState(initialProducts);
   const [cursor, setCursor] = useState(initialCursor);
+  const [filters, setFilters] = useState({});
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const loaderRef = useRef(null);
+
+  const applyFilters = useCallback((nextFilters) => {
+    setError("");
+    startTransition(async () => {
+      const result = await getCategoryPageData(categorySlug, null, nextFilters);
+      if (!result?.success) {
+        setError(result?.error || "পণ্য filter করা যায়নি");
+        return;
+      }
+      setFilters(nextFilters);
+      setProducts(result.data || []);
+      setCursor(result.nextCursor);
+    });
+  }, [categorySlug]);
 
   const loadMore = useCallback(() => {
     if (!cursor || isPending) return;
     setError("");
     startTransition(async () => {
-      const result = await getCategoryPageData(categorySlug, cursor);
+      const result = await getCategoryPageData(categorySlug, cursor, filters);
       if (!result?.success) {
         setError(result?.error || "আরও পণ্য লোড করা যায়নি");
         return;
@@ -27,7 +43,7 @@ export default function CategoryProductGrid({ initialProducts, initialCursor, ca
       });
       setCursor(result.nextCursor);
     });
-  }, [categorySlug, cursor, isPending]);
+  }, [categorySlug, cursor, filters, isPending]);
 
   useEffect(() => {
     const target = loaderRef.current;
@@ -41,6 +57,7 @@ export default function CategoryProductGrid({ initialProducts, initialCursor, ca
 
   return (
     <>
+      <div className="mb-3 flex justify-end"><ProductFilters activeFilters={filters} onApply={applyFilters} onClear={() => applyFilters({})} /></div>
       {products.length ? (
         <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">
           {products.map((product, index) => (

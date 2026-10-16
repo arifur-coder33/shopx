@@ -32,5 +32,22 @@ export default function ViewProductEvent({ product }) {
       },
     });
   }, [product, session, price]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    const key = `product-view-counted:${product.id}`;
+    try {
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, "1");
+    } catch {
+      // Count once per page visit when session storage is unavailable.
+    }
+    fetch("/api/product-view", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ productId: product.id }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [product?.id]);
   return <div></div>;
 }

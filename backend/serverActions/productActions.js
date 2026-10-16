@@ -13,6 +13,7 @@ import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { getUserId, hasPermission } from "../utils/hasPermission";
 import { findSearchProducts } from "../utils/findSearchProducts";
 import { saveProductSpecifications } from "../services/specificationService";
+import { buildStorefrontProductFilter } from "@/backend/utils/storefrontProductFilters";
 import { getActiveCampaigns, getProductCardCampaignData } from "../services/campaignService";
 import {
   normalizeProductVideos,
@@ -873,6 +874,24 @@ export async function getAllProduct(params) {
       orderBy: { [sortField]: sortDirection },
     });
 
+    const reviewRows = products.length
+      ? await prisma.photoReview.groupBy({
+          by: ["productId"],
+          where: {
+            productId: { in: products.map((product) => product.id) },
+            isPublished: true,
+          },
+          _count: { _all: true },
+          _avg: { rating: true },
+        })
+      : [];
+    const reviewsByProductId = new Map(
+      reviewRows.map((row) => [row.productId, {
+        reviewCount: row._count._all,
+        reviewRating: row._avg.rating || 0,
+      }]),
+    );
+
     let nextCursor = null;
     if (products.length > requestedLimit) {
       products.pop();
@@ -905,6 +924,7 @@ export async function getAllProduct(params) {
       return {
         variations: updatedVariations,
         ...rest,
+        ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
         price: priceToDisplay || "N/A", // Format price
         stock: stock, // Total stock from variations
         orders: orderQty || 0, // Total orders from variations
@@ -2060,7 +2080,9 @@ export const updateProductStatus = async ({ id, value }) => {
   }
 };
 
-export const searchProducts = async (rawQuery) => {
+export const searchProducts = async (rawQuery, rawFilters = {}, cursor = null) => {
+  const { filters, productWhere, variationWhere } = buildStorefrontProductFilter(rawFilters);
+  const pageSize = 24;
   const [products, campaigns] = await Promise.all([
     findSearchProducts(rawQuery, {
       id: true,
@@ -2068,14 +2090,30 @@ export const searchProducts = async (rawQuery) => {
       slug: true,
       categoryId: true,
       hasVariations: true,
+      createdAt: true,
       thumbnail: { select: { name: true } },
-      variations: { select: { regularPrice: true, discountPrice: true } },
+      variations: {
+        ...(variationWhere && { where: variationWhere }),
+        select: { regularPrice: true, discountPrice: true },
+      },
       category: { select: { name: true, slug: true } },
-    }, 10),
+    }, pageSize + 1, productWhere, cursor),
     getActiveCampaigns(),
   ]);
 
-  const filteredProducts = products.map((product) => {
+  const hasMore = products.length > pageSize;
+  const visibleProducts = hasMore ? products.slice(0, pageSize) : products;
+  const reviewRows = visibleProducts.length
+    ? await prisma.photoReview.groupBy({
+        by: ["productId"],
+        where: { productId: { in: visibleProducts.map((product) => product.id) }, isPublished: true },
+        _count: { _all: true },
+        _avg: { rating: true },
+      })
+    : [];
+  const reviewsByProductId = new Map(reviewRows.map((row) => [row.productId, { reviewCount: row._count._all, reviewRating: row._avg.rating || 0 }]));
+
+  const filteredProducts = visibleProducts.map((product) => {
     const productVariations = product.variations || [];
     const regularPrices = productVariations.map((variation) => Number(variation.regularPrice)).filter(Number.isFinite);
     const displayPrices = productVariations
@@ -2092,6 +2130,7 @@ export const searchProducts = async (rawQuery) => {
       regularPrice,
       discountPrice,
       hasVariations: product.hasVariations,
+      ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
       thumbnail: { name: product.thumbnail?.name || null },
       category: product.category?.name || "Uncategorized",
       ...getProductCardCampaignData({
@@ -2104,5 +2143,10 @@ export const searchProducts = async (rawQuery) => {
     };
   });
 
-  return { success: true, data: filteredProducts };
+  return {
+    success: true,
+    data: filteredProducts,
+    nextCursor: hasMore ? visibleProducts.at(-1)?.id || null : null,
+    filters,
+  };
 };

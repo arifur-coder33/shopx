@@ -66,6 +66,9 @@ export default async function ProductListPage() {
       type: "number",
       sort: true,
     },
+    { label: "Views", field: "viewCount", type: "number", sort: true },
+    { label: "Reviews", field: "reviewCount", type: "computed", sort: false },
+    { label: "Avg. rating", field: "reviewRating", type: "computed", sort: false },
 
     { label: "Status", field: "status", type: "badge", sort: true }, // Use 'status' enum directly
   ];

@@ -184,6 +184,7 @@ model Product {
   seoDescription          String?
   isFeatured              Boolean?           @default(false) // Indicates if the product is featured
   isActive                Boolean?           @default(true) // Marks if the product is active
+  viewCount               Int                 @default(0)
   allowOutOfStockOrder    Boolean            @default(false)
   codAvailable            Boolean?           @default(true)
   advancePaymentType      String?            @default("NONE")
