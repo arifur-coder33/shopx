@@ -1075,7 +1075,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
       createdBy: "admin",
     });
     await postDeliveredCod();
-    if (order.paymentMethod === "cod" && status === "PROCESSING") {
+    if (status === "PROCESSING") {
       firePurchaseServer({ orderId }).catch((err) =>
         console.error("Tracking failed:", err),
       );

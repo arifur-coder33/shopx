@@ -23,12 +23,16 @@ export async function fireGoogleServer(data, configuredSettings) {
         params: {
           value: data.value,
           currency: data.currency,
-          transaction_id: data.eventId,
+          transaction_id: data.transactionId || data.eventId,
           source: data.actionSource || "website",
+          ...(Number.isFinite(Number(data.shipping)) && {
+            shipping: Number(data.shipping),
+          }),
 
           items: data.items.map((i) => ({
             item_id: i.id,
             item_name: i.name,
+            ...(i.category && { item_category: i.category }),
             price: i.price,
             quantity: i.quantity,
           })),
