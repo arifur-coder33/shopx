@@ -4,6 +4,7 @@ import Footer from "@/components/footer/Footer";
 import NavBar from "@/components/NavBar"; // The optimized NavBar from our previous discussion
 import { getPublicSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 import RouteViewTracker from "@/components/common/RouteViewTracker";
+import ChatWidgetLoader from "@/components/chat/ChatWidgetLoader";
 
 export const revalidate = 60;
 
@@ -19,6 +20,7 @@ export default async function UserLayout({ children }) {
       {/* All your scripts are now cleanly handled by this component */}
       <ThirdPartyScripts settings={trackingSettings} />
       <RouteViewTracker />
+      <ChatWidgetLoader />
 
       {/* The noscript tag is for users without JavaScript. It MUST remain here */}
       {/* in the HTML body and cannot be inside the client component. */}

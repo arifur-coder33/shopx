@@ -23,7 +23,7 @@ const productSelect = {
   },
 };
 
-function storefrontProduct(product, campaigns = []) {
+function storefrontProduct(product, campaigns = [], review = { reviewCount: 0, reviewRating: 0 }) {
   const variations = product.variations || [];
   const regularPrices = variations
     .map((variation) => Number(variation.regularPrice))
@@ -52,6 +52,7 @@ function storefrontProduct(product, campaigns = []) {
         ? lowestSalePrice
         : 0,
     ...campaignDisplay,
+    ...review,
     thumbnail: { name: product.thumbnail?.name || null },
     category: product.category?.name || "Uncategorized",
   };
@@ -77,9 +78,25 @@ async function productBatch({ featured, cursor = null, limit, campaigns = [] }) 
   const [products, resolvedCampaigns] = await Promise.all([productsPromise, campaigns]);
   const hasMore = products.length > limit;
   const visibleProducts = hasMore ? products.slice(0, limit) : products;
+  const reviewRows = visibleProducts.length
+    ? await prisma.photoReview.groupBy({
+        by: ["productId"],
+        where: { productId: { in: visibleProducts.map((product) => product.id) }, isPublished: true },
+        _count: { _all: true },
+        _avg: { rating: true },
+      })
+    : [];
+  const reviewsByProductId = new Map(reviewRows.map((row) => [row.productId, {
+    reviewCount: row._count._all,
+    reviewRating: row._avg.rating || 0,
+  }]));
 
   return {
-    products: visibleProducts.map((product) => storefrontProduct(product, resolvedCampaigns)),
+    products: visibleProducts.map((product) => storefrontProduct(
+      product,
+      resolvedCampaigns,
+      reviewsByProductId.get(product.id),
+    )),
     nextCursor: hasMore
       ? visibleProducts[visibleProducts.length - 1]?.id || null
       : null,

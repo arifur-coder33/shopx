@@ -507,6 +507,20 @@ export async function getAllCategoryWithproduct() {
       getActiveCampaigns(),
     ]);
 
+    const categoryProductIds = data.flatMap((category) => category.products.map((product) => product.id));
+    const reviewRows = categoryProductIds.length
+      ? await prisma.photoReview.groupBy({
+          by: ["productId"],
+          where: { productId: { in: categoryProductIds }, isPublished: true },
+          _count: { _all: true },
+          _avg: { rating: true },
+        })
+      : [];
+    const reviewsByProductId = new Map(reviewRows.map((row) => [row.productId, {
+      reviewCount: row._count._all,
+      reviewRating: row._avg.rating || 0,
+    }]));
+
     const filteredData = data
       .map((category) => ({
         ...category,
@@ -521,6 +535,7 @@ export async function getAllCategoryWithproduct() {
               regularPrice: 0,
               discountPrice: 0,
               hasVariations: false,
+              ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
               thumbnail: product.thumbnail?.name || null,
               category: product.category.name,
               ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: 0, discountPrice: 0 }),
@@ -547,6 +562,7 @@ export async function getAllCategoryWithproduct() {
             regularPrice: minRegular,
             discountPrice: minDiscount,
             hasVariations: product.hasVariations,
+            ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
             thumbnail: { name: product.thumbnail?.name || null },
             category: product.category.name,
             ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: minRegular, discountPrice: minDiscount }),

@@ -258,6 +258,7 @@ async function main() {
     "siteSetting",
     "contentPage",
     "campaign",
+    "chat",
   ];
 
   await prisma.resource.createMany({

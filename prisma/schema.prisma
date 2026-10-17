@@ -31,6 +31,7 @@ model User {
   tokenVersion Int       @default(0)
   orders       Order[] // Relationship to track user orders
   photoReviews PhotoReview[]
+  assignedChats ChatConversation[] @relation("ChatAssignedTo")
   createdAt    DateTime? @default(now()) // Timestamp for account creation
   updatedAt    DateTime  @updatedAt // Auto-updated timestamp
 }
@@ -1664,4 +1665,81 @@ model AbandonedCheckoutLead {
   lastSeenAt      DateTime @default(now())
 
   @@index([updatedAt])
+}
+
+enum ChatChannel {
+  WEBSITE
+  WHATSAPP
+  MESSENGER
+}
+
+enum ChatConversationStatus {
+  OPEN
+  PENDING
+  CLOSED
+}
+
+enum ChatMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ChatMessageAuthorType {
+  CUSTOMER
+  AGENT
+  AI
+  SYSTEM
+}
+
+model ChatConversation {
+  id             String                 @id @default(cuid())
+  channel        ChatChannel
+  externalUserId String
+  customerName   String?
+  customerPhone  String?
+  status         ChatConversationStatus @default(OPEN)
+  assignedToId   String?
+  assignedTo     User?                  @relation("ChatAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  lastMessageAt  DateTime               @default(now())
+  unreadCount    Int                    @default(0)
+  aiModeEnabled  Boolean                @default(false)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  messages       ChatMessage[]
+
+  @@unique([channel, externalUserId])
+  @@index([status, lastMessageAt])
+  @@index([channel, status, lastMessageAt])
+  @@index([assignedToId, status])
+}
+
+model ChatMessage {
+  id                String                @id @default(cuid())
+  conversationId    String
+  conversation      ChatConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  channel           ChatChannel
+  direction         ChatMessageDirection
+  authorType        ChatMessageAuthorType
+  authorId          String?
+  content           String                @db.Text
+  externalMessageId String?
+  deliveryStatus    String                @default("RECEIVED")
+  metadata          Json?
+  createdAt         DateTime              @default(now())
+
+  @@unique([channel, externalMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model ChatSetting {
+  id                   String   @id
+  websiteChatEnabled   Boolean  @default(true)
+  whatsappEnabled      Boolean  @default(false)
+  messengerEnabled     Boolean  @default(false)
+  welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
+  encryptedCredentials String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  createdBy            String?
+  updatedBy            String?
 }

@@ -9,6 +9,7 @@ import ProductInitialImage from "./ProductInitialImage";
 import { CampaignOfferList } from "@/components/campaign/CampaignOfferList";
 import ProductStaticGallery from "./ProductStaticGallery";
 import ProductInfoServer from "./ProductInfoServer";
+import ProductShareButton from "@/components/products/ProductShareButton";
 
 async function ProductEmiAvailability() {
   const providers = await getCheckoutProviders();
@@ -96,7 +97,10 @@ export default function ProductHeader({ data, imageProps, campaignOffers = [] })
   const titleComponent = (
     <div className="flex items-start gap-3 border-b border-border pb-3">
       <h1 className="min-w-0 flex-1 text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">{title}</h1>
-      <WishlistButton product={wishlistProduct} />
+      <div className="flex shrink-0 items-center gap-2">
+        <WishlistButton product={wishlistProduct} />
+        <ProductShareButton title={title} />
+      </div>
     </div>
   );
   const bottomComponent = <><CampaignOfferList campaigns={campaignOffers} title="এই পণ্যে চলমান অফার" /><Suspense fallback={null}><ProductEmiAvailability /></Suspense></>;
