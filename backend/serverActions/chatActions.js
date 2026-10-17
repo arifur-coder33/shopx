@@ -7,10 +7,43 @@ import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getSiteUrl } from "@/lib/siteUrl";
+import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscription } from "@/backend/services/orderPushService";
+import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
 
 const SETTING_ID = "primary";
 const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion"];
 const trim = (value) => String(value ?? "").trim();
+
+export async function getChatPushConfigAction() {
+  try {
+    await requireProcurementPermission("chat", "view");
+    return { success: true, publicKey: await getOrderPushPublicKey() };
+  } catch (error) { return actionError(error, "Chat push configuration could not be loaded."); }
+}
+
+export async function saveChatPushSubscriptionAction(subscription) {
+  try {
+    const userId = await requireProcurementPermission("chat", "view");
+    await saveOrderPushSubscription(userId, subscription);
+    return { success: true };
+  } catch (error) { return actionError(error, "Chat push subscription could not be saved."); }
+}
+
+export async function removeChatPushSubscriptionAction(endpoint) {
+  try {
+    const userId = await requireProcurementPermission("chat", "view");
+    await removeOrderPushSubscription(userId, endpoint);
+    return { success: true };
+  } catch (error) { return actionError(error, "Chat push subscription could not be removed."); }
+}
+
+export async function sendChatPushTestAction(endpoint) {
+  try {
+    const userId = await requireProcurementPermission("chat", "view");
+    const result = await sendChatPushTestNotification(userId, endpoint);
+    return { success: true, ...result };
+  } catch (error) { return actionError(error, "Test chat push could not be sent."); }
+}
 
 async function getSetting() {
   return prisma.chatSetting.findUnique({ where: { id: SETTING_ID } });

@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
+import { sendChatPushNotification } from "@/backend/services/chatPushService";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
     update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone }), lastMessageAt: new Date(), status: "OPEN" },
     select: { id: true },
   });
-  await prisma.$transaction(async (tx) => {
+  const insertedCount = await prisma.$transaction(async (tx) => {
     const inserted = await tx.chatMessage.createMany({
       data: [{ conversationId: conversation.id, channel, direction: "INBOUND", authorType: "CUSTOMER", content: content.slice(0, 4000), externalMessageId: messageId, metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined }],
       skipDuplicates: true,
@@ -47,7 +48,9 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
       where: { id: conversation.id },
       data: { lastMessageAt: new Date(), ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) },
     });
+    return inserted.count;
   });
+  if (insertedCount > 0) await sendChatPushNotification({ conversationId: conversation.id, channel, customerName, customerPhone, content });
 }
 
 async function applyMetaDeliveryStatus(channel, externalMessageId, status) {

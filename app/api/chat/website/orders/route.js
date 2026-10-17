@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { sendChatPushNotification } from "@/backend/services/chatPushService";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,7 @@ export async function POST(request) {
           prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: `Customer shared order ${order.orderNo}`, deliveryStatus: "DELIVERED", metadata: { type: "ORDER_TIMELINE", order: card } } }),
           prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } }),
         ]);
+        await sendChatPushNotification({ conversationId: conversation.id, channel: "WEBSITE", customerName: user?.name, customerPhone: user?.phone, content: message.content, metadata: message.metadata });
         return Response.json({ success: true, messageId: message.id }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
       }
       const orders = await prisma.order.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: "desc" }, take: 20, select: publicOrderSelect });

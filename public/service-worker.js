@@ -10,8 +10,8 @@ self.addEventListener("push", (event) => {
   let payload = {};
   try { payload = event.data ? event.data.json() : {}; } catch { payload = {}; }
   const notification = {
-    title: payload.title || "নতুন অর্ডার",
-    body: payload.body || "নতুন অর্ডার এসেছে।",
+    title: payload.title || (payload.type === "chat" ? "নতুন customer message" : "নতুন অর্ডার"),
+    body: payload.body || (payload.type === "chat" ? "নতুন customer message এসেছে।" : "নতুন অর্ডার এসেছে।"),
     icon: "/apple-touch-icon.png",
     badge: "/favicon-32x32.png",
     tag: payload.tag || "new-order",
@@ -20,6 +20,11 @@ self.addEventListener("push", (event) => {
 
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const focusedChatPage = windows.find((client) => client.focused && client.visibilityState === "visible" && new URL(client.url).origin === self.location.origin && new URL(client.url).pathname.startsWith("/admin/chat"));
+    if (payload.type === "chat" && focusedChatPage) {
+      focusedChatPage.postMessage({ type: "chat-push", conversationId: payload.conversationId });
+      return;
+    }
     const reportTestStage = (stage) => {
       if (payload.test) windows.forEach((client) => client.postMessage({ type: "order-push-test", stage }));
     };
