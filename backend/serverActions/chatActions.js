@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscription } from "@/backend/services/orderPushService";
 import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
+import jwt from "jsonwebtoken";
 
 const SETTING_ID = "primary";
 const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion"];
@@ -43,6 +44,23 @@ export async function sendChatPushTestAction(endpoint) {
     const result = await sendChatPushTestNotification(userId, endpoint);
     return { success: true, ...result };
   } catch (error) { return actionError(error, "Test chat push could not be sent."); }
+}
+
+export async function getChatRealtimeTokenAction() {
+  try {
+    const userId = await requireProcurementPermission("chat", "view");
+    const secret = process.env.AUTH_SECRET;
+    if (!secret) throw new Error("Realtime authentication is not configured.");
+    return {
+      success: true,
+      token: jwt.sign({ scope: "chat:realtime" }, secret, {
+        subject: userId,
+        audience: "shopzy-chat-realtime",
+        issuer: "shopzy",
+        expiresIn: "5m",
+      }),
+    };
+  } catch (error) { return actionError(error, "Chat realtime connection could not be authenticated."); }
 }
 
 async function getSetting() {
@@ -285,15 +303,15 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
     }
     if (conversation.channel === "WEBSITE") {
       await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "SENT" } });
-      return { success: true, data: await prisma.chatMessage.findUnique({ where: { id: message.id } }) };
+      return { success: true, data: { ...message, deliveryStatus: "SENT" } };
     }
     try {
       const externalMessageId = await sendMetaMessage(conversation, message.content, message.metadata?.product || null);
-      await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "SENT", externalMessageId } });
-      return { success: true, data: await prisma.chatMessage.findUnique({ where: { id: message.id } }) };
+      const updated = await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "SENT", externalMessageId } });
+      return { success: true, data: updated.count ? { ...message, deliveryStatus: "SENT", externalMessageId } : await prisma.chatMessage.findUnique({ where: { id: message.id } }) };
     } catch (sendError) {
-      await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "FAILED" } });
-      return { success: true, data: await prisma.chatMessage.findUnique({ where: { id: message.id } }), warning: sendError?.message || "Message could not be sent." };
+      const updated = await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "FAILED" } });
+      return { success: true, data: updated.count ? { ...message, deliveryStatus: "FAILED" } : await prisma.chatMessage.findUnique({ where: { id: message.id } }), warning: sendError?.message || "Message could not be sent." };
     }
   } catch (error) {
     return actionError(error, "Message could not be sent.");

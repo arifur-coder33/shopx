@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getChatAssignableUsersAction, getChatConversationAction, getChatCustomerOrdersAction, getChatInboxAction, getChatSettingsAction, getChatPushConfigAction, saveChatPushSubscriptionAction, removeChatPushSubscriptionAction, sendChatPushTestAction, searchChatProductsAction, sendChatReplyAction, updateChatConversationAction } from "@/backend/serverActions/chatActions";
+import { getChatAssignableUsersAction, getChatConversationAction, getChatCustomerOrdersAction, getChatInboxAction, getChatSettingsAction, getChatPushConfigAction, getChatRealtimeTokenAction, saveChatPushSubscriptionAction, removeChatPushSubscriptionAction, sendChatPushTestAction, searchChatProductsAction, sendChatReplyAction, updateChatConversationAction } from "@/backend/serverActions/chatActions";
 import { Search, Send, MessagesSquare, MessageCircle, Globe2, LoaderCircle, Check, CheckCheck, Clock3, UserRound, RotateCw, CircleAlert, ShoppingBag, Package, X, ChevronDown, Bell } from "lucide-react";
 
 const channelLabels = { WEBSITE: "Website", WHATSAPP: "WhatsApp", MESSENGER: "Messenger" };
@@ -63,6 +63,63 @@ export default function AdminChatInbox({ initialConversations, canUpdate, initia
 
   useEffect(() => { loadInbox(); }, [loadInbox]);
   useEffect(() => { loadConversation(); }, [loadConversation]);
+  useEffect(() => {
+    let stopped = false;
+    let socket = null;
+    let reconnectTimer = null;
+    let fallbackTimer = null;
+    let reconnectDelay = 1000;
+    let refreshTimer = null;
+
+    const refreshRealtimeData = () => {
+      if (refreshTimer) return;
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        loadInbox();
+        loadConversation();
+      }, 100);
+    };
+
+    const connect = async () => {
+      const authResult = await getChatRealtimeTokenAction();
+      if (stopped) return;
+      if (!authResult.success || !authResult.token) {
+        reconnectTimer = window.setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+        return;
+      }
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      socket = new WebSocket(`${protocol}//${window.location.host}/api/chat/socket`);
+      socket.addEventListener("open", () => socket?.send(JSON.stringify({ type: "auth", token: authResult.token })));
+      socket.addEventListener("message", (event) => {
+        let data;
+        try { data = JSON.parse(event.data); } catch { return; }
+        if (data.event === "realtime:connected") {
+          reconnectDelay = 1000;
+          refreshRealtimeData();
+        }
+        if (data.event === "chat.message") refreshRealtimeData();
+      });
+      socket.addEventListener("close", () => {
+        if (stopped) return;
+        reconnectTimer = window.setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+      });
+      socket.addEventListener("error", () => socket?.close());
+    };
+
+    connect();
+    fallbackTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible" && socket?.readyState !== WebSocket.OPEN) refreshRealtimeData();
+    }, 15000);
+    return () => {
+      stopped = true;
+      clearTimeout(reconnectTimer);
+      clearTimeout(refreshTimer);
+      clearInterval(fallbackTimer);
+      socket?.close();
+    };
+  }, [loadInbox, loadConversation]);
   useEffect(() => { getChatAssignableUsersAction().then((result) => { if (result.success) setAgents(result.data); }); }, []);
   useEffect(() => { getChatSettingsAction().then((result) => { if (result.success) setQuickReplies(result.data.quickReplies || []); }); }, []);
   useEffect(() => {
@@ -80,7 +137,7 @@ export default function AdminChatInbox({ initialConversations, canUpdate, initia
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") { loadInbox(); loadConversation(); }
-    }, 8000);
+    }, 15000);
     return () => window.clearInterval(timer);
   }, [loadInbox, loadConversation]);
   useEffect(() => {
@@ -135,7 +192,7 @@ export default function AdminChatInbox({ initialConversations, canUpdate, initia
       knownInboxRef.current = current;
     };
     checkInbox();
-    const timer = window.setInterval(checkInbox, 10000);
+    const timer = window.setInterval(checkInbox, 4000);
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 
@@ -147,22 +204,21 @@ export default function AdminChatInbox({ initialConversations, canUpdate, initia
 
   const sendReply = async (event) => {
     event.preventDefault();
-    if (!draft.trim() || !selectedId || busy || !canUpdate) return;
+    if (!draft.trim() || !selectedId || !canUpdate) return;
     const content = draft.trim();
     const pendingId = `pending-${Date.now()}`;
     const pending = { id: pendingId, conversationId: selectedId, channel: conversation?.channel, direction: "OUTBOUND", authorType: "AGENT", content, deliveryStatus: "SENDING", createdAt: new Date().toISOString() };
-    setBusy(true); setError(""); setDraft("");
+    setError(""); setDraft("");
     setConversation((current) => current ? { ...current, messages: [...current.messages, pending] } : current);
     const result = await sendChatReplyAction(selectedId, content);
     if (result.success) {
       setConversation((current) => current ? { ...current, messages: current.messages.map((item) => item.id === pendingId ? result.data : item) } : current);
       if (result.warning) setError(`${result.warning} Message-এ Retry চাপুন।`);
-      await loadInbox();
+      loadInbox();
     } else {
       setConversation((current) => current ? { ...current, messages: current.messages.filter((item) => item.id !== pendingId) } : current);
-      setDraft(content); setError(result.message || "Reply could not be sent.");
+      setDraft((current) => current || content); setError(result.message || "Reply could not be sent.");
     }
-    setBusy(false);
   };
 
   const retryReply = async (messageId) => {
@@ -286,7 +342,7 @@ export default function AdminChatInbox({ initialConversations, canUpdate, initia
             </div>
             <div className="border-t border-black/5 bg-white px-3 pt-3 sm:px-4"><div className="flex flex-wrap items-center gap-2 rounded-lg bg-background px-2 py-2"><button type="button" onClick={() => setOrdersExpanded((value) => !value)} aria-expanded={ordersExpanded} className="flex min-h-8 flex-1 flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface"><ShoppingBag size={15} className="text-primary" /><span className="font-semibold text-primary">{ordersExpanded ? "Orders লুকান" : "Orders দেখুন"}</span><span><b className="text-text">{orderSummary?.total ?? "—"}</b> মোট</span><span>Running <b className="text-amber-700">{orderSummary?.running ?? "—"}</b></span><span>Complete <b className="text-emerald-700">{orderSummary?.complete ?? "—"}</b></span><ChevronDown size={15} className={`ml-auto transition-transform ${ordersExpanded ? "rotate-180" : ""}`} /></button><button type="button" onClick={() => setProductPanel((value) => !value)} disabled={!canUpdate || conversation.status === "CLOSED"} aria-expanded={productPanel} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text disabled:opacity-50"><Package size={15} />{productPanel ? "Product search বন্ধ" : "Product পাঠান"}</button></div>{ordersExpanded && <div className="mt-2 max-h-44 space-y-2 overflow-y-auto pb-2">{orderSummary?.orders?.length ? orderSummary.orders.map((order) => <div key={order.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border px-3 py-2 text-xs"><a href={`/admin/orders2/${order.id}`} target="_blank" rel="noreferrer" className="font-semibold text-primary underline">{order.orderNo} ↗</a><span className="text-text-muted">{order.status}</span><span className="text-text-muted">৳{Number(order.orderPrice).toLocaleString("en-BD")}</span><span className="text-text-muted">{dateTime(order.createdAt)}</span><button type="button" disabled={!canUpdate || busy || conversation.status === "CLOSED"} onClick={() => sendOrderTimeline(order)} className="ml-auto rounded-md bg-brand px-2.5 py-1.5 font-semibold text-white disabled:opacity-50">Timeline পাঠান</button></div>) : <p className="px-3 py-2 text-xs text-text-muted">এই phone number-এ order নেই।</p>}</div>}</div>
             {productPanel && <div className="border-t border-border bg-surface p-3 sm:px-4"><div className="mb-2 flex items-center gap-2"><input autoFocus value={productQuery} onChange={(event) => setProductQuery(event.target.value)} placeholder="Product name বা code লিখুন" className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text" /><button type="button" onClick={() => setProductPanel(false)} aria-label="বন্ধ করুন" className="rounded p-2 text-text-muted"><X size={17} /></button></div><div className="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">{products.map((product) => <div key={product.id} className="flex items-center gap-2 rounded-lg border border-border p-2"><img src={product.imageUrl || "/placeholder.png"} alt="" className="h-12 w-12 rounded object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-text">{product.title}</p><p className="text-xs text-text-muted">৳{Number(product.price).toLocaleString("en-BD")}{product.inStock ? " · In stock" : " · Out of stock"}</p></div><button type="button" disabled={busy || conversation.status === "CLOSED"} onClick={() => sendProduct(product)} className="rounded-lg bg-brand px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Send</button></div>)}{productQuery.length >= 2 && !products.length && <p className="py-3 text-center text-xs text-text-muted">কোনো product পাওয়া যায়নি।</p>}</div></div>}
-            <form onSubmit={sendReply} className="sticky bottom-0 z-10 shrink-0 border-t border-black/5 bg-white p-3 sm:p-4">{draft.startsWith("/") && quickReplies.length > 0 && <div className="absolute bottom-full left-3 right-3 z-10 mb-1 max-h-52 overflow-auto rounded-xl border border-border bg-surface p-1 shadow-xl sm:left-4 sm:right-4">{quickReplies.filter((item) => !draft.slice(1).trim() || item.shortcut.toLowerCase().includes(draft.slice(1).toLowerCase()) || item.text.toLowerCase().includes(draft.slice(1).toLowerCase())).map((item) => <button key={item.shortcut} type="button" onClick={() => setDraft(item.text)} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-background"><b className="text-xs text-primary">/{item.shortcut}</b><span className="ml-2 line-clamp-1 text-xs text-text-muted">{item.text}</span></button>)}</div>}<div className="flex items-end gap-2"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={2} maxLength={4000} disabled={!canUpdate || conversation.status === "CLOSED"} placeholder={conversation.status === "CLOSED" ? "Reply দিতে conversation reopen করুন" : canUpdate ? "Reply লিখুন… (/ দিলে shortcut)" : "আপনার chat:update permission নেই"} className="min-h-11 flex-1 resize-y rounded-2xl border-0 bg-[#f0f2f5] px-4 py-2 text-sm text-slate-800 outline-none ring-1 ring-black/5 focus:ring-emerald-600 disabled:opacity-50" /><button type="submit" disabled={!canUpdate || busy || !draft.trim() || conversation.status === "CLOSED"} className="inline-flex h-11 items-center gap-2 rounded-full bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50">{busy ? <LoaderCircle size={17} className="animate-spin" /> : <Send size={17} />}<span className="hidden sm:inline">Send</span></button></div><p className="mt-2 text-[11px] text-text-muted">Website reply visitor-এর chat-এ যাবে; Meta reply সংশ্লিষ্ট WhatsApp বা Messenger channel-এ পাঠানো হবে।</p></form>
+            <form onSubmit={sendReply} className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-black/5 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4">{draft.startsWith("/") && quickReplies.length > 0 && <div className="absolute bottom-full left-3 right-3 z-10 mb-1 max-h-52 overflow-auto rounded-xl border border-border bg-surface p-1 shadow-xl sm:left-4 sm:right-4">{quickReplies.filter((item) => !draft.slice(1).trim() || item.shortcut.toLowerCase().includes(draft.slice(1).toLowerCase()) || item.text.toLowerCase().includes(draft.slice(1).toLowerCase())).map((item) => <button key={item.shortcut} type="button" onClick={() => setDraft(item.text)} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-background"><b className="text-xs text-primary">/{item.shortcut}</b><span className="ml-2 line-clamp-1 text-xs text-text-muted">{item.text}</span></button>)}</div>}<div className="flex items-end gap-2"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.altKey && !event.shiftKey) { event.preventDefault(); sendReply(event); } }} rows={2} maxLength={4000} disabled={!canUpdate || conversation.status === "CLOSED"} placeholder={conversation.status === "CLOSED" ? "Reply দিতে conversation reopen করুন" : canUpdate ? "Reply লিখুন… (Enter পাঠায়, Alt+Enter নতুন line)" : "আপনার chat:update permission নেই"} className="min-h-11 flex-1 resize-none rounded-2xl border-0 bg-[#f0f2f5] px-4 py-2 text-sm text-slate-800 outline-none ring-1 ring-black/5 focus:ring-emerald-600 disabled:opacity-50" /><button type="submit" disabled={!canUpdate || !draft.trim() || conversation.status === "CLOSED"} className="inline-flex h-11 items-center gap-2 rounded-full bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"><Send size={17} /><span className="hidden sm:inline">Send</span></button></div><p className="mt-2 text-[11px] text-text-muted">Website reply visitor-এর chat-এ যাবে; Meta reply সংশ্লিষ্ট WhatsApp বা Messenger channel-এ পাঠানো হবে।</p></form>
           </> : <div className="grid flex-1 place-items-center p-8 text-center text-text-muted"><div><UserRound className="mx-auto mb-3 h-10 w-10 opacity-40" /><p>একটি conversation বেছে নিন</p></div></div>}
         </div>
       </section>

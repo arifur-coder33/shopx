@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { after } from "next/server";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
@@ -50,7 +51,7 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
     });
     return inserted.count;
   });
-  if (insertedCount > 0) await sendChatPushNotification({ conversationId: conversation.id, channel, customerName, customerPhone, content });
+  if (insertedCount > 0) after(() => sendChatPushNotification({ conversationId: conversation.id, channel, customerName, customerPhone, content }));
 }
 
 async function applyMetaDeliveryStatus(channel, externalMessageId, status) {

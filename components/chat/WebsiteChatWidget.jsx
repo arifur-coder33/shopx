@@ -102,13 +102,44 @@ export default function WebsiteChatWidget() {
   }, [token]);
 
   useEffect(() => {
-    if (!open || !token) return;
+    if (!open || !token || !messages.length) return;
     refreshMessages();
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") refreshMessages();
-    }, 10000);
-    return () => window.clearInterval(timer);
-  }, [open, token, refreshMessages]);
+    let stopped = false;
+    let socket = null;
+    let reconnectTimer = null;
+    let fallbackTimer = null;
+    let reconnectDelay = 1000;
+    const connect = () => {
+      if (stopped) return;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      socket = new WebSocket(`${protocol}//${window.location.host}/api/chat/socket`);
+      socket.addEventListener("open", () => socket?.send(JSON.stringify({ type: "website-auth", token })));
+      socket.addEventListener("message", (event) => {
+        let data;
+        try { data = JSON.parse(event.data); } catch { return; }
+        if (data.event === "realtime:connected" || data.event === "chat.message") {
+          reconnectDelay = 1000;
+          refreshMessages();
+        }
+      });
+      socket.addEventListener("close", () => {
+        if (stopped) return;
+        reconnectTimer = window.setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 15000);
+      });
+      socket.addEventListener("error", () => socket?.close());
+    };
+    connect();
+    fallbackTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible" && socket?.readyState !== WebSocket.OPEN) refreshMessages();
+    }, 15000);
+    return () => {
+      stopped = true;
+      clearTimeout(reconnectTimer);
+      clearInterval(fallbackTimer);
+      socket?.close();
+    };
+  }, [open, token, messages.length, refreshMessages]);
 
   useEffect(() => {
     if (!open || !token || !messages.some((message) => message.direction === "OUTBOUND" && message.deliveryStatus === "DELIVERED")) return;
