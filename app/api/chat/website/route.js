@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export async function GET(request) {
   if (!/^[a-f0-9-]{36}$/i.test(token)) return Response.json({ success: false }, { status: 400 });
   const conversation = await prisma.chatConversation.findUnique({
     where: { channel_externalUserId: { channel: "WEBSITE", externalUserId: hashToken(token) } },
-    select: { id: true, status: true, messages: { orderBy: { createdAt: "asc" }, take: 100, select: { id: true, direction: true, content: true, deliveryStatus: true, createdAt: true } } },
+    select: { id: true, status: true, messages: { orderBy: { createdAt: "asc" }, take: 100, select: { id: true, direction: true, content: true, deliveryStatus: true, metadata: true, createdAt: true } } },
   });
   if (conversation) await prisma.chatMessage.updateMany({
     where: { conversationId: conversation.id, direction: "OUTBOUND", deliveryStatus: "SENT" },
@@ -61,8 +62,10 @@ export async function POST(request) {
     return Response.json({ success: false, message: "Message is invalid or too long." }, { status: 400 });
   }
   const externalUserId = hashToken(token);
-  const customerName = String(body?.name || "").trim().slice(0, 100) || null;
-  const customerPhone = String(body?.phone || "").trim().slice(0, 30) || null;
+  const session = await auth();
+  const account = session?.user?.id ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, phone: true } }) : null;
+  const customerName = account?.name || String(body?.name || "").trim().slice(0, 100) || null;
+  const customerPhone = account?.phone || String(body?.phone || "").trim().slice(0, 30) || null;
   try {
     const conversation = await prisma.chatConversation.upsert({
       where: { channel_externalUserId: { channel: "WEBSITE", externalUserId } },

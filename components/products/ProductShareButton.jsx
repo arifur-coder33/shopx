@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Facebook, MessageCircle, Share2 } from "lucide-react";
+import { Check, Copy, MessageCircle, Share2 } from "lucide-react";
 
 export default function ProductShareButton({ title }) {
   const [open, setOpen] = useState(false);
@@ -76,7 +76,7 @@ export default function ProductShareButton({ title }) {
             <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp
           </button>
           <button type="button" role="menuitem" onClick={() => openSocialShare("facebook")} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-primary-soft">
-            <Facebook className="h-4 w-4 text-blue-600" /> Facebook
+            <span aria-hidden="true" className="grid h-4 w-4 place-items-center rounded-full bg-blue-600 text-[11px] font-bold leading-none text-white">f</span> Facebook
           </button>
         </div>
       )}

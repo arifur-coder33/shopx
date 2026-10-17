@@ -1737,6 +1737,7 @@ model ChatSetting {
   whatsappEnabled      Boolean  @default(false)
   messengerEnabled     Boolean  @default(false)
   welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
+  quickReplies         Json     @default("[]")
   encryptedCredentials String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
