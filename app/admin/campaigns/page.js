@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { hasPermission } from "@/backend/utils/hasPermission";
 import CampaignDeleteButton from "./components/CampaignDeleteButton";
 import CampaignStatusButton from "./components/CampaignStatusButton";
+import { formatCampaignDateTimeLocal } from "@/lib/campaignDateTime";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function CampaignsPage({ searchParams }) {
             <td className="p-3 font-semibold">{campaign.priority ?? 0}</td>
             <td className="p-3"><span className={"inline-flex rounded-full px-2.5 py-1 text-xs font-semibold " + (statusClass[campaign.statusLabel] || "bg-surface-muted")}>{statusLabel[campaign.statusLabel] || campaign.statusLabel}</span></td>
             <td className="max-w-72 p-3">{campaign.stackable && !campaign.exclusive ? campaign.combinableCampaigns.length ? <><strong>{campaign.combinableCampaigns.length} campaigns</strong><div className="mt-1 flex flex-wrap gap-1">{campaign.combinableCampaigns.map((other) => <span key={other.id} className="rounded-full bg-primary-soft px-2 py-0.5 text-xs text-primary">{other.name}</span>)}</div></> : <span className="text-text-muted">No compatible campaigns</span> : <span className="text-text-muted">0 · Exclusive</span>}</td>
-            <td className="p-3 text-xs">{campaign.startAt ? new Date(campaign.startAt).toLocaleString() : "Now"}<br />{campaign.endAt ? new Date(campaign.endAt).toLocaleString() : "No end"}</td>
+            <td className="p-3 text-xs">{campaign.startAt ? formatCampaignDateTimeLocal(campaign.startAt).replace("T", " ") : "Now"}<br />{campaign.endAt ? formatCampaignDateTimeLocal(campaign.endAt).replace("T", " ") : "No end"}</td>
             <td className="p-3">{campaign._count.usages} / {campaign.usageLimit || "∞"}</td>
             <td className="flex flex-wrap gap-2 p-3"><Link href={"/admin/campaigns/" + campaign.id + "/edit"} className="rounded-lg border px-3 py-1.5 text-sm">Edit</Link><CampaignStatusButton id={campaign.id} status={campaign.status} /><CampaignDeleteButton id={campaign.id} disabled={campaign._count.usages > 0} /></td>
           </tr>)}

@@ -88,6 +88,17 @@ export async function getChatSettingsAction() {
   }
 }
 
+export async function revealChatCredentialAction(key) {
+  try {
+    await requireProcurementPermission("chat", "update");
+    if (!SECRET_KEYS.includes(key)) throw new Error("Invalid credential field.");
+    const setting = await getSetting();
+    const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
+    if (!credentials[key]) return { success: false, message: "এই credential সংরক্ষিত নেই।" };
+    return { success: true, data: { value: credentials[key] } };
+  } catch (error) { return actionError(error, "Credential could not be revealed."); }
+}
+
 export async function saveChatSettingsAction(formData) {
   try {
     const userId = await requireProcurementPermission("chat", "update");

@@ -5,6 +5,7 @@ import { hasPermission, getUserId } from "../utils/hasPermission";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import { isDatabaseId } from "@/lib/databaseId";
+import { parseCampaignDateTimeLocal } from "@/lib/campaignDateTime";
 
 const TYPES = new Set(["PRODUCT_DISCOUNT", "CART_DISCOUNT", "DELIVERY_DISCOUNT", "DELIVERY", "PAYMENT_DISCOUNT", "COUPON", "COMBO"]);
 const STATUSES = new Set(["DRAFT", "PUBLISHED", "PAUSED", "EXPIRED"]);
@@ -37,10 +38,7 @@ function parseProductPairs(value) {
 }
 
 function dateOrNull(value) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) throw new Error("Enter a valid campaign date.");
-  return date;
+  return parseCampaignDateTimeLocal(value);
 }
 
 function campaignData(formData, userId) {
