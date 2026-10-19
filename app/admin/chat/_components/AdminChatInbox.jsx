@@ -114,6 +114,7 @@ export default function AdminChatInbox({
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [replyToMessage, setReplyToMessage] = useState(null);
+  const [openMessageMenuId, setOpenMessageMenuId] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
@@ -137,6 +138,7 @@ export default function AdminChatInbox({
   const photoInputRef = useRef(null);
   const messageListRef = useRef(null);
   const messageElementsRef = useRef(new Map());
+  const messageActionMenusRef = useRef(new Map());
   const replyHighlightTimerRef = useRef(null);
   const [focusedReplyMessageId, setFocusedReplyMessageId] = useState(null);
   selectedIdRef.current = selectedId;
@@ -232,6 +234,30 @@ export default function AdminChatInbox({
   };
 
   useEffect(() => () => window.clearTimeout(replyHighlightTimerRef.current), []);
+
+  useEffect(() => {
+    if (!openMessageMenuId) return;
+    const closeOnOutsideClick = (event) => {
+      const menu = messageActionMenusRef.current.get(openMessageMenuId);
+      if (menu && !menu.contains(event.target)) setOpenMessageMenuId(null);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setOpenMessageMenuId(null);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [openMessageMenuId]);
+
+  const latestMessageId = conversation?.messages?.at(-1)?.id || null;
+  useEffect(() => {
+    const messageList = messageListRef.current;
+    if (!messageList || !latestMessageId) return;
+    messageList.scrollTo({ top: messageList.scrollHeight, behavior: "smooth" });
+  }, [selectedId, latestMessageId]);
 
   useEffect(() => {
     loadInbox();
@@ -1029,8 +1055,58 @@ export default function AdminChatInbox({
                     className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-3 py-2 transition-shadow duration-300 ${focusedReplyMessageId === message.id ? "ring-4 ring-violet-500 ring-offset-2 ring-offset-[#efeae2]" : ""} ${message.direction === "OUTBOUND" ? "rounded-tr-sm bg-[#d9fdd3] text-slate-900 shadow-sm" : "rounded-tl-sm bg-white text-slate-800 shadow-sm"}`}
+                      className={`relative max-w-[85%] rounded-2xl px-3 py-2 transition-shadow duration-300 ${focusedReplyMessageId === message.id ? "ring-4 ring-violet-500 ring-offset-2 ring-offset-[#efeae2]" : ""} ${message.direction === "OUTBOUND" ? "rounded-tr-sm bg-[#d9fdd3] text-slate-900 shadow-sm" : "rounded-tl-sm bg-white text-slate-800 shadow-sm"}`}
                     >
+                      {canUpdate && (
+                        <div
+                          ref={(element) => {
+                            if (element) messageActionMenusRef.current.set(message.id, element);
+                            else messageActionMenusRef.current.delete(message.id);
+                          }}
+                          className="relative mb-1 flex justify-end"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setOpenMessageMenuId((current) => current === message.id ? null : message.id)}
+                            aria-label="Message options"
+                            aria-haspopup="menu"
+                            aria-expanded={openMessageMenuId === message.id}
+                            className="grid h-6 w-6 place-items-center rounded-full text-slate-500 hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          >
+                            <ChevronDown size={15} />
+                          </button>
+                          {openMessageMenuId === message.id && (
+                            <div role="menu" className="absolute right-0 top-7 z-20 min-w-36 rounded-lg border border-border bg-white p-1 text-slate-800 shadow-lg">
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setReplyToMessage(message);
+                                  setDraft("");
+                                  setPhotoFile(null);
+                                  if (photoInputRef.current) photoInputRef.current.value = "";
+                                  setOpenMessageMenuId(null);
+                                }}
+                                className="block w-full rounded px-3 py-2 text-left text-xs font-semibold hover:bg-background"
+                              >Reply</button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={async () => {
+                                  try {
+                                    await navigator.clipboard.writeText(message.content || "");
+                                    setError("");
+                                  } catch {
+                                    setError("Message copy করা যায়নি।");
+                                  }
+                                  setOpenMessageMenuId(null);
+                                }}
+                                className="block w-full rounded px-3 py-2 text-left text-xs font-semibold hover:bg-background"
+                              >Copy message</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {message.metadata?.replyTo && (
                         <button
                           type="button"
@@ -1193,11 +1269,6 @@ export default function AdminChatInbox({
                           </>
                         )}
                       </p>
-                      {canUpdate && (
-                        <button type="button" onClick={() => { setReplyToMessage(message); setDraft(""); setPhotoFile(null); if (photoInputRef.current) photoInputRef.current.value = ""; }} className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline">
-                          <Reply size={12} /> Reply
-                        </button>
-                      )}
                     </div>
                   </div>
                   );

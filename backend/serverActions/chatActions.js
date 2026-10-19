@@ -82,6 +82,11 @@ export async function getChatSettingsAction() {
         messengerEnabled: setting?.messengerEnabled ?? false,
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
         quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies : [],
+        publicCredentials: {
+          whatsappPhoneNumberId: credentials.whatsappPhoneNumberId || "",
+          messengerPageId: credentials.messengerPageId || "",
+          graphApiVersion: credentials.graphApiVersion || "",
+        },
         configured: Object.fromEntries(SECRET_KEYS.map((key) => [key, Boolean(credentials[key])])),
       },
     };

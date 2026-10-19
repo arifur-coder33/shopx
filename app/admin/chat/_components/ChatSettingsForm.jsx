@@ -47,6 +47,7 @@ export default function ChatSettingsForm({
   const [showSecrets, setShowSecrets] = useState({});
   const [revealedCredentials, setRevealedCredentials] = useState({});
   const [generatedVerifyToken, setGeneratedVerifyToken] = useState("");
+  const [tokenCopied, setTokenCopied] = useState(false);
 
   const save = async (event) => {
     event.preventDefault();
@@ -74,6 +75,31 @@ export default function ChatSettingsForm({
     setGeneratedVerifyToken(
       Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(""),
     );
+  };
+
+  const copyVerifyToken = async () => {
+    let token = generatedVerifyToken || revealedCredentials.webhookVerifyToken;
+    if (!token && settings.configured?.webhookVerifyToken) {
+      const result = await revealChatCredentialAction("webhookVerifyToken");
+      if (!result.success) {
+        setMessage(result.message || "Token copy করা যায়নি।");
+        return;
+      }
+      token = result.data.value;
+      setRevealedCredentials((current) => ({ ...current, webhookVerifyToken: token }));
+    }
+    if (!token) {
+      setMessage("আগে নতুন token generate করুন।");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(token);
+      setTokenCopied(true);
+      setMessage("Token copied.");
+      window.setTimeout(() => setTokenCopied(false), 1800);
+    } catch {
+      setMessage("Token copy করা যায়নি।");
+    }
   };
 
   const toggleCredential = async (name) => {
@@ -217,14 +243,27 @@ export default function ChatSettingsForm({
                     {label}
                     {settings.configured?.[name]}
                     {name === "webhookVerifyToken" && (
-                      <button
-                        type="button"
-                        onClick={generateVerifyToken}
-                        disabled={!canUpdate}
-                        className="button px-3 py-1.5 text-xs disabled:opacity-50"
-                      >
-                        Generate new
-                      </button>
+                      <span className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={generateVerifyToken}
+                          disabled={!canUpdate}
+                          className="button px-3 py-1.5 text-xs disabled:opacity-50"
+                        >
+                          Generate new
+                        </button>
+                        <button
+                          type="button"
+                          onClick={copyVerifyToken}
+                          disabled={!canUpdate}
+                          aria-label="Webhook token copy করুন"
+                          title="Copy token"
+                          className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-xs font-semibold text-text disabled:opacity-50"
+                        >
+                          {tokenCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                          <span>{tokenCopied ? "Copied" : "Copy token"}</span>
+                        </button>
+                      </span>
                     )}
                   </span>
                   {name === "webhookVerifyToken" && generatedVerifyToken && (
@@ -236,7 +275,9 @@ export default function ChatSettingsForm({
                     <input
                       name={name}
                       value={
-                        name === "webhookVerifyToken"
+                        !secret
+                          ? revealedCredentials[name] ?? settings.publicCredentials?.[name] ?? ""
+                          : name === "webhookVerifyToken"
                           ? generatedVerifyToken ||
                             revealedCredentials[name] ||
                             ""
@@ -252,7 +293,7 @@ export default function ChatSettingsForm({
                       }}
                       type={secret && !showSecrets[name] ? "password" : "text"}
                       placeholder={
-                        settings.configured?.[name] &&
+                        secret && settings.configured?.[name] &&
                         !revealedCredentials[name] &&
                         !(name === "webhookVerifyToken" && generatedVerifyToken)
                           ? "••••••••••••"
