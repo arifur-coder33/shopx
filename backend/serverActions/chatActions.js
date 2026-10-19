@@ -7,6 +7,7 @@ import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getSiteUrl } from "@/lib/siteUrl";
+import { groupChatInbox, normalizeChatPhone } from "@/lib/chatIdentity";
 import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscription } from "@/backend/services/orderPushService";
 import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
 import jwt from "jsonwebtoken";
@@ -202,12 +203,12 @@ export async function getChatInboxAction({ channel = "ALL", status = "OPEN", sea
       orderBy: { lastMessageAt: "desc" },
       take: 100,
       select: {
-        id: true, channel: true, externalUserId: true, customerName: true, customerPhone: true, status: true,
+        id: true, channel: true, externalUserId: true, customerName: true, customerPhone: true, normalizedPhone: true, profilePicUrl: true, status: true,
         lastMessageAt: true, unreadCount: true, assignedToId: true, assignedTo: { select: { name: true } },
         messages: { orderBy: { createdAt: "desc" }, take: 1, select: { content: true, direction: true, createdAt: true } },
       },
     });
-    return { success: true, data: conversations };
+    return { success: true, data: channel === "ALL" ? groupChatInbox(conversations) : conversations.map((item) => ({ ...item, channels: [item.channel], linkedConversations: [{ id: item.id, channel: item.channel, status: item.status, externalUserId: item.externalUserId, customerPhone: item.customerPhone }] })) };
   } catch (error) {
     return actionError(error, "Chat inbox could not be loaded.");
   }
@@ -216,19 +217,86 @@ export async function getChatInboxAction({ channel = "ALL", status = "OPEN", sea
 export async function getChatConversationAction(conversationId) {
   try {
     await requireProcurementPermission("chat", "view");
+    const selected = await prisma.chatConversation.findUnique({ where: { id: conversationId } });
+    if (!selected) return { success: false, message: "Conversation not found." };
+    const linked = selected.normalizedPhone && ["WHATSAPP", "MESSENGER"].includes(selected.channel)
+      ? await prisma.chatConversation.findMany({ where: { normalizedPhone: selected.normalizedPhone, channel: { in: ["WHATSAPP", "MESSENGER"] } }, include: { messages: { orderBy: { createdAt: "desc" }, take: 300 } } })
+      : [await prisma.chatConversation.findUnique({ where: { id: conversationId }, include: { messages: { orderBy: { createdAt: "desc" }, take: 300 } } })];
+    const linkedIds = linked.map((item) => item.id);
     await prisma.$transaction([
-      prisma.chatConversation.update({ where: { id: conversationId }, data: { unreadCount: 0 } }),
-      prisma.chatMessage.updateMany({ where: { conversationId, direction: "INBOUND", deliveryStatus: "DELIVERED" }, data: { deliveryStatus: "READ" } }),
+      prisma.chatConversation.updateMany({ where: { id: { in: linkedIds } }, data: { unreadCount: 0 } }),
+      prisma.chatMessage.updateMany({ where: { conversationId: { in: linkedIds }, direction: "INBOUND", deliveryStatus: "DELIVERED" }, data: { deliveryStatus: "READ" } }),
     ]);
-    const conversation = await prisma.chatConversation.findUnique({
-      where: { id: conversationId },
-      include: { messages: { orderBy: { createdAt: "asc" }, take: 300 } },
-    });
-    if (!conversation) return { success: false, message: "Conversation not found." };
+    const conversation = {
+      ...selected,
+      customerName: linked.find((item) => item.channel === "MESSENGER" && item.customerName)?.customerName || linked.map((item) => item.customerName).filter(Boolean).sort((a, b) => b.trim().split(/\s+/).length - a.trim().split(/\s+/).length)[0] || selected.customerName,
+      customerPhone: selected.customerPhone || linked.find((item) => item.customerPhone)?.customerPhone || null,
+      profilePicUrl: linked.find((item) => item.profilePicUrl)?.profilePicUrl || null,
+      linkedConversations: linked.map((item) => ({ id: item.id, channel: item.channel, status: item.status, externalUserId: item.externalUserId, customerPhone: item.customerPhone })),
+      channels: [...new Set(linked.map((item) => item.channel))],
+      messages: linked.flatMap((item) => item.messages).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)).slice(-300),
+    };
     return { success: true, data: conversation };
   } catch (error) {
     return actionError(error, "Conversation could not be loaded.");
   }
+}
+
+export async function setMessengerCustomerPhoneAction(conversationId, rawPhone) {
+  try {
+    await requireProcurementPermission("chat", "update");
+    const normalizedPhone = normalizeChatPhone(rawPhone);
+    if (!normalizedPhone) throw new Error("Country code-সহ সঠিক phone number দিন।");
+    const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { channel: true } });
+    if (conversation?.channel !== "MESSENGER") throw new Error("Messenger conversation পাওয়া যায়নি।");
+    await prisma.chatConversation.update({ where: { id: conversationId }, data: { customerPhone: normalizedPhone, normalizedPhone } });
+    return { success: true };
+  } catch (error) { return actionError(error, "Phone number could not be saved."); }
+}
+
+export async function getMessengerCustomerProfileAction(conversationId) {
+  try {
+    await requireProcurementPermission("chat", "view");
+    const conversation = await prisma.chatConversation.findUnique({
+      where: { id: conversationId },
+      select: { channel: true, externalUserId: true, customerName: true, profilePicUrl: true },
+    });
+    if (!conversation || conversation.channel !== "MESSENGER") throw new Error("Messenger conversation পাওয়া যায়নি।");
+    const setting = await getSetting();
+    const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
+    const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
+    let profile = {};
+    let profileErrorCode = null;
+    if (credentials.messengerPageAccessToken && /^v\d+\.\d+$/.test(version || "")) {
+      try {
+        const url = `https://graph.facebook.com/${version}/${encodeURIComponent(conversation.externalUserId)}?fields=first_name,middle_name,last_name,profile_pic`;
+        let response = await fetch(url, {
+          headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}` },
+          cache: "no-store",
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!response.ok) {
+          response = await fetch(url.replace("first_name,middle_name,last_name,profile_pic", "first_name,last_name,profile_pic"), {
+            headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}` },
+            cache: "no-store",
+            signal: AbortSignal.timeout(5000),
+          });
+        }
+        const result = await response.json();
+        if (response.ok) profile = result;
+        else profileErrorCode = result.error?.code || null;
+      } catch { /* Keep the saved name when Meta is unavailable. */ }
+    }
+    const name = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean).join(" ").trim() || conversation.customerName;
+    let profilePicUrl = null;
+    try {
+      if (new URL(profile.profile_pic).protocol === "https:") profilePicUrl = profile.profile_pic;
+    } catch { /* No usable profile picture. */ }
+    if ((name && name !== conversation.customerName) || (profilePicUrl && profilePicUrl !== conversation.profilePicUrl)) {
+      await prisma.chatConversation.update({ where: { id: conversationId }, data: { ...(name && { customerName: name }), ...(profilePicUrl && { profilePicUrl }) } });
+    }
+    return { success: true, data: { name: name || null, profilePicUrl, profileAvailable: Boolean(profile.first_name || profile.middle_name || profile.last_name || profile.profile_pic), profileErrorCode } };
+  } catch (error) { return actionError(error, "Messenger profile could not be loaded."); }
 }
 
 export async function getChatAssignableUsersAction() {
@@ -334,7 +402,13 @@ export async function updateChatConversationAction(conversationId, { status, ass
     await requireProcurementPermission("chat", "update");
     if (status && !["OPEN", "PENDING", "CLOSED"].includes(status)) throw new Error("Invalid conversation status.");
     const data = { ...(status && { status }), ...(assignedToId !== undefined && { assignedToId }) };
-    const conversation = await prisma.chatConversation.update({ where: { id: conversationId }, data, select: { id: true, status: true, assignedToId: true } });
+    const selected = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, channel: true, normalizedPhone: true } });
+    if (!selected) throw new Error("Conversation not found.");
+    const where = selected.normalizedPhone && ["WHATSAPP", "MESSENGER"].includes(selected.channel)
+      ? { normalizedPhone: selected.normalizedPhone, channel: { in: ["WHATSAPP", "MESSENGER"] } }
+      : { id: conversationId };
+    await prisma.chatConversation.updateMany({ where, data });
+    const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, status: true, assignedToId: true } });
     return { success: true, data: conversation };
   } catch (error) {
     return actionError(error, "Conversation could not be updated.");

@@ -4,10 +4,12 @@ import {
   getChatAssignableUsersAction,
   getChatConversationAction,
   getChatCustomerOrdersAction,
+  getMessengerCustomerProfileAction,
   getChatInboxAction,
   getChatPushConfigAction,
   getChatRealtimeTokenAction,
   getChatSettingsAction,
+  setMessengerCustomerPhoneAction,
   removeChatPushSubscriptionAction,
   saveChatPushSubscriptionAction,
   searchChatProductsAction,
@@ -22,6 +24,7 @@ import {
   ChevronDown,
   CircleAlert,
   Clock3,
+  ExternalLink,
   Globe2,
   MessageCircle,
   MessagesSquare,
@@ -48,6 +51,16 @@ const dateTime = (value) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "";
+
+function whatsappChatUrl(conversation) {
+  const number = String(conversation?.externalUserId || conversation?.customerPhone || "").replace(/\D/g, "");
+  return /^\d{8,15}$/.test(number) ? `https://wa.me/${number}` : null;
+}
+
+function customerInitials(name) {
+  const words = String(name || "").trim().split(/\s+/).filter(Boolean);
+  return words.length ? [words[0], words.at(-1)].filter((word, index) => index === 0 || words.length > 1).map((word) => Array.from(word)[0]).join("").toUpperCase() : "";
+}
 
 function urlBase64ToUint8Array(value) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
@@ -82,6 +95,9 @@ export default function AdminChatInbox({
       : initialConversations[0]?.id || "",
   );
   const [conversation, setConversation] = useState(null);
+  const [replyChannel, setReplyChannel] = useState(null);
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
   const [channel, setChannel] = useState("ALL");
   const [status, setStatus] = useState(() =>
     typeof window !== "undefined" &&
@@ -100,6 +116,10 @@ export default function AdminChatInbox({
   const [productQuery, setProductQuery] = useState("");
   const [products, setProducts] = useState([]);
   const [ordersExpanded, setOrdersExpanded] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [profileError, setProfileError] = useState("");
   const [notificationPermission, setNotificationPermission] =
     useState("default");
   const [pushReady, setPushReady] = useState(false);
@@ -107,6 +127,47 @@ export default function AdminChatInbox({
   const selectedIdRef = useRef(selectedId);
   const knownInboxRef = useRef(null);
   selectedIdRef.current = selectedId;
+
+  useEffect(() => {
+    setProfileOpen(false);
+    setProfile(null);
+    setProfileError("");
+    setPhoneDraft("");
+    setReplyChannel(null);
+  }, [selectedId]);
+
+  const openMessengerProfile = async () => {
+    if (profileOpen) { setProfileOpen(false); return; }
+    setProfileOpen(true);
+    setProfileBusy(true);
+    setProfileError("");
+    setPhoneDraft(conversation?.linkedConversations?.find((item) => item.channel === "MESSENGER")?.customerPhone || "");
+    const activeId = selectedId;
+    const requestedId = conversation?.linkedConversations?.find((item) => item.channel === "MESSENGER")?.id || selectedId;
+    const result = await getMessengerCustomerProfileAction(requestedId);
+    if (selectedIdRef.current === activeId) {
+      if (result.success) {
+        setProfile(result.data);
+        setProfileError(result.data.profileAvailable ? "" : result.data.profileErrorCode ? `Meta profile data দেয়নি (Graph API error ${result.data.profileErrorCode}).` : "Meta profile data পাওয়া যায়নি।");
+        setConversation((current) => current ? { ...current, customerName: result.data.name || current.customerName, profilePicUrl: result.data.profilePicUrl || current.profilePicUrl } : current);
+      }
+      else setProfileError(result.message || "Profile পাওয়া যায়নি।");
+      setProfileBusy(false);
+    }
+  };
+
+  const saveMessengerPhone = async (event) => {
+    event.preventDefault();
+    const messengerId = conversation?.linkedConversations?.find((item) => item.channel === "MESSENGER")?.id;
+    if (!messengerId || !phoneDraft.trim() || phoneBusy) return;
+    setPhoneBusy(true);
+    const result = await setMessengerCustomerPhoneAction(messengerId, phoneDraft);
+    if (result.success) {
+      await Promise.all([loadConversation(), loadInbox()]);
+      setProfileError("");
+    } else setProfileError(result.message || "Phone number save করা যায়নি।");
+    setPhoneBusy(false);
+  };
 
   const loadInbox = useCallback(async () => {
     const result = await getChatInboxAction({ channel, status });
@@ -116,7 +177,7 @@ export default function AdminChatInbox({
     }
     setConversations(result.data);
     setSelectedId((current) =>
-      current && result.data.some((item) => item.id === current)
+      current && result.data.some((item) => item.id === current || item.linkedConversations?.some((linked) => linked.id === current))
         ? current
         : result.data[0]?.id || "",
     );
@@ -129,7 +190,12 @@ export default function AdminChatInbox({
       return;
     }
     const result = await getChatConversationAction(selectedId);
-    if (result.success) setConversation(result.data);
+    if (result.success) {
+      setConversation(result.data);
+      setReplyChannel((current) => result.data.linkedConversations.some((item) => item.channel === current)
+        ? current
+        : result.data.linkedConversations.find((item) => item.status !== "CLOSED")?.channel || result.data.channel);
+    }
     else setError(result.message);
   }, [selectedId]);
 
@@ -373,15 +439,20 @@ export default function AdminChatInbox({
     );
   }, [conversations, search]);
 
+  const replyTarget = conversation?.linkedConversations?.find((item) => item.channel === replyChannel) || conversation?.linkedConversations?.[0];
+  const replyClosed = replyTarget?.status === "CLOSED";
+  const messengerContact = conversation?.linkedConversations?.find((item) => item.channel === "MESSENGER");
+  const whatsappContact = conversation?.linkedConversations?.find((item) => item.channel === "WHATSAPP");
+
   const sendReply = async (event) => {
     event.preventDefault();
-    if (!draft.trim() || !selectedId || !canUpdate) return;
+    if (!draft.trim() || !replyTarget || !canUpdate) return;
     const content = draft.trim();
     const pendingId = `pending-${Date.now()}`;
     const pending = {
       id: pendingId,
-      conversationId: selectedId,
-      channel: conversation?.channel,
+      conversationId: replyTarget.id,
+      channel: replyTarget.channel,
       direction: "OUTBOUND",
       authorType: "AGENT",
       content,
@@ -395,7 +466,7 @@ export default function AdminChatInbox({
         ? { ...current, messages: [...current.messages, pending] }
         : current,
     );
-    const result = await sendChatReplyAction(selectedId, content);
+    const result = await sendChatReplyAction(replyTarget.id, content);
     if (result.success) {
       setConversation((current) =>
         current
@@ -441,7 +512,8 @@ export default function AdminChatInbox({
           }
         : current,
     );
-    const result = await sendChatReplyAction(selectedId, "", messageId);
+    const message = conversation?.messages.find((item) => item.id === messageId);
+    const result = await sendChatReplyAction(message?.conversationId || selectedId, "", messageId);
     if (result.success) {
       setConversation((current) =>
         current
@@ -462,10 +534,10 @@ export default function AdminChatInbox({
   };
 
   const sendProduct = async (product) => {
-    if (!selectedId || busy || !canUpdate) return;
+    if (!replyTarget || busy || !canUpdate) return;
     setBusy(true);
     setError("");
-    const result = await sendChatReplyAction(selectedId, "", null, {
+    const result = await sendChatReplyAction(replyTarget.id, "", null, {
       id: product.id,
     });
     if (result.success) {
@@ -484,11 +556,11 @@ export default function AdminChatInbox({
   };
 
   const sendOrderTimeline = async (order) => {
-    if (!selectedId || busy || !canUpdate) return;
+    if (!replyTarget || busy || !canUpdate) return;
     setBusy(true);
     setError("");
     const result = await sendChatReplyAction(
-      selectedId,
+      replyTarget.id,
       "",
       null,
       null,
@@ -594,7 +666,7 @@ export default function AdminChatInbox({
   };
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-4 pb-8">
+    <main className="mx-auto flex h-[calc(100dvh-5rem)] w-full max-w-7xl min-h-0 flex-col overflow-hidden sm:h-[calc(100dvh-6rem)]">
       {error && (
         <p
           role="alert"
@@ -603,9 +675,9 @@ export default function AdminChatInbox({
           {error}
         </p>
       )}
-      <section className="grid h-[calc(100dvh-12rem)] min-h-[24rem] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm lg:h-[min(78vh,820px)] lg:min-h-[32rem] lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm lg:grid-cols-[22rem_minmax(0,1fr)]">
         <aside
-          className={`min-w-0 border-b border-border lg:border-b-0 lg:border-r ${selectedId ? "hidden lg:block" : ""}`}
+          className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-b border-border lg:border-b-0 lg:border-r ${selectedId ? "hidden lg:flex" : ""}`}
         >
           <header className="flex flex-col items-end justify-between gap-3">
             {/* <div>
@@ -708,7 +780,7 @@ export default function AdminChatInbox({
               </select>
             </div>
           </div>
-          <div className="max-h-[65vh] overflow-y-auto lg:max-h-[calc(72vh-6rem)]">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {visibleConversations.length ? (
               visibleConversations.map((item) => {
                 const Icon =
@@ -723,11 +795,11 @@ export default function AdminChatInbox({
                     type="button"
                     key={item.id}
                     onClick={() => setSelectedId(item.id)}
-                    className={`w-full border-b border-border/70 p-3 text-left transition hover:bg-background ${selectedId === item.id ? "bg-primary-soft" : ""}`}
+                    className={`w-full border-b border-border/70 p-3 text-left transition hover:bg-background ${selectedId === item.id || item.linkedConversations?.some((linked) => linked.id === selectedId) ? "bg-primary-soft" : ""}`}
                   >
                     <span className="flex items-center gap-2">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-background text-primary">
-                        <Icon size={18} />
+                      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-background text-primary">
+                        {item.profilePicUrl ? <img src={item.profilePicUrl} alt="" className="h-full w-full object-cover" /> : customerInitials(item.customerName) ? <span className="text-xs font-bold">{customerInitials(item.customerName)}</span> : <Icon size={18} />}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center justify-between gap-2">
@@ -752,6 +824,7 @@ export default function AdminChatInbox({
                             ? "আপনি: "
                             : ""}
                           {lastMessage?.content || "নতুন conversation"}
+                          {item.channels?.length > 1 ? ` · ${item.channels.map((channel) => channelLabels[channel]).join(" + ")}` : ""}
                           {item.assignedTo?.name
                             ? ` · ${item.assignedTo.name}`
                             : ""}
@@ -769,11 +842,11 @@ export default function AdminChatInbox({
           </div>
         </aside>
         <div
-          className={`flex h-full min-h-0 min-w-0 flex-col ${!selectedId ? "hidden lg:flex" : ""}`}
+          className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden ${!selectedId ? "hidden lg:flex" : ""}`}
         >
           {conversation ? (
             <>
-              <header className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-white p-3 sm:p-4">
+              <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-white p-3 sm:p-4">
                 <div className="flex min-w-0 items-center gap-2">
                   <button
                     type="button"
@@ -782,18 +855,28 @@ export default function AdminChatInbox({
                   >
                     ← Inbox
                   </button>
+                  {conversation.profilePicUrl ? <img src={conversation.profilePicUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" /> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background text-xs font-bold text-primary">{customerInitials(conversation.customerName) || <UserRound size={20} />}</span>}
                   <div className="min-w-0">
                     <h2 className="truncate font-bold text-text">
-                      {conversation.customerName ||
-                        conversation.customerPhone ||
-                        `${channelLabels[conversation.channel]} · ${conversation.externalUserId.slice(-6)}`}
+                      {messengerContact ? (
+                        <button type="button" onClick={openMessengerProfile} aria-expanded={profileOpen} title="Messenger profile দেখুন" className="inline-flex max-w-full items-center gap-1 truncate text-primary hover:underline">
+                          {conversation.customerName || `Messenger · ${messengerContact.externalUserId.slice(-6)}`}<UserRound size={14} className="shrink-0" />
+                        </button>
+                      ) : whatsappContact && whatsappChatUrl(whatsappContact) ? (
+                        <a href={whatsappChatUrl(whatsappContact)} target="_blank" rel="noreferrer" title="WhatsApp chat খুলুন" className="inline-flex max-w-full items-center gap-1 truncate text-primary hover:underline">
+                          {conversation.customerName || conversation.customerPhone || conversation.externalUserId}<ExternalLink size={14} className="shrink-0" />
+                        </a>
+                      ) : (
+                        conversation.customerName || conversation.customerPhone || `${channelLabels[conversation.channel]} · ${conversation.externalUserId.slice(-6)}`
+                      )}
                     </h2>
                     <p className="text-xs text-text-muted">
-                      {channelLabels[conversation.channel]} ·{" "}
+                      {conversation.channels?.map((channel) => channelLabels[channel]).join(" + ") || channelLabels[conversation.channel]} ·{" "}
                       {statusLabels[conversation.status]}
                       {conversation.customerPhone
                         ? ` · ${conversation.customerPhone}`
                         : ""}
+                      {messengerContact && whatsappContact && whatsappChatUrl(whatsappContact) && <a href={whatsappChatUrl(whatsappContact)} target="_blank" rel="noreferrer" className="ml-2 text-primary hover:underline">WhatsApp খুলুন ↗</a>}
                     </p>
                   </div>
                 </div>
@@ -841,6 +924,13 @@ export default function AdminChatInbox({
                   </div>
                 )}
               </header>
+              {profileOpen && messengerContact && (
+                <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface px-4 py-3">
+                  {profile?.profilePicUrl || conversation.profilePicUrl ? <img src={profile?.profilePicUrl || conversation.profilePicUrl} alt="" className="h-12 w-12 rounded-full object-cover" /> : <span className="grid h-12 w-12 place-items-center rounded-full bg-background text-primary"><UserRound size={22} /></span>}
+                  <div className="min-w-0 flex-1"><p className="font-semibold text-text">{profileBusy ? "Profile লোড হচ্ছে…" : profile?.name || conversation.customerName || `Messenger · ${messengerContact.externalUserId.slice(-6)}`}</p><p className="text-xs text-text-muted">Messenger profile তথ্য · Facebook profile link Meta দেয় না</p>{canUpdate && <form onSubmit={saveMessengerPhone} className="mt-2 flex max-w-sm gap-2"><input value={phoneDraft} onChange={(event) => setPhoneDraft(event.target.value)} placeholder="Customer phone number" aria-label="Messenger customer phone number" className="min-w-0 flex-1 rounded border border-border px-2 py-1 text-xs" /><button type="submit" disabled={phoneBusy || !phoneDraft.trim()} className="rounded bg-primary px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">{phoneBusy ? "Saving…" : "Save & link"}</button></form>}{profileError && <p className="text-xs text-red-600">{profileError}</p>}</div>
+                  <button type="button" onClick={() => setProfileOpen(false)} aria-label="Profile বন্ধ করুন" className="rounded p-2 text-text-muted hover:bg-background"><X size={17} /></button>
+                </div>
+              )}
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#efeae2] p-3 sm:p-5">
                 {conversation.messages.map((message) => (
                   <div
@@ -996,7 +1086,7 @@ export default function AdminChatInbox({
                   </div>
                 ))}
               </div>
-              <div className="border-t border-black/5 bg-white px-3 pt-3 sm:px-4">
+              <div className="shrink-0 border-t border-black/5 bg-white px-3 pt-3 sm:px-4">
                 <div className="flex flex-wrap items-center gap-2 rounded-lg bg-background px-2 py-2">
                   <button
                     type="button"
@@ -1032,7 +1122,7 @@ export default function AdminChatInbox({
                   <button
                     type="button"
                     onClick={() => setProductPanel((value) => !value)}
-                    disabled={!canUpdate || conversation.status === "CLOSED"}
+                    disabled={!canUpdate || replyClosed}
                     aria-expanded={productPanel}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text disabled:opacity-50"
                   >
@@ -1070,7 +1160,7 @@ export default function AdminChatInbox({
                             disabled={
                               !canUpdate ||
                               busy ||
-                              conversation.status === "CLOSED"
+                              replyClosed
                             }
                             onClick={() => sendOrderTimeline(order)}
                             className="ml-auto rounded-md bg-brand px-2.5 py-1.5 font-semibold text-white disabled:opacity-50"
@@ -1088,7 +1178,7 @@ export default function AdminChatInbox({
                 )}
               </div>
               {productPanel && (
-                <div className="border-t border-border bg-surface p-3 sm:px-4">
+              <div className="shrink-0 border-t border-border bg-surface p-3 sm:px-4">
                   <div className="mb-2 flex items-center gap-2">
                     <input
                       autoFocus
@@ -1130,7 +1220,7 @@ export default function AdminChatInbox({
                         </div>
                         <button
                           type="button"
-                          disabled={busy || conversation.status === "CLOSED"}
+                          disabled={busy || replyClosed}
                           onClick={() => sendProduct(product)}
                           className="rounded-lg bg-brand px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                         >
@@ -1148,8 +1238,9 @@ export default function AdminChatInbox({
               )}
               <form
                 onSubmit={sendReply}
-                className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-black/5 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4"
+                className="relative z-10 mt-auto shrink-0 border-t border-black/5 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4"
               >
+                {conversation.linkedConversations?.length > 1 && <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-text-muted">Reply via <select value={replyTarget?.channel || ""} onChange={(event) => setReplyChannel(event.target.value)} className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-text">{conversation.linkedConversations.map((item) => <option key={item.id} value={item.channel}>{channelLabels[item.channel]}{item.status === "CLOSED" ? " (Closed)" : ""}</option>)}</select></label>}
                 {draft.startsWith("/") && quickReplies.length > 0 && (
                   <div className="absolute bottom-full left-3 right-3 z-10 mb-1 max-h-52 overflow-auto rounded-xl border border-border bg-surface p-1 shadow-xl sm:left-4 sm:right-4">
                     {quickReplies
@@ -1196,9 +1287,9 @@ export default function AdminChatInbox({
                     }}
                     rows={2}
                     maxLength={4000}
-                    disabled={!canUpdate || conversation.status === "CLOSED"}
+                    disabled={!canUpdate || replyClosed}
                     placeholder={
-                      conversation.status === "CLOSED"
+                      replyClosed
                         ? "Reply দিতে conversation reopen করুন"
                         : canUpdate
                           ? "Reply লিখুন… (Enter পাঠায়, Alt+Enter নতুন line)"
@@ -1211,7 +1302,7 @@ export default function AdminChatInbox({
                     disabled={
                       !canUpdate ||
                       !draft.trim() ||
-                      conversation.status === "CLOSED"
+                      replyClosed
                     }
                     className="inline-flex h-11 items-center gap-2 rounded-full bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
                   >

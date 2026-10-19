@@ -1697,6 +1697,8 @@ model ChatConversation {
   externalUserId String
   customerName   String?
   customerPhone  String?
+  normalizedPhone String?
+  profilePicUrl   String?
   status         ChatConversationStatus @default(OPEN)
   assignedToId   String?
   assignedTo     User?                  @relation("ChatAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
@@ -1710,6 +1712,7 @@ model ChatConversation {
   @@unique([channel, externalUserId])
   @@index([status, lastMessageAt])
   @@index([channel, status, lastMessageAt])
+  @@index([normalizedPhone, lastMessageAt])
   @@index([assignedToId, status])
 }
 

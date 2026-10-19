@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
+import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +33,41 @@ function hasValidSignature(rawBody, header, appSecret) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-async function saveInboundMessage({ channel, externalUserId, customerName, customerPhone, messageId, content, metadata }) {
+async function getMessengerCustomerProfile(senderId, credentials) {
+  const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
+  if (!senderId || !credentials.messengerPageAccessToken || !/^v\d+\.\d+$/.test(version || "")) return null;
+  try {
+    const url = `https://graph.facebook.com/${version}/${encodeURIComponent(senderId)}?fields=first_name,middle_name,last_name,profile_pic`;
+    let response = await fetch(url, {
+      headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      response = await fetch(url.replace("first_name,middle_name,last_name,profile_pic", "first_name,last_name,profile_pic"), {
+        headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      });
+    }
+    if (!response.ok) return null;
+    const profile = await response.json();
+    const name = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean).join(" ").trim().slice(0, 150) || null;
+    let profilePicUrl = null;
+    try { if (new URL(profile.profile_pic).protocol === "https:") profilePicUrl = profile.profile_pic; } catch {}
+    return { name, profilePicUrl };
+  } catch {
+    return null;
+  }
+}
+
+async function saveInboundMessage({ channel, externalUserId, customerName, customerPhone, profilePicUrl, messageId, content, metadata }) {
   if (!externalUserId || !messageId || !content) return;
+  const normalizedPhone = normalizeChatPhone(customerPhone);
   const conversation = await prisma.chatConversation.upsert({
     where: { channel_externalUserId: { channel, externalUserId } },
-    create: { channel, externalUserId, customerName: customerName || null, customerPhone: customerPhone || null, lastMessageAt: new Date() },
-    update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone }), lastMessageAt: new Date(), status: "OPEN" },
+    create: { channel, externalUserId, customerName: customerName || null, customerPhone: customerPhone || null, normalizedPhone, profilePicUrl: profilePicUrl || null, lastMessageAt: new Date() },
+    update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone, normalizedPhone }), ...(profilePicUrl && { profilePicUrl }), lastMessageAt: new Date(), status: "OPEN" },
     select: { id: true },
   });
   const insertedCount = await prisma.$transaction(async (tx) => {
@@ -92,7 +122,7 @@ export async function POST(request) {
           await saveInboundMessage({
             channel: "WHATSAPP",
             externalUserId: message.from,
-            customerName: contacts.get(message.from),
+            customerName: contacts.get(message.from)?.trim().slice(0, 150),
             customerPhone: message.from,
             messageId: message.id,
             content: text,
@@ -100,6 +130,7 @@ export async function POST(request) {
           });
         }
       }
+      const messengerProfiles = new Map();
       for (const event of credentials.messengerEnabled ? entry.messaging || [] : []) {
         if (event.delivery?.mids?.length) {
           for (const mid of event.delivery.mids) await applyMetaDeliveryStatus("MESSENGER", mid, "delivered");
@@ -110,10 +141,17 @@ export async function POST(request) {
         }
         if (event.message?.is_echo) continue;
         const text = event.message?.text || (event.message?.attachments?.length ? `[${event.message.attachments[0].type || "attachment"} message]` : "");
+        const senderId = event.sender?.id;
+        if (senderId && !messengerProfiles.has(senderId) && event.message?.mid && text) {
+          messengerProfiles.set(senderId, await getMessengerCustomerProfile(senderId, credentials));
+        }
+        const profile = messengerProfiles.get(senderId);
         await saveInboundMessage({
           channel: "MESSENGER",
-          externalUserId: event.sender?.id,
-          customerName: null,
+          externalUserId: senderId,
+          customerName: profile?.name || null,
+          customerPhone: sharedChatPhone(event.message?.text),
+          profilePicUrl: profile?.profilePicUrl || null,
           messageId: event.message?.mid,
           content: text,
           metadata: { timestamp: event.timestamp, attachments: event.message?.attachments || [] },
