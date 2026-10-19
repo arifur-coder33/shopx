@@ -51,26 +51,27 @@ export async function GET(request) {
         const messages = await prisma.chatMessage.findMany({
           where: {
             ...(conversationId && { conversationId }),
-            createdAt: { gte: cursorAt },
+            updatedAt: { gte: cursorAt },
             OR: [
-              { createdAt: { gt: cursorAt } },
-              { createdAt: cursorAt, id: { gt: cursorId } },
+              { updatedAt: { gt: cursorAt } },
+              { updatedAt: cursorAt, id: { gt: cursorId } },
             ],
           },
-          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
           take: 100,
-          select: { id: true, conversationId: true, direction: true, createdAt: true },
+          select: { id: true, conversationId: true, direction: true, updatedAt: true },
         });
         for (const message of messages) {
-          if (seenIds.has(message.id)) continue;
-          seenIds.add(message.id);
+          const eventKey = `${message.id}:${message.updatedAt.getTime()}`;
+          if (seenIds.has(eventKey)) continue;
+          seenIds.add(eventKey);
           send(ws, "chat.message", {
             id: message.id,
             conversationId: message.conversationId,
             direction: message.direction,
-            createdAt: message.createdAt.toISOString(),
+            updatedAt: message.updatedAt.toISOString(),
           });
-          cursorAt = message.createdAt;
+          cursorAt = message.updatedAt;
           cursorId = message.id;
         }
         while (seenIds.size > 500) seenIds.delete(seenIds.values().next().value);

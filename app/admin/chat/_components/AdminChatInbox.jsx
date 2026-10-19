@@ -6,6 +6,7 @@ import {
   getChatCustomerOrdersAction,
   getMessengerCustomerProfileAction,
   getChatInboxAction,
+  getChatMediaLibraryAction,
   getChatPushConfigAction,
   getChatRealtimeTokenAction,
   getChatSettingsAction,
@@ -17,6 +18,7 @@ import {
   sendChatPushTestAction,
   sendChatReplyAction,
   sendChatImageAction,
+  setChatMessageReactionAction,
   retryChatImageAction,
   updateChatConversationAction,
 } from "@/backend/serverActions/chatActions";
@@ -30,6 +32,7 @@ import {
   ExternalLink,
   Globe2,
   ImagePlus,
+  Images,
   MessageCircle,
   MessagesSquare,
   Package,
@@ -37,6 +40,7 @@ import {
   Reply,
   Search,
   Send,
+  Smile,
   ShoppingBag,
   UserRound,
   X,
@@ -50,6 +54,7 @@ const channelLabels = {
   MESSENGER: "Messenger",
 };
 const statusLabels = { OPEN: "Open", PENDING: "Pending", CLOSED: "Closed" };
+const messengerReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 const dateTime = (value) =>
   value
     ? new Intl.DateTimeFormat("bn-BD", {
@@ -115,13 +120,21 @@ export default function AdminChatInbox({
   const [draft, setDraft] = useState("");
   const [replyToMessage, setReplyToMessage] = useState(null);
   const [openMessageMenuId, setOpenMessageMenuId] = useState(null);
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
+  const [reactionBusyId, setReactionBusyId] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
+  const [selectedChatMedia, setSelectedChatMedia] = useState(null);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [chatMediaItems, setChatMediaItems] = useState([]);
+  const [chatMediaLoading, setChatMediaLoading] = useState(false);
+  const [chatMediaSearch, setChatMediaSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
   const [agents, setAgents] = useState([]);
   const [orderSummary, setOrderSummary] = useState(null);
   const [quickReplies, setQuickReplies] = useState([]);
   const [productPanel, setProductPanel] = useState(false);
+  const [productSendMode, setProductSendMode] = useState("page");
   const [productQuery, setProductQuery] = useState("");
   const [products, setProducts] = useState([]);
   const [ordersExpanded, setOrdersExpanded] = useState(false);
@@ -151,6 +164,8 @@ export default function AdminChatInbox({
     setReplyChannel(null);
     setReplyToMessage(null);
     setPhotoFile(null);
+    setSelectedChatMedia(null);
+    setMediaPickerOpen(false);
     if (photoInputRef.current) photoInputRef.current.value = "";
     setDraft("");
   }, [selectedId]);
@@ -239,7 +254,10 @@ export default function AdminChatInbox({
     if (!openMessageMenuId) return;
     const closeOnOutsideClick = (event) => {
       const menu = messageActionMenusRef.current.get(openMessageMenuId);
-      if (menu && !menu.contains(event.target)) setOpenMessageMenuId(null);
+      if (menu && !menu.contains(event.target)) {
+        setOpenMessageMenuId(null);
+        setReactionPickerMessageId(null);
+      }
     };
     const closeOnEscape = (event) => {
       if (event.key === "Escape") setOpenMessageMenuId(null);
@@ -506,7 +524,7 @@ export default function AdminChatInbox({
 
   const sendReply = async (event) => {
     event.preventDefault();
-    if (photoFile) return sendPhoto(event);
+    if (photoFile || selectedChatMedia) return sendPhoto(event);
     if (!draft.trim() || !replyTarget || !canUpdate) return;
     const content = draft.trim();
     const pendingId = `pending-${Date.now()}`;
@@ -561,23 +579,41 @@ export default function AdminChatInbox({
 
   const sendPhoto = async (event) => {
     event.preventDefault();
-    if (!photoFile || !replyTarget || !canUpdate || busy) return;
+    if ((!photoFile && !selectedChatMedia) || !replyTarget || !canUpdate || busy) return;
     setBusy(true);
     setError("");
     const formData = new FormData();
-    formData.set("image", photoFile);
+    if (photoFile) formData.set("image", photoFile);
+    else formData.set("mediaId", selectedChatMedia.id);
     formData.set("caption", draft);
     const result = await sendChatImageAction(replyTarget.id, formData, replyToMessage?.id || null);
     if (result.success) {
       setConversation((current) => current ? { ...current, messages: [...current.messages, result.data] } : current);
       setDraft("");
       setPhotoFile(null);
+      setSelectedChatMedia(null);
       if (photoInputRef.current) photoInputRef.current.value = "";
       setReplyToMessage(null);
       if (result.warning) setError(result.warning);
       await loadInbox();
     } else setError(result.message || "Photo পাঠানো যায়নি।");
     setBusy(false);
+  };
+
+  const openChatMediaPicker = async () => {
+    setMediaPickerOpen(true);
+    setChatMediaLoading(true);
+    const result = await getChatMediaLibraryAction();
+    if (result.success) setChatMediaItems(result.data || []);
+    else setError(result.message || "Media Library load করা যায়নি।");
+    setChatMediaLoading(false);
+  };
+
+  const selectChatMedia = (item) => {
+    setSelectedChatMedia(item);
+    setPhotoFile(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    setMediaPickerOpen(false);
   };
 
   const deleteConversation = async () => {
@@ -590,7 +626,9 @@ export default function AdminChatInbox({
     setConversation(null);
     setSelectedId("");
     setReplyToMessage(null);
+    setSelectedChatMedia(null);
     await loadInbox();
+    if (result.warning) setError(result.warning);
   };
 
   const retryReply = async (messageId) => {
@@ -632,12 +670,39 @@ export default function AdminChatInbox({
     setBusy(false);
   };
 
-  const sendProduct = async (product) => {
+  const reactToMessage = async (message, emoji) => {
+    if (!message || reactionBusyId) return;
+    setReactionBusyId(message.id);
+    const result = await setChatMessageReactionAction(message.id, emoji);
+    if (result.success) {
+      setConversation((current) => current ? {
+        ...current,
+        messages: current.messages.map((item) => item.id === message.id ? result.data : item),
+      } : current);
+      setOpenMessageMenuId(null);
+      setReactionPickerMessageId(null);
+      setError("");
+    } else setError(result.message || "Reaction পাঠানো যায়নি।");
+    setReactionBusyId(null);
+  };
+
+  const startReplyToMessage = (message) => {
+    setReplyToMessage(message);
+    setDraft("");
+    setPhotoFile(null);
+    setSelectedChatMedia(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    setOpenMessageMenuId(null);
+    setReactionPickerMessageId(null);
+  };
+
+  const sendProduct = async (product, mode = productSendMode) => {
     if (!replyTarget || busy || !canUpdate) return;
     setBusy(true);
     setError("");
     const result = await sendChatReplyAction(replyTarget.id, "", null, {
       id: product.id,
+      mode,
     });
     if (result.success) {
       setConversation((current) =>
@@ -765,7 +830,7 @@ export default function AdminChatInbox({
   };
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-5rem)] w-full max-w-7xl min-h-0 flex-col overflow-hidden sm:h-[calc(100dvh-6rem)]">
+    <main className="fixed inset-0 z-[60] mx-auto flex h-[100dvh] min-h-0 w-full max-w-none flex-col overflow-hidden bg-white lg:relative lg:inset-auto lg:z-auto lg:h-[calc(100dvh-6rem)] lg:max-w-7xl">
       {error && (
         <p
           role="alert"
@@ -774,7 +839,7 @@ export default function AdminChatInbox({
           {error}
         </p>
       )}
-      <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden border border-black/5 bg-white shadow-sm lg:grid-cols-[22rem_minmax(0,1fr)] lg:rounded-2xl">
         <aside
           className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-b border-border lg:border-b-0 lg:border-r ${selectedId ? "hidden lg:flex" : ""}`}
         >
@@ -1035,6 +1100,15 @@ export default function AdminChatInbox({
               )}
               <div ref={messageListRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#efeae2] p-3 sm:p-5">
                 {conversation.messages.map((message) => {
+                  const reactions = Array.isArray(message.metadata?.reactions) ? message.metadata.reactions : [];
+                  const reactionGroups = reactions.reduce((groups, reaction) => {
+                    const emoji = reaction.emoji || reaction.code;
+                    if (!emoji) return groups;
+                    const group = groups.find((item) => item.emoji === emoji);
+                    if (group) group.items.push(reaction);
+                    else groups.push({ emoji, items: [reaction] });
+                    return groups;
+                  }, []);
                   const imageUrls = [
                     ...(message.metadata?.image?.url ? [message.metadata.image.url] : []),
                     ...(message.metadata?.image?.mediaId && message.channel === "WHATSAPP"
@@ -1052,7 +1126,7 @@ export default function AdminChatInbox({
                       else messageElementsRef.current.delete(message.id);
                     }}
                     tabIndex={-1}
-                    className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}
+                    className={`group relative flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}
                   >
                     <div
                       className={`relative max-w-[85%] rounded-2xl px-3 py-2 transition-shadow duration-300 ${focusedReplyMessageId === message.id ? "ring-4 ring-violet-500 ring-offset-2 ring-offset-[#efeae2]" : ""} ${message.direction === "OUTBOUND" ? "rounded-tr-sm bg-[#d9fdd3] text-slate-900 shadow-sm" : "rounded-tl-sm bg-white text-slate-800 shadow-sm"}`}
@@ -1063,32 +1137,47 @@ export default function AdminChatInbox({
                             if (element) messageActionMenusRef.current.set(message.id, element);
                             else messageActionMenusRef.current.delete(message.id);
                           }}
-                          className="relative mb-1 flex justify-end"
+                          className={`absolute top-2 z-20 flex items-center gap-1 rounded-full border border-black/10 bg-white/95 p-1 text-slate-700 shadow-md transition-opacity opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 ${message.direction === "OUTBOUND" ? "right-full mr-2" : "left-full ml-2"}`}
                         >
                           <button
                             type="button"
-                            onClick={() => setOpenMessageMenuId((current) => current === message.id ? null : message.id)}
+                            onClick={() => startReplyToMessage(message)}
+                            aria-label="এই message-এর reply দিন"
+                            title="Reply"
+                            className="grid h-8 w-8 place-items-center rounded-full hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          ><Reply size={17} /></button>
+                          {message.channel === "MESSENGER" && message.externalMessageId && (
+                            <button
+                              type="button"
+                              onClick={() => setReactionPickerMessageId((current) => current === message.id ? null : message.id)}
+                              aria-label="এই message-এ reaction দিন"
+                              aria-expanded={reactionPickerMessageId === message.id}
+                              title="React"
+                              className="grid h-8 w-8 place-items-center rounded-full hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            ><Smile size={18} /></button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenMessageMenuId((current) => current === message.id ? null : message.id);
+                              setReactionPickerMessageId(null);
+                            }}
                             aria-label="Message options"
                             aria-haspopup="menu"
                             aria-expanded={openMessageMenuId === message.id}
-                            className="grid h-6 w-6 place-items-center rounded-full text-slate-500 hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            className="grid h-8 w-8 place-items-center rounded-full hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                           >
                             <ChevronDown size={15} />
                           </button>
+                          {reactionPickerMessageId === message.id && (
+                            <div className="absolute right-0 top-full mt-2 flex gap-1 rounded-full border border-border bg-white p-1 text-lg shadow-lg" aria-label="Messenger reaction বাছুন">
+                              {messengerReactions.map((emoji) => (
+                                <button key={emoji} type="button" disabled={reactionBusyId === message.id} onClick={() => reactToMessage(message, emoji)} aria-label={`${emoji} reaction দিন`} className="grid h-9 w-9 place-items-center rounded-full hover:bg-background disabled:opacity-50">{emoji}</button>
+                              ))}
+                            </div>
+                          )}
                           {openMessageMenuId === message.id && (
                             <div role="menu" className="absolute right-0 top-7 z-20 min-w-36 rounded-lg border border-border bg-white p-1 text-slate-800 shadow-lg">
-                              <button
-                                type="button"
-                                role="menuitem"
-                                onClick={() => {
-                                  setReplyToMessage(message);
-                                  setDraft("");
-                                  setPhotoFile(null);
-                                  if (photoInputRef.current) photoInputRef.current.value = "";
-                                  setOpenMessageMenuId(null);
-                                }}
-                                className="block w-full rounded px-3 py-2 text-left text-xs font-semibold hover:bg-background"
-                              >Reply</button>
                               <button
                                 type="button"
                                 role="menuitem"
@@ -1120,13 +1209,9 @@ export default function AdminChatInbox({
                         </button>
                       )}
                       {message.metadata?.type === "PRODUCT_CARD" &&
+                        (!message.metadata.product.mode || message.metadata.product.mode === "photo-price") &&
                         message.metadata.product && (
-                          <a
-                            href={message.metadata.product.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mb-2 block overflow-hidden rounded-xl bg-white text-gray-900"
-                          >
+                          <div className="mb-2 block overflow-hidden rounded-xl bg-white text-gray-900">
                             {message.metadata.product.imageUrl && (
                               <img
                                 src={message.metadata.product.imageUrl}
@@ -1145,9 +1230,9 @@ export default function AdminChatInbox({
                                 ).toLocaleString("en-BD")}
                               </span>
                             </span>
-                          </a>
+                          </div>
                         )}
-                      {message.metadata?.product?.buyNowUrl && (
+                      {message.metadata?.product?.buyNowUrl && !message.metadata.product.mode && (
                         <a href={message.metadata.product.buyNowUrl} target="_blank" rel="noreferrer" className="mb-2 inline-flex rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white">এখনই কিনুন</a>
                       )}
                       {message.metadata?.type === "ORDER_TIMELINE" &&
@@ -1269,6 +1354,20 @@ export default function AdminChatInbox({
                           </>
                         )}
                       </p>
+                      {reactionGroups.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1" aria-label="Message reactions">
+                          {reactionGroups.map((group) => (
+                            <button
+                              key={group.emoji}
+                              type="button"
+                              disabled={!canUpdate || reactionBusyId === message.id || message.channel !== "MESSENGER"}
+                              onClick={() => reactToMessage(message, group.emoji)}
+                              title={group.items.map((item) => item.actorType === "AGENT" ? "Page" : "Customer").join(", ")}
+                              className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs ${group.items.some((item) => item.actorType === "AGENT") ? "border-primary/40 bg-primary/10" : "border-black/10 bg-white/70"} disabled:cursor-default`}
+                            >{group.emoji}<span className="text-[10px]">{group.items.length}</span></button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   );
@@ -1406,14 +1505,26 @@ export default function AdminChatInbox({
                               : " · Out of stock"}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          disabled={busy || replyClosed}
-                          onClick={() => sendProduct(product)}
-                          className="rounded-lg bg-brand px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                        >
-                          Send
-                        </button>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <select
+                            aria-label={`${product.title} পাঠানোর ধরন`}
+                            value={productSendMode}
+                            onChange={(event) => setProductSendMode(event.target.value)}
+                            className="max-w-28 rounded-md border border-border bg-background px-1.5 py-1.5 text-[11px] text-text"
+                          >
+                            <option value="page">Product page</option>
+                            <option value="order">Order link</option>
+                            <option value="photo-price">Photo + price</option>
+                          </select>
+                          <button
+                            type="button"
+                            disabled={busy || replyClosed}
+                            onClick={() => sendProduct(product)}
+                            className="rounded-lg bg-brand px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                          >
+                            Send
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {productQuery.length >= 2 && !products.length && (
@@ -1428,7 +1539,7 @@ export default function AdminChatInbox({
                 onSubmit={sendReply}
                 className="relative z-10 mt-auto shrink-0 border-t border-black/5 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4"
               >
-                <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} />
+    <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { setPhotoFile(event.target.files?.[0] || null); setSelectedChatMedia(null); }} />
                 {replyToMessage && (
                   <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-primary bg-primary-soft px-3 py-2 text-xs">
                     <Reply size={14} className="shrink-0 text-primary" />
@@ -1441,6 +1552,13 @@ export default function AdminChatInbox({
                     <ImagePlus size={14} className="text-primary" />
                     <span className="min-w-0 flex-1 truncate">{photoFile.name}</span>
                     <button type="button" onClick={() => { setPhotoFile(null); if (photoInputRef.current) photoInputRef.current.value = ""; }} aria-label="Photo সরান" className="rounded p-1 hover:bg-white"><X size={14} /></button>
+                  </div>
+                )}
+                {selectedChatMedia && (
+                  <div className="mb-2 flex items-center gap-2 rounded-lg bg-background px-3 py-2 text-xs">
+                    <img src={selectedChatMedia.url} alt="" className="h-10 w-10 rounded object-cover" />
+                    <span className="min-w-0 flex-1 truncate">{selectedChatMedia.displayName || selectedChatMedia.name}</span>
+                    <button type="button" onClick={() => setSelectedChatMedia(null)} aria-label="Media photo সরান" className="rounded p-1 hover:bg-white"><X size={14} /></button>
                   </div>
                 )}
                 {conversation.linkedConversations?.length > 1 && <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-text-muted">Reply via <select value={replyTarget?.channel || ""} onChange={(event) => setReplyChannel(event.target.value)} className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-text">{conversation.linkedConversations.map((item) => <option key={item.id} value={item.channel}>{channelLabels[item.channel]}{item.status === "CLOSED" ? " (Closed)" : ""}</option>)}</select></label>}
@@ -1475,7 +1593,8 @@ export default function AdminChatInbox({
                   </div>
                 )}
                 <div className="flex items-end gap-2 ">
-                  <button type="button" onClick={() => photoInputRef.current?.click()} disabled={!canUpdate || replyClosed || busy} aria-label="Photo পাঠান" title="Photo পাঠান" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-primary hover:bg-background disabled:opacity-50"><ImagePlus size={19} /></button>
+                  <button type="button" onClick={() => photoInputRef.current?.click()} disabled={!canUpdate || replyClosed || busy} aria-label="Photo upload করুন" title="Photo upload করুন" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-primary hover:bg-background disabled:opacity-50"><ImagePlus size={19} /></button>
+                  <button type="button" onClick={openChatMediaPicker} disabled={!canUpdate || replyClosed || busy} aria-label="Media Library থেকে photo বাছুন" title="Media Library থেকে photo বাছুন" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-primary hover:bg-background disabled:opacity-50"><Images size={19} /></button>
                   <textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -1493,7 +1612,7 @@ export default function AdminChatInbox({
                     maxLength={4000}
                     disabled={!canUpdate || replyClosed}
                     placeholder={
-                      photoFile
+                      photoFile || selectedChatMedia
                         ? "Photo caption লিখুন (ঐচ্ছিক)"
                         : replyClosed
                         ? "Reply দিতে conversation reopen করুন"
@@ -1507,7 +1626,7 @@ export default function AdminChatInbox({
                     type="submit"
                     disabled={
                       !canUpdate ||
-                      (!draft.trim() && !photoFile) ||
+                      (!draft.trim() && !photoFile && !selectedChatMedia) ||
                       replyClosed
                     }
                     className="inline-flex h-11 items-center gap-2 rounded-full bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
@@ -1521,6 +1640,29 @@ export default function AdminChatInbox({
                   WhatsApp বা Messenger channel-এ পাঠানো হবে।
                 </p>
               </form>
+              {mediaPickerOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 sm:p-6" onClick={() => setMediaPickerOpen(false)}>
+                  <section role="dialog" aria-modal="true" aria-labelledby="chat-media-title" className="flex max-h-[85dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                    <header className="flex items-center gap-3 border-b border-border p-4">
+                      <div className="min-w-0 flex-1"><h2 id="chat-media-title" className="font-bold text-text">Media Library</h2><p className="text-xs text-text-muted">JPG বা PNG photo বেছে নিন।</p></div>
+                      <button type="button" onClick={() => setMediaPickerOpen(false)} aria-label="Media picker বন্ধ করুন" className="rounded p-2 text-text-muted hover:bg-background"><X size={18} /></button>
+                    </header>
+                    <div className="border-b border-border p-3"><input value={chatMediaSearch} onChange={(event) => setChatMediaSearch(event.target.value)} placeholder="ছবির নাম খুঁজুন" aria-label="Media Library-তে ছবি খুঁজুন" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text" /></div>
+                    <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                      {chatMediaLoading ? <p className="py-10 text-center text-sm text-text-muted">Media load হচ্ছে…</p> : chatMediaItems.filter((item) => `${item.displayName || ""} ${item.name}`.toLowerCase().includes(chatMediaSearch.trim().toLowerCase())).length ? (
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                          {chatMediaItems.filter((item) => `${item.displayName || ""} ${item.name}`.toLowerCase().includes(chatMediaSearch.trim().toLowerCase())).map((item) => (
+                            <button key={item.id} type="button" onClick={() => selectChatMedia(item)} className="overflow-hidden rounded-xl border border-border text-left hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                              <img src={item.url} alt={item.displayName || item.name} loading="lazy" className="aspect-square w-full bg-background object-cover" />
+                              <span className="block truncate p-2 text-xs font-semibold text-text">{item.displayName || item.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : <p className="py-10 text-center text-sm text-text-muted">Media Library-তে কোনো JPG/PNG photo পাওয়া যায়নি।</p>}
+                    </div>
+                  </section>
+                </div>
+              )}
             </>
           ) : (
             <div className="grid flex-1 place-items-center p-8 text-center text-text-muted">

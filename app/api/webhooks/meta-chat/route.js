@@ -114,6 +114,36 @@ async function applyMetaMessageEdit(channel, edit) {
   return true;
 }
 
+const REACTION_EMOJI = { like: "👍", love: "❤️", haha: "😂", wow: "😮", sad: "😢", angry: "😡", dislike: "👎" };
+
+async function applyMessengerReaction(event, pageId) {
+  const reactionEvent = event?.reaction || event?.message_reaction || event?.message_reactions || event?.messaging_reaction || event?.message?.reaction || event?.value;
+  if (Array.isArray(reactionEvent)) {
+    for (const item of reactionEvent) await applyMessengerReaction({ ...event, reaction: item }, pageId);
+    return;
+  }
+  const externalMessageId = reactionEvent?.mid || reactionEvent?.message_id || reactionEvent?.messageId || reactionEvent?.message?.mid;
+  const action = reactionEvent?.action;
+  const senderId = event?.sender?.id || reactionEvent?.sender?.id || reactionEvent?.from?.id || reactionEvent?.from_id;
+  if (!externalMessageId || !senderId || !["react", "unreact"].includes(action)) return;
+  const actorType = String(senderId) === String(pageId) ? "AGENT" : "CUSTOMER";
+  const actorId = actorType === "AGENT" ? "PAGE" : senderId;
+  const code = typeof reactionEvent.reaction === "string" ? reactionEvent.reaction : null;
+  const emoji = reactionEvent.emoji || REACTION_EMOJI[code] || null;
+  const message = await prisma.chatMessage.findFirst({
+    where: { channel: "MESSENGER", externalMessageId },
+    select: { id: true, metadata: true },
+  });
+  if (!message) return;
+  const currentReactions = Array.isArray(message.metadata?.reactions) ? message.metadata.reactions : [];
+  const reactions = currentReactions.filter((item) => !(item.actorId === actorId && item.actorType === actorType));
+  if (action === "react" && (emoji || code)) reactions.push({ actorId, actorType, code, emoji: emoji || code });
+  await prisma.chatMessage.update({
+    where: { id: message.id },
+    data: { metadata: { ...(message.metadata || {}), reactions } },
+  });
+}
+
 async function applyMetaDeliveryStatus(channel, externalMessageId, status) {
   if (!externalMessageId) return;
   const mapped = ({ sent: "SENT", delivered: "DELIVERED", read: "READ", failed: "FAILED" })[status];
@@ -169,6 +199,10 @@ export async function POST(request) {
       }
       const messengerProfiles = new Map();
       for (const event of credentials.messengerEnabled ? entry.messaging || [] : []) {
+        if (event.reaction || event.message_reaction || event.message_reactions || event.message?.reaction) {
+          await applyMessengerReaction(event, entry.id);
+          continue;
+        }
         if (event.delivery?.mids?.length) {
           for (const mid of event.delivery.mids) await applyMetaDeliveryStatus("MESSENGER", mid, "delivered");
         }
@@ -194,6 +228,12 @@ export async function POST(request) {
           content: text,
           metadata: { timestamp: event.timestamp, attachments: event.message?.attachments || [], ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
         });
+      }
+      for (const change of credentials.messengerEnabled ? entry.changes || [] : []) {
+        if (change.field === "message_reactions") {
+          const value = change.value || {};
+          await applyMessengerReaction({ ...value, reaction: value.reaction || value }, entry.id);
+        }
       }
     }
     return Response.json({ success: true });
