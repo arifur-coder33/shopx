@@ -70,9 +70,20 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
     update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone, normalizedPhone }), ...(profilePicUrl && { profilePicUrl }), lastMessageAt: new Date(), status: "OPEN" },
     select: { id: true },
   });
+  const replyToExternalMessageId = metadata?.replyToExternalMessageId;
+  let savedMetadata = metadata;
+  if (replyToExternalMessageId) {
+    const quoted = await prisma.chatMessage.findFirst({
+      where: { conversationId: conversation.id, channel, externalMessageId: replyToExternalMessageId },
+      select: { id: true, content: true, direction: true, authorType: true },
+    });
+    if (quoted) {
+      savedMetadata = { ...metadata, replyTo: { id: quoted.id, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType } };
+    } else savedMetadata = { ...metadata, replyTo: { content: "Replied to an earlier message" } };
+  }
   const insertedCount = await prisma.$transaction(async (tx) => {
     const inserted = await tx.chatMessage.createMany({
-      data: [{ conversationId: conversation.id, channel, direction: "INBOUND", authorType: "CUSTOMER", content: content.slice(0, 4000), externalMessageId: messageId, metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined }],
+      data: [{ conversationId: conversation.id, channel, direction: "INBOUND", authorType: "CUSTOMER", content: content.slice(0, 4000), externalMessageId: messageId, metadata: savedMetadata ? JSON.parse(JSON.stringify(savedMetadata)) : undefined }],
       skipDuplicates: true,
     });
     await tx.chatConversation.update({
@@ -82,6 +93,25 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
     return inserted.count;
   });
   if (insertedCount > 0) after(() => sendChatPushNotification({ conversationId: conversation.id, channel, customerName, customerPhone, content }));
+}
+
+async function applyMetaMessageEdit(channel, edit) {
+  const externalMessageId = edit?.message_id || edit?.id;
+  const content = typeof edit?.text === "string" ? edit.text : edit?.text?.body;
+  if (!externalMessageId || typeof content !== "string") return false;
+  const message = await prisma.chatMessage.findFirst({
+    where: { channel, externalMessageId },
+    select: { id: true, metadata: true },
+  });
+  if (!message) return false;
+  await prisma.chatMessage.update({
+    where: { id: message.id },
+    data: {
+      content: content.slice(0, 4000),
+      metadata: { ...(message.metadata || {}), edited: true, editedAt: new Date().toISOString() },
+    },
+  });
+  return true;
 }
 
 async function applyMetaDeliveryStatus(channel, externalMessageId, status) {
@@ -118,6 +148,7 @@ export async function POST(request) {
         }
         const contacts = new Map((value.contacts || []).map((contact) => [contact.wa_id, contact.profile?.name]));
         for (const message of credentials.whatsappEnabled ? value.messages || [] : []) {
+          if (message.edit && await applyMetaMessageEdit("WHATSAPP", message.edit)) continue;
           const text = message.text?.body || message.image?.caption || message.document?.caption || `[${message.type || "unsupported"} message]`;
           await saveInboundMessage({
             channel: "WHATSAPP",
@@ -126,7 +157,13 @@ export async function POST(request) {
             customerPhone: message.from,
             messageId: message.id,
             content: text,
-            metadata: { type: message.type, timestamp: message.timestamp, phoneNumberId: value.metadata?.phone_number_id },
+            metadata: {
+              type: message.type,
+              timestamp: message.timestamp,
+              phoneNumberId: value.metadata?.phone_number_id,
+              ...(message.context?.id && { replyToExternalMessageId: message.context.id }),
+              ...(message.image?.id && { image: { mediaId: message.image.id, mimeType: message.image.mime_type || "image/jpeg", caption: message.image.caption || null } }),
+            },
           });
         }
       }
@@ -140,6 +177,7 @@ export async function POST(request) {
           if (conversation) await prisma.chatMessage.updateMany({ where: { conversationId: conversation.id, direction: "OUTBOUND", deliveryStatus: "DELIVERED", createdAt: { lte: new Date(Number(event.read.watermark)) } }, data: { deliveryStatus: "READ" } });
         }
         if (event.message?.is_echo) continue;
+        if (event.message?.edit && await applyMetaMessageEdit("MESSENGER", event.message.edit)) continue;
         const text = event.message?.text || (event.message?.attachments?.length ? `[${event.message.attachments[0].type || "attachment"} message]` : "");
         const senderId = event.sender?.id;
         if (senderId && !messengerProfiles.has(senderId) && event.message?.mid && text) {
@@ -154,7 +192,7 @@ export async function POST(request) {
           profilePicUrl: profile?.profilePicUrl || null,
           messageId: event.message?.mid,
           content: text,
-          metadata: { timestamp: event.timestamp, attachments: event.message?.attachments || [] },
+          metadata: { timestamp: event.timestamp, attachments: event.message?.attachments || [], ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
         });
       }
     }

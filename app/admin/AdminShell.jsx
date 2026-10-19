@@ -2,6 +2,7 @@
 
 import AdminNavBar from "@/components/nav/AdminNav";
 import AdminSideNav from "@/components/nav/AdminSideNav";
+import { usePathname } from "next/navigation";
 import { SessionProvider } from "next-auth/react";
 import { Suspense, useEffect, useState } from "react";
 import { SWRConfig } from "swr";
@@ -9,6 +10,8 @@ import { SWRConfig } from "swr";
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 export default function AdminShell({ children, siteSetting }) {
+  const pathname = usePathname();
+  const isChatInbox = pathname === "/admin/chat";
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -40,7 +43,9 @@ export default function AdminShell({ children, siteSetting }) {
             />
             <main
               className={cn(
-                "min-h-screen min-w-0 flex-1 overflow-x-clip p-2 transition-all duration-300 ease-in-out sm:p-4",
+                isChatInbox
+                  ? "h-[calc(100dvh-4rem)] min-h-0 min-w-0 flex-1 overflow-hidden p-2 transition-all duration-300 ease-in-out sm:p-4"
+                  : "min-h-screen min-w-0 flex-1 overflow-x-clip p-2 transition-all duration-300 ease-in-out sm:p-4",
                 isMobile ? "w-full" : isSidebarCollapsed ? "sm:ml-20" : "sm:ml-64",
               )}
             >

@@ -11,6 +11,7 @@ import { groupChatInbox, normalizeChatPhone } from "@/lib/chatIdentity";
 import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscription } from "@/backend/services/orderPushService";
 import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
 import jwt from "jsonwebtoken";
+import { cloudinaryUpload } from "@/backend/utils/cloudinary";
 
 const SETTING_ID = "primary";
 const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion"];
@@ -314,7 +315,7 @@ export async function getChatAssignableUsersAction() {
   }
 }
 
-async function sendMetaMessage(conversation, content, product = null) {
+async function sendMetaMessage(conversation, content, { product = null, imageUrl = null, replyToMessageId = null, replyToContent = null } = {}) {
   const setting = await getSetting();
   const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
@@ -324,13 +325,19 @@ async function sendMetaMessage(conversation, content, product = null) {
   const resourceId = isWhatsApp ? credentials.whatsappPhoneNumberId : credentials.messengerPageId;
   if (!accessToken || !resourceId) throw new Error("এই channel-এর Meta credentials configure করা হয়নি।");
   const url = `https://graph.facebook.com/${version}/${resourceId}/messages`;
+  const quoted = replyToMessageId ? { message_id: replyToMessageId } : undefined;
+  const outgoingText = replyToContent && !isWhatsApp
+    ? `↪ ${replyToContent.slice(0, 250)}\n\n${content}`
+    : content;
   const payload = isWhatsApp
-    ? product?.imageUrl
-      ? { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, type: "image", image: { link: product.imageUrl, caption: content } }
-      : { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, type: "text", text: { body: content } }
-    : product
-      ? { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "template", payload: { template_type: "generic", elements: [{ title: product.title.slice(0, 80), image_url: product.imageUrl || undefined, subtitle: content.slice(0, 80), default_action: { type: "web_url", url: product.url }, buttons: [{ type: "web_url", url: product.url, title: "পণ্য দেখুন" }] }] } } } }
-      : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { text: content } };
+    ? imageUrl || product?.imageUrl
+      ? { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, ...(quoted && { context: quoted }), type: "image", image: { link: imageUrl || product.imageUrl, ...(content.trim() && { caption: content.slice(0, 1000) }) } }
+      : { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, ...(quoted && { context: quoted }), type: "text", text: { body: content, preview_url: true } }
+    : imageUrl
+      ? { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "image", payload: { url: imageUrl, is_reusable: true } } } }
+      : product
+        ? { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "template", payload: { template_type: "generic", elements: [{ title: product.title.slice(0, 80), image_url: product.imageUrl || undefined, subtitle: content.slice(0, 80), default_action: { type: "web_url", url: product.url }, buttons: [{ type: "web_url", url: product.url, title: "পণ্য দেখুন" }, { type: "web_url", url: product.buyNowUrl || product.url, title: "এখনই কিনুন" }] }] } } } }
+        : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { text: outgoingText } };
   const response = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -339,10 +346,28 @@ async function sendMetaMessage(conversation, content, product = null) {
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result?.error?.message || "Meta message could not be sent.");
-  return isWhatsApp ? result?.messages?.[0]?.id || null : result?.message_id || null;
+  const id = isWhatsApp ? result?.messages?.[0]?.id || null : result?.message_id || null;
+  const secondaryIds = [];
+  let warning = null;
+  if (!isWhatsApp && imageUrl && content.trim()) {
+    try {
+      const captionResponse = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { text: outgoingText } }),
+        cache: "no-store",
+      });
+      const captionResult = await captionResponse.json().catch(() => ({}));
+      if (captionResponse.ok && captionResult.message_id) secondaryIds.push(captionResult.message_id);
+      else warning = captionResult?.error?.message || "Photo গেছে, তবে caption পাঠানো যায়নি।";
+    } catch {
+      warning = "Photo গেছে, তবে caption পাঠানো যায়নি।";
+    }
+  }
+  return { id, secondaryIds, warning };
 }
 
-export async function sendChatReplyAction(conversationId, rawContent, retryMessageId = null, product = null, timelineOrderId = null) {
+export async function sendChatReplyAction(conversationId, rawContent, retryMessageId = null, product = null, timelineOrderId = null, replyToMessageId = null) {
   try {
     const session = await auth();
     if (!hasUIPermission(session?.user?.permissions, "chat", "update")) throw new Error("Unauthorized");
@@ -357,7 +382,7 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
       const prices = item.variations.map((variant) => Number(variant.discountPrice || variant.regularPrice || 0)).filter((price) => price > 0);
       const siteUrl = await getSiteUrl();
       const rawImage = item.variations.find((variant) => variant.thumbnail?.url)?.thumbnail?.url || item.thumbnail?.url || (item.thumbnail?.name ? `/uploads/${item.thumbnail.name}` : null);
-      productCard = { id: item.id, title: item.title, url: new URL(`/product/${item.slug}`, siteUrl).toString(), imageUrl: rawImage ? new URL(rawImage, siteUrl).toString() : null, price: prices.length ? Math.min(...prices) : 0 };
+      productCard = { id: item.id, title: item.title, url: new URL(`/product/${item.slug}`, siteUrl).toString(), buyNowUrl: new URL(`/buynow/${item.slug}`, siteUrl).toString(), imageUrl: rawImage ? new URL(rawImage, siteUrl).toString() : null, price: prices.length ? Math.min(...prices) : 0 };
     }
     if (timelineOrderId) {
       const digits = String(conversation.customerPhone || "").replace(/\D/g, "");
@@ -367,16 +392,27 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
       orderTimelineCard = { id: order.id, orderNo: order.orderNo, status: order.status, orderPrice: order.orderPrice, createdAt: order.createdAt.toISOString(), events: order.timeline.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })) };
     }
     let message;
+    let replyTo = null;
+    if (replyToMessageId) {
+      const quoted = await prisma.chatMessage.findUnique({
+        where: { id: String(replyToMessageId) },
+        select: { id: true, conversationId: true, channel: true, externalMessageId: true, content: true, direction: true, authorType: true, conversation: { select: { normalizedPhone: true } } },
+      });
+      const sameLinkedContact = conversation.normalizedPhone && quoted?.conversation?.normalizedPhone === conversation.normalizedPhone;
+      if (!quoted || (quoted.conversationId !== conversationId && !sameLinkedContact)) throw new Error("যে message-এ reply দিচ্ছেন সেটি পাওয়া যায়নি।");
+      replyTo = { id: quoted.id, externalMessageId: quoted.channel === conversation.channel ? quoted.externalMessageId : null, channel: quoted.channel, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType };
+    }
     if (retryMessageId) {
       message = await prisma.chatMessage.findFirst({ where: { id: retryMessageId, conversationId, direction: "OUTBOUND", authorType: "AGENT", deliveryStatus: "FAILED" } });
       if (!message) throw new Error("এই message-টি retry করা যাবে না।");
+      replyTo = message.metadata?.replyTo || null;
       await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "SENDING" } });
     } else {
       const timelineText = orderTimelineCard ? [`Order ${orderTimelineCard.orderNo} · ${orderTimelineCard.status}`, ...orderTimelineCard.events.map((event) => `${event.title}${event.message ? `: ${event.message}` : ""}${event.location ? ` · ${event.location}` : ""}`)].join("\n") : "";
-      const content = trim(rawContent).slice(0, 4000) || (productCard ? `${productCard.title} · ৳${productCard.price}\n${productCard.url}` : timelineText);
+      const content = trim(rawContent).slice(0, 4000) || (productCard ? `${productCard.title} · ৳${productCard.price}\nপণ্য দেখুন: ${productCard.url}\nএখনই কিনুন: ${productCard.buyNowUrl}` : timelineText);
       if (!content) throw new Error("Message cannot be empty.");
       [message] = await prisma.$transaction([
-        prisma.chatMessage.create({ data: { conversationId, channel: conversation.channel, direction: "OUTBOUND", authorType: "AGENT", authorId: session.user.id, content, deliveryStatus: "SENDING", ...((productCard || orderTimelineCard) && { metadata: productCard ? { type: "PRODUCT_CARD", product: productCard } : { type: "ORDER_TIMELINE", order: orderTimelineCard } }) } }),
+        prisma.chatMessage.create({ data: { conversationId, channel: conversation.channel, direction: "OUTBOUND", authorType: "AGENT", authorId: session.user.id, content, deliveryStatus: "SENDING", ...((productCard || orderTimelineCard || replyTo) && { metadata: { ...(productCard ? { type: "PRODUCT_CARD", product: productCard } : orderTimelineCard ? { type: "ORDER_TIMELINE", order: orderTimelineCard } : {}), ...(replyTo && { replyTo }) } }) } }),
         prisma.chatConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date(), status: "OPEN" } }),
       ]);
     }
@@ -385,15 +421,128 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
       return { success: true, data: { ...message, deliveryStatus: "SENT" } };
     }
     try {
-      const externalMessageId = await sendMetaMessage(conversation, message.content, message.metadata?.product || null);
-      const updated = await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "SENT", externalMessageId } });
-      return { success: true, data: updated.count ? { ...message, deliveryStatus: "SENT", externalMessageId } : await prisma.chatMessage.findUnique({ where: { id: message.id } }) };
+      const sent = await sendMetaMessage(conversation, message.content, { product: message.metadata?.product || null, replyToMessageId: replyTo?.externalMessageId || null, replyToContent: replyTo?.content || null });
+      const metadata = { ...(message.metadata || {}), ...(sent.secondaryIds.length && { externalMessageIds: sent.secondaryIds }) };
+      const updated = await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "SENT", externalMessageId: sent.id, metadata } });
+      return { success: true, data: updated.count ? { ...message, deliveryStatus: "SENT", externalMessageId: sent.id, metadata } : await prisma.chatMessage.findUnique({ where: { id: message.id } }), ...(sent.warning && { warning: sent.warning }) };
     } catch (sendError) {
       const updated = await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "FAILED" } });
       return { success: true, data: updated.count ? { ...message, deliveryStatus: "FAILED" } : await prisma.chatMessage.findUnique({ where: { id: message.id } }), warning: sendError?.message || "Message could not be sent." };
     }
   } catch (error) {
     return actionError(error, "Message could not be sent.");
+  }
+}
+
+export async function sendChatImageAction(conversationId, formData, replyToMessageId = null) {
+  try {
+    const session = await auth();
+    if (!hasUIPermission(session?.user?.permissions, "chat", "update")) throw new Error("Unauthorized");
+    const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId } });
+    if (!conversation) throw new Error("Conversation not found.");
+    if (conversation.status === "CLOSED") throw new Error("আগে conversation আবার খুলুন, তারপর photo পাঠান।");
+
+    const image = formData.get("image");
+    const caption = trim(formData.get("caption")).slice(0, 1000);
+    if (!image || typeof image.arrayBuffer !== "function" || !image.size) throw new Error("একটি photo বেছে নিন।");
+    if (!["image/jpeg", "image/png"].includes(image.type) || image.size > 5 * 1024 * 1024) {
+      throw new Error("JPG বা PNG photo দিন (সর্বোচ্চ 5 MB)।");
+    }
+    const upload = await cloudinaryUpload({
+      image,
+      tag: "chat-image",
+      slug: `chat-${Date.now()}`,
+      perifix: "",
+    });
+    if (!upload?.secure_url) throw new Error("Photo upload করা যায়নি।");
+
+    let replyTo = null;
+    if (replyToMessageId) {
+      const quoted = await prisma.chatMessage.findUnique({
+        where: { id: String(replyToMessageId) },
+        select: { id: true, conversationId: true, channel: true, externalMessageId: true, content: true, direction: true, authorType: true, conversation: { select: { normalizedPhone: true } } },
+      });
+      const sameLinkedContact = conversation.normalizedPhone && quoted?.conversation?.normalizedPhone === conversation.normalizedPhone;
+      if (!quoted || (quoted.conversationId !== conversationId && !sameLinkedContact)) throw new Error("যে message-এ reply দিচ্ছেন সেটি পাওয়া যায়নি।");
+      replyTo = { id: quoted.id, externalMessageId: quoted.channel === conversation.channel ? quoted.externalMessageId : null, channel: quoted.channel, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType };
+    }
+    const content = caption || "📷 Photo";
+    const message = await prisma.chatMessage.create({
+      data: {
+        conversationId,
+        channel: conversation.channel,
+        direction: "OUTBOUND",
+        authorType: "AGENT",
+        authorId: session.user.id,
+        content,
+        deliveryStatus: conversation.channel === "WEBSITE" ? "SENT" : "SENDING",
+        metadata: { type: "IMAGE", image: { url: upload.secure_url, mimeType: image.type }, ...(replyTo && { replyTo }) },
+      },
+    });
+    await prisma.chatConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date(), status: "OPEN" } });
+    if (conversation.channel === "WEBSITE") return { success: true, data: message };
+
+    try {
+      const sent = await sendMetaMessage(conversation, caption, {
+        imageUrl: upload.secure_url,
+        replyToMessageId: replyTo?.externalMessageId || null,
+        replyToContent: replyTo?.content || null,
+      });
+      const metadata = { ...(message.metadata || {}), ...(sent.secondaryIds.length && { externalMessageIds: sent.secondaryIds }) };
+      const updated = await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "SENT", externalMessageId: sent.id, metadata } });
+      return { success: true, data: updated, ...(sent.warning && { warning: sent.warning }) };
+    } catch (sendError) {
+      const updated = await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "FAILED" } });
+      return { success: true, data: updated, warning: sendError?.message || "Photo পাঠানো যায়নি।" };
+    }
+  } catch (error) {
+    return actionError(error, "Photo could not be sent.");
+  }
+}
+
+export async function retryChatImageAction(messageId) {
+  try {
+    await requireProcurementPermission("chat", "update");
+    const message = await prisma.chatMessage.findUnique({
+      where: { id: messageId },
+      include: { conversation: true },
+    });
+    const imageUrl = message?.metadata?.image?.url;
+    if (!message || message.direction !== "OUTBOUND" || message.deliveryStatus !== "FAILED" || message.metadata?.type !== "IMAGE" || !imageUrl) throw new Error("এই photo retry করা যাচ্ছে না।");
+    await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "SENDING" } });
+    try {
+      const sent = await sendMetaMessage(message.conversation, message.content === "📷 Photo" ? "" : message.content, {
+        imageUrl,
+        replyToMessageId: message.metadata?.replyTo?.externalMessageId || null,
+        replyToContent: message.metadata?.replyTo?.content || null,
+      });
+      const metadata = { ...(message.metadata || {}), ...(sent.secondaryIds.length && { externalMessageIds: sent.secondaryIds }) };
+      const updated = await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "SENT", externalMessageId: sent.id, metadata } });
+      return { success: true, data: updated, ...(sent.warning && { warning: sent.warning }) };
+    } catch (error) {
+      const updated = await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "FAILED" } });
+      return { success: true, data: updated, warning: error?.message || "Photo পাঠানো যায়নি।" };
+    }
+  } catch (error) {
+    return actionError(error, "Photo retry করা যায়নি।");
+  }
+}
+
+export async function deleteChatConversationAction(conversationId) {
+  try {
+    await requireProcurementPermission("chat", "update");
+    const conversation = await prisma.chatConversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true, normalizedPhone: true, channel: true },
+    });
+    if (!conversation) throw new Error("Conversation পাওয়া যায়নি।");
+    const where = conversation.normalizedPhone && ["WHATSAPP", "MESSENGER"].includes(conversation.channel)
+      ? { normalizedPhone: conversation.normalizedPhone, channel: { in: ["WHATSAPP", "MESSENGER"] } }
+      : { id: conversation.id };
+    const result = await prisma.chatConversation.deleteMany({ where });
+    return { success: true, deleted: result.count };
+  } catch (error) {
+    return actionError(error, "Conversation delete করা যায়নি।");
   }
 }
 

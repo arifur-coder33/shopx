@@ -9,12 +9,15 @@ import {
   getChatPushConfigAction,
   getChatRealtimeTokenAction,
   getChatSettingsAction,
+  deleteChatConversationAction,
   setMessengerCustomerPhoneAction,
   removeChatPushSubscriptionAction,
   saveChatPushSubscriptionAction,
   searchChatProductsAction,
   sendChatPushTestAction,
   sendChatReplyAction,
+  sendChatImageAction,
+  retryChatImageAction,
   updateChatConversationAction,
 } from "@/backend/serverActions/chatActions";
 import {
@@ -26,15 +29,18 @@ import {
   Clock3,
   ExternalLink,
   Globe2,
+  ImagePlus,
   MessageCircle,
   MessagesSquare,
   Package,
   RotateCw,
+  Reply,
   Search,
   Send,
   ShoppingBag,
   UserRound,
   X,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -107,6 +113,8 @@ export default function AdminChatInbox({
   );
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
+  const [replyToMessage, setReplyToMessage] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
   const [agents, setAgents] = useState([]);
@@ -126,6 +134,11 @@ export default function AdminChatInbox({
   const [pushTestBusy, setPushTestBusy] = useState(false);
   const selectedIdRef = useRef(selectedId);
   const knownInboxRef = useRef(null);
+  const photoInputRef = useRef(null);
+  const messageListRef = useRef(null);
+  const messageElementsRef = useRef(new Map());
+  const replyHighlightTimerRef = useRef(null);
+  const [focusedReplyMessageId, setFocusedReplyMessageId] = useState(null);
   selectedIdRef.current = selectedId;
 
   useEffect(() => {
@@ -134,6 +147,10 @@ export default function AdminChatInbox({
     setProfileError("");
     setPhoneDraft("");
     setReplyChannel(null);
+    setReplyToMessage(null);
+    setPhotoFile(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    setDraft("");
   }, [selectedId]);
 
   const openMessengerProfile = async () => {
@@ -198,6 +215,23 @@ export default function AdminChatInbox({
     }
     else setError(result.message);
   }, [selectedId]);
+
+  const jumpToMessage = (messageId) => {
+    if (!messageId) return;
+    const target = messageElementsRef.current.get(messageId);
+    if (!target || !messageListRef.current?.contains(target)) {
+      setError("মূল message-টি এই chat history-তে পাওয়া যায়নি।");
+      return;
+    }
+    setError("");
+    setFocusedReplyMessageId(messageId);
+    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    window.setTimeout(() => target.focus({ preventScroll: true }), 180);
+    window.clearTimeout(replyHighlightTimerRef.current);
+    replyHighlightTimerRef.current = window.setTimeout(() => setFocusedReplyMessageId(null), 2200);
+  };
+
+  useEffect(() => () => window.clearTimeout(replyHighlightTimerRef.current), []);
 
   useEffect(() => {
     loadInbox();
@@ -446,6 +480,7 @@ export default function AdminChatInbox({
 
   const sendReply = async (event) => {
     event.preventDefault();
+    if (photoFile) return sendPhoto(event);
     if (!draft.trim() || !replyTarget || !canUpdate) return;
     const content = draft.trim();
     const pendingId = `pending-${Date.now()}`;
@@ -456,6 +491,7 @@ export default function AdminChatInbox({
       direction: "OUTBOUND",
       authorType: "AGENT",
       content,
+      metadata: replyToMessage ? { replyTo: { id: replyToMessage.id, content: replyToMessage.content.slice(0, 300), direction: replyToMessage.direction, authorType: replyToMessage.authorType } } : null,
       deliveryStatus: "SENDING",
       createdAt: new Date().toISOString(),
     };
@@ -466,7 +502,7 @@ export default function AdminChatInbox({
         ? { ...current, messages: [...current.messages, pending] }
         : current,
     );
-    const result = await sendChatReplyAction(replyTarget.id, content);
+    const result = await sendChatReplyAction(replyTarget.id, content, null, null, null, replyToMessage?.id || null);
     if (result.success) {
       setConversation((current) =>
         current
@@ -479,6 +515,7 @@ export default function AdminChatInbox({
           : current,
       );
       if (result.warning) setError(`${result.warning} Message-এ Retry চাপুন।`);
+      setReplyToMessage(null);
       loadInbox();
     } else {
       setConversation((current) =>
@@ -494,6 +531,40 @@ export default function AdminChatInbox({
       setDraft((current) => current || content);
       setError(result.message || "Reply could not be sent.");
     }
+  };
+
+  const sendPhoto = async (event) => {
+    event.preventDefault();
+    if (!photoFile || !replyTarget || !canUpdate || busy) return;
+    setBusy(true);
+    setError("");
+    const formData = new FormData();
+    formData.set("image", photoFile);
+    formData.set("caption", draft);
+    const result = await sendChatImageAction(replyTarget.id, formData, replyToMessage?.id || null);
+    if (result.success) {
+      setConversation((current) => current ? { ...current, messages: [...current.messages, result.data] } : current);
+      setDraft("");
+      setPhotoFile(null);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+      setReplyToMessage(null);
+      if (result.warning) setError(result.warning);
+      await loadInbox();
+    } else setError(result.message || "Photo পাঠানো যায়নি।");
+    setBusy(false);
+  };
+
+  const deleteConversation = async () => {
+    if (!selectedId || !canUpdate || !window.confirm("এই chat ও তার সব local message delete করবেন? Meta inbox থেকে message unsend হবে না।")) return;
+    const result = await deleteChatConversationAction(selectedId);
+    if (!result.success) {
+      setError(result.message || "Chat delete করা যায়নি।");
+      return;
+    }
+    setConversation(null);
+    setSelectedId("");
+    setReplyToMessage(null);
+    await loadInbox();
   };
 
   const retryReply = async (messageId) => {
@@ -513,7 +584,9 @@ export default function AdminChatInbox({
         : current,
     );
     const message = conversation?.messages.find((item) => item.id === messageId);
-    const result = await sendChatReplyAction(message?.conversationId || selectedId, "", messageId);
+    const result = message?.metadata?.type === "IMAGE"
+      ? await retryChatImageAction(messageId)
+      : await sendChatReplyAction(message?.conversationId || selectedId, "", messageId);
     if (result.success) {
       setConversation((current) =>
         current
@@ -921,6 +994,9 @@ export default function AdminChatInbox({
                       <Check size={14} />
                       {conversation.status === "CLOSED" ? "Reopen" : "Close"}
                     </button>
+                    <button type="button" onClick={deleteConversation} title="এই chat delete করুন" aria-label="এই chat delete করুন" className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">
+                      <Trash2 size={14} /> Delete chat
+                    </button>
                   </div>
                 )}
               </header>
@@ -931,15 +1007,42 @@ export default function AdminChatInbox({
                   <button type="button" onClick={() => setProfileOpen(false)} aria-label="Profile বন্ধ করুন" className="rounded p-2 text-text-muted hover:bg-background"><X size={17} /></button>
                 </div>
               )}
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#efeae2] p-3 sm:p-5">
-                {conversation.messages.map((message) => (
+              <div ref={messageListRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#efeae2] p-3 sm:p-5">
+                {conversation.messages.map((message) => {
+                  const imageUrls = [
+                    ...(message.metadata?.image?.url ? [message.metadata.image.url] : []),
+                    ...(message.metadata?.image?.mediaId && message.channel === "WHATSAPP"
+                      ? [`/api/admin/chat/media/${encodeURIComponent(message.id)}`]
+                      : []),
+                    ...(message.metadata?.attachments || [])
+                      .filter((attachment) => attachment.type === "image" && /^https:\/\//i.test(attachment.payload?.url || ""))
+                      .map((attachment) => attachment.payload.url),
+                  ];
+                  return (
                   <div
                     key={message.id}
+                    ref={(element) => {
+                      if (element) messageElementsRef.current.set(message.id, element);
+                      else messageElementsRef.current.delete(message.id);
+                    }}
+                    tabIndex={-1}
                     className={`flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-3 py-2 ${message.direction === "OUTBOUND" ? "rounded-tr-sm bg-[#d9fdd3] text-slate-900 shadow-sm" : "rounded-tl-sm bg-white text-slate-800 shadow-sm"}`}
+                      className={`max-w-[85%] rounded-2xl px-3 py-2 transition-shadow duration-300 ${focusedReplyMessageId === message.id ? "ring-4 ring-violet-500 ring-offset-2 ring-offset-[#efeae2]" : ""} ${message.direction === "OUTBOUND" ? "rounded-tr-sm bg-[#d9fdd3] text-slate-900 shadow-sm" : "rounded-tl-sm bg-white text-slate-800 shadow-sm"}`}
                     >
+                      {message.metadata?.replyTo && (
+                        <button
+                          type="button"
+                          onClick={() => jumpToMessage(message.metadata.replyTo.id)}
+                          disabled={!message.metadata.replyTo.id}
+                          aria-label={`মূল message-এ যান: ${message.metadata.replyTo.content || "message"}`}
+                          className={`mb-2 block w-full border-l-2 border-primary/50 bg-black/5 px-2 py-1 text-left text-xs ${message.metadata.replyTo.id ? "cursor-pointer hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : "cursor-default"}`}
+                        >
+                          <span className="font-semibold">{message.metadata.replyTo.direction === "OUTBOUND" ? "Reply to your message" : "Reply to customer message"}</span>
+                          <p className="line-clamp-2">{message.metadata.replyTo.content}</p>
+                        </button>
+                      )}
                       {message.metadata?.type === "PRODUCT_CARD" &&
                         message.metadata.product && (
                           <a
@@ -968,6 +1071,9 @@ export default function AdminChatInbox({
                             </span>
                           </a>
                         )}
+                      {message.metadata?.product?.buyNowUrl && (
+                        <a href={message.metadata.product.buyNowUrl} target="_blank" rel="noreferrer" className="mb-2 inline-flex rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white">এখনই কিনুন</a>
+                      )}
                       {message.metadata?.type === "ORDER_TIMELINE" &&
                         message.metadata.order && (
                           <div className="mb-2 rounded-xl bg-white p-3 text-gray-900">
@@ -1020,9 +1126,14 @@ export default function AdminChatInbox({
                             </a>
                           </div>
                         )}
+                      {imageUrls.map((imageUrl, index) => (
+                        <a key={`${message.id}-image-${index}`} href={imageUrl} target="_blank" rel="noreferrer" className="mb-2 block max-w-sm overflow-hidden rounded-xl">
+                          <img src={imageUrl} alt="Customer sent image" loading="lazy" className="max-h-80 w-full object-contain" />
+                        </a>
+                      ))}
                       {!["PRODUCT_CARD", "ORDER_TIMELINE"].includes(
                         message.metadata?.type,
-                      ) && (
+                      ) && !(imageUrls.length && ["[image message]", "📷 Photo"].includes(message.content)) && (
                         <p className="whitespace-pre-wrap break-words text-sm">
                           {message.content}
                         </p>
@@ -1035,7 +1146,7 @@ export default function AdminChatInbox({
                           : message.authorType === "AGENT"
                             ? "Staff"
                             : channelLabels[message.channel]}{" "}
-                        · {dateTime(message.createdAt)}
+                        · {dateTime(message.createdAt)}{message.metadata?.edited && <span className="ml-1 italic">· edited</span>}
                         {message.direction === "OUTBOUND" && (
                           <>
                             <span
@@ -1082,9 +1193,15 @@ export default function AdminChatInbox({
                           </>
                         )}
                       </p>
+                      {canUpdate && (
+                        <button type="button" onClick={() => { setReplyToMessage(message); setDraft(""); setPhotoFile(null); if (photoInputRef.current) photoInputRef.current.value = ""; }} className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline">
+                          <Reply size={12} /> Reply
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <div className="shrink-0 border-t border-black/5 bg-white px-3 pt-3 sm:px-4">
                 <div className="flex flex-wrap items-center gap-2 rounded-lg bg-background px-2 py-2">
@@ -1240,6 +1357,21 @@ export default function AdminChatInbox({
                 onSubmit={sendReply}
                 className="relative z-10 mt-auto shrink-0 border-t border-black/5 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4"
               >
+                <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} />
+                {replyToMessage && (
+                  <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-primary bg-primary-soft px-3 py-2 text-xs">
+                    <Reply size={14} className="shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1 truncate">Reply: {replyToMessage.content || "Photo"}</span>
+                    <button type="button" onClick={() => setReplyToMessage(null)} aria-label="Reply cancel" className="rounded p-1 hover:bg-white"><X size={14} /></button>
+                  </div>
+                )}
+                {photoFile && (
+                  <div className="mb-2 flex items-center gap-2 rounded-lg bg-background px-3 py-2 text-xs">
+                    <ImagePlus size={14} className="text-primary" />
+                    <span className="min-w-0 flex-1 truncate">{photoFile.name}</span>
+                    <button type="button" onClick={() => { setPhotoFile(null); if (photoInputRef.current) photoInputRef.current.value = ""; }} aria-label="Photo সরান" className="rounded p-1 hover:bg-white"><X size={14} /></button>
+                  </div>
+                )}
                 {conversation.linkedConversations?.length > 1 && <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-text-muted">Reply via <select value={replyTarget?.channel || ""} onChange={(event) => setReplyChannel(event.target.value)} className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-text">{conversation.linkedConversations.map((item) => <option key={item.id} value={item.channel}>{channelLabels[item.channel]}{item.status === "CLOSED" ? " (Closed)" : ""}</option>)}</select></label>}
                 {draft.startsWith("/") && quickReplies.length > 0 && (
                   <div className="absolute bottom-full left-3 right-3 z-10 mb-1 max-h-52 overflow-auto rounded-xl border border-border bg-surface p-1 shadow-xl sm:left-4 sm:right-4">
@@ -1272,6 +1404,7 @@ export default function AdminChatInbox({
                   </div>
                 )}
                 <div className="flex items-end gap-2 ">
+                  <button type="button" onClick={() => photoInputRef.current?.click()} disabled={!canUpdate || replyClosed || busy} aria-label="Photo পাঠান" title="Photo পাঠান" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-primary hover:bg-background disabled:opacity-50"><ImagePlus size={19} /></button>
                   <textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -1289,7 +1422,9 @@ export default function AdminChatInbox({
                     maxLength={4000}
                     disabled={!canUpdate || replyClosed}
                     placeholder={
-                      replyClosed
+                      photoFile
+                        ? "Photo caption লিখুন (ঐচ্ছিক)"
+                        : replyClosed
                         ? "Reply দিতে conversation reopen করুন"
                         : canUpdate
                           ? "Reply লিখুন… (Enter পাঠায়, Alt+Enter নতুন line)"
@@ -1301,7 +1436,7 @@ export default function AdminChatInbox({
                     type="submit"
                     disabled={
                       !canUpdate ||
-                      !draft.trim() ||
+                      (!draft.trim() && !photoFile) ||
                       replyClosed
                     }
                     className="inline-flex h-11 items-center gap-2 rounded-full bg-emerald-700 px-4 font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
