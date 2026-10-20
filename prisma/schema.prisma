@@ -1672,6 +1672,8 @@ enum ChatChannel {
   WEBSITE
   WHATSAPP
   MESSENGER
+  INSTAGRAM
+  TIKTOK
 }
 
 enum ChatConversationStatus {
@@ -1744,6 +1746,8 @@ model ChatSetting {
   websiteChatEnabled   Boolean  @default(true)
   whatsappEnabled      Boolean  @default(false)
   messengerEnabled     Boolean  @default(false)
+  instagramEnabled     Boolean  @default(false)
+  tiktokEnabled        Boolean  @default(false)
   welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
   quickReplies         Json     @default("[]")
   encryptedCredentials String?

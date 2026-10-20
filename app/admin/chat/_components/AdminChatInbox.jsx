@@ -52,6 +52,8 @@ const channelLabels = {
   WEBSITE: "Website",
   WHATSAPP: "WhatsApp",
   MESSENGER: "Messenger",
+  INSTAGRAM: "Instagram",
+  TIKTOK: "TikTok",
 };
 const statusLabels = { OPEN: "Open", PENDING: "Pending", CLOSED: "Closed" };
 const messengerReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -852,7 +854,7 @@ export default function AdminChatInbox({
                 Chat Inbox
               </h1>
               <p className="mt-1 text-sm text-text-muted">
-                Website, WhatsApp ও Messenger conversation এক জায়গায়।
+                Website, WhatsApp, Messenger, Instagram ও TikTok conversation এক জায়গায়।
               </p>
             </div> */}
             <details className="group relative z-20">
@@ -931,6 +933,8 @@ export default function AdminChatInbox({
                 <option value="WEBSITE">Website</option>
                 <option value="WHATSAPP">WhatsApp</option>
                 <option value="MESSENGER">Messenger</option>
+                <option value="INSTAGRAM">Instagram</option>
+                <option value="TIKTOK">TikTok</option>
               </select>
               <select
                 value={status}
@@ -1112,6 +1116,9 @@ export default function AdminChatInbox({
                   const imageUrls = [
                     ...(message.metadata?.image?.url ? [message.metadata.image.url] : []),
                     ...(message.metadata?.image?.mediaId && message.channel === "WHATSAPP"
+                      ? [`/api/admin/chat/media/${encodeURIComponent(message.id)}`]
+                      : []),
+                    ...(message.metadata?.image?.mediaId && message.channel === "TIKTOK"
                       ? [`/api/admin/chat/media/${encodeURIComponent(message.id)}`]
                       : []),
                     ...(message.metadata?.attachments || [])
@@ -1637,7 +1644,7 @@ export default function AdminChatInbox({
                 </div>
                 <p className="mt-2 text-[11px] text-text-muted">
                   Website reply visitor-এর chat-এ যাবে; Meta reply সংশ্লিষ্ট
-                  WhatsApp বা Messenger channel-এ পাঠানো হবে।
+                  WhatsApp, Messenger, Instagram বা TikTok channel-এ পাঠানো হবে।
                 </p>
               </form>
               {mediaPickerOpen && (

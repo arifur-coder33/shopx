@@ -21,6 +21,8 @@ const secretFields = [
     "Messenger Page Access Token",
     "সংশ্লিষ্ট Facebook Page-এর token",
   ],
+  ["instagramAccountId", "Instagram Professional Account ID", "যে Instagram account-এর DM যুক্ত করবেন"],
+  ["instagramAccessToken", "Instagram Access Token", "Instagram Messaging-এর জন্য অনুমোদিত token"],
   ["metaAppSecret", "Meta App Secret", "Meta App Settings → Basic"],
   [
     "webhookVerifyToken",
@@ -32,12 +34,17 @@ const secretFields = [
     "Meta Graph API Version",
     "যেমন vXX.0; Meta app-এর supported version দিন",
   ],
+  ["tiktokBusinessId", "TikTok Business ID", "Authorization-এর open_id"],
+  ["tiktokClientKey", "TikTok Client Key", "TikTok for Business developer app থেকে"],
+  ["tiktokAccessToken", "TikTok Access Token", "Business Messaging API token"],
+  ["tiktokClientSecret", "TikTok Client Secret", "Webhook signature verify করতেও লাগে"],
 ];
 
 export default function ChatSettingsForm({
   settings,
   canUpdate,
   webhookUrl,
+  tiktokWebhookUrl,
   encryptionReady,
 }) {
   const router = useRouter();
@@ -143,7 +150,7 @@ export default function ChatSettingsForm({
         <ShieldCheck className="mt-0.5 shrink-0" size={19} />
         <p>
           {encryptionReady
-            ? "Meta credentials database-এ encrypted অবস্থায় save হবে."
+            ? "External channel credentials database-এ encrypted অবস্থায় save হবে."
             : "Credentials save করার আগে server-এ PROVIDER_CREDENTIAL_ENCRYPTION_KEY (কমপক্ষে 32 অক্ষর) সেট করতে হবে."}
         </p>
       </div>
@@ -159,6 +166,8 @@ export default function ChatSettingsForm({
             ["websiteChatEnabled", "Website chat", settings.websiteChatEnabled],
             ["whatsappEnabled", "WhatsApp inbox", settings.whatsappEnabled],
             ["messengerEnabled", "Messenger inbox", settings.messengerEnabled],
+            ["instagramEnabled", "Instagram inbox", settings.instagramEnabled],
+            ["tiktokEnabled", "TikTok inbox", settings.tiktokEnabled],
           ].map(([name, label, checked]) => (
             <label
               key={name}
@@ -211,7 +220,7 @@ export default function ChatSettingsForm({
             <h2 className="font-bold text-text">Meta webhook</h2>
             <p className="mt-1 text-xs leading-5 text-text-muted">
               Meta Developer App-এর Webhooks settings-এ callback URL ও একই
-              verify token ব্যবহার করুন। Incoming WhatsApp এবং Messenger message
+              verify token ব্যবহার করুন। Incoming WhatsApp, Messenger এবং Instagram message
               এখানে আসবে।
             </p>
           </div>
@@ -236,6 +245,9 @@ export default function ChatSettingsForm({
               const secret =
                 name !== "whatsappPhoneNumberId" &&
                 name !== "messengerPageId" &&
+                name !== "instagramAccountId" &&
+                name !== "tiktokBusinessId" &&
+                name !== "tiktokClientKey" &&
                 name !== "graphApiVersion";
               return (
                 <label className="block" key={name}>
@@ -337,8 +349,8 @@ export default function ChatSettingsForm({
             })}
           </div>
           <p className="text-xs leading-5 text-text-muted">
-            Meta app-এ WhatsApp webhook fields এবং Messenger-এর messages ও
-            message_reactions fields subscribe করুন।
+            Meta app-এ WhatsApp webhook fields, Messenger-এর messages ও
+            message_reactions এবং Instagram-এর messages fields subscribe করুন।
             Credentials না বসানো পর্যন্ত external channel off রাখুন।
             WhatsApp/Messenger reply delivery Meta-এর account setup, permissions
             ও messaging rules-এর ওপর নির্ভর করে।
@@ -351,6 +363,20 @@ export default function ChatSettingsForm({
           >
             Open Meta for Developers ↗
           </a>
+        </section>
+        <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
+          <div>
+            <h2 className="font-bold text-text">TikTok Business Messaging</h2>
+            <p className="mt-1 text-xs leading-5 text-text-muted">
+              TikTok for Business app-এ Business Messaging API access, authorization এবং DIRECT_MESSAGE webhook configure করুন। Callback URL:
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <input readOnly value={tiktokWebhookUrl} aria-label="TikTok webhook callback URL" className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text" />
+            <button type="button" onClick={async () => { await navigator.clipboard.writeText(tiktokWebhookUrl); setMessage("TikTok webhook URL copied."); }} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text"><Copy size={16} />Copy</button>
+          </div>
+          <p className="text-xs leading-5 text-text-muted">TikTok API access ও account authorization TikTok-এর approval-এর ওপর নির্ভর করে। Access token মেয়াদোত্তীর্ণ হলে নতুন token সংরক্ষণ করুন।</p>
+          <a className="text-sm font-semibold text-primary hover:underline" href="https://business-api.tiktok.com/portal/bm-api/education-hub" target="_blank" rel="noreferrer">TikTok Business Messaging docs ↗</a>
         </section>
         {message && (
           <p

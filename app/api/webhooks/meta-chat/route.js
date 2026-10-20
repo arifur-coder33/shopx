@@ -8,9 +8,9 @@ import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 export const dynamic = "force-dynamic";
 
 async function getCredentials() {
-  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true } });
-  if (!setting?.encryptedCredentials) return { whatsappEnabled: setting?.whatsappEnabled ?? false, messengerEnabled: setting?.messengerEnabled ?? false };
-  return { ...decryptProviderCredentials(setting.encryptedCredentials), whatsappEnabled: setting.whatsappEnabled, messengerEnabled: setting.messengerEnabled };
+  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true, instagramEnabled: true } });
+  if (!setting?.encryptedCredentials) return { whatsappEnabled: setting?.whatsappEnabled ?? false, messengerEnabled: setting?.messengerEnabled ?? false, instagramEnabled: setting?.instagramEnabled ?? false };
+  return { ...decryptProviderCredentials(setting.encryptedCredentials), whatsappEnabled: setting.whatsappEnabled, messengerEnabled: setting.messengerEnabled, instagramEnabled: setting.instagramEnabled };
 }
 
 export async function GET(request) {
@@ -33,26 +33,28 @@ function hasValidSignature(rawBody, header, appSecret) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-async function getMessengerCustomerProfile(senderId, credentials) {
+async function getMessengerCustomerProfile(senderId, credentials, channel = "MESSENGER") {
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
-  if (!senderId || !credentials.messengerPageAccessToken || !/^v\d+\.\d+$/.test(version || "")) return null;
+  const accessToken = channel === "INSTAGRAM" ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
+  if (!senderId || !accessToken || !/^v\d+\.\d+$/.test(version || "")) return null;
   try {
-    const url = `https://graph.facebook.com/${version}/${encodeURIComponent(senderId)}?fields=first_name,middle_name,last_name,profile_pic`;
+    const fields = channel === "INSTAGRAM" ? "name,username,profile_pic" : "first_name,middle_name,last_name,profile_pic";
+    const url = `https://graph.facebook.com/${version}/${encodeURIComponent(senderId)}?fields=${fields}`;
     let response = await fetch(url, {
-      headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) {
       response = await fetch(url.replace("first_name,middle_name,last_name,profile_pic", "first_name,last_name,profile_pic"), {
-        headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         cache: "no-store",
         signal: AbortSignal.timeout(5000),
       });
     }
     if (!response.ok) return null;
     const profile = await response.json();
-    const name = [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean).join(" ").trim().slice(0, 150) || null;
+    const name = String(channel === "INSTAGRAM" ? profile.name || profile.username || "" : [profile.first_name, profile.middle_name, profile.last_name].filter(Boolean).join(" ")).trim().slice(0, 150) || null;
     let profilePicUrl = null;
     try { if (new URL(profile.profile_pic).protocol === "https:") profilePicUrl = profile.profile_pic; } catch {}
     return { name, profilePicUrl };
@@ -169,6 +171,7 @@ export async function POST(request) {
   }
   let payload;
   try { payload = JSON.parse(rawBody); } catch { return new Response("Invalid JSON", { status: 400 }); }
+  const isInstagramPayload = payload.object === "instagram";
   try {
     for (const entry of payload.entry || []) {
       for (const change of entry.changes || []) {
@@ -198,7 +201,7 @@ export async function POST(request) {
         }
       }
       const messengerProfiles = new Map();
-      for (const event of credentials.messengerEnabled ? entry.messaging || [] : []) {
+      for (const event of credentials.messengerEnabled && !isInstagramPayload ? entry.messaging || [] : []) {
         if (event.reaction || event.message_reaction || event.message_reactions || event.message?.reaction) {
           await applyMessengerReaction(event, entry.id);
           continue;
@@ -227,6 +230,23 @@ export async function POST(request) {
           messageId: event.message?.mid,
           content: text,
           metadata: { timestamp: event.timestamp, attachments: event.message?.attachments || [], ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
+        });
+      }
+      const instagramProfiles = new Map();
+      for (const event of credentials.instagramEnabled && isInstagramPayload ? entry.messaging || [] : []) {
+        if (event.message?.is_echo || !event.message?.mid) continue;
+        const text = event.message?.text || event.message?.attachments?.map((attachment) => attachment.payload?.url || attachment.type).filter(Boolean).join("\n") || "[Instagram attachment]";
+        const senderId = event.sender?.id;
+        if (senderId && !instagramProfiles.has(senderId)) instagramProfiles.set(senderId, await getMessengerCustomerProfile(senderId, credentials, "INSTAGRAM"));
+        const profile = instagramProfiles.get(senderId);
+        await saveInboundMessage({
+          channel: "INSTAGRAM",
+          externalUserId: senderId,
+          customerName: profile?.name || null,
+          profilePicUrl: profile?.profilePicUrl || null,
+          messageId: event.message.mid,
+          content: text,
+          metadata: { timestamp: event.timestamp, attachments: event.message.attachments || [], ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
         });
       }
       for (const change of credentials.messengerEnabled ? entry.changes || [] : []) {

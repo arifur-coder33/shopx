@@ -15,7 +15,7 @@ import jwt from "jsonwebtoken";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
 
 const SETTING_ID = "primary";
-const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion"];
+const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "instagramAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion", "tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret"];
 const trim = (value) => String(value ?? "").trim();
 
 export async function getChatPushConfigAction() {
@@ -92,7 +92,8 @@ export async function setChatMessageReactionAction(messageId, emoji) {
     const payload = {
       recipient: { id: message.conversation.externalUserId },
       sender_action: shouldRemove ? "unreact" : "react",
-      payload: { message_id: message.externalMessageId, ...(!shouldRemove && { reaction: reactionCode }) },
+      // Meta needs the reaction code for both react and unreact actions.
+      payload: { message_id: message.externalMessageId, reaction: reactionCode },
     };
     const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
       method: "POST",
@@ -121,11 +122,16 @@ export async function getChatSettingsAction() {
         websiteChatEnabled: setting?.websiteChatEnabled ?? true,
         whatsappEnabled: setting?.whatsappEnabled ?? false,
         messengerEnabled: setting?.messengerEnabled ?? false,
+        instagramEnabled: setting?.instagramEnabled ?? false,
+        tiktokEnabled: setting?.tiktokEnabled ?? false,
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
         quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies : [],
         publicCredentials: {
           whatsappPhoneNumberId: credentials.whatsappPhoneNumberId || "",
           messengerPageId: credentials.messengerPageId || "",
+          instagramAccountId: credentials.instagramAccountId || "",
+          tiktokBusinessId: credentials.tiktokBusinessId || "",
+          tiktokClientKey: credentials.tiktokClientKey || "",
           graphApiVersion: credentials.graphApiVersion || "",
         },
         configured: Object.fromEntries(SECRET_KEYS.map((key) => [key, Boolean(credentials[key])])),
@@ -159,6 +165,8 @@ export async function saveChatSettingsAction(formData) {
     const websiteChatEnabled = formData.get("websiteChatEnabled") === "on";
     const whatsappEnabled = formData.get("whatsappEnabled") === "on";
     const messengerEnabled = formData.get("messengerEnabled") === "on";
+    const instagramEnabled = formData.get("instagramEnabled") === "on";
+    const tiktokEnabled = formData.get("tiktokEnabled") === "on";
     const welcomeMessage = trim(formData.get("welcomeMessage")).slice(0, 300) || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?";
     const quickReplies = String(formData.get("quickReplies") || "").split("\n").map((line) => {
       const separator = line.indexOf("=");
@@ -173,17 +181,23 @@ export async function saveChatSettingsAction(formData) {
     if (messengerEnabled && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
       throw new Error("Messenger চালু করতে Page ID, Page Access Token, App Secret ও Webhook Verify Token দিন।");
     }
+    if (instagramEnabled && (!credentials.instagramAccountId || !credentials.instagramAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
+      throw new Error("Instagram inbox চালু করতে Instagram Professional Account ID, access token, Meta App Secret ও Webhook Verify Token দিন।");
+    }
+    if (tiktokEnabled && (!credentials.tiktokBusinessId || !credentials.tiktokAccessToken || !credentials.tiktokClientKey || !credentials.tiktokClientSecret)) {
+      throw new Error("TikTok inbox চালু করতে Business ID, access token, Client Key ও Client Secret দিন। TikTok Business Messaging API access অনুমোদিত থাকতে হবে।");
+    }
     if (credentials.graphApiVersion && !/^v\d+\.\d+$/.test(credentials.graphApiVersion)) {
       throw new Error("Graph API version এভাবে লিখুন: vXX.0");
     }
     if (Object.keys(credentials).length && (!process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY || process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY.length < 32)) {
-      throw new Error("Meta credentials encrypt করতে PROVIDER_CREDENTIAL_ENCRYPTION_KEY কমপক্ষে 32 অক্ষরের হতে হবে।");
+      throw new Error("External channel credentials encrypt করতে PROVIDER_CREDENTIAL_ENCRYPTION_KEY কমপক্ষে 32 অক্ষরের হতে হবে।");
     }
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, welcomeMessage, quickReplies, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, welcomeMessage, quickReplies, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, welcomeMessage, quickReplies, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, welcomeMessage, quickReplies, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");
@@ -384,8 +398,9 @@ async function sendMetaMessage(conversation, content, { product = null, imageUrl
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
   if (!version || !/^v\d+\.\d+$/.test(version)) throw new Error("Chat Settings-এ valid Meta Graph API version configure করুন।");
   const isWhatsApp = conversation.channel === "WHATSAPP";
-  const accessToken = isWhatsApp ? credentials.whatsappAccessToken : credentials.messengerPageAccessToken;
-  const resourceId = isWhatsApp ? credentials.whatsappPhoneNumberId : credentials.messengerPageId;
+  const isInstagram = conversation.channel === "INSTAGRAM";
+  const accessToken = isWhatsApp ? credentials.whatsappAccessToken : isInstagram ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
+  const resourceId = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
   if (!accessToken || !resourceId) throw new Error("এই channel-এর Meta credentials configure করা হয়নি।");
   const url = `https://graph.facebook.com/${version}/${resourceId}/messages`;
   const quoted = replyToMessageId ? { message_id: replyToMessageId } : undefined;
@@ -428,6 +443,70 @@ async function sendMetaMessage(conversation, content, { product = null, imageUrl
     }
   }
   return { id, secondaryIds, warning };
+}
+
+async function sendTikTokMessage(conversation, content, referencedMessageId = null) {
+  const setting = await getSetting();
+  const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
+  if (!credentials.tiktokAccessToken || !credentials.tiktokBusinessId) throw new Error("TikTok Business Messaging credentials configure করা হয়নি।");
+  const response = await fetch("https://business-api.tiktok.com/open_api/v1.3/business/message/send/", {
+    method: "POST",
+    headers: { "Access-Token": credentials.tiktokAccessToken, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      business_id: credentials.tiktokBusinessId,
+      recipient_type: "CONVERSATION",
+      recipient: conversation.externalUserId,
+      message_type: "TEXT",
+      text: { body: content.slice(0, 6000) },
+      ...(referencedMessageId && { referenced_message_info: { referenced_message_id: referencedMessageId } }),
+    }),
+    cache: "no-store",
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.code !== 0) throw new Error(result.message || "TikTok message পাঠানো যায়নি।");
+  return { id: result.data?.message_id || null, secondaryIds: [] };
+}
+
+async function sendTikTokImageMessage(conversation, imageUrl, caption = "", referencedMessageId = null) {
+  const setting = await getSetting();
+  const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
+  if (!credentials.tiktokAccessToken || !credentials.tiktokBusinessId) throw new Error("TikTok Business Messaging credentials configure করা হয়নি।");
+  let sourceUrl;
+  try { sourceUrl = new URL(imageUrl); } catch { throw new Error("TikTok-এ পাঠানোর photo URL সঠিক নয়।"); }
+  if (sourceUrl.protocol !== "https:" || !/(^|\.)cloudinary\.com$/i.test(sourceUrl.hostname)) throw new Error("TikTok-এ পাঠানোর জন্য Media Library-তে থাকা secure photo দিন।");
+  const source = await fetch(sourceUrl, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+  const mimeType = source.headers.get("content-type")?.split(";")[0]?.toLowerCase();
+  if (!source.ok || !["image/jpeg", "image/png"].includes(mimeType)) throw new Error("TikTok-এ JPG অথবা PNG photo পাঠানো যাবে।");
+  if (Number(source.headers.get("content-length") || 0) > 3 * 1024 * 1024) throw new Error("TikTok photo সর্বোচ্চ 3 MB হতে পারে।");
+  const bytes = await source.arrayBuffer();
+  if (bytes.byteLength > 3 * 1024 * 1024) throw new Error("TikTok photo সর্বোচ্চ 3 MB হতে পারে।");
+  const extension = mimeType === "image/png" ? "png" : "jpg";
+  const uploadForm = new FormData();
+  uploadForm.set("business_id", credentials.tiktokBusinessId);
+  uploadForm.set("media_type", "IMAGE");
+  uploadForm.set("file", new Blob([bytes], { type: mimeType }), `chat.${extension}`);
+  const uploadResponse = await fetch("https://business-api.tiktok.com/open_api/v1.3/business/message/media/upload/", {
+    method: "POST", headers: { "Access-Token": credentials.tiktokAccessToken }, body: uploadForm, cache: "no-store",
+  });
+  const uploadResult = await uploadResponse.json().catch(() => ({}));
+  const mediaId = uploadResult.data?.media_id;
+  if (!uploadResponse.ok || uploadResult.code !== 0 || !mediaId) throw new Error(uploadResult.message || "TikTok-এ photo upload করা যায়নি।");
+  const send = async (payload) => {
+    const response = await fetch("https://business-api.tiktok.com/open_api/v1.3/business/message/send/", {
+      method: "POST", headers: { "Access-Token": credentials.tiktokAccessToken, "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store",
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.code !== 0) throw new Error(result.message || "TikTok message পাঠানো যায়নি।");
+    return result.data?.message_id || null;
+  };
+  const base = { business_id: credentials.tiktokBusinessId, recipient_type: "CONVERSATION", recipient: conversation.externalUserId };
+  const id = await send({ ...base, message_type: "IMAGE", image: { media_id: mediaId } });
+  const secondaryIds = [];
+  if (caption.trim()) {
+    const captionId = await send({ ...base, message_type: "TEXT", text: { body: caption.slice(0, 6000) }, ...(referencedMessageId && { referenced_message_info: { referenced_message_id: referencedMessageId } }) });
+    if (captionId) secondaryIds.push(captionId);
+  }
+  return { id, secondaryIds };
 }
 
 export async function sendChatReplyAction(conversationId, rawContent, retryMessageId = null, product = null, timelineOrderId = null, replyToMessageId = null) {
@@ -491,7 +570,9 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
       return { success: true, data: { ...message, deliveryStatus: "SENT" } };
     }
     try {
-      const sent = await sendMetaMessage(conversation, message.content, { product: message.metadata?.product || null, imageUrl: message.metadata?.product?.mode === "photo-price" ? message.metadata.product.imageUrl : null, replyToMessageId: replyTo?.externalMessageId || null });
+      const sent = conversation.channel === "TIKTOK"
+        ? await sendTikTokMessage(conversation, message.content, replyTo?.externalMessageId || null)
+        : await sendMetaMessage(conversation, message.content, { product: message.metadata?.product || null, imageUrl: message.metadata?.product?.mode === "photo-price" ? message.metadata.product.imageUrl : null, replyToMessageId: replyTo?.externalMessageId || null });
       const metadata = { ...(message.metadata || {}), ...(sent.secondaryIds.length && { externalMessageIds: sent.secondaryIds }) };
       const updated = await prisma.chatMessage.updateMany({ where: { id: message.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "SENT", externalMessageId: sent.id, metadata } });
       return { success: true, data: updated.count ? { ...message, deliveryStatus: "SENT", externalMessageId: sent.id, metadata } : await prisma.chatMessage.findUnique({ where: { id: message.id } }), ...(sent.warning && { warning: sent.warning }) };
@@ -601,10 +682,12 @@ export async function sendChatImageAction(conversationId, formData, replyToMessa
     if (conversation.channel === "WEBSITE") return { success: true, data: message };
 
     try {
-      const sent = await sendMetaMessage(conversation, caption, {
-        imageUrl: mediaRecord.url,
-        replyToMessageId: replyTo?.externalMessageId || null,
-      });
+      const sent = conversation.channel === "TIKTOK"
+        ? await sendTikTokImageMessage(conversation, mediaRecord.url, caption, replyTo?.externalMessageId || null)
+        : await sendMetaMessage(conversation, caption, {
+          imageUrl: mediaRecord.url,
+          replyToMessageId: replyTo?.externalMessageId || null,
+        });
       const metadata = { ...(message.metadata || {}), ...(sent.secondaryIds.length && { externalMessageIds: sent.secondaryIds }) };
       const updated = await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "SENT", externalMessageId: sent.id, metadata } });
       return { success: true, data: updated, ...(sent.warning && { warning: sent.warning }) };
