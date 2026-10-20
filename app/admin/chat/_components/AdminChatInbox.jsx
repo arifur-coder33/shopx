@@ -1131,7 +1131,7 @@ export default function AdminChatInbox({
                     return groups;
                   }, []);
                   const imageUrls = [
-                    ...(message.metadata?.image?.url ? [message.metadata.image.url] : []),
+                    ...(!message.metadata?.productOptions?.length && message.metadata?.image?.url ? [message.metadata.image.url] : []),
                     ...(message.metadata?.image?.mediaId && message.channel === "WHATSAPP"
                       ? [`/api/admin/chat/media/${encodeURIComponent(message.id)}`]
                       : []),
@@ -1315,6 +1315,12 @@ export default function AdminChatInbox({
                         <a key={`${message.id}-image-${index}`} href={imageUrl} target="_blank" rel="noreferrer" className="mb-2 block max-w-sm overflow-hidden rounded-xl">
                           <img src={imageUrl} alt="Customer sent image" loading="lazy" className="max-h-80 w-full object-contain" />
                         </a>
+                      ))}
+                      {(message.metadata?.productOptions || []).map((product, index) => (
+                        <div key={`${message.id}-product-${product.id}`} className="mb-2 max-w-sm overflow-hidden rounded-xl border border-black/10 bg-white">
+                          {product.imageUrl && <a href={product.imageUrl} target="_blank" rel="noreferrer"><img src={product.imageUrl} alt={product.title} loading="lazy" className="max-h-64 w-full object-contain" /></a>}
+                          <div className="p-3 text-sm"><strong>পণ্য-{index + 1}: {product.title}</strong>{product.price != null && <p className="mt-1 font-semibold">৳{Number(product.price).toLocaleString("en-BD")}</p>}{product.features?.length > 0 && <p className="mt-1 text-xs text-slate-600">{product.features.join(" · ")}</p>}</div>
+                        </div>
                       ))}
                       {!["PRODUCT_CARD", "ORDER_TIMELINE"].includes(
                         message.metadata?.type,

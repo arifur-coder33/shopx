@@ -227,6 +227,16 @@ export default function ChatSettingsForm({
             <input name="aiAutoReplyEnabled" type="checkbox" defaultChecked={settings.aiAutoReplyEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />
           </label>
           <label className="block">
+            <span className="text-sm font-semibold text-text">AI reply tone ও style</span>
+            <span className="mt-1 block text-xs text-text-muted">নিজের দোকানের মতো করে tone লিখুন। Banglish বা বাংলা—দুই ক্ষেত্রেই AI বাংলা অক্ষরে reply দেবে; customer English লিখলে English-এ উত্তর দেবে।</span>
+            <textarea name="aiReplyTone" rows={3} maxLength={500} defaultValue={settings.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো"} disabled={!canUpdate} placeholder="বন্ধুসুলভ, সহজ, natural; ছোট reply; অতিরিক্ত greeting বা emoji নয়" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-text">Saved AI example Q&A</span>
+            <span className="mt-1 block text-xs text-text-muted">প্রতি লাইনে একটি করে লিখুন: প্রশ্ন =&gt; উত্তর। সর্বোচ্চ 40টি example; কাছাকাছি customer question এলে AI এগুলো থেকে ভাষা ও উত্তরের ধরন শিখবে। দাম, stock ও delivery-এর current তথ্য catalog থেকে নেবে।</span>
+            <textarea name="aiReplyExamples" rows={8} defaultValue={(settings.aiReplyExamples || []).map((item) => `${item.question} => ${item.answer}`).join("\n")} disabled={!canUpdate} placeholder={"Delivery charge কত? => এলাকা বললে delivery charge দেখে জানাচ্ছি।\nএই রং আছে? => কোন রংটা চাইছেন? available color দেখে বলছি।\nProduct-এর price কত? => product-এর নাম বা link দিলে current price জানাচ্ছি।"} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
+          </label>
+          <label className="block">
             <span className="text-sm font-semibold text-text">OpenAI API key</span>
             <span className="mt-1 flex rounded-lg border border-border bg-background focus-within:border-brand">
               <input

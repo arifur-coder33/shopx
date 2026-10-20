@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compactConversationHistory, customerRequiresHumanFollowUp, explicitAddressPreference, hasInboundImage, isDeliveryQuestion, isProductImageRequest, isProductQuestion, needsHumanFollowUp, shouldAutoReply } from "./chatAiPreferences.mjs";
+import { compactConversationHistory, customerRequiresHumanFollowUp, explicitAddressPreference, hasInboundImage, isDeliveryQuestion, isProductImageRequest, isProductQuestion, needsHumanFollowUp, selectRelevantAiReplyExamples, shouldAutoReply } from "./chatAiPreferences.mjs";
 
 test("stores only explicit address preferences, including corrections", () => {
   assert.equal(explicitAddressPreference("আমাকে আপু বলবেন"), "APU");
@@ -57,6 +57,15 @@ test("recognizes explicit requests for a product photo and inbound image attachm
   assert.equal(hasInboundImage({ image: { mediaId: "media-id" } }), true);
   assert.equal(hasInboundImage({ attachments: [{ type: "image", payload: { url: "https://cdn.example/photo.jpg" } }] }), true);
   assert.equal(hasInboundImage({ attachments: [{ type: "file", payload: { url: "https://cdn.example/file.pdf" } }] }), false);
+});
+
+test("selects only relevant saved answer examples for the current customer question", () => {
+  const examples = [
+    { question: "delivery charge koto?", answer: "Delivery charge location onujayi hoy." },
+    { question: "refund kobe pabo?", answer: "Team status check kore janabe." },
+  ];
+  assert.deepEqual(selectRelevantAiReplyExamples(examples, "delivery charge koto Dhakay?"), [examples[0]]);
+  assert.deepEqual(selectRelevantAiReplyExamples(examples, "eta ki color e ache?"), []);
 });
 
 test("requires verified order context or human follow-up for account requests", () => {

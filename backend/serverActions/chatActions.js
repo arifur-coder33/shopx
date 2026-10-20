@@ -128,6 +128,8 @@ export async function getChatSettingsAction() {
         aiAutoReplyEnabled: setting?.aiAutoReplyEnabled ?? false,
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
         quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies : [],
+        aiReplyTone: setting?.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো",
+        aiReplyExamples: Array.isArray(setting?.aiReplyExamples) ? setting.aiReplyExamples : [],
         publicCredentials: {
           whatsappPhoneNumberId: credentials.whatsappPhoneNumberId || "",
           messengerPageId: credentials.messengerPageId || "",
@@ -178,6 +180,14 @@ export async function saveChatSettingsAction(formData) {
       const text = line.slice(separator + 1).trim().slice(0, 500);
       return shortcut && text ? { shortcut, text } : null;
     }).filter(Boolean).slice(0, 50);
+    const aiReplyTone = trim(formData.get("aiReplyTone")).replace(/[<>]/g, "").slice(0, 500) || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো";
+    const aiReplyExamples = String(formData.get("aiReplyExamples") || "").split(/\r?\n/).map((line) => {
+      const separator = line.indexOf("=>");
+      if (separator < 1) return null;
+      const question = line.slice(0, separator).trim().replace(/[<>]/g, "").slice(0, 300);
+      const answer = line.slice(separator + 2).trim().replace(/[<>]/g, "").slice(0, 500);
+      return question && answer ? { question, answer } : null;
+    }).filter(Boolean).slice(0, 40);
     if (whatsappEnabled && (!credentials.whatsappPhoneNumberId || !credentials.whatsappAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
       throw new Error("WhatsApp চালু করতে Phone Number ID, Access Token, App Secret ও Webhook Verify Token দিন।");
     }
@@ -200,8 +210,8 @@ export async function saveChatSettingsAction(formData) {
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");
