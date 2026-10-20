@@ -1330,13 +1330,12 @@ export default function AdminChatInbox({
                         <div
                           role="status"
                           aria-label="AI উত্তর লিখছে"
-                          className="flex min-w-20 items-center gap-1.5 py-1 text-sm text-slate-600"
+                          className="flex min-w-14 items-center justify-center gap-1 rounded-full bg-slate-100 px-3 py-2"
                         >
-                          <span>লিখছে</span>
                           {[0, 1, 2].map((dot) => (
                             <span
                               key={dot}
-                              className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
+                              className="h-2 w-2 animate-bounce rounded-full bg-slate-500"
                               style={{ animationDelay: `${dot * 160}ms` }}
                             />
                           ))}

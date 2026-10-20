@@ -400,6 +400,55 @@ async function getCatalog(
   const productSearch = async () => {
     if (!wantsProducts) return [];
     let matches = await queryCatalog(terms);
+    const hasStrongNameMatch = matches.some((product) =>
+      terms.some((term) => {
+        const normalizedTerm = String(term || "").toLowerCase();
+        return (
+          normalizedTerm.length >= 3 &&
+          (`${product.title || ""} ${product.category?.name || ""}`.toLowerCase().includes(normalizedTerm))
+        );
+      }),
+    );
+    if (terms.length && !rememberedProductIds.length && !hasStrongNameMatch) {
+      const searchText = [messageText, ...imageTerms].filter(Boolean).join(" ");
+      const expandedTerms = await deriveCatalogSearchTerms(apiKey, searchText);
+      const expandedMatches = expandedTerms.length
+        ? await queryCatalog(expandedTerms)
+        : [];
+      if (expandedMatches.length) {
+        const seenIds = new Set(expandedMatches.map((product) => product.id));
+        matches = [
+          ...expandedMatches,
+          ...matches.filter((product) => !seenIds.has(product.id)),
+        ].slice(0, 8);
+      }
+    }
+    if (imageTerms.length) {
+      const imageTermsMatchTitle = matches.some((product) =>
+        imageTerms.some((term) => {
+          const normalizedTerm = String(term || "").toLowerCase();
+          return (
+            normalizedTerm.length >= 3 &&
+            (`${product.title || ""} ${product.category?.name || ""}`.toLowerCase().includes(normalizedTerm))
+          );
+        }),
+      );
+      if (!imageTermsMatchTitle) {
+        const visualSearchText = imageTerms.join(" ");
+        const expandedTerms = await deriveCatalogSearchTerms(
+          apiKey,
+          visualSearchText,
+        );
+        const expandedMatches = expandedTerms.length
+          ? await queryCatalog(expandedTerms)
+          : [];
+        const seenIds = new Set(expandedMatches.map((product) => product.id));
+        matches = [
+          ...expandedMatches,
+          ...matches.filter((product) => !seenIds.has(product.id)),
+        ].slice(0, 8);
+      }
+    }
     if (matches.length) {
       const stockQuestion = /(?:\bstock\b|\bavailable\b|স্টক|আছে\??)/iu.test(
         String(messageText || ""),
@@ -1098,13 +1147,13 @@ async function generateReply(
     .filter(
       (product) =>
         product.imageUrls?.length &&
-        (productMemory.selectedProductId
+        (customerImage || (productMemory.selectedProductId
           ? (explicitPhotoRequest &&
               product.id === productMemory.selectedProductId) ||
             (stockQuestion &&
               product.id !== productMemory.selectedProductId &&
               !productMemory.previousShownIds.includes(product.id))
-          : !productMemory.previousShownIds.includes(product.id)),
+          : !productMemory.previousShownIds.includes(product.id))),
     )
     .slice(0, 5);
   const requestInput = [
@@ -1153,7 +1202,7 @@ async function generateReply(
     body: JSON.stringify({
       model: "gpt-5.4-mini",
       store: false,
-      instructions: `${CHAT_AI_INSTRUCTIONS}\n\nChannel style: ${channelStyle}\nFor broad product questions with several matching products, briefly list up to three distinct options with their catalog-backed name, price and useful features, then ask which one they mean. Remember the selected product from the supplied conversation data. For a stock question about a selected product, report only that product's verified stock; if it is out of stock, check the supplied related catalog products and show relevant in-stock alternatives with their catalog-backed names, prices, and photos when available. If no related alternative is in stock, clearly say that no matching product is currently in stock. Never report another product's stock as the selected product's stock. Do not resend a product photo already shown unless the customer asks for it again. Answer a follow-up about the selected product directly. Ask one natural follow-up only when it helps; do not append “anything else?” mechanically. For order-status requests, only report a matching verified order. If an order number is present but no verified match is available, ask for the phone number used for the order; do not ask for the order number again. For return, refund, or exchange policy questions, use only configured published policy-page content and include its provided link. If policy data could not be loaded, say you cannot verify it right now; if the page is missing or still contains a setup placeholder, say the policy details are not listed yet and share an available page link. Never invent policy terms. For campaign questions, use only active campaign records, summarize eligibility and discount details that are present, and include each provided campaign link exactly as a plain URL. If campaign data could not be loaded, say you cannot verify current offers right now; if it loaded and the active campaign list is empty, say there are no active campaigns. For a photo question, use only product facts in the catalog. If an image match is uncertain, say so briefly and ask for a product name or more detail. If productIdsToShow contains a substitute, call it an alternative rather than the exact pictured item.`,
+      instructions: `${CHAT_AI_INSTRUCTIONS}\n\nChannel style: ${channelStyle}\nFor broad product questions with several matching products, briefly list up to three distinct options with their catalog-backed name, price and useful features, then ask which one they mean. Remember the selected product from the supplied conversation data. For a stock question about a selected product, report only that product's verified stock; if it is out of stock, check the supplied related catalog products and show relevant in-stock alternatives with their catalog-backed names, prices, and photos when available. If no related alternative is in stock, clearly say that no matching product is currently in stock. Never report another product's stock as the selected product's stock. Do not resend a product photo already shown unless the customer asks for it again. Answer a follow-up about the selected product directly. Ask one natural follow-up only when it helps; do not append “anything else?” mechanically. For order-status requests, only report a matching verified order. If an order number is present but no verified match is available, ask for the phone number used for the order; do not ask for the order number again. For return, refund, or exchange policy questions, use only configured published policy-page content and include its provided link. If policy data could not be loaded, say you cannot verify it right now; if the page is missing or still contains a setup placeholder, say the policy details are not listed yet and share an available page link. Never invent policy terms. For campaign questions, use only active campaign records, summarize eligibility and discount details that are present, and include each provided campaign link exactly as a plain URL. If campaign data could not be loaded, say you cannot verify current offers right now; if it loaded and the active campaign list is empty, say there are no active campaigns. For a photo question, use only product facts in the catalog. If no catalog match is confident, politely say in Bengali that you could not find the pictured item in the catalog and ask if they would like to know about another product. If productIdsToShow contains a substitute, call it an alternative rather than the exact pictured item.`,
       input: requestInput,
       text: {
         format: {
@@ -1415,7 +1464,10 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     const [productContext, verifiedOrders] = await Promise.all([
       getCatalog(
         inbound.content,
-        imageDescription?.searchTerms || [],
+        [
+          ...(imageDescription?.searchTerms || []),
+          ...(imageDescription?.description?.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []),
+        ],
         conversation.channel,
         productMemory.catalogProductIds,
         credentials.openaiApiKey,
