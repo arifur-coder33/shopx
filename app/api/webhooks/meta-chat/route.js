@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
+import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 
 export const dynamic = "force-dynamic";
@@ -94,7 +95,15 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
     });
     return inserted.count;
   });
-  if (insertedCount > 0) after(() => sendChatPushNotification({ conversationId: conversation.id, channel, customerName, customerPhone, content }));
+  if (insertedCount > 0) {
+    const inbound = await prisma.chatMessage.findFirst({ where: { conversationId: conversation.id, channel, externalMessageId: messageId }, select: { id: true } });
+    after(async () => {
+      await Promise.allSettled([
+        sendChatPushNotification({ conversationId: conversation.id, channel, customerName, customerPhone, content }),
+        inbound ? maybeSendChatAiReply(conversation.id, inbound.id) : Promise.resolve(),
+      ]);
+    });
+  }
 }
 
 async function applyMetaMessageEdit(channel, edit) {

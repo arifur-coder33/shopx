@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { after } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
+import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,12 @@ export async function POST(request) {
       prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content, deliveryStatus: "DELIVERED" } }),
       prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } }),
     ]);
-    after(() => sendChatPushNotification({ conversationId: conversation.id, channel: "WEBSITE", customerName, customerPhone, content: message.content }));
+    after(async () => {
+      await Promise.allSettled([
+        sendChatPushNotification({ conversationId: conversation.id, channel: "WEBSITE", customerName, customerPhone, content: message.content }),
+        maybeSendChatAiReply(conversation.id, message.id),
+      ]);
+    });
     return Response.json({ success: true, data: { id: message.id, direction: message.direction, content: message.content, deliveryStatus: message.deliveryStatus, createdAt: message.createdAt } }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ success: false, message: "Message could not be saved. Please try again." }, { status: 500 });

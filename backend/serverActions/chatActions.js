@@ -15,7 +15,7 @@ import jwt from "jsonwebtoken";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
 
 const SETTING_ID = "primary";
-const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "instagramAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion", "tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret"];
+const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "instagramAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion", "tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret", "openaiApiKey"];
 const trim = (value) => String(value ?? "").trim();
 
 export async function getChatPushConfigAction() {
@@ -124,6 +124,7 @@ export async function getChatSettingsAction() {
         messengerEnabled: setting?.messengerEnabled ?? false,
         instagramEnabled: setting?.instagramEnabled ?? false,
         tiktokEnabled: setting?.tiktokEnabled ?? false,
+        aiAutoReplyEnabled: setting?.aiAutoReplyEnabled ?? false,
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
         quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies : [],
         publicCredentials: {
@@ -167,6 +168,7 @@ export async function saveChatSettingsAction(formData) {
     const messengerEnabled = formData.get("messengerEnabled") === "on";
     const instagramEnabled = formData.get("instagramEnabled") === "on";
     const tiktokEnabled = formData.get("tiktokEnabled") === "on";
+    const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
     const welcomeMessage = trim(formData.get("welcomeMessage")).slice(0, 300) || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?";
     const quickReplies = String(formData.get("quickReplies") || "").split("\n").map((line) => {
       const separator = line.indexOf("=");
@@ -191,13 +193,14 @@ export async function saveChatSettingsAction(formData) {
       throw new Error("Graph API version এভাবে লিখুন: vXX.0");
     }
     if (Object.keys(credentials).length && (!process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY || process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY.length < 32)) {
-      throw new Error("External channel credentials encrypt করতে PROVIDER_CREDENTIAL_ENCRYPTION_KEY কমপক্ষে 32 অক্ষরের হতে হবে।");
+      throw new Error("Chat credentials encrypt করতে PROVIDER_CREDENTIAL_ENCRYPTION_KEY কমপক্ষে 32 অক্ষরের হতে হবে।");
     }
+    if (aiAutoReplyEnabled && !credentials.openaiApiKey) throw new Error("AI auto reply চালু করতে OpenAI API key দিন।");
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, welcomeMessage, quickReplies, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, welcomeMessage, quickReplies, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");

@@ -1748,6 +1748,7 @@ model ChatSetting {
   messengerEnabled     Boolean  @default(false)
   instagramEnabled     Boolean  @default(false)
   tiktokEnabled        Boolean  @default(false)
+  aiAutoReplyEnabled   Boolean  @default(false)
   welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
   quickReplies         Json     @default("[]")
   encryptedCredentials String?

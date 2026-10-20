@@ -217,6 +217,43 @@ export default function ChatSettingsForm({
         </section>
         <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
           <div>
+            <h2 className="font-bold text-text">ChatGPT AI auto reply</h2>
+            <p className="mt-1 text-xs leading-5 text-text-muted">
+              Customer message এলে AI catalog-এর active product তথ্য দেখে উত্তর পাঠাবে। অজানা দাম বা তথ্য অনুমান করবে না।
+            </p>
+          </div>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+            <span className="font-medium text-text">AI auto reply চালু করুন</span>
+            <input name="aiAutoReplyEnabled" type="checkbox" defaultChecked={settings.aiAutoReplyEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-text">OpenAI API key</span>
+            <span className="mt-1 flex rounded-lg border border-border bg-background focus-within:border-brand">
+              <input
+                name="openaiApiKey"
+                value={revealedCredentials.openaiApiKey || ""}
+                onChange={(event) => setRevealedCredentials((current) => ({ ...current, openaiApiKey: event.target.value }))}
+                type={showSecrets.openaiApiKey ? "text" : "password"}
+                placeholder={settings.configured?.openaiApiKey ? "•••••••••••• (সংরক্ষিত)" : "sk-…"}
+                autoComplete="new-password"
+                disabled={!canUpdate}
+                className="min-w-0 flex-1 rounded-lg bg-transparent px-3 py-2 text-sm text-text outline-none disabled:opacity-50"
+              />
+              <button type="button" onClick={() => toggleCredential("openaiApiKey")} aria-label={showSecrets.openaiApiKey ? "OpenAI API key hide" : "OpenAI API key show"} className="px-3 text-text-muted">
+                {showSecrets.openaiApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </span>
+            {settings.configured?.openaiApiKey && (
+              <span className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+                <input type="checkbox" name="clear_openaiApiKey" value="true" disabled={!canUpdate} className="accent-[var(--color-brand)]" />
+                Saved API key মুছে দিন
+              </span>
+            )}
+          </label>
+          <p className="text-xs text-text-muted">API key encrypted অবস্থায় সংরক্ষিত হবে। AI reply WEBSITE এবং enabled external chat channel-এ পাঠানো হবে।</p>
+        </section>
+        <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
+          <div>
             <h2 className="font-bold text-text">Meta webhook</h2>
             <p className="mt-1 text-xs leading-5 text-text-muted">
               Meta Developer App-এর Webhooks settings-এ callback URL ও একই

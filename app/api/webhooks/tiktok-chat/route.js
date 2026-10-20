@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
+import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,15 @@ async function saveTikTokMessage(envelope) {
     skipDuplicates: true,
   });
   await prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: createdAt, ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) } });
-  if (inserted.count > 0) after(() => sendChatPushNotification({ conversationId: conversation.id, channel: "TIKTOK", customerName, content: text }));
+  if (inserted.count > 0) {
+    const inbound = await prisma.chatMessage.findFirst({ where: { conversationId: conversation.id, channel: "TIKTOK", externalMessageId: String(messageId) }, select: { id: true } });
+    after(async () => {
+      await Promise.allSettled([
+        sendChatPushNotification({ conversationId: conversation.id, channel: "TIKTOK", customerName, content: text }),
+        inbound ? maybeSendChatAiReply(conversation.id, inbound.id) : Promise.resolve(),
+      ]);
+    });
+  }
 }
 
 export async function POST(request) {
