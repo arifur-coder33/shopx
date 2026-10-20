@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compactConversationHistory, customerRequiresHumanFollowUp, explicitAddressPreference, isDeliveryQuestion, isProductQuestion, needsHumanFollowUp, shouldAutoReply } from "./chatAiPreferences.mjs";
+import { compactConversationHistory, customerRequiresHumanFollowUp, explicitAddressPreference, hasInboundImage, isDeliveryQuestion, isProductImageRequest, isProductQuestion, needsHumanFollowUp, shouldAutoReply } from "./chatAiPreferences.mjs";
 
 test("stores only explicit address preferences, including corrections", () => {
   assert.equal(explicitAddressPreference("আমাকে আপু বলবেন"), "APU");
@@ -47,6 +47,16 @@ test("only fetches business facts when the customer asks for product or delivery
   assert.equal(isProductQuestion("Hello"), false);
   assert.equal(isDeliveryQuestion("ঢাকায় delivery charge কত?"), true);
   assert.equal(isDeliveryQuestion("Hi"), false);
+});
+
+test("recognizes explicit requests for a product photo and inbound image attachments", () => {
+  assert.equal(isProductImageRequest("ei black bag er photo den"), true);
+  assert.equal(isProductImageRequest("ei bag er chobi den"), true);
+  assert.equal(isProductImageRequest("এই পণ্যের ছবি দেখান"), true);
+  assert.equal(isProductImageRequest("How much is it?"), false);
+  assert.equal(hasInboundImage({ image: { mediaId: "media-id" } }), true);
+  assert.equal(hasInboundImage({ attachments: [{ type: "image", payload: { url: "https://cdn.example/photo.jpg" } }] }), true);
+  assert.equal(hasInboundImage({ attachments: [{ type: "file", payload: { url: "https://cdn.example/file.pdf" } }] }), false);
 });
 
 test("requires verified order context or human follow-up for account requests", () => {

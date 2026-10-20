@@ -224,7 +224,7 @@ export async function POST(request) {
         }
         if (event.message?.is_echo) continue;
         if (event.message?.edit && await applyMetaMessageEdit("MESSENGER", event.message.edit)) continue;
-        const text = event.message?.text || (event.message?.attachments?.length ? `[${event.message.attachments[0].type || "attachment"} message]` : "");
+        const text = event.message?.text || (event.message?.attachments?.some((attachment) => attachment.type === "image") ? "📷 Photo" : event.message?.attachments?.length ? `[${event.message.attachments[0].type || "attachment"} message]` : "");
         const senderId = event.sender?.id;
         if (senderId && !messengerProfiles.has(senderId) && event.message?.mid && text) {
           messengerProfiles.set(senderId, await getMessengerCustomerProfile(senderId, credentials));
@@ -244,7 +244,7 @@ export async function POST(request) {
       const instagramProfiles = new Map();
       for (const event of credentials.instagramEnabled && isInstagramPayload ? entry.messaging || [] : []) {
         if (event.message?.is_echo || !event.message?.mid) continue;
-        const text = event.message?.text || event.message?.attachments?.map((attachment) => attachment.payload?.url || attachment.type).filter(Boolean).join("\n") || "[Instagram attachment]";
+        const text = event.message?.text || (event.message?.attachments?.some((attachment) => attachment.type === "image") ? "📷 Photo" : event.message?.attachments?.map((attachment) => attachment.type).filter(Boolean).join("\n") || "[Instagram attachment]");
         const senderId = event.sender?.id;
         if (senderId && !instagramProfiles.has(senderId)) instagramProfiles.set(senderId, await getMessengerCustomerProfile(senderId, credentials, "INSTAGRAM"));
         const profile = instagramProfiles.get(senderId);

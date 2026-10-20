@@ -58,6 +58,16 @@ export function isDeliveryQuestion(text) {
   return /(?:delivery|deliver|shipping|courier|charge|ডেলিভারি|পাঠাবেন|পাঠান|চার্জ|কুরিয়ার|কুরিয়ার|কবে পাব|কবে আসবে)/iu.test(String(text || ""));
 }
 
+export function isProductImageRequest(text) {
+  const message = String(text || "");
+  return /(?:\b(?:send|show|share|see|get)\b.{0,35}\b(?:photo|picture|image|pic)\b|\b(?:photo|picture|image|pic|chobi)\b.{0,35}\b(?:send|show|share|see|want|please|den|din|pathan|dekhan|chai)\b|ছবি|ফটো|পণ্যের\s*ছবি|প্রোডাক্টের\s*ছবি)/iu.test(message);
+}
+
+export function hasInboundImage(metadata) {
+  if (metadata?.image?.mediaId || metadata?.image?.url) return true;
+  return (metadata?.attachments || []).some((attachment) => attachment?.type === "image" || attachment?.payload?.url && /image/i.test(attachment?.type || ""));
+}
+
 export function shouldFetchOrderContext(text) {
   return ACCOUNT_REQUEST_PATTERN.test(String(text || ""));
 }

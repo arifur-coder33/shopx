@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, CircleAlert, LoaderCircle, MessageCircle, Minus, Plus, RotateCw, Send, X, ShoppingBag } from "lucide-react";
+import { Check, CheckCheck, CircleAlert, ImagePlus, LoaderCircle, MessageCircle, Minus, Plus, RotateCw, Send, X, ShoppingBag } from "lucide-react";
 
 const TOKEN_KEY = "storefront-chat-visitor";
 const PHONE_KEY = "storefront-chat-phone";
@@ -53,6 +53,7 @@ export default function WebsiteChatWidget() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [text, setText] = useState("");
+  const [photo, setPhoto] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ordersOpen, setOrdersOpen] = useState(false);
@@ -152,26 +153,31 @@ export default function WebsiteChatWidget() {
   const sendMessage = async (event) => {
     event?.preventDefault();
     const content = text.trim();
-    if (!content || busy || !token) return;
+    if ((!content && !photo) || busy || !token) return;
     const pendingId = `pending-${Date.now()}`;
     setBusy(true);
     setError("");
-    setMessages((current) => [...current, { id: pendingId, direction: "INBOUND", content, createdAt: new Date().toISOString(), deliveryStatus: "SENDING" }]);
+    const previewUrl = photo ? URL.createObjectURL(photo) : null;
+    setMessages((current) => [...current, { id: pendingId, direction: "INBOUND", content: content || "📷 Photo", metadata: previewUrl ? { image: { url: previewUrl } } : null, createdAt: new Date().toISOString(), deliveryStatus: "SENDING" }]);
     setText("");
+    const selectedPhoto = photo;
+    setPhoto(null);
     try {
-      const response = await fetch("/api/chat/website", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, content, name, phone }),
-      });
+      let response;
+      if (selectedPhoto) {
+        const form = new FormData();
+        form.set("token", token); form.set("content", content); form.set("name", name); form.set("phone", phone); form.set("image", selectedPhoto);
+        response = await fetch("/api/chat/website/image", { method: "POST", body: form });
+      } else response = await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content, name, phone }) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "বার্তা পাঠানো যায়নি।");
       setMessages((current) => current.map((message) => message.id === pendingId ? result.data : message));
       refreshMessages();
     } catch (sendError) {
-      setMessages((current) => current.map((message) => message.id === pendingId ? { ...message, deliveryStatus: "FAILED" } : message));
+      setMessages((current) => current.map((message) => message.id === pendingId ? { ...message, deliveryStatus: "FAILED", metadata: selectedPhoto ? { photoRetryUnsupported: true } : null } : message));
       setError(sendError.message || "বার্তা পাঠানো যায়নি। আবার চেষ্টা করুন।");
     } finally {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setBusy(false);
     }
   };
@@ -259,16 +265,18 @@ export default function WebsiteChatWidget() {
                 {message.metadata?.type === "ORDER_TIMELINE" && message.metadata.order && <div className="mb-1 rounded-xl bg-white p-3 text-gray-900"><strong className="block text-sm">অর্ডার {message.metadata.order.orderNo}</strong><p className="mt-1 text-xs">বর্তমান অবস্থা: {message.metadata.order.status}</p><ol className="mt-2 space-y-2 border-l border-gray-200 pl-3">{message.metadata.order.events.map((event, index) => <li key={`${event.status}-${index}`} className="text-xs"><b>{event.title}</b>{event.message ? ` · ${event.message}` : ""}{event.location ? ` · ${event.location}` : ""}<span className="mt-0.5 block text-[10px] text-gray-500">{new Intl.DateTimeFormat("bn-BD", { dateStyle: "short", timeStyle: "short" }).format(new Date(event.createdAt))}</span></li>)}</ol></div>}
                 {!["PRODUCT_CARD", "ORDER_TIMELINE"].includes(message.metadata?.type) && !(message.metadata?.image?.url && message.content === "📷 Photo") && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
                 {message.metadata?.edited && <p className="mt-1 text-right text-[10px] italic opacity-70">edited</p>}
-                {message.direction === "INBOUND" && message.deliveryStatus && <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-600">{message.deliveryStatus === "SENDING" ? <LoaderCircle size={12} className="animate-spin" /> : message.deliveryStatus === "FAILED" ? <><CircleAlert size={13} /><button type="button" onClick={() => retryMessage(message)} className="inline-flex items-center gap-1 underline"><RotateCw size={11} />আবার পাঠান</button></> : message.deliveryStatus === "READ" ? <CheckCheck size={14} /> : <Check size={13} />}</p>}
+                {message.direction === "INBOUND" && message.deliveryStatus && <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-600">{message.deliveryStatus === "SENDING" ? <LoaderCircle size={12} className="animate-spin" /> : message.deliveryStatus === "FAILED" ? <><CircleAlert size={13} />{!message.metadata?.photoRetryUnsupported && <button type="button" onClick={() => retryMessage(message)} className="inline-flex items-center gap-1 underline"><RotateCw size={11} />আবার পাঠান</button>}</> : message.deliveryStatus === "READ" ? <CheckCheck size={14} /> : <Check size={13} />}</p>}
               </div>
             </div>)}
             <div ref={endRef} />
           </div>
           <form onSubmit={sendMessage} className="shrink-0 space-y-2 border-t border-black/5 bg-[#f0f2f5] p-3">
             {!identity && !messages.length && identityLoaded && <div className="grid grid-cols-2 gap-2"><input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} placeholder="আপনার নাম (ঐচ্ছিক)" aria-label="আপনার নাম (ঐচ্ছিক)" className="min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand" /><input value={phone} onChange={(event) => { const value = event.target.value.slice(0, 30); setPhone(value); setOrderPhone(value); try { sessionStorage.setItem(PHONE_KEY, value); } catch {} }} type="tel" inputMode="tel" autoComplete="tel" maxLength={30} placeholder="ফোন (ঐচ্ছিক)" aria-label="ফোন নম্বর (ঐচ্ছিক)" className="min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand" /></div>}
+            {photo && <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs text-slate-700"><span className="truncate">📷 {photo.name}</span><button type="button" onClick={() => setPhoto(null)} aria-label="Photo সরান" className="ml-2 rounded-full p-1 hover:bg-black/5"><X size={14} /></button></div>}
             <div className="flex items-end gap-2">
+              <label className={`grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-black/5 hover:bg-slate-50 ${busy ? "pointer-events-none opacity-50" : ""}`} aria-label="Photo যোগ করুন"><ImagePlus size={18} /><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 5 * 1024 * 1024) { setError("Photo সর্বোচ্চ 5 MB হতে পারে।"); event.target.value = ""; return; } setPhoto(file); setError(""); }} /></label>
               <textarea value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) sendMessage(event); }} maxLength={2000} rows={1} placeholder="আপনার বার্তা লিখুন…" aria-label="বার্তা" className="max-h-28 min-h-10 flex-1 resize-none rounded-2xl border-0 bg-white px-4 py-2.5 text-base text-slate-800 outline-none ring-1 ring-black/5 focus:ring-primary sm:resize-y sm:text-sm" />
-              <button type="submit" disabled={busy || !text.trim()} aria-label="বার্তা পাঠান" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-700 text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={18} /> : <Send size={18} />}</button>
+              <button type="submit" disabled={busy || (!text.trim() && !photo)} aria-label="বার্তা পাঠান" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-700 text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={18} /> : <Send size={18} />}</button>
             </div>
             {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
           </form>
