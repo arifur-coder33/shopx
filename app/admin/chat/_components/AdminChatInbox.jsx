@@ -762,6 +762,13 @@ export default function AdminChatInbox({
     else setError(result.message || "Assignment could not be updated.");
   };
 
+  const toggleConversationAi = async () => {
+    if (!conversation || !canUpdate || conversation.assignedToId) return;
+    const result = await updateChatConversationAction(selectedId, { aiModeEnabled: !conversation.aiModeEnabled });
+    if (result.success) await Promise.all([loadConversation(), loadInbox()]);
+    else setError(result.message || "AI mode could not be updated.");
+  };
+
   const enableNotifications = async () => {
     if (
       !("Notification" in window) ||
@@ -1063,6 +1070,16 @@ export default function AdminChatInbox({
                         </option>
                       ))}
                     </select>
+                    <button
+                      type="button"
+                      onClick={toggleConversationAi}
+                      disabled={Boolean(conversation.assignedToId)}
+                      title={conversation.assignedToId ? "AI চালু করতে আগে agent unassign করুন" : "এই conversation-এর AI auto reply toggle করুন"}
+                      aria-pressed={Boolean(conversation.aiModeEnabled)}
+                      className={`rounded-lg border px-2 py-2 text-xs font-semibold disabled:opacity-50 ${conversation.aiModeEnabled ? "border-emerald-600/30 bg-emerald-50 text-emerald-800" : "border-border bg-background text-text-muted"}`}
+                    >
+                      AI {conversation.aiModeEnabled ? "On" : "Off"}
+                    </button>
                     <button
                       type="button"
                       onClick={() =>

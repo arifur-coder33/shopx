@@ -10,6 +10,7 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import { groupChatInbox, normalizeChatPhone } from "@/lib/chatIdentity";
 import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscription } from "@/backend/services/orderPushService";
 import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
+import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
 import { getMediaUsageIndex, syncLegacyChatMedia } from "@/backend/services/mediaUsageService";
 import jwt from "jsonwebtoken";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
@@ -285,7 +286,7 @@ export async function getChatInboxAction({ channel = "ALL", status = "OPEN", sea
       take: 100,
       select: {
         id: true, channel: true, externalUserId: true, customerName: true, customerPhone: true, normalizedPhone: true, profilePicUrl: true, status: true,
-        lastMessageAt: true, unreadCount: true, assignedToId: true, assignedTo: { select: { name: true } },
+        lastMessageAt: true, unreadCount: true, assignedToId: true, assignedTo: { select: { name: true } }, aiModeEnabled: true,
         messages: { orderBy: { createdAt: "desc" }, take: 1, select: { content: true, direction: true, createdAt: true } },
       },
     });
@@ -405,6 +406,7 @@ async function sendMetaMessage(conversation, content, { product = null, imageUrl
   const accessToken = isWhatsApp ? credentials.whatsappAccessToken : isInstagram ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
   const resourceId = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
   if (!accessToken || !resourceId) throw new Error("এই channel-এর Meta credentials configure করা হয়নি।");
+  if (!imageUrl && !product) return sendChatChannelTextMessage(conversation, content, credentials, replyToMessageId);
   const url = `https://graph.facebook.com/${version}/${resourceId}/messages`;
   const quoted = replyToMessageId ? { message_id: replyToMessageId } : undefined;
   const messengerReply = replyToMessageId ? { reply_to: { mid: replyToMessageId } } : {};
@@ -451,23 +453,7 @@ async function sendMetaMessage(conversation, content, { product = null, imageUrl
 async function sendTikTokMessage(conversation, content, referencedMessageId = null) {
   const setting = await getSetting();
   const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
-  if (!credentials.tiktokAccessToken || !credentials.tiktokBusinessId) throw new Error("TikTok Business Messaging credentials configure করা হয়নি।");
-  const response = await fetch("https://business-api.tiktok.com/open_api/v1.3/business/message/send/", {
-    method: "POST",
-    headers: { "Access-Token": credentials.tiktokAccessToken, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      business_id: credentials.tiktokBusinessId,
-      recipient_type: "CONVERSATION",
-      recipient: conversation.externalUserId,
-      message_type: "TEXT",
-      text: { body: content.slice(0, 6000) },
-      ...(referencedMessageId && { referenced_message_info: { referenced_message_id: referencedMessageId } }),
-    }),
-    cache: "no-store",
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || result.code !== 0) throw new Error(result.message || "TikTok message পাঠানো যায়নি।");
-  return { id: result.data?.message_id || null, secondaryIds: [] };
+  return sendChatChannelTextMessage(conversation, content, credentials, referencedMessageId);
 }
 
 async function sendTikTokImageMessage(conversation, imageUrl, caption = "", referencedMessageId = null) {
@@ -553,7 +539,10 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
       message = await prisma.chatMessage.findFirst({ where: { id: retryMessageId, conversationId, direction: "OUTBOUND", authorType: "AGENT", deliveryStatus: "FAILED" } });
       if (!message) throw new Error("এই message-টি retry করা যাবে না।");
       replyTo = message.metadata?.replyTo || null;
-      await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "SENDING" } });
+      await prisma.$transaction([
+        prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: "SENDING" } }),
+        prisma.chatConversation.update({ where: { id: conversationId }, data: { aiModeEnabled: false } }),
+      ]);
     } else {
       const timelineText = orderTimelineCard ? [`Order ${orderTimelineCard.orderNo} · ${orderTimelineCard.status}`, ...orderTimelineCard.events.map((event) => `${event.title}${event.message ? `: ${event.message}` : ""}${event.location ? ` · ${event.location}` : ""}`)].join("\n") : "";
       const productText = productCard?.mode === "order"
@@ -565,7 +554,7 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
       if (!content) throw new Error("Message cannot be empty.");
       [message] = await prisma.$transaction([
         prisma.chatMessage.create({ data: { conversationId, channel: conversation.channel, direction: "OUTBOUND", authorType: "AGENT", authorId: session.user.id, content, deliveryStatus: "SENDING", ...((productCard || orderTimelineCard || replyTo) && { metadata: { ...(productCard ? { type: "PRODUCT_CARD", product: productCard } : orderTimelineCard ? { type: "ORDER_TIMELINE", order: orderTimelineCard } : {}), ...(replyTo && { replyTo }) } }) } }),
-        prisma.chatConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date(), status: "OPEN" } }),
+        prisma.chatConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date(), status: "OPEN", aiModeEnabled: false } }),
       ]);
     }
     if (conversation.channel === "WEBSITE") {
@@ -681,7 +670,7 @@ export async function sendChatImageAction(conversationId, formData, replyToMessa
       }
       throw error;
     }
-    await prisma.chatConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date(), status: "OPEN" } });
+    await prisma.chatConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date(), status: "OPEN", aiModeEnabled: false } });
     if (conversation.channel === "WEBSITE") return { success: true, data: message };
 
     try {
@@ -778,18 +767,20 @@ export async function deleteChatConversationAction(conversationId) {
   }
 }
 
-export async function updateChatConversationAction(conversationId, { status, assignedToId } = {}) {
+export async function updateChatConversationAction(conversationId, { status, assignedToId, aiModeEnabled } = {}) {
   try {
     await requireProcurementPermission("chat", "update");
     if (status && !["OPEN", "PENDING", "CLOSED"].includes(status)) throw new Error("Invalid conversation status.");
-    const data = { ...(status && { status }), ...(assignedToId !== undefined && { assignedToId }) };
-    const selected = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, channel: true, normalizedPhone: true } });
+    if (aiModeEnabled !== undefined && typeof aiModeEnabled !== "boolean") throw new Error("Invalid AI mode setting.");
+    const selected = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, channel: true, normalizedPhone: true, assignedToId: true } });
     if (!selected) throw new Error("Conversation not found.");
+    if (aiModeEnabled === true && (assignedToId || (assignedToId === undefined && selected.assignedToId))) throw new Error("আগে conversation unassign করুন, তারপর AI চালু করুন।");
+    const data = { ...(status && { status }), ...(assignedToId !== undefined && { assignedToId }), ...(aiModeEnabled !== undefined && { aiModeEnabled }), ...((assignedToId || status === "PENDING") && { aiModeEnabled: false }) };
     const where = selected.normalizedPhone && ["WHATSAPP", "MESSENGER"].includes(selected.channel)
       ? { normalizedPhone: selected.normalizedPhone, channel: { in: ["WHATSAPP", "MESSENGER"] } }
       : { id: conversationId };
     await prisma.chatConversation.updateMany({ where, data });
-    const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, status: true, assignedToId: true } });
+    const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, status: true, assignedToId: true, aiModeEnabled: true } });
     return { success: true, data: conversation };
   } catch (error) {
     return actionError(error, "Conversation could not be updated.");

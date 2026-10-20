@@ -23,17 +23,18 @@ model User {
   emailVerificationOtpSentAt    DateTime?
   emailVerificationOtpAttempts  Int       @default(0)
 
-  password     String
-  accounts     Account[]
-  sessions     Session[]
-  roleId       String
-  role         Role      @relation(fields: [roleId], references: [id])
-  tokenVersion Int       @default(0)
-  orders       Order[] // Relationship to track user orders
-  photoReviews PhotoReview[]
-  assignedChats ChatConversation[] @relation("ChatAssignedTo")
-  createdAt    DateTime? @default(now()) // Timestamp for account creation
-  updatedAt    DateTime  @updatedAt // Auto-updated timestamp
+  password                  String
+  accounts                  Account[]
+  sessions                  Session[]
+  roleId                    String
+  role                      Role               @relation(fields: [roleId], references: [id])
+  tokenVersion              Int                @default(0)
+  orders                    Order[] // Relationship to track user orders
+  photoReviews              PhotoReview[]
+  assignedChats             ChatConversation[] @relation("ChatAssignedTo")
+  chatCustomerConversations ChatConversation[] @relation("ChatCustomer")
+  createdAt                 DateTime?          @default(now()) // Timestamp for account creation
+  updatedAt                 DateTime           @updatedAt // Auto-updated timestamp
 }
 
 model Role {
@@ -155,13 +156,13 @@ model Media {
   // Reverse relations
   productsAsThumbnail       Product[]
   photoReviews              PhotoReview[]
-  chatMessages               ChatMessage[]
+  chatMessages              ChatMessage[]
   ProductVariationThumbnail ProductVariation[]
   productGallery            ProductGallery[] // Explicit Many-to-Many Relation
   banner                    banner[] // Explicit Many-to-Many Relation
   heroSlides                HeroSlide[]
   supplierDocuments         SupplierDocument[] // Explicit Many-to-Many Relation
-  footerLogos               ContentPage[]       @relation("ContentPageFooterLogo")
+  footerLogos               ContentPage[]      @relation("ContentPageFooterLogo")
   createdAt                 DateTime           @default(now())
 }
 
@@ -186,7 +187,7 @@ model Product {
   seoDescription          String?
   isFeatured              Boolean?           @default(false) // Indicates if the product is featured
   isActive                Boolean?           @default(true) // Marks if the product is active
-  viewCount               Int                 @default(0)
+  viewCount               Int                @default(0)
   allowOutOfStockOrder    Boolean            @default(false)
   codAvailable            Boolean?           @default(true)
   advancePaymentType      String?            @default("NONE")
@@ -448,7 +449,7 @@ model Order {
   refunds                   Refund[]
   ledgers                   Ledger[]
   deliveries                Delivery[]
-  returnReceipts             ReturnReceipt[]
+  returnReceipts            ReturnReceipt[]
   fbc                       String?
   fbp                       String?
   gclid                     String?
@@ -465,32 +466,32 @@ model Order {
 }
 
 model OrderItem {
-  id               String           @id @default(cuid())
+  id               String              @id @default(cuid())
   orderId          String
-  order            Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order            Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderNo          String
   orderItemNo      Int
   productName      String
   campaignName     String?
-  campaignDiscount Float            @default(0)
+  campaignDiscount Float               @default(0)
   sku              String
   productCode      String?
   thumbnail        String?
   price            Float
   quantity         Int // Foreign key for Product
   productId        String
-  product          Product          @relation(fields: [productId], references: [id]) // Relation to Product
+  product          Product             @relation(fields: [productId], references: [id]) // Relation to Product
   combinations     String? // JSON string to store combination details
   combinationId    String?
-  combination      Combination?     @relation(fields: [combinationId], references: [id])
+  combination      Combination?        @relation(fields: [combinationId], references: [id])
   variationId      String
-  variation        ProductVariation @relation(fields: [variationId], references: [id])
+  variation        ProductVariation    @relation(fields: [variationId], references: [id])
   deliveryItems    DeliveryItem[]
   returnItems      ReturnReceiptItem[]
   photoReview      PhotoReview?
-  status           OrderStatus      @default(PENDING)
-  createdAt        DateTime         @default(now()) // Timestamp for order placement
-  updatedAt        DateTime         @updatedAt // Auto-updated timestamp
+  status           OrderStatus         @default(PENDING)
+  createdAt        DateTime            @default(now()) // Timestamp for order placement
+  updatedAt        DateTime            @updatedAt // Auto-updated timestamp
 }
 
 model OrderCounter {
@@ -572,27 +573,27 @@ model PaymentGateway {
 }
 
 model CourierProvider {
-  id                   String               @id @default(cuid())
-  name                 String
-  code                 String               @unique
-  adapterKey           String               @default("MANUAL")
-  isActive             Boolean              @default(false)
-  sortOrder            Int                  @default(0)
-  moneyAccountId       String?
-  moneyAccount         MoneyAccount?        @relation(fields: [moneyAccountId], references: [id])
-  encryptedCredentials String?
-  credentialVersion    Int                  @default(1)
-  credentialsUpdatedAt DateTime?
-  nonSecretConfig      Json?
+  id                    String               @id @default(cuid())
+  name                  String
+  code                  String               @unique
+  adapterKey            String               @default("MANUAL")
+  isActive              Boolean              @default(false)
+  sortOrder             Int                  @default(0)
+  moneyAccountId        String?
+  moneyAccount          MoneyAccount?        @relation(fields: [moneyAccountId], references: [id])
+  encryptedCredentials  String?
+  credentialVersion     Int                  @default(1)
+  credentialsUpdatedAt  DateTime?
+  nonSecretConfig       Json?
   webhookLastReceivedAt DateTime?
-  orders               Order[]              @relation("OrderCourierProvider")
-  shippings            Shipping[]
-  pickupPoints         CourierPickupPoint[]
-  payments             Payment[]
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  createdBy            String?
-  updatedBy            String?
+  orders                Order[]              @relation("OrderCourierProvider")
+  shippings             Shipping[]
+  pickupPoints          CourierPickupPoint[]
+  payments              Payment[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  createdBy             String?
+  updatedBy             String?
 
   @@index([isActive, sortOrder])
   @@index([moneyAccountId])
@@ -602,19 +603,19 @@ model CourierProvider {
 // server-side conversion APIs. Access tokens/secrets are stored together in
 // encryptedSecrets; they are never returned with public storefront settings.
 model SocialTrackingSetting {
-  id                String    @id
-  facebookPixelId   String?
-  googleTagId       String?
-  googleAnalyticsId String?
+  id                        String    @id
+  facebookPixelId           String?
+  googleTagId               String?
+  googleAnalyticsId         String?
   googleAnalyticsPropertyId String?
-  clarityProjectId  String?
-  tiktokPixelId     String?
-  encryptedSecrets  String?
-  secretsUpdatedAt  DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  createdBy         String?
-  updatedBy         String?
+  clarityProjectId          String?
+  tiktokPixelId             String?
+  encryptedSecrets          String?
+  secretsUpdatedAt          DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  createdBy                 String?
+  updatedBy                 String?
 }
 
 model OrderTimeline {
@@ -780,38 +781,38 @@ model CourierPickupPoint {
 }
 
 model SiteSetting {
-  id              String   @id @default(cuid())
-  name            String?
-  slogan          String?
-  seoTitle        String?
-  seoDescription  String?
-  logo            String?
-  favicon         String?
-  phoneNumber1    String?
-  phoneNumber2    String?
-  adress1         String?
-  adress2         String?
-  googleMap       String?
-  email           String?
-  fbLink          String?
-  messengerLink   String?
-  whatsappNumber  String?
-  youTubeLink     String?
-  primaryColor    String?
-  secondaryColor  String?
-  accentColor     String?
-  lightBackground String?
-  lightSurface    String?
-  lightText       String?
-  darkBackground  String?
-  darkSurface     String?
-  darkText        String?
-  baseFontSize    Int?
-  borderRadius    Int?
-  orderReconfirmEnabled Boolean @default(true)
-  orderReconfirmMessage String? @db.VarChar(500)
-  createdAt       DateTime @default(now()) // Timestamp for order placement
-  updatedAt       DateTime @updatedAt // Auto-updated timestamp
+  id                    String   @id @default(cuid())
+  name                  String?
+  slogan                String?
+  seoTitle              String?
+  seoDescription        String?
+  logo                  String?
+  favicon               String?
+  phoneNumber1          String?
+  phoneNumber2          String?
+  adress1               String?
+  adress2               String?
+  googleMap             String?
+  email                 String?
+  fbLink                String?
+  messengerLink         String?
+  whatsappNumber        String?
+  youTubeLink           String?
+  primaryColor          String?
+  secondaryColor        String?
+  accentColor           String?
+  lightBackground       String?
+  lightSurface          String?
+  lightText             String?
+  darkBackground        String?
+  darkSurface           String?
+  darkText              String?
+  baseFontSize          Int?
+  borderRadius          Int?
+  orderReconfirmEnabled Boolean  @default(true)
+  orderReconfirmMessage String?  @db.VarChar(500)
+  createdAt             DateTime @default(now()) // Timestamp for order placement
+  updatedAt             DateTime @updatedAt // Auto-updated timestamp
 }
 
 model SocialAuthConfiguration {
@@ -884,23 +885,23 @@ enum HeroSlideMotion {
 }
 
 model PhotoReview {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   productId    String?
-  product      Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product      Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
   imageId      String?
-  image        Media?   @relation(fields: [imageId], references: [id], onDelete: Restrict)
-  orderItemId  String?  @unique
+  image        Media?     @relation(fields: [imageId], references: [id], onDelete: Restrict)
+  orderItemId  String?    @unique
   orderItem    OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
   userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   customerName String?
-  reviewText   String?  @db.VarChar(1000)
+  reviewText   String?    @db.VarChar(1000)
   rating       Int?
-  isPublished  Boolean  @default(true)
-  sortOrder    Int      @default(0)
+  isPublished  Boolean    @default(true)
+  sortOrder    Int        @default(0)
   createdBy    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@index([productId, isPublished, sortOrder])
   @@index([imageId])
@@ -1244,15 +1245,15 @@ model DeliveryItem {
 }
 
 model ReturnReceipt {
-  id          String             @id @default(cuid())
+  id          String              @id @default(cuid())
   orderId     String
-  order       Order              @relation(fields: [orderId], references: [id])
+  order       Order               @relation(fields: [orderId], references: [id])
   reasonType  ReturnReasonType
   description String?
   items       ReturnReceiptItem[]
   expenses    Expense[]
   refunds     Refund[]
-  createdAt   DateTime           @default(now())
+  createdAt   DateTime            @default(now())
   createdBy   String?
 
   @@index([orderId, createdAt])
@@ -1695,46 +1696,51 @@ enum ChatMessageAuthorType {
 }
 
 model ChatConversation {
-  id             String                 @id @default(cuid())
-  channel        ChatChannel
-  externalUserId String
-  customerName   String?
-  customerPhone  String?
-  normalizedPhone String?
-  profilePicUrl   String?
-  status         ChatConversationStatus @default(OPEN)
-  assignedToId   String?
-  assignedTo     User?                  @relation("ChatAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-  lastMessageAt  DateTime               @default(now())
-  unreadCount    Int                    @default(0)
-  aiModeEnabled  Boolean                @default(false)
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  messages       ChatMessage[]
+  id               String                 @id @default(cuid())
+  channel          ChatChannel
+  externalUserId   String
+  customerName     String?
+  customerPhone    String?
+  customerUserId   String?
+  customerUser     User?                  @relation("ChatCustomer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  preferredAddress String?
+  normalizedPhone  String?
+  profilePicUrl    String?
+  status           ChatConversationStatus @default(OPEN)
+  assignedToId     String?
+  assignedTo       User?                  @relation("ChatAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  lastMessageAt    DateTime               @default(now())
+  unreadCount      Int                    @default(0)
+  aiModeEnabled    Boolean                @default(true)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  messages         ChatMessage[]
 
   @@unique([channel, externalUserId])
   @@index([status, lastMessageAt])
   @@index([channel, status, lastMessageAt])
   @@index([normalizedPhone, lastMessageAt])
   @@index([assignedToId, status])
+  @@index([customerUserId])
 }
 
 model ChatMessage {
-  id                String                @id @default(cuid())
-  conversationId    String
-  conversation      ChatConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  channel           ChatChannel
-  direction         ChatMessageDirection
-  authorType        ChatMessageAuthorType
-  authorId          String?
-  content           String                @db.Text
-  externalMessageId String?
-  mediaId           String?
-  media             Media?                @relation(fields: [mediaId], references: [id], onDelete: SetNull)
-  deliveryStatus    String                @default("RECEIVED")
-  metadata          Json?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id                  String                @id @default(cuid())
+  conversationId      String
+  conversation        ChatConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  channel             ChatChannel
+  direction           ChatMessageDirection
+  authorType          ChatMessageAuthorType
+  authorId            String?
+  content             String                @db.Text
+  externalMessageId   String?
+  aiReplyForMessageId String?               @unique
+  mediaId             String?
+  media               Media?                @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  deliveryStatus      String                @default("RECEIVED")
+  metadata            Json?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
   @@unique([channel, externalMessageId])
   @@index([conversationId, createdAt])

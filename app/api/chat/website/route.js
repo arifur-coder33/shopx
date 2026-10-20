@@ -66,14 +66,14 @@ export async function POST(request) {
   }
   const externalUserId = hashToken(token);
   const session = await auth();
-  const account = session?.user?.id ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, phone: true } }) : null;
+  const account = session?.user?.id ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, name: true, phone: true } }) : null;
   const customerName = account?.name || String(body?.name || "").trim().slice(0, 100) || null;
   const customerPhone = account?.phone || String(body?.phone || "").trim().slice(0, 30) || null;
   try {
     const conversation = await prisma.chatConversation.upsert({
       where: { channel_externalUserId: { channel: "WEBSITE", externalUserId } },
-      create: { channel: "WEBSITE", externalUserId, customerName, customerPhone, lastMessageAt: new Date() },
-      update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone }), lastMessageAt: new Date(), status: "OPEN" },
+      create: { channel: "WEBSITE", externalUserId, customerName, customerPhone, customerUserId: account?.id || null, lastMessageAt: new Date() },
+      update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone }), ...(account?.id && { customerUserId: account.id }), lastMessageAt: new Date(), status: "OPEN" },
       select: { id: true },
     });
     const [message] = await prisma.$transaction([

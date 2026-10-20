@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { after } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
+import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
 
@@ -39,15 +40,15 @@ export async function POST(request) {
         const externalUserId = createHash("sha256").update(token).digest("hex");
         const [order, user, setting] = await Promise.all([
           prisma.order.findFirst({ where: { id: orderId, userId: session.user.id }, select: publicOrderSelect }),
-          prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, phone: true } }),
+          prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, name: true, phone: true } }),
           prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { websiteChatEnabled: true } }),
         ]);
         if (setting?.websiteChatEnabled === false) return Response.json({ success: false, message: "Website chat is currently unavailable." }, { status: 403 });
         if (!order) return Response.json({ success: false, message: "এই order আপনার account-এর নয়।" }, { status: 404 });
         const conversation = await prisma.chatConversation.upsert({
           where: { channel_externalUserId: { channel: "WEBSITE", externalUserId } },
-          create: { channel: "WEBSITE", externalUserId, customerName: user?.name || null, customerPhone: user?.phone || null, lastMessageAt: new Date() },
-          update: { ...(user?.name && { customerName: user.name }), ...(user?.phone && { customerPhone: user.phone }), lastMessageAt: new Date(), status: "OPEN" },
+          create: { channel: "WEBSITE", externalUserId, customerName: user?.name || null, customerPhone: user?.phone || null, customerUserId: user?.id || null, lastMessageAt: new Date() },
+          update: { ...(user?.name && { customerName: user.name }), ...(user?.phone && { customerPhone: user.phone }), ...(user?.id && { customerUserId: user.id }), lastMessageAt: new Date(), status: "OPEN" },
           select: { id: true },
         });
         const card = { id: order.id, orderNo: order.orderNo, status: order.status, orderPrice: order.orderPrice, createdAt: order.createdAt.toISOString(), orderItems: order.orderItems, events: order.timeline.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })) };
@@ -55,7 +56,12 @@ export async function POST(request) {
           prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: `Customer shared order ${order.orderNo}`, deliveryStatus: "DELIVERED", metadata: { type: "ORDER_TIMELINE", order: card } } }),
           prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } }),
         ]);
-        after(() => sendChatPushNotification({ conversationId: conversation.id, channel: "WEBSITE", customerName: user?.name, customerPhone: user?.phone, content: message.content, metadata: message.metadata }));
+        after(async () => {
+          await Promise.allSettled([
+            sendChatPushNotification({ conversationId: conversation.id, channel: "WEBSITE", customerName: user?.name, customerPhone: user?.phone, content: message.content, metadata: message.metadata }),
+            maybeSendChatAiReply(conversation.id, message.id),
+          ]);
+        });
         return Response.json({ success: true, messageId: message.id }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
       }
       const orders = await prisma.order.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: "desc" }, take: 20, select: publicOrderSelect });
