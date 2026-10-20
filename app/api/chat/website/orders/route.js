@@ -6,6 +6,7 @@ import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const sameOrigin = (request) => {
   const origin = request.headers.get("origin");

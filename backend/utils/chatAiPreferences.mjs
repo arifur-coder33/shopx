@@ -45,7 +45,20 @@ export function shouldAutoReply({ globalEnabled, conversation, inbound }) {
 }
 
 export function needsHumanFollowUp({ messageText, hasVerifiedOrder }) {
+  if (isPolicyInformationQuestion(messageText)) return false;
+  const normalizedDigits = String(messageText || "").replace(/[০-৯]/g, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
+  if (isOrderStatusQuestion(messageText) && /\b\d{5,9}\b/u.test(normalizedDigits)) return customerRequiresHumanFollowUp(messageText);
   return customerRequiresHumanFollowUp(messageText) || (ACCOUNT_REQUEST_PATTERN.test(String(messageText || "")) && !hasVerifiedOrder);
+}
+
+export function isPolicyInformationQuestion(text) {
+  const value = String(text || "");
+  return /(?:\bpolicy\b|পলিসি|নীতিমালা|নীতি)/iu.test(value) && /(?:\breturn\b|\brefund\b|\bexchange\b|ফেরত|রিফান্ড|এক্সচেঞ্জ|বদল)/iu.test(value)
+    && !/(?:\b(?:my|amar|amr)\s+(?:refund|return|exchange)|\b(?:refund|return|exchange)\s+(?:status|pending|complaint)|আমার\s*(?:রিফান্ড|ফেরত)|রিফান্ড\s*(?:স্ট্যাটাস|পাইনি)|অভিযোগ)/iu.test(value);
+}
+
+export function isOrderStatusQuestion(text) {
+  return /(?:\b(?:track|tracking)\b|\b(?:order|shipment|parcel)\b.{0,30}\b(?:status|update|where)\b|\b(?:where|kothay)\b.{0,30}\border\b|অর্ডার.{0,24}(?:অবস্থা|স্ট্যাটাস|কোথায়|কোথায়|খোঁজ)|(?:ট্র্যাক|পার্সেল|কুরিয়ার|কুরিয়ার).{0,24}(?:অবস্থা|স্ট্যাটাস|কোথায়|কোথায়|খোঁজ))/iu.test(String(text || ""));
 }
 
 const ACCOUNT_REQUEST_PATTERN = /(?:\border\b|\btrack(?:ing)?\b|\brefund\b|\breturn\b|\bcancel(?:lation)?\b|\bparcel\b|\bpackage\b|\bshipment\b|\b(?:delivery|order) status\b|অর্ডার|ট্র্যাক|রিফান্ড|ফেরত|বাতিল|অর্ডারের অবস্থা|অর্ডার স্ট্যাটাস|পার্সেল|প্যাকেজ|কুরিয়ার স্ট্যাটাস|কুরিয়ার স্ট্যাটাস)/iu;

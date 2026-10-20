@@ -1325,9 +1325,27 @@ export default function AdminChatInbox({
                       {!["PRODUCT_CARD", "ORDER_TIMELINE"].includes(
                         message.metadata?.type,
                       ) && !(imageUrls.length && ["[image message]", "📷 Photo"].includes(message.content)) && (
+                        message.authorType === "AI" &&
+                      message.deliveryStatus === "SENDING" ? (
+                        <div
+                          role="status"
+                          aria-label="AI উত্তর লিখছে"
+                          className="flex min-w-20 items-center gap-1.5 py-1 text-sm text-slate-600"
+                        >
+                          <span>লিখছে</span>
+                          {[0, 1, 2].map((dot) => (
+                            <span
+                              key={dot}
+                              className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
+                              style={{ animationDelay: `${dot * 160}ms` }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
                         <p className="whitespace-pre-wrap break-words text-sm">
                           {message.content}
                         </p>
+                      )
                       )}
                       <p
                         className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${message.direction === "OUTBOUND" ? "text-slate-500" : "text-text-muted"}`}

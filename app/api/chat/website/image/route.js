@@ -7,6 +7,7 @@ import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary"
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 export const runtime = "nodejs";
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");

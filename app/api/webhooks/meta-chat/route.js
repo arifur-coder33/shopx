@@ -7,6 +7,7 @@ import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 async function getCredentials() {
   const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true, instagramEnabled: true } });

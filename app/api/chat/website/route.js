@@ -6,6 +6,7 @@ import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
 const rateBuckets = globalThis.__websiteChatRateBuckets || (globalThis.__websiteChatRateBuckets = new Map());
