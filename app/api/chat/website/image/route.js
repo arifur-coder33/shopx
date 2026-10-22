@@ -37,7 +37,9 @@ export async function POST(request) {
   try { form = await request.formData(); } catch { return Response.json({ success: false, message: "Invalid request." }, { status: 400 }); }
   const token = String(form.get("token") || "");
   const caption = String(form.get("content") || "").trim().slice(0, 2000);
-  const websitePage = await getWebsitePageProductContext(form.get("pagePath")).catch(() => null);
+  const websitePage = await getWebsitePageProductContext(
+    form.get("pagePath") || request.headers.get("referer"),
+  ).catch(() => null);
   const image = form.get("image");
   if (!/^[a-f0-9-]{36}$/i.test(token) || !image || typeof image.arrayBuffer !== "function" || !image.size) return Response.json({ success: false, message: "একটি photo বেছে নিন।" }, { status: 400 });
   if (!["image/jpeg", "image/png", "image/webp"].includes(image.type) || image.size > 5 * 1024 * 1024) return Response.json({ success: false, message: "JPG, PNG বা WebP photo দিন (সর্বোচ্চ 5 MB)।" }, { status: 400 });

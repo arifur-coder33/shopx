@@ -71,7 +71,9 @@ export async function POST(request) {
   const account = session?.user?.id ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, name: true, phone: true } }) : null;
   const customerName = account?.name || String(body?.name || "").trim().slice(0, 100) || null;
   const customerPhone = account?.phone || String(body?.phone || "").trim().slice(0, 30) || null;
-  const websitePage = await getWebsitePageProductContext(body?.pagePath).catch(() => null);
+  const websitePage = await getWebsitePageProductContext(
+    body?.pagePath || request.headers.get("referer"),
+  ).catch(() => null);
   try {
     const conversation = await prisma.chatConversation.upsert({
       where: { channel_externalUserId: { channel: "WEBSITE", externalUserId } },

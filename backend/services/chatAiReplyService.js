@@ -220,10 +220,11 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
   const pageContext = currentMetadata?.websitePage || [...history].reverse().find((message) => message.direction === "INBOUND" && message.metadata?.websitePage)?.metadata?.websitePage || null;
   const latestPageReply = [...history].reverse().find((message) => message.direction === "OUTBOUND" && message.metadata?.pageProductId);
   const affirmative = /^(?:yes|yeah|yep|ok(?:ay)?|ha|hya|ji|jii|হ্যাঁ|হ্যা|জি|জ্বি|ঠিক আছে)[!?.\s]*$/iu.test(String(currentMessage || "").trim());
-  const confirmsPageProduct = Boolean(affirmative && latestPageReply?.metadata?.pageProductConfirmationPending);
+  const samePageProduct = !pageContext || pageContext.productId === latestPageReply?.metadata?.pageProductId;
+  const confirmsPageProduct = Boolean(affirmative && samePageProduct && latestPageReply?.metadata?.pageProductConfirmationPending);
   const pageProductId = confirmsPageProduct ? latestPageReply.metadata.pageProductId : pageContext?.productId || latestPageReply?.metadata?.pageProductId || null;
   const pageProductTitle = pageContext?.productTitle || latestPageReply?.metadata?.pageProductTitle || null;
-  const pageProductConfirmed = confirmsPageProduct || Boolean(latestPageReply?.metadata?.pageProductConfirmed);
+  const pageProductConfirmed = confirmsPageProduct || Boolean(samePageProduct && latestPageReply?.metadata?.pageProductConfirmed);
   const numberMatch = text.match(
     /\b(?:option|product|number|no\.?)\s*#?\s*([1-9])\b|(?:নম্বর|অপশন|পণ্য)\s*([1-9])|^\s*([1-9])\s*$/u,
   );
@@ -371,7 +372,9 @@ async function getCatalog(
       ...(String(messageText)
         .toLowerCase()
         .match(/[\p{L}\p{N}]{3,}/gu) || []),
-      ...imageTerms.map((term) => String(term).toLowerCase()),
+      ...imageTerms.flatMap((term) =>
+        String(term).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [],
+      ),
     ]),
   ];
   const colorAliases = {
@@ -1066,7 +1069,7 @@ async function describeCustomerImage(apiKey, image, customerText) {
             {
               type: "input_image",
               image_url: `data:${image.mimeType};base64,${image.base64}`,
-              detail: "low",
+              detail: "high",
             },
           ],
         },
@@ -1241,6 +1244,35 @@ async function generateReply(
   const latestCustomerText =
     [...history].reverse().find((message) => message.direction === "INBOUND")
       ?.content || "";
+  const asksForPageProductPrice = /(?:price|cost|dam|damer|koto|kotho|দাম|মূল্য|কত|কতো|৳)/iu.test(latestCustomerText);
+  if (productMemory.pageProductConfirmationRequired && productMemory.pageProductTitle) {
+    return {
+      text: `আপনি কি “${String(productMemory.pageProductTitle).slice(0, 160)}” পণ্যটির দাম জানতে চাচ্ছেন?`,
+      imageMatch: "none",
+      products: [],
+    };
+  }
+  if (productMemory.pageProductConfirmed && productMemory.pageProductId && asksForPageProductPrice) {
+    const pageProduct = products.products.find((product) => product.id === productMemory.pageProductId);
+    if (pageProduct) {
+      const prices = [...new Set(pageProduct.variants
+        .map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice))
+        .filter((price) => Number.isFinite(price) && price > 0))].sort((a, b) => a - b);
+      const money = (amount) => `৳${new Intl.NumberFormat("en-BD", { maximumFractionDigits: 0 }).format(amount)}`;
+      const priceText = prices.length === 1
+        ? `${money(prices[0])}`
+        : prices.length > 1
+          ? `${money(prices[0])} থেকে ${money(prices.at(-1))}`
+          : null;
+      return {
+        text: priceText
+          ? `জি, ${pageProduct.title}-এর দাম ${priceText}${prices.length > 1 ? "। কোন ভ্যারিয়েন্টটি জানতে চান?" : "।"}`
+          : `দুঃখিত, ${pageProduct.title}-এর বর্তমান দাম catalog-এ পাওয়া যাচ্ছে না। দেখে নিশ্চিত করে জানাতে হবে।`,
+        imageMatch: "none",
+        products: [],
+      };
+    }
+  }
   const relevantExamples = selectRelevantAiReplyExamples(
     aiReplyExamples,
     latestCustomerText,
@@ -1313,7 +1345,7 @@ async function generateReply(
                 !productMemory.previousShownIds.includes(product.id))
             : !productMemory.previousShownIds.includes(product.id))),
     )
-    .slice(0, 5);
+    .slice(0, 8);
   const requestInput = [
     {
       role: "developer",
@@ -1336,7 +1368,7 @@ async function generateReply(
       visualParts.push({
         type: "input_image",
         image_url: `data:${customerImage.mimeType};base64,${customerImage.base64}`,
-        detail: "low",
+        detail: "high",
       });
     for (const product of candidates) {
       visualParts.push({
@@ -1346,7 +1378,7 @@ async function generateReply(
       visualParts.push({
         type: "input_image",
         image_url: product.imageUrls[0],
-        detail: "low",
+        detail: "high",
       });
     }
     requestInput.push({ role: "user", content: visualParts });
