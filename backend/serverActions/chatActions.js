@@ -121,6 +121,7 @@ export async function getChatSettingsAction() {
       success: true,
       data: {
         websiteChatEnabled: setting?.websiteChatEnabled ?? true,
+        chatOrderCreationEnabled: setting?.chatOrderCreationEnabled ?? true,
         whatsappEnabled: setting?.whatsappEnabled ?? false,
         messengerEnabled: setting?.messengerEnabled ?? false,
         instagramEnabled: setting?.instagramEnabled ?? false,
@@ -167,6 +168,7 @@ export async function saveChatSettingsAction(formData) {
       else if (trim(formData.get(key))) credentials[key] = trim(formData.get(key));
     }
     const websiteChatEnabled = formData.get("websiteChatEnabled") === "on";
+    const chatOrderCreationEnabled = formData.get("chatOrderCreationEnabled") === "on";
     const whatsappEnabled = formData.get("whatsappEnabled") === "on";
     const messengerEnabled = formData.get("messengerEnabled") === "on";
     const instagramEnabled = formData.get("instagramEnabled") === "on";
@@ -210,8 +212,8 @@ export async function saveChatSettingsAction(formData) {
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, chatOrderCreationEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, chatOrderCreationEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");

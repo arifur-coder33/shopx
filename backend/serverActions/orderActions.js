@@ -280,6 +280,9 @@ export async function createOrder(formData) {
         "আপনার নাম, মোবাইল নাম্বার, জেলা, থানা এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
       );
     }
+    if (!/^(?:01[3-9]\d{8}|8801[3-9]\d{8})$/.test(String(data.phoneNumber).replace(/\D/g, ""))) {
+      throw new Error("সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01712345678 অথবা 8801712345678)।");
+    }
     if (!["COD", "ONLINE", "EMI"].includes(requestedPaymentMethod)) {
       throw new Error("Select a valid payment method.");
     }
@@ -385,9 +388,7 @@ export async function createOrder(formData) {
         variation.available < requested
       ) {
         const item = orderItems.find((row) => row.variation.id === variationId);
-        throw new Error(
-          `${item.title} স্টক শেষ। মাত্র ${variation.available}টি বাকি আছে।`,
-        );
+        throw new Error(`${item.title} এখন স্টকে নেই।`);
       }
     }
     const serverOrderPrice = orderItems.reduce((total, item) => {

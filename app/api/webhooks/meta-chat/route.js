@@ -239,7 +239,7 @@ export async function POST(request) {
           profilePicUrl: profile?.profilePicUrl || null,
           messageId: event.message?.mid,
           content: text,
-          metadata: { timestamp: event.timestamp, attachments: event.message?.attachments || [], ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
+          metadata: { timestamp: event.timestamp, attachments: event.message?.attachments || [], ...(event.message?.quick_reply?.payload && { quickReplyPayload: String(event.message.quick_reply.payload).slice(0, 200) }), ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
         });
       }
       const instagramProfiles = new Map();

@@ -68,7 +68,7 @@ export function isProductQuestion(text) {
 }
 
 export function isDeliveryQuestion(text) {
-  return /(?:delivery|deliver|shipping|courier|charge|ডেলিভারি|পাঠাবেন|পাঠান|চার্জ|কুরিয়ার|কুরিয়ার|কবে পাব|কবে আসবে)/iu.test(String(text || ""));
+  return /(?:delivery|deliver|shipping|courier|\bcharge(?:s|d)?\b|ডেলিভারি|পাঠাবেন|পাঠান|চার্জ(?!ার)|কুরিয়ার|কুরিয়ার|কবে পাব|কবে আসবে)/iu.test(String(text || ""));
 }
 
 export function isProductImageRequest(text) {

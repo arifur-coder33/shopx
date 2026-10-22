@@ -183,6 +183,10 @@ export default function ChatSettingsForm({
               />
             </label>
           ))}
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+            <span><span className="block font-medium text-text">Chat থেকে অর্ডার তৈরি</span><span className="mt-1 block text-xs text-text-muted">বন্ধ থাকলে website chat ও Messenger শুধু নাম, ফোন ও ঠিকানা সংগ্রহ করবে।</span></span>
+            <input name="chatOrderCreationEnabled" type="checkbox" defaultChecked={settings.chatOrderCreationEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />
+          </label>
           <label className="block">
             <span className="text-sm font-semibold text-text">
               Website welcome message

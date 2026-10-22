@@ -1,4 +1,4 @@
-export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null) {
+export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
   const text = String(content || "").slice(0, 700);
   if (conversation.channel === "WEBSITE") return null;
   if (["WHATSAPP", "MESSENGER", "INSTAGRAM"].includes(conversation.channel)) {
@@ -11,7 +11,7 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
     const reply = replyToExternalMessageId ? { reply_to: { mid: replyToExternalMessageId } } : {};
     const payload = isWhatsApp
       ? { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }), type: "text", text: { body: text, preview_url: true } }
-      : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...reply, message: { text } };
+      : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...reply, message: { text, ...(conversation.channel === "MESSENGER" && quickReplies.length && { quick_replies: quickReplies.slice(0, 10).map((option) => ({ content_type: "text", title: String(typeof option === "string" ? option : option.title).slice(0, 20), payload: String(typeof option === "string" ? option : option.payload).slice(0, 1000) })) }) } };
     return {
       provider: isWhatsApp ? "WHATSAPP" : "META",
       url: `https://graph.facebook.com/${version}/${resource}/messages`,
@@ -38,8 +38,8 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
   throw new Error("এই chat channel-এ text reply supported নয়।");
 }
 
-export async function sendChatChannelTextMessage(conversation, content, credentials, replyToExternalMessageId = null) {
-  const request = buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId);
+export async function sendChatChannelTextMessage(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
+  const request = buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId, quickReplies);
   if (!request) return { id: null, secondaryIds: [], warning: null };
   const response = await fetch(request.url, {
     method: "POST",
