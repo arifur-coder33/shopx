@@ -219,13 +219,20 @@ export default function ChatSettingsForm({
           <div>
             <h2 className="font-bold text-text">ChatGPT AI auto reply</h2>
             <p className="mt-1 text-xs leading-5 text-text-muted">
-              Customer message এলে AI catalog-এর active product তথ্য দেখে উত্তর পাঠাবে। অজানা দাম বা তথ্য অনুমান করবে না।
+              Customer message এলে AI catalog-এর active product তথ্য দেখে উত্তর পাঠাবে। Product page থেকে chat এলে page-এর product চিনে নেবে; দাম বলার আগে product confirm করবে। অজানা দাম বা তথ্য অনুমান করবে না।
             </p>
           </div>
           <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
             <span className="font-medium text-text">AI auto reply চালু করুন</span>
             <input name="aiAutoReplyEnabled" type="checkbox" defaultChecked={settings.aiAutoReplyEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />
           </label>
+          <div className="rounded-xl border border-border bg-background p-3 text-xs leading-5 text-text-muted">
+            <p className="font-semibold text-text">Built-in AI guidance</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              <li>Product page থেকে দাম জানতে চাইলে AI product-এর নাম বলে আগে নিশ্চিত হবে; customer সম্মতি দিলে catalog-এর verified দাম জানাবে।</li>
+              <li>Order করার নিয়ম জানতে চাইলে Buy Now, তথ্য পূরণ, Dhaka delivery area, payment method, এবং Place Order—এই ধাপগুলো বুঝিয়ে দেবে।</li>
+            </ul>
+          </div>
           <label className="block">
             <span className="text-sm font-semibold text-text">AI reply tone ও style</span>
             <span className="mt-1 block text-xs text-text-muted">নিজের দোকানের মতো করে tone লিখুন। Banglish বা বাংলা—দুই ক্ষেত্রেই AI বাংলা অক্ষরে reply দেবে; customer English লিখলে English-এ উত্তর দেবে।</span>

@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
+import { getWebsitePageProductContext } from "@/backend/utils/chatWebsitePageContext.mjs";
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export async function POST(request) {
   try { form = await request.formData(); } catch { return Response.json({ success: false, message: "Invalid request." }, { status: 400 }); }
   const token = String(form.get("token") || "");
   const caption = String(form.get("content") || "").trim().slice(0, 2000);
+  const websitePage = await getWebsitePageProductContext(form.get("pagePath")).catch(() => null);
   const image = form.get("image");
   if (!/^[a-f0-9-]{36}$/i.test(token) || !image || typeof image.arrayBuffer !== "function" || !image.size) return Response.json({ success: false, message: "একটি photo বেছে নিন।" }, { status: 400 });
   if (!["image/jpeg", "image/png", "image/webp"].includes(image.type) || image.size > 5 * 1024 * 1024) return Response.json({ success: false, message: "JPG, PNG বা WebP photo দিন (সর্বোচ্চ 5 MB)।" }, { status: 400 });
@@ -58,7 +60,7 @@ export async function POST(request) {
     });
     media = await prisma.media.create({ data: { url: upload.secure_url, name: mediaName, displayName: image.name.replace(/\.[^.]+$/, "").slice(0, 120) || "Customer chat photo", host: "cloudinary", width: Number.isFinite(upload.width) ? upload.width : null, height: Number.isFinite(upload.height) ? upload.height : null, sizeBytes: Number.isFinite(upload.bytes) ? upload.bytes : image.size } });
     const message = await prisma.$transaction(async (tx) => {
-      const created = await tx.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: caption || "📷 Photo", deliveryStatus: "DELIVERED", mediaId: media.id, metadata: { type: "IMAGE", image: { url: upload.secure_url, mediaId: media.id, mimeType: image.type, caption } } } });
+      const created = await tx.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: caption || "📷 Photo", deliveryStatus: "DELIVERED", mediaId: media.id, metadata: { type: "IMAGE", image: { url: upload.secure_url, mediaId: media.id, mimeType: image.type, caption }, ...(websitePage && { websitePage }) } } });
       await tx.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } });
       return created;
     });

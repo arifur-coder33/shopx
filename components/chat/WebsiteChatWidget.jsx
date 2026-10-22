@@ -161,14 +161,15 @@ export default function WebsiteChatWidget() {
     setMessages((current) => [...current, { id: pendingId, direction: "INBOUND", content: content || "📷 Photo", metadata: previewUrl ? { image: { url: previewUrl } } : null, createdAt: new Date().toISOString(), deliveryStatus: "SENDING" }]);
     setText("");
     const selectedPhoto = photo;
+    const pagePath = window.location.pathname;
     setPhoto(null);
     try {
       let response;
       if (selectedPhoto) {
         const form = new FormData();
-        form.set("token", token); form.set("content", content); form.set("name", name); form.set("phone", phone); form.set("image", selectedPhoto);
+        form.set("token", token); form.set("content", content); form.set("name", name); form.set("phone", phone); form.set("pagePath", pagePath); form.set("image", selectedPhoto);
         response = await fetch("/api/chat/website/image", { method: "POST", body: form });
-      } else response = await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content, name, phone }) });
+      } else response = await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content, name, phone, pagePath }) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "বার্তা পাঠানো যায়নি।");
       setMessages((current) => current.map((message) => message.id === pendingId ? result.data : message));
@@ -187,7 +188,7 @@ export default function WebsiteChatWidget() {
     setBusy(true); setError("");
     setMessages((current) => current.map((item) => item.id === message.id ? { ...item, deliveryStatus: "SENDING" } : item));
     try {
-      const response = await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content: message.content, name, phone }) });
+      const response = await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content: message.content, name, phone, pagePath: message.metadata?.websitePage?.path || window.location.pathname }) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "বার্তা পাঠানো যায়নি।");
       setMessages((current) => current.map((item) => item.id === message.id ? result.data : item));

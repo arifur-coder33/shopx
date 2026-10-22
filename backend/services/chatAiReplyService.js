@@ -17,6 +17,7 @@ import { decryptProviderCredentials } from "@/backend/services/providerCredentia
 import {
   compactConversationHistory,
   explicitAddressPreference,
+  findExactAiReplyExample,
   hasInboundImage,
   isDeliveryQuestion,
   isProductImageRequest,
@@ -159,7 +160,7 @@ async function deriveCatalogSearchTerms(apiKey, customerText) {
   }
 }
 
-function getProductMemory(history, currentMessage) {
+function getProductMemory(history, currentMessage, currentMetadata = {}) {
   const outbound = [...history]
     .reverse()
     .find((message) => message.direction === "OUTBOUND");
@@ -183,6 +184,10 @@ function getProductMemory(history, currentMessage) {
             },
           ]
         : [];
+  const latestCategoryMessage = [...history].reverse().find(
+    (message) => message.direction === "OUTBOUND" && message.metadata?.categoryOptions?.length,
+  );
+  const latestCategoryOptions = latestCategoryMessage?.metadata?.categoryOptions || [];
   const allShownOptions = history
     .filter((message) => message.direction === "OUTBOUND")
     .flatMap((message) => [
@@ -212,8 +217,15 @@ function getProductMemory(history, currentMessage) {
     ),
   ];
   const text = normalizeDigits(currentMessage).toLowerCase();
+  const pageContext = currentMetadata?.websitePage || [...history].reverse().find((message) => message.direction === "INBOUND" && message.metadata?.websitePage)?.metadata?.websitePage || null;
+  const latestPageReply = [...history].reverse().find((message) => message.direction === "OUTBOUND" && message.metadata?.pageProductId);
+  const affirmative = /^(?:yes|yeah|yep|ok(?:ay)?|ha|hya|ji|jii|হ্যাঁ|হ্যা|জি|জ্বি|ঠিক আছে)[!?.\s]*$/iu.test(String(currentMessage || "").trim());
+  const confirmsPageProduct = Boolean(affirmative && latestPageReply?.metadata?.pageProductConfirmationPending);
+  const pageProductId = confirmsPageProduct ? latestPageReply.metadata.pageProductId : pageContext?.productId || latestPageReply?.metadata?.pageProductId || null;
+  const pageProductTitle = pageContext?.productTitle || latestPageReply?.metadata?.pageProductTitle || null;
+  const pageProductConfirmed = confirmsPageProduct || Boolean(latestPageReply?.metadata?.pageProductConfirmed);
   const numberMatch = text.match(
-    /\b(?:option|product|number|no\.?)\s*#?\s*([1-3])\b|(?:নম্বর|অপশন|পণ্য)\s*([1-3])|^\s*([1-3])\s*$/u,
+    /\b(?:option|product|number|no\.?)\s*#?\s*([1-9])\b|(?:নম্বর|অপশন|পণ্য)\s*([1-9])|^\s*([1-9])\s*$/u,
   );
   const number = numberMatch?.[1] || numberMatch?.[2] || numberMatch?.[3];
   let selectedProductId = number ? latestOptions[Number(number) - 1]?.id : null;
@@ -223,6 +235,18 @@ function getProductMemory(history, currentMessage) {
     );
     if (matches.length === 1) selectedProductId = matches[0].id;
   }
+  const categoryContextIsNewest =
+    history.indexOf(latestCategoryMessage) > history.indexOf(latestProductMessage);
+  const categoryOptionFromMessage = number
+    ? latestCategoryOptions[Number(number) - 1]
+    : latestCategoryOptions.find((category) =>
+        category.name && text.includes(String(category.name).toLowerCase()),
+      );
+  const selectedCategoryOption = categoryContextIsNewest
+    ? categoryOptionFromMessage
+    : null;
+  if (selectedCategoryOption) selectedProductId = null;
+  const rememberedCategoryIds = selectedCategoryOption?.categoryIds || [];
   if (
     !selectedProductId &&
     latestOptions.length === 1 &&
@@ -230,6 +254,7 @@ function getProductMemory(history, currentMessage) {
   )
     selectedProductId = latestOptions[0].id;
   const startsNewProductSearch =
+    Boolean(rememberedCategoryIds.length) ||
     /(?:ghas|grass|cutter|trimmer|mower|weed|machine|machin|battery|shirt|shirts|pant|pants|trouser|dress|tshirt|saree|sharee|kurti|bag|shoe|juta|sandal|watch|mobile|phone|product|category|catalog|black|kalo|কালো|ঘাস|কাটার|মেশিন|ব্যাটারি|শার্ট|প্যান্ট|জামা|জুতা|ব্যাগ|পণ্য|প্রোডাক্ট|ক্যাটাগরি)/iu.test(
       text,
     );
@@ -250,7 +275,9 @@ function getProductMemory(history, currentMessage) {
               message.metadata?.selectedProductId,
           )?.metadata?.selectedProductId;
   const latestReplyText = String(outbound?.content || "").toLowerCase();
-  const inferredFromReply = allShownOptions
+  const inferredFromReply = startsNewProductSearch
+    ? null
+    : allShownOptions
     .map((product) => {
       const titleWords = String(product.title || "")
         .toLowerCase()
@@ -267,7 +294,7 @@ function getProductMemory(history, currentMessage) {
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score)[0]?.product?.id;
   const chosenProductId =
-    selectedProductId || priorSelected || inferredFromReply || null;
+    selectedProductId || priorSelected || inferredFromReply || (confirmsPageProduct ? pageProductId : null);
   const catalogProductIds = chosenProductId
     ? [chosenProductId]
     : !startsNewProductSearch && isProductFollowUp
@@ -278,6 +305,11 @@ function getProductMemory(history, currentMessage) {
     previousShownIds,
     selectedProductId: chosenProductId,
     catalogProductIds,
+    catalogCategoryIds: rememberedCategoryIds,
+    pageProductId,
+    pageProductTitle,
+    pageProductConfirmed,
+    pageProductConfirmationRequired: Boolean(pageProductId && !pageProductConfirmed && isProductQuestion(text) && /(?:price|dam|koto|cost|দাম|মূল্য|কত)/iu.test(text)),
   };
 }
 
@@ -286,6 +318,7 @@ async function getCatalog(
   imageTerms = [],
   channel = "WEBSITE",
   rememberedProductIds = [],
+  rememberedCategoryIds = [],
   apiKey = null,
 ) {
   const isBroadCatalogBrowse = /(?:\bwhat\s+(?:products|items|categories)\s+(?:do\s+you\s+have|are\s+available|do\s+you\s+sell)\b|\b(?:ki\s+ki|ki\s+ki\s+dhoro?n?er)\s+(?:product|products|item|category)\b|\bki\s+product\s+ache\b|\bwhat\s+do\s+you\s+sell\b|কী\s*কী\s*(?:প্রোডাক্ট|পণ্য|ক্যাটাগরি)|কি\s*কি\s*(?:প্রোডাক্ট|পণ্য|ক্যাটাগরি)|কোন\s*কোন\s*(?:পণ্য|প্রোডাক্ট)|কি\s*কি\s*বিক্রি\s*করেন)/iu.test(String(messageText || ""));
@@ -293,7 +326,8 @@ async function getCatalog(
     isProductQuestion(messageText) ||
     isProductImageRequest(messageText) ||
     imageTerms.length > 0 ||
-    rememberedProductIds.length > 0;
+    rememberedProductIds.length > 0 ||
+    rememberedCategoryIds.length > 0;
   const wantsDelivery = isDeliveryQuestion(messageText);
   const wantsCampaignInfo = CAMPAIGN_QUESTION.test(String(messageText || ""));
   const wantsPolicyInfo = POLICY_QUESTION.test(String(messageText || ""));
@@ -320,6 +354,7 @@ async function getCatalog(
     categories = categoryRows
       .filter((category) => !category.parentCategoryId)
       .map((category) => ({
+        id: category.id,
         name: category.name,
         subcategories: childrenByParent.get(category.id) || [],
       }));
@@ -352,7 +387,7 @@ async function getCatalog(
     ),
   ].slice(0, 14);
   const queryCatalog = async (searchTerms, categoryIds = []) => {
-    if (!searchTerms.length && !rememberedProductIds.length)
+    if (!searchTerms.length && !rememberedProductIds.length && !categoryIds.length)
       return Promise.resolve([]);
     const where = {
       isActive: true,
@@ -465,6 +500,8 @@ async function getCatalog(
   };
   const productSearch = async () => {
     if (!wantsProducts || isBroadCatalogBrowse) return [];
+    if (rememberedCategoryIds.length)
+      return queryCatalog([], rememberedCategoryIds);
     let matches = await queryCatalog(terms);
     const hasStrongNameMatch = matches.some((product) =>
       terms.some((term) => {
@@ -1208,6 +1245,29 @@ async function generateReply(
     aiReplyExamples,
     latestCustomerText,
   );
+  const exactSavedExample = findExactAiReplyExample(
+    aiReplyExamples,
+    latestCustomerText,
+  );
+  const isStandaloneGreeting = /^(?:hi|hlw|hello|hey|assalamu\s+alaikum|আসসালামু\s+আলাইকুম|হাই|হ্যালো)[!?.\s]*$/iu.test(latestCustomerText.trim());
+  const hasProductQuestion = isProductQuestion(latestCustomerText);
+  const hasDeliveryQuestion = isDeliveryQuestion(latestCustomerText);
+  const hasCampaignQuestion = CAMPAIGN_QUESTION.test(latestCustomerText);
+  const hasPolicyQuestion = POLICY_QUESTION.test(latestCustomerText);
+  const hasOrderQuestion = shouldFetchOrderContext(latestCustomerText);
+  const asksOrderHowTo = /(?:order\s*(?:kivabe|korbo|how)|how\s+(?:do\s+i|to)\s+order|অর্ডার\s*(?:কীভাবে|কিভাবে|করব|করবো)|কীভাবে\s*অর্ডার)/iu.test(latestCustomerText);
+  const exactAnswerCanUseSavedContext =
+    !asksOrderHowTo && (isStandaloneGreeting ||
+    (!hasProductQuestion && !hasDeliveryQuestion && !hasCampaignQuestion && !hasPolicyQuestion && !hasOrderQuestion) ||
+    (hasProductQuestion && !productMemory.pageProductConfirmationRequired && !productMemory.selectedProductId && !products.products.length && !products.categories?.length && !customerImage) ||
+    (hasDeliveryQuestion && !products.delivery) ||
+    (hasOrderQuestion && !orders.length));
+  if (exactSavedExample && exactAnswerCanUseSavedContext)
+    return {
+      text: exactSavedExample.answer,
+      imageMatch: "none",
+      products: [],
+    };
   const verifiedData = {
     preferredAddress:
       ADDRESS_LABELS[preferredAddress] || "UNKNOWN; use neutral wording",
@@ -1226,6 +1286,12 @@ async function generateReply(
       products.products.find(
         (product) => product.id === productMemory.selectedProductId,
       ) || null,
+    websitePageProduct: productMemory.pageProductId ? {
+      id: productMemory.pageProductId,
+      title: productMemory.pageProductTitle,
+      confirmed: productMemory.pageProductConfirmed,
+    } : null,
+    pageProductConfirmationRequired: productMemory.pageProductConfirmationRequired,
     deliveryCharges: products.delivery,
     verifiedOrders: orders,
     orderIdentityVerified: orders.length > 0,
@@ -1517,7 +1583,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         channel: conversation.channel,
         direction: "OUTBOUND",
         authorType: "AI",
-        content: "AI উত্তর তৈরি হচ্ছে…",
+        content: "",
         deliveryStatus: "SENDING",
         aiReplyForMessageId: inbound.id,
       },
@@ -1540,7 +1606,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       },
     });
     const history = newestHistory.reverse();
-    const productMemory = getProductMemory(history, inbound.content);
+    const productMemory = getProductMemory(history, inbound.content, inbound.metadata);
     const recentQuestionContext = history
       .slice(-6)
       .map((message) => message.content)
@@ -1579,6 +1645,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         ],
         conversation.channel,
         productMemory.catalogProductIds,
+        productMemory.catalogCategoryIds,
         credentials.openaiApiKey,
       ),
       getVerifiedOrders(conversation, inbound.content, history),
@@ -1660,11 +1727,31 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       aiPromptVersion: CHAT_AI_PROMPT_VERSION,
       handoffRequired: requiresHumanFollowUp,
       ...(productOptions.length && { productOptions, shownProductIds }),
+      ...(productContext.categories?.length && {
+        categoryOptions: productContext.categories.flatMap((category) => [
+          {
+            id: category.id,
+            name: category.name,
+            categoryIds: [category.id, ...category.subcategories.map((item) => item.id)],
+          },
+          ...category.subcategories.map((item) => ({
+            id: item.id,
+            name: item.name,
+            categoryIds: [item.id],
+          })),
+        ]),
+      }),
       ...(delivery.imageWarnings.length && {
         imageWarnings: delivery.imageWarnings,
       }),
       ...(productMemory.selectedProductId && {
         selectedProductId: productMemory.selectedProductId,
+      }),
+      ...(productMemory.pageProductId && {
+        pageProductId: productMemory.pageProductId,
+        pageProductTitle: productMemory.pageProductTitle,
+        pageProductConfirmed: productMemory.pageProductConfirmed,
+        pageProductConfirmationPending: productMemory.pageProductConfirmationRequired,
       }),
       ...(generated.products[0]?.imageUrls?.[0] && {
         image: {

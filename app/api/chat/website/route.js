@@ -4,6 +4,7 @@ import { after } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
+import { getWebsitePageProductContext } from "@/backend/utils/chatWebsitePageContext.mjs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -70,6 +71,7 @@ export async function POST(request) {
   const account = session?.user?.id ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, name: true, phone: true } }) : null;
   const customerName = account?.name || String(body?.name || "").trim().slice(0, 100) || null;
   const customerPhone = account?.phone || String(body?.phone || "").trim().slice(0, 30) || null;
+  const websitePage = await getWebsitePageProductContext(body?.pagePath).catch(() => null);
   try {
     const conversation = await prisma.chatConversation.upsert({
       where: { channel_externalUserId: { channel: "WEBSITE", externalUserId } },
@@ -78,7 +80,7 @@ export async function POST(request) {
       select: { id: true },
     });
     const [message] = await prisma.$transaction([
-      prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content, deliveryStatus: "DELIVERED" } }),
+      prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content, deliveryStatus: "DELIVERED", ...(websitePage && { metadata: { websitePage } }) } }),
       prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } }),
     ]);
     after(async () => {

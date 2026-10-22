@@ -105,6 +105,25 @@ export function selectRelevantAiReplyExamples(examples, customerText, limit = 3)
     .map(({ example }) => ({ question: example.question.slice(0, 300), answer: example.answer.slice(0, 500) }));
 }
 
+export function findExactAiReplyExample(examples, customerText) {
+  const normalize = (value) => String(value || "")
+    .toLocaleLowerCase()
+    .replace(/[?!.,;:()[\]{}'"`~@#$%^&*_+=|\\<>/\-]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  const target = normalize(customerText);
+  if (!target) return null;
+  const match = (Array.isArray(examples) ? examples : []).find(
+    (example) =>
+      typeof example?.question === "string" &&
+      typeof example?.answer === "string" &&
+      normalize(example.question) === target,
+  );
+  return match
+    ? { question: match.question.slice(0, 300), answer: match.answer.slice(0, 500) }
+    : null;
+}
+
 export function shouldFetchOrderContext(text) {
   return ACCOUNT_REQUEST_PATTERN.test(String(text || ""));
 }
