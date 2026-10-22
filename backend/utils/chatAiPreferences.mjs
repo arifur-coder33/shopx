@@ -64,7 +64,7 @@ export function isOrderStatusQuestion(text) {
 const ACCOUNT_REQUEST_PATTERN = /(?:\border\b|\btrack(?:ing)?\b|\brefund\b|\breturn\b|\bcancel(?:lation)?\b|\bparcel\b|\bpackage\b|\bshipment\b|\b(?:delivery|order) status\b|অর্ডার|ট্র্যাক|রিফান্ড|ফেরত|বাতিল|অর্ডারের অবস্থা|অর্ডার স্ট্যাটাস|পার্সেল|প্যাকেজ|কুরিয়ার স্ট্যাটাস|কুরিয়ার স্ট্যাটাস)/iu;
 
 export function isProductQuestion(text) {
-  return /(?:price|cost|dam|damer|koto|kotho|ache|ase|available|electric|machine|machin|grass|ghas|cutter|trimmer|weed|mower|battery|brand|model|color|colour|size|stock|product|variant|৳|দাম|কালার|রং|সাইজ|স্টক|পণ্য|ভ্যারিয়েশন|ভ্যারিয়েশন|কত|কতো|আছে|এইটা|এটার|ঘাস|কাটার|মেশিন)/iu.test(String(text || ""));
+  return /(?:price|cost|dam|damer|koto|kotho|ache|ase|available|electric|machine|machin|grass|ghas|cutter|trimmer|weed|mower|battery|brand|model|color|colour|size|stock|product|variant|shirt|shirts|pant|pants|trouser|dress|tshirt|t-shirt|saree|sharee|kurti|bag|shoe|shoes|juta|sandal|watch|mobile|phone|product|category|catalog|catalogue|lagbe|need|looking\s+for|৳|দাম|কালার|রং|সাইজ|স্টক|পণ্য|প্রোডাক্ট|ক্যাটাগরি|ক্যাটালগ|শার্ট|প্যান্ট|জামা|জুতা|ব্যাগ|কত|কতো|আছে|এইটা|এটার|ঘাস|কাটার|মেশিন|লাগবে|চাই)/iu.test(String(text || ""));
 }
 
 export function isDeliveryQuestion(text) {
@@ -82,15 +82,22 @@ export function hasInboundImage(metadata) {
 }
 
 export function selectRelevantAiReplyExamples(examples, customerText, limit = 3) {
-  const tokenize = (value) => new Set((String(value || "").toLowerCase().match(/[\p{L}\p{N}]{2,}/gu) || []).filter((word) => !["ami", "amar", "apni", "tumi", "eta", "etar", "ki", "koto", "the", "is", "are", "you", "this", "that", "for", "and", "the", "দাম", "কত", "কি", "এই", "এটা", "আমার", "আপনি"].includes(word)));
+  const normalize = (value) => String(value || "")
+    .toLocaleLowerCase()
+    .replace(/[?!.,;:()[\]{}'"`~@#$%^&*_+=|\\<>/\-]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  const tokenize = (value) => new Set((normalize(value).match(/[\p{L}\p{N}]{2,}/gu) || []).filter((word) => !["ami", "amar", "apni", "tumi", "eta", "etar", "ki", "the", "is", "are", "you", "this", "that", "for", "and", "please", "দাম", "কত", "কি", "এই", "এটা", "আমার", "আপনি"].includes(word)));
+  const normalizedCustomerText = normalize(customerText);
   const current = tokenize(customerText);
-  if (!current.size) return [];
+  if (!normalizedCustomerText) return [];
   return (Array.isArray(examples) ? examples : [])
-    .filter((example) => typeof example?.question === "string" && typeof example?.answer === "string")
+    .filter((example) => typeof example?.question === "string" && typeof example.answer === "string")
     .map((example) => {
+      const exact = normalize(example.question) === normalizedCustomerText;
       const terms = tokenize(example.question);
       const overlap = [...terms].filter((term) => current.has(term)).length;
-      return { example, score: overlap / Math.max(1, terms.size) };
+      return { example, score: exact ? 2 : overlap / Math.max(1, terms.size) };
     })
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
