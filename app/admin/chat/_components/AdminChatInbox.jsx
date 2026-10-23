@@ -63,6 +63,7 @@ const dateTime = (value) =>
     ? new Intl.DateTimeFormat("bn-BD", {
         dateStyle: "short",
         timeStyle: "short",
+      timeZone: "Asia/Dhaka",
       }).format(new Date(value))
     : "";
 
@@ -1231,8 +1232,8 @@ export default function AdminChatInbox({
                         </button>
                       )}
                       {message.metadata?.type === "PRODUCT_CARD" &&
-                        message.metadata.product && (
-                        (!message.metadata.product.mode || message.metadata.product.mode === "photo-price") &&
+                        message.metadata?.product &&
+                        (!message.metadata.product.mode || message.metadata.product.mode === "photo-price") && (
                           <div className="mb-2 block overflow-hidden rounded-xl bg-white text-gray-900">
                             {message.metadata.product.imageUrl && (
                               <img
