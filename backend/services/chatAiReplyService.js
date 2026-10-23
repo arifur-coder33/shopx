@@ -409,7 +409,8 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
     .reverse()
     .find((message) => message.direction === "OUTBOUND");
   const latestProductMessage = [...history].reverse().find((message) => {
-    if (message.direction !== "OUTBOUND" || message.deliveryStatus === "FAILED") return false;
+    if (message.direction !== "OUTBOUND" || message.deliveryStatus === "FAILED")
+      return false;
     return (
       (Array.isArray(message.metadata?.productOptions) &&
         message.metadata.productOptions.length > 0) ||
@@ -447,7 +448,10 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
   const latestCategoryOptions =
     latestCategoryMessage?.metadata?.categoryOptions || [];
   const allShownOptions = history
-    .filter((message) => message.direction === "OUTBOUND" && message.deliveryStatus !== "FAILED")
+    .filter(
+      (message) =>
+        message.direction === "OUTBOUND" && message.deliveryStatus !== "FAILED",
+    )
     .flatMap((message) => [
       ...(message.metadata?.productOptions || []),
       ...(message.metadata?.image?.productId
@@ -491,7 +495,7 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
         message.direction === "OUTBOUND" && message.metadata?.pageProductId,
     );
   const affirmative =
-    /^(?:yes|yeah|yep|ok(?:ay)?|ha|hya|ji|jii|হ্যাঁ|হ্যা|জি|জ্বি|ঠিক আছে)[!?.\s]*$/iu.test(
+    /^(?:yes|yeah|yep|ok(?:ay)?|ha|hya|ji|jii|হ্যাঁ|হ্যা|জ্বি|জ্বি|ঠিক আছে)[!?.\s]*$/iu.test(
       String(currentMessage || "").trim(),
     );
   const samePageProduct =
@@ -866,7 +870,61 @@ async function getCatalog(
       .map(({ product }) => product);
   };
   const productSearch = async () => {
-    if (!wantsProducts || isBroadCatalogBrowse) return [];
+    if (isBroadCatalogBrowse) {
+      // broad question e 12 ta featured product dao
+      return prisma.product.findMany({
+        where: { isActive: true, status: "ACTIVE" },
+        take: 12,
+        orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          description: true,
+          seoDescription: true,
+          categoryId: true,
+          specifications: {
+            orderBy: { sortOrder: "asc" },
+            take: 8,
+            select: { value: true, specification: { select: { name: true } } },
+          },
+          category: { select: { name: true } },
+          thumbnail: { select: { url: true, name: true } },
+          gallery: {
+            take: 3,
+            orderBy: { createdAt: "asc" },
+            select: { media: { select: { url: true, name: true } } },
+          },
+          variations: {
+            take: 20,
+            select: {
+              id: true,
+              regularPrice: true,
+              discountPrice: true,
+              weight: true,
+              thumbnail: { select: { url: true, name: true } },
+              stocks: { select: { available: true } },
+              combinations: {
+                select: {
+                  variationName: { select: { name: true } },
+                  variationValue: { select: { value: true } },
+                },
+              },
+            },
+          },
+          videos: {
+            orderBy: { sortOrder: "asc" },
+            select: { header: true, url: true, sortOrder: true },
+          },
+          videoUrl: true,
+          deliveryMinDays: true,
+          deliveryMaxDays: true,
+          allowOutOfStockOrder: true,
+        },
+      });
+    }
+    if (!wantsProducts) return [];
+
     if (rememberedCategoryIds.length)
       return queryCatalog([], rememberedCategoryIds);
     let matches = await queryCatalog(terms);
@@ -1650,16 +1708,41 @@ async function generateReply(
   const latestCustomerText =
     [...history].reverse().find((message) => message.direction === "INBOUND")
       ?.content || "";
+  // if (BROAD_CATALOG_QUESTION.test(latestCustomerText)) {
+  //   const categoryNames = (products.categories || []).flatMap((category) =>
+  //     category.subcategories?.length
+  //       ? category.subcategories.map((item) => item.name)
+  //       : [category.name],
+  //   );
+  //   return {
+  //     text: categoryNames.length
+  //       ? `জ্বি, আমাদের কাছে ${[...new Set(categoryNames)].slice(0, 16).join(", ")} আছে। কোন ধরনের পণ্য দেখতে চান?`
+  //       : "দুঃখিত, এখন আমাদের পণ্যের তালিকা পাওয়া যাচ্ছে না। কোন পণ্যটি খুঁজছেন বলবেন?",
+  //     imageMatch: "none",
+  //     products: [],
+  //   };
+  // }
   if (BROAD_CATALOG_QUESTION.test(latestCustomerText)) {
     const categoryNames = (products.categories || []).flatMap((category) =>
       category.subcategories?.length
         ? category.subcategories.map((item) => item.name)
         : [category.name],
     );
+    const uniqueCategories = [...new Set(categoryNames)].slice(0, 16);
+    const productList = products.products || [];
+
+    if (uniqueCategories.length || productList.length) {
+      return {
+        text: uniqueCategories.length
+          ? `জ্বি, আমাদের কাছে ${uniqueCategories.join(", ")} সহ অনেক ক্যাটাগরির পণ্য আছে। নিচে কিছু জনপ্রিয় পণ্য দেখতে পারেন, কোন ধরনের পণ্য খুঁজছেন বলবেন?`
+          : `জ্বি, আমাদের কাছে অনেক পণ্য আছে। নিচে কিছু জনপ্রিয় পণ্য দেখতে পারেন।`,
+        imageMatch: "none",
+        products: productList.slice(0, 6), // 6 ta product card dekhabe
+      };
+    }
+
     return {
-      text: categoryNames.length
-        ? `জি, আমাদের কাছে ${[...new Set(categoryNames)].slice(0, 16).join(", ")} আছে। কোন ধরনের পণ্য দেখতে চান?`
-        : "দুঃখিত, এখন আমাদের পণ্যের তালিকা পাওয়া যাচ্ছে না। কোন পণ্যটি খুঁজছেন বলবেন?",
+      text: "দুঃখিত, এখন আমাদের পণ্যের তালিকা পাওয়া যাচ্ছে না। কোন পণ্যটি খুঁজছেন বলবেন?",
       imageMatch: "none",
       products: [],
     };
@@ -1677,7 +1760,7 @@ async function generateReply(
       ) || (products.products.length === 1 ? products.products[0] : null);
     if (!mediaProduct)
       return {
-        text: "জি, কোন পণ্যটির ছবি বা ভিডিও দেখতে চান? পণ্যের নাম বা লিংকটি দিলে ঠিক সেটির মিডিয়া পাঠাচ্ছি।",
+        text: "জ্বি, কোন পণ্যটির ছবি বা ভিডিও দেখতে চান? পণ্যের নাম বা লিংকটি দিলে ঠিক সেটির মিডিয়া পাঠাচ্ছি।",
         imageMatch: "none",
         products: [],
       };
@@ -1688,7 +1771,7 @@ async function generateReply(
         ? videos.filter((video) => kindMatch(video.header))
         : videos;
       const text = matchingVideos.length
-        ? `জি, ${mediaProduct.title}-এর ${kindMatch ? "চাওয়া ধরনের " : ""}ভিডিও${matchingVideos.length > 1 ? "গুলো" : "টি"} এখানে:\n${matchingVideos.map((video) => `${video.header}: ${video.url}`).join("\n")}`
+        ? `জ্বি, ${mediaProduct.title}-এর ${kindMatch ? "চাওয়া ধরনের " : ""}ভিডিও${matchingVideos.length > 1 ? "গুলো" : "টি"} এখানে:\n${matchingVideos.map((video) => `${video.header}: ${video.url}`).join("\n")}`
         : videos.length
           ? `দুঃখিত, ${mediaProduct.title}-এর চাওয়া ধরনের ভিডিও এখন নেই। আছে: ${videos.map((video) => video.header).join(", ")}।`
           : `দুঃখিত, ${mediaProduct.title}-এর কোনো ভিডিও এখন দেওয়া নেই।`;
@@ -1703,7 +1786,7 @@ async function generateReply(
     const imageUrl = mediaProduct.imageUrls?.[0];
     return {
       text: imageUrl
-        ? `জি, ${mediaProduct.title}-এর ছবি এখানে: ${imageUrl}`
+        ? `জ্বি, ${mediaProduct.title}-এর ছবি এখানে: ${imageUrl}`
         : `দুঃখিত, ${mediaProduct.title}-এর ছবি এখন দেওয়া নেই।`,
       imageMatch: imageUrl ? "exact" : "none",
       products: [],
@@ -1745,8 +1828,8 @@ async function generateReply(
       ) || (products.products.length === 1 ? products.products[0] : null);
     return {
       text: orderProduct
-        ? `জি, ${orderProduct.title} অর্ডার করতে এই লিংকে যান: ${orderProduct.buyNowUrl}\nসেখানে নাম, ফোন, ঠিকানা, জেলা, থানা ও পেমেন্ট পদ্ধতি দিয়ে ‘Place Order’ চাপুন।`
-        : "জি, কোন পণ্যটি অর্ডার করতে চান? নাম বা ছবিটি দিলে অর্ডার লিংক দিচ্ছি।",
+        ? `জ্বি, ${orderProduct.title} অর্ডার করতে এই লিংকে যান: ${orderProduct.buyNowUrl}\nসেখানে নাম, ফোন, ঠিকানা, জেলা, থানা ও পেমেন্ট পদ্ধতি দিয়ে ‘Place Order’ চাপুন।`
+        : "জ্বি, কোন পণ্যটি অর্ডার করতে চান? নাম বা ছবিটি দিলে অর্ডার লিংক দিচ্ছি।",
       imageMatch: "none",
       products: [],
       ...(orderProduct && { selectedProductId: orderProduct.id }),
@@ -1763,14 +1846,23 @@ async function generateReply(
     .reverse()
     .find((message) => message.direction === "OUTBOUND");
   if (
-    /^(?:ji|jii|yes|ha|hya|হ্যাঁ|হ্যা|জি|জ্বি)[!?.\s]*$/iu.test(latestCustomerText.trim()) &&
-    /(?:কার্ড|card|ছবি|photo|বিস্তারিত).{0,25}(?:দেখা|দেখিয়ে|দেখাব|পাঠাব|পাঠিয়ে|send|share)/iu.test(previousReply?.content || "")
+    /^(?:ji|jii|yes|ha|hya|হ্যাঁ|হ্যা|জি|জ্বি)[!?.\s]*$/iu.test(
+      latestCustomerText.trim(),
+    ) &&
+    /(?:কার্ড|card|ছবি|photo|বিস্তারিত).{0,25}(?:দেখা|দেখিয়ে|দেখাব|পাঠাব|পাঠিয়ে|send|share)/iu.test(
+      previousReply?.content || "",
+    )
   ) {
-    const promisedProduct = products.products.find((product) => product.id === productMemory.selectedProductId);
-    if (promisedProduct) return {
-      text: `জি, ${promisedProduct.title} এখানে দেখতে পারেন।`,
-      imageMatch: "none", products: [promisedProduct], selectedProductId: promisedProduct.id,
-    };
+    const promisedProduct = products.products.find(
+      (product) => product.id === productMemory.selectedProductId,
+    );
+    if (promisedProduct)
+      return {
+        text: `জ্বি, ${promisedProduct.title} এখানে দেখতে পারেন।`,
+        imageMatch: "none",
+        products: [promisedProduct],
+        selectedProductId: promisedProduct.id,
+      };
   }
   const detailsAfterAddressRequest =
     recentOrderGuideRequest &&
@@ -1779,7 +1871,7 @@ async function generateReply(
     ) &&
     (/(?:\b01\d{9}\b|\b\+?8801\d{9}\b|[,،])/u.test(latestCustomerText) ||
       /^[\p{L}\p{M}\s.\-]{3,70}$/u.test(latestCustomerText.trim())) &&
-    !/^(?:yes|ha|ok|okay|no|thanks|thank you|জি|হ্যাঁ|না|ধন্যবাদ)[!?.\s]*$/iu.test(
+    !/^(?:yes|ha|ok|okay|no|thanks|thank you|জ্বি|হ্যাঁ|না|ধন্যবাদ)[!?.\s]*$/iu.test(
       latestCustomerText.trim(),
     ) &&
     !isProductQuestion(latestCustomerText) &&
@@ -1840,7 +1932,7 @@ async function generateReply(
             : null;
       return {
         text: priceText
-          ? `জি, ${pageProduct.title}-এর দাম ${priceText}${prices.length > 1 ? "। কোন ভ্যারিয়েন্টটি জানতে চান?" : "।"}`
+          ? `জ্বি, ${pageProduct.title}-এর দাম ${priceText}${prices.length > 1 ? "। কোন ভ্যারিয়েন্টটি জানতে চান?" : "।"}`
           : `দুঃখিত, ${pageProduct.title}-এর বর্তমান দাম এখন নিশ্চিত করতে পারছি না। দেখে জানাতে হবে।`,
         imageMatch: "none",
         products: [],
@@ -1949,14 +2041,14 @@ async function generateReply(
     );
     if (inStock.length === 1)
       return {
-        text: "জি, এই পণ্যটি স্টকে আছে। চাইলে ছবি বা দাম জানাতে পারি।",
+        text: "জ্বি, এই পণ্যটি স্টকে আছে। চাইলে ছবি বা দাম জানাতে পারি।",
         imageMatch: "none",
         products: [],
         selectedProductId: inStock[0].id,
       };
     if (inStock.length > 1)
       return {
-        text: `জি, এই ${Math.min(3, inStock.length)}টি অপশন দেখতে পারেন। কোনটি পছন্দ হয়েছে?`,
+        text: `জ্বি, এই ${Math.min(3, inStock.length)}টি অপশন দেখতে পারেন। কোনটি পছন্দ হয়েছে?`,
         imageMatch: "none",
         products: inStock.slice(0, 3),
       };
@@ -2008,7 +2100,7 @@ async function generateReply(
         text: stockProduct.variants.some(
           (variant) => variant.availableStock > 0,
         )
-          ? "জি, স্টক আছে।"
+          ? "জ্বি, স্টক আছে।"
           : "দুঃখিত, এই পণ্যটি এখন স্টকে নেই।",
         imageMatch: "none",
         products: [],
@@ -2133,8 +2225,8 @@ async function generateReply(
     text:
       recommendationSearch && selectedProducts.length
         ? selectedProducts.length > 1
-          ? `জি, এই ${selectedProducts.length}টি অপশন দেখতে পারেন। কোনটি সম্পর্কে জানতে চান?`
-          : "জি, এই অপশনটি দেখতে পারেন।"
+          ? `জ্বি, এই ${selectedProducts.length}টি অপশন দেখতে পারেন। কোনটি সম্পর্কে জানতে চান?`
+          : "জ্বি, এই অপশনটি দেখতে পারেন।"
         : String(parsed.reply).slice(0, 700),
     imageMatch: productIdsToShow.length ? parsed.imageMatch : "none",
     products: selectedProducts,
@@ -2564,7 +2656,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           !isProductImageRequest(inbound.content) &&
           !isProductVideoRequest(inbound.content)
         ? {
-            text: `জি, ছবির পণ্যটি আমাদের কাছে আছে—${exactPhotoProduct.title}${exactPhotoPrices.length ? `। দাম ৳${Math.min(...exactPhotoPrices).toLocaleString("en-BD")}${Math.max(...exactPhotoPrices) !== Math.min(...exactPhotoPrices) ? ` থেকে ৳${Math.max(...exactPhotoPrices).toLocaleString("en-BD")}` : ""}` : ""}${exactPhotoProduct.variants.some((variant) => variant.availableStock > 0) ? "। স্টক আছে।" : "। এখন স্টকে নেই।"}`,
+            text: `জ্বি, ছবির পণ্যটি আমাদের কাছে আছে—${exactPhotoProduct.title}${exactPhotoPrices.length ? `। দাম ৳${Math.min(...exactPhotoPrices).toLocaleString("en-BD")}${Math.max(...exactPhotoPrices) !== Math.min(...exactPhotoPrices) ? ` থেকে ৳${Math.max(...exactPhotoPrices).toLocaleString("en-BD")}` : ""}` : ""}${exactPhotoProduct.variants.some((variant) => variant.availableStock > 0) ? "। স্টক আছে।" : "। এখন স্টকে নেই।"}`,
             imageMatch: "exact",
             products: [exactPhotoProduct],
           }
