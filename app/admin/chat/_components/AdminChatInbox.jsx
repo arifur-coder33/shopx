@@ -47,6 +47,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { normalizeChatText } from "@/lib/chatText";
 
 const channelLabels = {
   WEBSITE: "Website",
@@ -100,24 +101,13 @@ export default function AdminChatInbox({
   initialError = "",
 }) {
   const [conversations, setConversations] = useState(initialConversations);
-  const [selectedId, setSelectedId] = useState(() =>
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("conversation") ||
-        initialConversations[0]?.id ||
-        ""
-      : initialConversations[0]?.id || "",
-  );
+  const [selectedId, setSelectedId] = useState(initialConversations[0]?.id || "");
   const [conversation, setConversation] = useState(null);
   const [replyChannel, setReplyChannel] = useState(null);
   const [phoneDraft, setPhoneDraft] = useState("");
   const [phoneBusy, setPhoneBusy] = useState(false);
   const [channel, setChannel] = useState("ALL");
-  const [status, setStatus] = useState(() =>
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).has("conversation")
-      ? "ALL"
-      : "OPEN",
-  );
+  const [status, setStatus] = useState("OPEN");
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [replyToMessage, setReplyToMessage] = useState(null);
@@ -157,6 +147,14 @@ export default function AdminChatInbox({
   const replyHighlightTimerRef = useRef(null);
   const [focusedReplyMessageId, setFocusedReplyMessageId] = useState(null);
   selectedIdRef.current = selectedId;
+
+  useEffect(() => {
+    const requestedConversation = new URLSearchParams(window.location.search).get("conversation");
+    if (requestedConversation) {
+      setSelectedId(requestedConversation);
+      setStatus("ALL");
+    }
+  }, []);
 
   useEffect(() => {
     setProfileOpen(false);
@@ -1229,12 +1227,12 @@ export default function AdminChatInbox({
                           className={`mb-2 block w-full border-l-2 border-primary/50 bg-black/5 px-2 py-1 text-left text-xs ${message.metadata.replyTo.id ? "cursor-pointer hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : "cursor-default"}`}
                         >
                           <span className="font-semibold">{message.metadata.replyTo.direction === "OUTBOUND" ? "Reply to your message" : "Reply to customer message"}</span>
-                          <p className="line-clamp-2">{message.metadata.replyTo.content}</p>
+                          <p className="line-clamp-2">{normalizeChatText(message.metadata.replyTo.content)}</p>
                         </button>
                       )}
                       {message.metadata?.type === "PRODUCT_CARD" &&
-                        (!message.metadata.product.mode || message.metadata.product.mode === "photo-price") &&
                         message.metadata.product && (
+                        (!message.metadata.product.mode || message.metadata.product.mode === "photo-price") &&
                           <div className="mb-2 block overflow-hidden rounded-xl bg-white text-gray-900">
                             {message.metadata.product.imageUrl && (
                               <img
@@ -1256,7 +1254,7 @@ export default function AdminChatInbox({
                             </span>
                           </div>
                         )}
-                      {message.metadata?.product?.buyNowUrl && !message.metadata.product.mode && (
+                      {message.metadata?.product?.buyNowUrl && !message.metadata?.product?.mode && (
                         <a href={message.metadata.product.buyNowUrl} target="_blank" rel="noreferrer" className="mb-2 inline-flex rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white">এখনই কিনুন</a>
                       )}
                       {message.metadata?.type === "ORDER_TIMELINE" &&
@@ -1342,7 +1340,7 @@ export default function AdminChatInbox({
                         </div>
                       ) : (
                         <p className="whitespace-pre-wrap break-words text-sm">
-                          {message.content}
+                          {normalizeChatText(message.content)}
                         </p>
                       )
                       )}
