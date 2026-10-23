@@ -2556,6 +2556,162 @@ async function generateReply(
   };
 }
 
+// async function deliverReply(
+//   conversation,
+//   content,
+//   credentials,
+//   products = [],
+//   mediaPhoto = null,
+//   videoLinks = [],
+// ) {
+//   if (conversation.channel === "WEBSITE")
+//     return { id: null, imageWarnings: [], mediaMessages: [] };
+//   const sent = [];
+//   const mediaMessages = [];
+//   if (content.trim())
+//     sent.push(
+//       await sendChatChannelTextMessage(
+//         conversation,
+//         videoLinks.length ? content.split("\n")[0] : content,
+//         credentials,
+//       ),
+//     );
+//   for (const video of videoLinks) {
+//     const videoText = `${video.header}: ${video.url}`;
+//     const result = await sendChatChannelTextMessage(
+//       conversation,
+//       videoText,
+//       credentials,
+//     );
+//     sent.push(result);
+//     mediaMessages.push({ id: result.id, content: videoText });
+//   }
+//   const imageWarnings = [];
+//   if (mediaPhoto?.url) {
+//     try {
+//       const result = await sendChatChannelImageMessage(
+//         conversation,
+//         "",
+//         mediaPhoto.url,
+//         credentials,
+//       );
+//       sent.push(result);
+//       mediaMessages.push({
+//         id: result.id,
+//         content: "📷 পণ্যের ছবি",
+//         image: mediaPhoto,
+//       });
+//     } catch (error) {
+//       imageWarnings.push({
+//         productId: mediaPhoto.productId,
+//         code: String(error?.code || "image_send_failed").slice(0, 80),
+//       });
+//     }
+//   }
+//   for (const product of products) {
+//     if (conversation.channel === "MESSENGER") {
+//       try {
+//         const result = await sendMessengerProductCard(
+//           conversation,
+//           product,
+//           credentials,
+//         );
+//         sent.push(result);
+//         mediaMessages.push({ id: result.id, content: product.title, product });
+//       } catch (error) {
+//         imageWarnings.push({
+//           productId: product.id,
+//           code: String(error?.code || "card_send_failed").slice(0, 80),
+//         });
+//         const fallback = `${product.title}\nদেখুন: ${product.url}\nঅর্ডার: ${product.buyNowUrl}`;
+//         const result = await sendChatChannelTextMessage(
+//           conversation,
+//           fallback,
+//           credentials,
+//           null,
+//           [
+//             { title: "আরও জানতে চাই", payload: `details:${product.id}` },
+//             { title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
+//           ],
+//         );
+//         sent.push(result);
+//         mediaMessages.push({ id: result.id, content: fallback });
+//       }
+//       continue;
+//     }
+//     if (!product.imageUrls?.[0]) continue;
+//     const price = product.variants
+//       .map(
+//         (variant) =>
+//           variant.currentCampaignPrice ||
+//           variant.listedPrice ||
+//           variant.regularPrice,
+//       )
+//       .filter((value) => Number(value) > 0)
+//       .map(Number);
+//     const priceText = price.length
+//       ? ` · ৳${Math.min(...price).toLocaleString("en-BD")}${Math.max(...price) !== Math.min(...price) ? `–${Math.max(...price).toLocaleString("en-BD")}` : ""}`
+//       : "";
+//     const variantLines = product.variants
+//       .slice(0, 5)
+//       .map((variant) => {
+//         const label = variant.options.join(" / ");
+//         const amount =
+//           variant.currentCampaignPrice ||
+//           variant.listedPrice ||
+//           variant.regularPrice;
+//         return label
+//           ? `• ${label}${amount ? ` · ৳${Number(amount).toLocaleString("en-BD")}` : ""}`
+//           : null;
+//       })
+//       .filter(Boolean);
+//     const caption = [
+//       `${product.title}${priceText}`,
+//       ...product.features.slice(0, 3),
+//       ...variantLines,
+//       `দেখুন: ${product.url}`,
+//       `এখনই কিনুন: ${product.buyNowUrl}`,
+//     ]
+//       .join("\n")
+//       .slice(0, 950);
+//     try {
+//       const result = await sendChatChannelImageMessage(
+//         conversation,
+//         caption,
+//         product.imageUrls[0],
+//         credentials,
+//       );
+//       sent.push(result);
+//       mediaMessages.push({
+//         id: result.id,
+//         content: caption,
+//         image: {
+//           url: product.imageUrls[0],
+//           productId: product.id,
+//           productTitle: product.title,
+//         },
+//       });
+//     } catch (error) {
+//       imageWarnings.push({
+//         productId: product.id,
+//         code: String(error?.code || "image_send_failed").slice(0, 80),
+//       });
+//       const fallback = `${product.title}${priceText}\nদেখুন: ${product.url}\nঅর্ডার: ${product.buyNowUrl}`;
+//       const result = await sendChatChannelTextMessage(
+//         conversation,
+//         fallback,
+//         credentials,
+//       );
+//       sent.push(result);
+//       mediaMessages.push({ id: result.id, content: fallback });
+//     }
+//   }
+//   return {
+//     id: sent.find((result) => result.id)?.id || null,
+//     imageWarnings,
+//     mediaMessages,
+//   };
+// }
 async function deliverReply(
   conversation,
   content,
@@ -2566,9 +2722,12 @@ async function deliverReply(
 ) {
   if (conversation.channel === "WEBSITE")
     return { id: null, imageWarnings: [], mediaMessages: [] };
+
   const sent = [];
   const mediaMessages = [];
-  if (content.trim())
+
+  // ১. মূল চ্যাট টেক্সট পাঠানো
+  if (content.trim()) {
     sent.push(
       await sendChatChannelTextMessage(
         conversation,
@@ -2576,6 +2735,9 @@ async function deliverReply(
         credentials,
       ),
     );
+  }
+
+  // ২. ভিডিও লিংক থাকলে পাঠানো
   for (const video of videoLinks) {
     const videoText = `${video.header}: ${video.url}`;
     const result = await sendChatChannelTextMessage(
@@ -2586,7 +2748,10 @@ async function deliverReply(
     sent.push(result);
     mediaMessages.push({ id: result.id, content: videoText });
   }
+
   const imageWarnings = [];
+
+  // ৩. স্পেসিফিক ফটো রিকোয়েস্ট থাকলে পাঠানো
   if (mediaPhoto?.url) {
     try {
       const result = await sendChatChannelImageMessage(
@@ -2602,13 +2767,20 @@ async function deliverReply(
         image: mediaPhoto,
       });
     } catch (error) {
+      console.error(
+        "WhatsApp/Channel mediaPhoto send failed:",
+        error?.message || error,
+      );
       imageWarnings.push({
         productId: mediaPhoto.productId,
         code: String(error?.code || "image_send_failed").slice(0, 80),
       });
     }
   }
+
+  // ৪. প্রোডাক্ট কার্ড / ছবি ও ডিটেইলস পাঠানো
   for (const product of products) {
+    // মেসেঞ্জারের জন্য আগের মতোই বাটনসহ কার্ড থাকবে
     if (conversation.channel === "MESSENGER") {
       try {
         const result = await sendMessengerProductCard(
@@ -2623,7 +2795,7 @@ async function deliverReply(
           productId: product.id,
           code: String(error?.code || "card_send_failed").slice(0, 80),
         });
-        const fallback = `${product.title}\nদেখুন: ${product.url}\nঅর্ডার: ${product.buyNowUrl}`;
+        const fallback = `*${product.title}*\n\n🛒 বিস্তারিত দেখুন: ${product.url}\n👉 এখনই অর্ডার করুন: ${product.buyNowUrl}`;
         const result = await sendChatChannelTextMessage(
           conversation,
           fallback,
@@ -2639,8 +2811,9 @@ async function deliverReply(
       }
       continue;
     }
-    if (!product.imageUrls?.[0]) continue;
-    const price = product.variants
+
+    // --- হোয়াটসঅ্যাপ (WHATSAPP) ও অন্যান্য চ্যানেলের জন্য বিশেষ ফরম্যাট ---
+    const prices = product.variants
       .map(
         (variant) =>
           variant.currentCampaignPrice ||
@@ -2649,70 +2822,94 @@ async function deliverReply(
       )
       .filter((value) => Number(value) > 0)
       .map(Number);
-    const priceText = price.length
-      ? ` · ৳${Math.min(...price).toLocaleString("en-BD")}${Math.max(...price) !== Math.min(...price) ? `–${Math.max(...price).toLocaleString("en-BD")}` : ""}`
+
+    const priceText = prices.length
+      ? `\n💰 *মূল্য:* ৳${Math.min(...prices).toLocaleString("en-BD")}${
+          Math.max(...prices) !== Math.min(...prices)
+            ? ` – ৳${Math.max(...prices).toLocaleString("en-BD")}`
+            : ""
+        }`
       : "";
-    const variantLines = product.variants
-      .slice(0, 5)
-      .map((variant) => {
-        const label = variant.options.join(" / ");
-        const amount =
-          variant.currentCampaignPrice ||
-          variant.listedPrice ||
-          variant.regularPrice;
-        return label
-          ? `• ${label}${amount ? ` · ৳${Number(amount).toLocaleString("en-BD")}` : ""}`
-          : null;
-      })
-      .filter(Boolean);
-    const caption = [
-      `${product.title}${priceText}`,
-      ...product.features.slice(0, 3),
-      ...variantLines,
-      `দেখুন: ${product.url}`,
-      `এখনই কিনুন: ${product.buyNowUrl}`,
-    ]
-      .join("\n")
-      .slice(0, 950);
-    try {
-      const result = await sendChatChannelImageMessage(
-        conversation,
-        caption,
-        product.imageUrls[0],
-        credentials,
-      );
-      sent.push(result);
-      mediaMessages.push({
-        id: result.id,
-        content: caption,
-        image: {
-          url: product.imageUrls[0],
+
+    const featureLines = product.features
+      .slice(0, 3)
+      .map((f) => `✔ ${f}`)
+      .join("\n");
+
+    // হোয়াটসঅ্যাপে বাটনের বিকল্প হিসেবে পরিষ্কার ক্লিক্যাবল লিংক:
+    const captionLines = [
+      `🛍️ *${product.title}*${priceText}`,
+      featureLines ? `\n${featureLines}` : "",
+      `\n🔗 *বিস্তারিত দেখুন:* ${product.url}`,
+      `👉 *সরাসরি অর্ডার করতে ক্লিক করুন:* ${product.buyNowUrl}`,
+    ].filter(Boolean);
+
+    const caption = captionLines.join("\n").slice(0, 950);
+
+    // ইমেজ ইউআরএল ভ্যালিডেশন (হোয়াটসঅ্যাপের জন্য HTTPS বাধ্যতামূলক)
+    let validImageUrl = null;
+    if (product.imageUrls?.[0] && product.imageUrls[0].startsWith("https://")) {
+      validImageUrl = product.imageUrls[0];
+    }
+
+    if (validImageUrl) {
+      try {
+        const result = await sendChatChannelImageMessage(
+          conversation,
+          caption,
+          validImageUrl,
+          credentials,
+        );
+        sent.push(result);
+        mediaMessages.push({
+          id: result.id,
+          content: caption,
+          image: {
+            url: validImageUrl,
+            productId: product.id,
+            productTitle: product.title,
+          },
+        });
+      } catch (error) {
+        // হোয়াটসঅ্যাপে ছবি ফেইল করার আসল কারণ টার্মিনালে লগ হবে
+        console.error("WhatsApp image delivery failed:", {
           productId: product.id,
-          productTitle: product.title,
-        },
-      });
-    } catch (error) {
-      imageWarnings.push({
-        productId: product.id,
-        code: String(error?.code || "image_send_failed").slice(0, 80),
-      });
-      const fallback = `${product.title}${priceText}\nদেখুন: ${product.url}\nঅর্ডার: ${product.buyNowUrl}`;
+          imageUrl: validImageUrl,
+          error: error?.message || error,
+        });
+
+        imageWarnings.push({
+          productId: product.id,
+          code: String(error?.code || "image_send_failed").slice(0, 80),
+        });
+
+        // ছবি ফেইল করলে সুন্দর ফরম্যাটেড টেক্সট মেসেজ পাঠাবে
+        const result = await sendChatChannelTextMessage(
+          conversation,
+          caption,
+          credentials,
+        );
+        sent.push(result);
+        mediaMessages.push({ id: result.id, content: caption });
+      }
+    } else {
+      // যদি ছবির লিংক ভ্যালিড না হয়, শুধু টেক্সট পাঠানো
       const result = await sendChatChannelTextMessage(
         conversation,
-        fallback,
+        caption,
         credentials,
       );
       sent.push(result);
-      mediaMessages.push({ id: result.id, content: fallback });
+      mediaMessages.push({ id: result.id, content: caption });
     }
   }
+
   return {
     id: sent.find((result) => result.id)?.id || null,
     imageWarnings,
     mediaMessages,
   };
 }
-
 async function stopForHumanTakeover(
   conversationId,
   inboundMessage,
