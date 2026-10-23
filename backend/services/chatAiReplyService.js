@@ -32,6 +32,7 @@ import {
   shouldAutoReply,
   shouldFetchOrderContext,
 } from "@/backend/utils/chatAiPreferences.mjs";
+import { htmlToText } from "html-to-text";
 import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import prisma from "@/lib/prisma";
@@ -276,7 +277,16 @@ const CAMPAIGN_QUESTION =
 const POLICY_QUESTION =
   /(?:\b(?:return|refund|exchange)\s+policy\b|\bpolicy\b.{0,30}\b(?:return|refund|exchange)\b|\b(?:return|refund|exchange)\b|\bferot\b|\brifund\b|\bexchange\b|রিটার্ন|ফেরত|রিফান্ড|এক্সচেঞ্জ|বদল|পলিসি|নীতিমালা|নীতি)/iu;
 const BROAD_CATALOG_QUESTION =
-  /(?:\bwhat\s+(?:products|items|categories)\s+(?:do\s+you\s+have|are\s+available|do\s+you\s+sell)\b|\b(?:ki\s+ki|ki\s+ki\s+dhoro?n?er)\s+(?:product|products|item|category)\b|\bki\s+product\s+ache\b|\bwhat\s+do\s+you\s+sell\b|\b(?:apnara|apnader|tomra)\s+(?:ki|ki\s+ki)\s+(?:sell|bikri)\s+koren\b|\b(?:ki|ki\s+ki)\s+(?:sell|bikri)\s+koren\b|কী\s*কী\s*(?:প্রোডাক্ট|পণ্য|ক্যাটাগরি)|কি\s*কি\s*(?:প্রোডাক্ট|পণ্য|ক্যাটাগরি)|কোন\s*কোন\s*(?:পণ্য|প্রোডাক্ট)|কি\s*কি\s*বিক্রি\s*করেন|আপনারা\s*কি\s*বিক্রি\s*করেন)/iu;
+  /(?:\bwhat\s+(?:products|items|categories)\s+(?:do\s+you\s+have|are\s+available|do\s+you\s+sell)\b|\b(?:ki\s+ki|ki\s+ki\s+dhoro?n?er)\s+(?:product|products|item|category)\b|\bki\s+product\s+ache\b|\bki\s+(?:ki\s+)?(?:ache|ase|pawa\s+jay|paowa\s+jay)\b|\b(?:apnader|apnara|tomader|amader)\s+(?:kache\s+)?ki\s+ki\s+(?:ache|ase|pawa\s+jay|paowa\s+jay)\b|\bwhat\s+do\s+you\s+sell\b|\b(?:apnara|apnader|tomra)\s+(?:ki|ki\s+ki)\s+(?:sell|bikri)\s+koren\b|\b(?:ki|ki\s+ki)\s+(?:sell|bikri)\s+koren\b|কী\s*কী\s*(?:আছে|আসে|পাওয়া\s*যায়|পাওয়া\s*যায়|প্রোডাক্ট|পণ্য|ক্যাটাগরি)|কি\s*কি\s*(?:আছে|আসে|পাওয়া\s*যায়|পাওয়া\s*যায়|প্রোডাক্ট|পণ্য|ক্যাটাগরি)|আপনাদের\s*(?:কাছে\s*)?কি\s*কি\s*(?:আছে|আসে|পাওয়া\s*যায়|পাওয়া\s*যায়)|কোন\s*কোন\s*(?:পণ্য|প্রোডাক্ট)|কি\s*কি\s*বিক্রি\s*করেন|আপনারা\s*কি\s*বিক্রি\s*করেন)/iu;
+
+function plainChatText(value) {
+  return htmlToText(String(value || ""), { wordwrap: false })
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 function googleSchema(schema) {
   if (Array.isArray(schema)) return schema.map(googleSchema);
@@ -1286,15 +1296,17 @@ async function getCatalog(
       id: product.id,
       title: product.title,
       category: product.category?.name || null,
-      description: String(product.description || product.seoDescription || "")
-        .replace(/<[^>]*>/g, " ")
+      description: plainChatText(
+        product.description || product.seoDescription || "",
+      )
         .replace(/\s+/g, " ")
-        .trim()
         .slice(0, 2500),
       features: product.specifications
         .map(
           (specification) =>
-            `${specification.specification.name}: ${specification.value}`,
+            plainChatText(
+              `${specification.specification.name}: ${specification.value}`,
+            ),
         )
         .slice(0, 8),
       url: new URL(
@@ -2754,7 +2766,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
               ? { ...productMemory, selectedProductId: exactPhotoProduct.id }
               : productMemory,
           );
-    const content = String(generated.text)
+    const content = plainChatText(generated.text)
       .replace(/(?:আমাদের\s+)?(?:ক্যাটালগে|catalogue?-এ)/giu, "আমাদের কাছে")
       .replace(/(?:ক্যাটালগ|catalogue?)/giu, "পণ্যের তথ্য");
 
