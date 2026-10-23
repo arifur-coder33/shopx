@@ -73,7 +73,7 @@ export function isDeliveryQuestion(text) {
 
 export function isProductImageRequest(text) {
   const message = String(text || "");
-  return /(?:\b(?:send|show|share|see|get)\b.{0,35}\b(?:photo|picture|image|pic)\b|\b(?:photo|picture|image|pic|chobi)\b.{0,35}\b(?:send|show|share|see|want|please|den|din|pathan|dekhan|chai)\b|ছবি|ফটো|পণ্যের\s*ছবি|প্রোডাক্টের\s*ছবি)/iu.test(message);
+  return /(?:\b(?:send|show|share|see|get)\b.{0,35}\b(?:photo|picture|image|pic)\b|\b(?:photo|picture|image|pic|chobi)\b.{0,35}\b(?:send|show|share|see|want|please|den|din|deo|dao|dekhaw|dekhao|pathan|dekhan|chai)\b|ছবি|ফটো|পণ্যের\s*ছবি|প্রোডাক্টের\s*ছবি)/iu.test(message);
 }
 
 export function isProductVideoRequest(text) {
