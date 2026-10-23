@@ -12,6 +12,10 @@ import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscr
 import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
 import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
+import {
+  DEFAULT_CHAT_AI_MODELS,
+  isChatAiModelAllowed,
+} from "@/backend/services/chatAiModels";
 import { getMediaUsageIndex, syncLegacyChatMedia } from "@/backend/services/mediaUsageService";
 import jwt from "jsonwebtoken";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
@@ -129,6 +133,12 @@ export async function getChatSettingsAction() {
         tiktokEnabled: setting?.tiktokEnabled ?? false,
         aiAutoReplyEnabled: setting?.aiAutoReplyEnabled ?? false,
         aiProvider: setting?.aiProvider === "GOOGLE_AI_STUDIO" ? "GOOGLE_AI_STUDIO" : "OPENAI",
+        openaiModel: isChatAiModelAllowed("OPENAI", setting?.openaiModel)
+          ? setting.openaiModel
+          : DEFAULT_CHAT_AI_MODELS.OPENAI,
+        googleAiStudioModel: isChatAiModelAllowed("GOOGLE_AI_STUDIO", setting?.googleAiStudioModel)
+          ? setting.googleAiStudioModel
+          : DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO,
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
         quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies.filter((item) => item?.shortcut && item?.text) : [],
         aiReplyTone: setting?.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো",
@@ -178,6 +188,10 @@ export async function saveChatSettingsAction(formData) {
     const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
     const aiProvider = trim(formData.get("aiProvider")) || "OPENAI";
     if (!["OPENAI", "GOOGLE_AI_STUDIO"].includes(aiProvider)) throw new Error("AI provider নির্বাচনটি সঠিক নয়।");
+    const openaiModel = trim(formData.get("openaiModel")) || DEFAULT_CHAT_AI_MODELS.OPENAI;
+    const googleAiStudioModel = trim(formData.get("googleAiStudioModel")) || DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO;
+    if (!isChatAiModelAllowed("OPENAI", openaiModel)) throw new Error("OpenAI model নির্বাচনটি সঠিক নয়।");
+    if (!isChatAiModelAllowed("GOOGLE_AI_STUDIO", googleAiStudioModel)) throw new Error("Google AI model নির্বাচনটি সঠিক নয়।");
     const welcomeMessage = trim(formData.get("welcomeMessage")).slice(0, 300) || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?";
     const quickReplies = String(formData.get("quickReplies") || "").split("\n").map((line) => {
       const separator = line.indexOf("=");
@@ -218,8 +232,8 @@ export async function saveChatSettingsAction(formData) {
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");

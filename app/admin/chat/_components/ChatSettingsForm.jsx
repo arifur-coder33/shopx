@@ -4,6 +4,10 @@ import {
   revealChatCredentialAction,
   saveChatSettingsAction,
 } from "@/backend/serverActions/chatActions";
+import {
+  CHAT_AI_MODELS,
+  DEFAULT_CHAT_AI_MODELS,
+} from "@/backend/services/chatAiModels";
 import { CheckCircle2, Copy, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -55,6 +59,9 @@ export default function ChatSettingsForm({
   const [revealedCredentials, setRevealedCredentials] = useState({});
   const [generatedVerifyToken, setGeneratedVerifyToken] = useState("");
   const [tokenCopied, setTokenCopied] = useState(false);
+  const [aiProvider, setAiProvider] = useState(settings.aiProvider || "OPENAI");
+  const [openaiModel, setOpenaiModel] = useState(settings.openaiModel || DEFAULT_CHAT_AI_MODELS.OPENAI);
+  const [googleAiStudioModel, setGoogleAiStudioModel] = useState(settings.googleAiStudioModel || DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO);
 
   const save = async (event) => {
     event.preventDefault();
@@ -232,11 +239,25 @@ export default function ChatSettingsForm({
           </label>
           <label className="block">
             <span className="text-sm font-semibold text-text">AI reply provider</span>
-            <select name="aiProvider" defaultValue={settings.aiProvider || "OPENAI"} disabled={!canUpdate} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50">
+            <select name="aiProvider" value={aiProvider} onChange={(event) => setAiProvider(event.target.value)} disabled={!canUpdate} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50">
               <option value="OPENAI">OpenAI</option>
               <option value="GOOGLE_AI_STUDIO">Google AI Studio (Gemini)</option>
             </select>
             <span className="mt-1 block text-xs text-text-muted">নির্বাচিত provider-এর API key দিয়েই reply এবং product photo search চলবে।</span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-text">{aiProvider === "OPENAI" ? "OpenAI model" : "Google AI Studio model"}</span>
+            <input type="hidden" name="openaiModel" value={openaiModel} />
+            <input type="hidden" name="googleAiStudioModel" value={googleAiStudioModel} />
+            <select
+              value={aiProvider === "OPENAI" ? openaiModel : googleAiStudioModel}
+              onChange={(event) => aiProvider === "OPENAI" ? setOpenaiModel(event.target.value) : setGoogleAiStudioModel(event.target.value)}
+              disabled={!canUpdate}
+              className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50"
+            >
+              {CHAT_AI_MODELS[aiProvider].map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
+            </select>
+            <span className="mt-1 block text-xs text-text-muted">নির্বাচিত model database-এ সংরক্ষিত থাকবে। provider বদলালে সেই provider-এর model-ও আলাদা করে সংরক্ষণ করতে পারবেন।</span>
           </label>
           <div className="rounded-xl border border-border bg-background p-3 text-xs leading-5 text-text-muted">
             <p className="font-semibold text-text">Built-in AI guidance</p>

@@ -151,6 +151,8 @@ model Media {
   width                     Int?
   height                    Int?
   sizeBytes                 Int?
+  imageDifferenceHash       String?
+  imageAverageHash          String?
   categoryThumbnail         Category[]         @relation(name: "categoryThumbnail")
   categoryBanner            Category[]         @relation(name: "categoryBanner")
   // Reverse relations
@@ -1756,6 +1758,8 @@ model ChatSetting {
   tiktokEnabled        Boolean  @default(false)
   aiAutoReplyEnabled   Boolean  @default(false)
   aiProvider           String   @default("OPENAI")
+  openaiModel          String   @default("gpt-6-luna")
+  googleAiStudioModel  String   @default("gemini-3.8-flash")
   aiReplyTone          String   @default("বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো")
   aiReplyExamples      Json     @default("[]")
   welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
