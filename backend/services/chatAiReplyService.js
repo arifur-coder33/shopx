@@ -10,6 +10,7 @@ import {
 } from "@/backend/services/chatAiPrompt";
 import {
   sendChatChannelImageMessage,
+  sendMessengerProductCard,
   sendChatChannelTextMessage,
 } from "@/backend/services/chatChannelTextAdapter";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
@@ -21,6 +22,7 @@ import {
   hasInboundImage,
   isDeliveryQuestion,
   isProductImageRequest,
+  isProductVideoRequest,
   isProductQuestion,
   needsHumanFollowUp,
   selectRelevantAiReplyExamples,
@@ -33,6 +35,7 @@ import prisma from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { handleMessengerOrderFlow } from "@/backend/services/chatMessengerOrderFlow";
 import { findMatchingCatalogImage } from "@/backend/services/chatCatalogImageMatch";
+import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 
 const settingId = "primary";
 const ADDRESS_LABELS = {
@@ -47,6 +50,8 @@ const PRODUCT_SEARCH_STOPWORDS = new Set([
   "picture",
   "image",
   "pic",
+  "video", "videos", "vedio", "vdo", "clip", "link",
+  "unboxing", "unbox", "setup", "setting", "installation", "install", "demo", "review",
   "product",
   "products",
   "please",
@@ -91,6 +96,8 @@ const PRODUCT_SEARCH_STOPWORDS = new Set([
   "দাম",
   "ছবি",
   "ফটো",
+  "ভিডিও", "ভিডিয়ো", "ভিডিওটা", "ভিডিওটি", "ভিডিওর", "ভিডিওগুলো", "লিংক", "আনবক্সিং", "সেটিং", "সেটআপ", "ইনস্টল", "ডেমো", "রিভিউ",
+  "ছবিটা", "ছবিটি", "ফটোটা",
   "পণ্য",
   "প্রোডাক্ট",
   "দেন",
@@ -109,6 +116,9 @@ const PRODUCT_FOLLOW_UP_TERMS = new Set([
   "cost", "discount", "offer", "return", "refund", "exchange", "original",
   "ওয়ারেন্টি", "গ্যারান্টি", "মান", "ফিচার", "রং", "কালার", "সাইজ",
   "স্টক", "ডেলিভারি", "চার্জ", "দাম", "মূল্য", "ছাড়", "অফার",
+  "video", "videos", "vedio", "vdo", "clip", "link", "photo", "picture", "image", "pic", "chobi",
+  "unboxing", "unbox", "setup", "setting", "installation", "install", "demo", "review",
+  "ভিডিও", "ভিডিয়ো", "ভিডিওটা", "ভিডিওটি", "ভিডিওর", "ভিডিওগুলো", "লিংক", "ছবি", "ছবিটা", "ছবিটি", "ফটো", "ফটোটা", "আনবক্সিং", "সেটিং", "সেটআপ", "ইনস্টল", "ডেমো", "রিভিউ",
 ]);
 const PRODUCT_BROWSE_TERMS = new Set([
   "ki", "kono", "dekhao", "dekhan", "dekhte", "dekhaw", "diben",
@@ -132,6 +142,29 @@ function isStockQuestion(value) {
   if (/(?:\bstock\b|\bavailable\b|স্টক)/iu.test(text)) return true;
   return /(?:\b(?:ache|ase)\b|আছে)/iu.test(text) &&
     !/(?:warranty|guarantee|feature|quality|color|colour|size|delivery|shipping|\bcharge\b|ওয়ারেন্টি|গ্যারান্টি|ফিচার|রং|কালার|সাইজ|ডেলিভারি|চার্জ)/iu.test(text);
+}
+
+const VIDEO_KIND_WORDS = [
+  { words: /\b(?:unbox(?:ing)?)\b|আনবক্সিং|বক্স\s*খোলা/iu, labels: /\b(?:unbox(?:ing)?)\b|আনবক্সিং|বক্স\s*খোলা/iu },
+  { words: /\b(?:setup|set\s*up|setting|install(?:ation)?)\b|সেটিং|সেটআপ|ইনস্টল|লাগানো/iu, labels: /\b(?:setup|set\s*up|setting|install(?:ation)?)\b|সেটিং|সেটআপ|ইনস্টল|লাগানো/iu },
+  { words: /\b(?:demo|demonstration|usage|how\s*to\s*use|use)\b|ডেমো|ব্যবহার|চালানোর/iu, labels: /\b(?:demo|demonstration|usage|how\s*to\s*use|use)\b|ডেমো|ব্যবহার|চালানোর/iu },
+  { words: /\breview\b|রিভিউ/iu, labels: /\breview\b|রিভিউ/iu },
+];
+
+function requestedVideoKind(text, product) {
+  const namedKind = VIDEO_KIND_WORDS.find((kind) => kind.words.test(text));
+  if (namedKind) return (header) => namedKind.labels.test(header);
+  const productWords = new Set(`${product.title || ""} ${product.category || ""}`.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []);
+  const requestWords = String(text || "").toLowerCase()
+    .match(/[\p{L}\p{N}]{3,}/gu)?.filter((word) =>
+      !PRODUCT_SEARCH_STOPWORDS.has(word) &&
+      !PRODUCT_BROWSE_TERMS.has(word) &&
+      !productWords.has(word) &&
+      !["er", "ki", "ta", "tar", "kono", "dibe", "deben", "diba", "dao", "dekhte", "dekhabo", "apnar", "apni", "amake", "please"].includes(word),
+    ) || [];
+  return requestWords.length
+    ? (header) => requestWords.some((word) => header.toLowerCase().includes(word))
+    : null;
 }
 
 async function deriveCatalogSearchTerms(apiKey, customerText) {
@@ -310,6 +343,7 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
   const isProductFollowUp =
     isProductQuestion(text) ||
     isProductImageRequest(text) ||
+    isProductVideoRequest(text) ||
     /\b(?:eta|etar|this|that|it|number|option)\b|এটা|এটার|এইটা|এটির|নম্বর|অপশন/iu.test(
       text,
     );
@@ -376,6 +410,7 @@ async function getCatalog(
   const wantsProducts =
     isProductQuestion(messageText) ||
     isProductImageRequest(messageText) ||
+    isProductVideoRequest(messageText) ||
     imageTerms.length > 0 ||
     rememberedProductIds.length > 0 ||
     rememberedCategoryIds.length > 0 ||
@@ -483,6 +518,11 @@ async function getCatalog(
         title: true,
         slug: true,
         description: true,
+        videoUrl: true,
+        videos: {
+          orderBy: { sortOrder: "asc" },
+          select: { header: true, url: true, sortOrder: true },
+        },
         seoDescription: true,
         categoryId: true,
         specifications: {
@@ -825,6 +865,10 @@ async function getCatalog(
       imageUrls: [
         ...new Set(
           [
+            product.thumbnail?.url ||
+              (product.thumbnail?.name
+                ? `/uploads/${product.thumbnail.name}`
+                : null),
             ...product.variations.map(
               (variant) =>
                 variant.thumbnail?.url ||
@@ -832,10 +876,6 @@ async function getCatalog(
                   ? `/uploads/${variant.thumbnail.name}`
                   : null),
             ),
-            product.thumbnail?.url ||
-              (product.thumbnail?.name
-                ? `/uploads/${product.thumbnail.name}`
-                : null),
             ...product.gallery.map(
               ({ media }) =>
                 media?.url || (media?.name ? `/uploads/${media.name}` : null),
@@ -850,6 +890,7 @@ async function getCatalog(
                   parsed.hostname === "cloudinary.com" ||
                   parsed.hostname.endsWith(".cloudinary.com");
                 if (parsed.protocol !== "https:" || !allowedDomain) return null;
+                if (/\/(?:video|videos)\/(?:upload\/)?|\.(?:mp4|webm|mov)$/iu.test(parsed.pathname)) return null;
                 if (
                   channel === "TIKTOK" &&
                   parsed.hostname !== "cloudinary.com" &&
@@ -864,6 +905,15 @@ async function getCatalog(
             .filter(Boolean),
         ),
       ].slice(0, 4),
+      videos: (product.videos.length
+        ? product.videos
+        : product.videoUrl
+          ? [{ header: "পণ্যের ভিডিও", url: product.videoUrl, sortOrder: 0 }]
+          : []
+      ).filter((video) => {
+        try { return ["https:", "http:"].includes(new URL(video.url).protocol); }
+        catch { return false; }
+      }).map((video) => ({ header: video.header, url: video.url })),
       deliveryEstimateDays:
         product.deliveryMinDays && product.deliveryMaxDays
           ? `${product.deliveryMinDays}-${product.deliveryMaxDays}`
@@ -1305,6 +1355,37 @@ async function generateReply(
   const latestCustomerText =
     [...history].reverse().find((message) => message.direction === "INBOUND")
       ?.content || "";
+  if (isProductImageRequest(latestCustomerText) || isProductVideoRequest(latestCustomerText)) {
+    const mediaProduct = products.products.find((product) =>
+      product.id === productMemory.selectedProductId ||
+      (!productMemory.newProductSearch && product.id === productMemory.pageProductId),
+    ) || (products.products.length === 1 ? products.products[0] : null);
+    if (!mediaProduct) return {
+      text: "জি, কোন পণ্যটির ছবি বা ভিডিও দেখতে চান? পণ্যের নাম বা লিংকটি দিলে ঠিক সেটির মিডিয়া পাঠাচ্ছি।",
+      imageMatch: "none", products: [],
+    };
+    if (isProductVideoRequest(latestCustomerText)) {
+      const videos = mediaProduct.videos || [];
+      const kindMatch = requestedVideoKind(latestCustomerText, mediaProduct);
+      const matchingVideos = kindMatch ? videos.filter((video) => kindMatch(video.header)) : videos;
+      const text = matchingVideos.length
+        ? `জি, ${mediaProduct.title}-এর ${kindMatch ? "চাওয়া ধরনের " : ""}ভিডিও${matchingVideos.length > 1 ? "গুলো" : "টি"} এখানে:\n${matchingVideos.map((video) => `${video.header}: ${video.url}`).join("\n")}`
+        : videos.length
+          ? `দুঃখিত, ${mediaProduct.title}-এর চাওয়া ধরনের ভিডিও এখন নেই। আছে: ${videos.map((video) => video.header).join(", ")}।`
+          : `দুঃখিত, ${mediaProduct.title}-এর কোনো ভিডিও এখন দেওয়া নেই।`;
+      return { text, imageMatch: "none", products: [], selectedProductId: mediaProduct.id, videoLinks: matchingVideos };
+    }
+    const imageUrl = mediaProduct.imageUrls?.[0];
+    return {
+      text: imageUrl
+        ? `জি, ${mediaProduct.title}-এর ছবি এখানে: ${imageUrl}`
+        : `দুঃখিত, ${mediaProduct.title}-এর ছবি এখন দেওয়া নেই।`,
+      imageMatch: imageUrl ? "exact" : "none",
+      products: [],
+      selectedProductId: mediaProduct.id,
+      ...(imageUrl && { mediaPhoto: { url: imageUrl, productId: mediaProduct.id, productTitle: mediaProduct.title } }),
+    };
+  }
   const asksOrderHowTo = (text) =>
     /(?:\b(?:order|ordering)\b|অর্ডার)/iu.test(String(text || "")) &&
     /(?:\b(?:kivabe|kibhabe|ki\s*vabe|ki\s*bhabe|how|niyom|process|steps)\b|কীভাবে|কিভাবে|কেমন\s*করে|নিয়ম|পদ্ধতি|\border\s*(?:korbo|korbo\s+ekhon|korte\s+chai|dite\s+chai)|অর্ডার\s*(?:করব|করবো|দেব|দিতে\s*চাই|করতে\s*চাই))/iu.test(String(text || ""));
@@ -1579,15 +1660,29 @@ async function generateReply(
   };
 }
 
-async function deliverReply(conversation, content, credentials, products = []) {
+async function deliverReply(conversation, content, credentials, products = [], mediaPhoto = null, videoLinks = []) {
   if (conversation.channel === "WEBSITE") return { id: null, imageWarnings: [] };
   const sent = [];
   if (content.trim())
     sent.push(
-      await sendChatChannelTextMessage(conversation, content, credentials),
+      await sendChatChannelTextMessage(conversation, videoLinks.length ? content.split("\n")[0] : content, credentials),
     );
+  for (const video of videoLinks)
+    sent.push(await sendChatChannelTextMessage(conversation, `${video.header}: ${video.url}`, credentials));
   const imageWarnings = [];
+  if (mediaPhoto?.url) {
+    try { sent.push(await sendChatChannelImageMessage(conversation, "", mediaPhoto.url, credentials)); }
+    catch (error) { imageWarnings.push({ productId: mediaPhoto.productId, code: String(error?.code || "image_send_failed").slice(0, 80) }); }
+  }
   for (const product of products) {
+    if (conversation.channel === "MESSENGER") {
+      try { sent.push(await sendMessengerProductCard(conversation, product, credentials)); }
+      catch (error) {
+        imageWarnings.push({ productId: product.id, code: String(error?.code || "card_send_failed").slice(0, 80) });
+        sent.push(await sendChatChannelTextMessage(conversation, `${product.title}\n${product.url}`, credentials, null, [{ title: "আরও জানতে চাই", payload: `details:${product.id}` }, { title: "অর্ডার করতে চাই", payload: `order:${product.id}` }]));
+      }
+      continue;
+    }
     if (!product.imageUrls?.[0]) continue;
     const price = product.variants
       .map(
@@ -1631,13 +1726,6 @@ async function deliverReply(conversation, content, credentials, products = []) {
         code: String(error?.code || "image_send_failed").slice(0, 80),
       });
     }
-  }
-  if (conversation.channel === "MESSENGER" && products.length) {
-    const quickReplies = products.slice(0, 3).flatMap((product, index) => [
-      { title: products.length === 1 ? "বিস্তারিত জানতে চাই" : `পণ্য ${index + 1} বিস্তারিত`, payload: `details:${product.id}` },
-      { title: products.length === 1 ? "অর্ডার করতে চাই" : `পণ্য ${index + 1} অর্ডার`, payload: `order:${product.id}` },
-    ]);
-    sent.push(await sendChatChannelTextMessage(conversation, "কোন পণ্যটি সম্পর্কে জানতে বা অর্ডার করতে চান? নিচের বাটনে চাপুন।", credentials, null, quickReplies));
   }
   return { id: sent.find((result) => result.id)?.id || null, imageWarnings };
 }
@@ -1686,7 +1774,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         where: { id: settingId },
         select: {
           aiAutoReplyEnabled: true,
-          chatOrderCreationEnabled: true,
+          quickReplies: true,
           aiReplyTone: true,
           aiReplyExamples: true,
           encryptedCredentials: true,
@@ -1737,7 +1825,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     const credentials = decryptProviderCredentials(
       setting.encryptedCredentials,
     );
-    if (await handleMessengerOrderFlow({ conversation, inbound, credentials, canCreateOrder: setting.chatOrderCreationEnabled ?? true })) return;
+    if (await handleMessengerOrderFlow({ conversation, inbound, credentials, canCreateOrder: isChatOrderCreationEnabled(setting) })) return;
     if (!credentials.openaiApiKey) return;
 
     aiMessage = await prisma.chatMessage.create({
@@ -1812,7 +1900,11 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
             .match(/[\p{L}\p{N}]{3,}/gu) || []),
         ],
         conversation.channel,
-        exactPhotoProductId ? [exactPhotoProductId] : productMemory.catalogProductIds,
+        exactPhotoProductId
+          ? [exactPhotoProductId]
+          : (isProductImageRequest(inbound.content) || isProductVideoRequest(inbound.content)) && !productMemory.newProductSearch && productMemory.pageProductId
+            ? [...new Set([...productMemory.catalogProductIds, productMemory.pageProductId])]
+            : productMemory.catalogProductIds,
         productMemory.catalogCategoryIds,
         credentials.openaiApiKey,
         exactPhotoProductId ? false : productMemory.newProductSearch,
@@ -1829,12 +1921,12 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     });
     const exactPhotoProduct = exactPhotoProductId && productContext.products.find((product) => product.id === exactPhotoProductId);
     const exactPhotoPrices = exactPhotoProduct?.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((price) => price > 0) || [];
-    const contactOnlyRequest = conversation.channel === "WEBSITE" && setting.chatOrderCreationEnabled === false && /(?:অর্ডার\s*(?:করতে|করব|করবো|দিতে)|\border\s*(?:korbo|korte|dite|now)\b|কিনতে চাই|নিতে চাই)/iu.test(inbound.content);
+    const contactOnlyRequest = conversation.channel === "WEBSITE" && !isChatOrderCreationEnabled(setting) && /(?:অর্ডার\s*(?:করতে|করব|করবো|দিতে)|\border\s*(?:korbo|korte|dite|now)\b|কিনতে চাই|নিতে চাই)/iu.test(inbound.content);
     const generated = contactOnlyRequest ? {
       text: "আপনার নাম, ফোন নম্বর ও সম্পূর্ণ ঠিকানা দিন। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।",
       imageMatch: "none",
       products: [],
-    } : exactPhotoProduct ? {
+    } : exactPhotoProduct && !isProductImageRequest(inbound.content) && !isProductVideoRequest(inbound.content) ? {
       text: `জি, ছবির পণ্যটি আমাদের কাছে আছে—${exactPhotoProduct.title}${exactPhotoPrices.length ? `। দাম ৳${Math.min(...exactPhotoPrices).toLocaleString("en-BD")}${Math.max(...exactPhotoPrices) !== Math.min(...exactPhotoPrices) ? ` থেকে ৳${Math.max(...exactPhotoPrices).toLocaleString("en-BD")}` : ""}` : ""}${exactPhotoProduct.variants.some((variant) => variant.availableStock > 0) ? "। স্টক আছে।" : "। এখন স্টকে নেই।"}`,
       imageMatch: "exact",
       products: [exactPhotoProduct],
@@ -1848,9 +1940,11 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       customerImage,
       setting.aiReplyTone,
       setting.aiReplyExamples,
-      productMemory,
+      exactPhotoProduct ? { ...productMemory, selectedProductId: exactPhotoProduct.id } : productMemory,
     );
-    const content = generated.text;
+    const content = String(generated.text)
+      .replace(/(?:আমাদের\s+)?(?:ক্যাটালগে|catalogue?-এ)/giu, "আমাদের কাছে")
+      .replace(/(?:ক্যাটালগ|catalogue?)/giu, "পণ্যের তথ্য");
 
     if (await stopForHumanTakeover(conversationId, inbound, aiMessage.id)) {
       await prisma.chatMessage.update({
@@ -1872,6 +1966,8 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       content,
       credentials,
       generated.products,
+      generated.mediaPhoto,
+      generated.videoLinks,
     );
     const productOptions = generated.products.map((product) => {
           const prices = product.variants
@@ -1928,8 +2024,8 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       ...(delivery.imageWarnings.length && {
         imageWarnings: delivery.imageWarnings,
       }),
-      ...(productMemory.selectedProductId && {
-        selectedProductId: productMemory.selectedProductId,
+      ...((generated.selectedProductId || productMemory.selectedProductId) && {
+        selectedProductId: generated.selectedProductId || productMemory.selectedProductId,
       }),
       ...(productMemory.pageProductId && {
         pageProductId: productMemory.pageProductId,
@@ -1937,7 +2033,8 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         pageProductConfirmed: productMemory.pageProductConfirmed,
         pageProductConfirmationPending: productMemory.pageProductConfirmationRequired,
       }),
-      ...(conversation.channel !== "WEBSITE" && generated.products[0]?.imageUrls?.[0] && {
+      ...(generated.mediaPhoto?.url && { image: { ...generated.mediaPhoto, match: "exact" } }),
+      ...(conversation.channel !== "WEBSITE" && !generated.mediaPhoto && generated.products[0]?.imageUrls?.[0] && {
         image: {
           url: generated.products[0].imageUrls[0],
           productId: generated.products[0].id,

@@ -6,6 +6,14 @@ import { Check, CheckCheck, CircleAlert, ImagePlus, LoaderCircle, MessageCircle,
 const TOKEN_KEY = "storefront-chat-visitor";
 const PHONE_KEY = "storefront-chat-phone";
 
+function renderMessageText(content) {
+  return String(content || "").split(/(https?:\/\/[^\s]+)/giu).map((part, index) =>
+    /^https?:\/\//iu.test(part)
+      ? <a key={index} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline break-all">{part}</a>
+      : part,
+  );
+}
+
 function getToken() {
   try {
     let token = sessionStorage.getItem(TOKEN_KEY);
@@ -301,7 +309,7 @@ export default function WebsiteChatWidget() {
                 {message.metadata?.type === "ORDER_WEBSITE" && <a href={message.metadata.buyNowUrl} className="mt-2 block rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">অর্ডার পেজে যান</a>}
                 {message.metadata?.type === "ORDER_PLACED" && <a href={message.metadata.trackingUrl} className="mt-2 block rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">অর্ডার ট্র্যাক করুন</a>}
                 {message.metadata?.type === "ORDER_TIMELINE" && message.metadata.order && <div className="mb-1 rounded-xl bg-white p-3 text-gray-900"><strong className="block text-sm">অর্ডার {message.metadata.order.orderNo}</strong><p className="mt-1 text-xs">বর্তমান অবস্থা: {message.metadata.order.status}</p><ol className="mt-2 space-y-2 border-l border-gray-200 pl-3">{message.metadata.order.events.map((event, index) => <li key={`${event.status}-${index}`} className="text-xs"><b>{event.title}</b>{event.message ? ` · ${event.message}` : ""}{event.location ? ` · ${event.location}` : ""}<span className="mt-0.5 block text-[10px] text-gray-500">{new Intl.DateTimeFormat("bn-BD", { dateStyle: "short", timeStyle: "short" }).format(new Date(event.createdAt))}</span></li>)}</ol></div>}
-                {message.authorType === "AI" && message.deliveryStatus === "SENDING" ? <div role="status" aria-label="AI উত্তর লিখছে" className="flex min-w-14 items-center justify-center gap-1 rounded-full bg-slate-100 px-3 py-2">{[0, 1, 2].map((dot) => <span key={dot} className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: `${dot * 160}ms` }} />)}</div> : !["PRODUCT_CARD", "ORDER_TIMELINE"].includes(message.metadata?.type) && !(message.metadata?.image?.url && message.content === "📷 Photo") && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
+                {message.authorType === "AI" && message.deliveryStatus === "SENDING" ? <div role="status" aria-label="AI উত্তর লিখছে" className="flex min-w-14 items-center justify-center gap-1 rounded-full bg-slate-100 px-3 py-2">{[0, 1, 2].map((dot) => <span key={dot} className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: `${dot * 160}ms` }} />)}</div> : !["PRODUCT_CARD", "ORDER_TIMELINE"].includes(message.metadata?.type) && !(message.metadata?.image?.url && message.content === "📷 Photo") && <p className="whitespace-pre-wrap break-words">{renderMessageText(message.content)}</p>}
                 {message.metadata?.edited && <p className="mt-1 text-right text-[10px] italic opacity-70">edited</p>}
                 {message.direction === "INBOUND" && message.deliveryStatus && <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-600">{message.deliveryStatus === "SENDING" ? <LoaderCircle size={12} className="animate-spin" /> : message.deliveryStatus === "FAILED" ? <><CircleAlert size={13} />{!message.metadata?.photoRetryUnsupported && <button type="button" onClick={() => retryMessage(message)} className="inline-flex items-center gap-1 underline"><RotateCw size={11} />আবার পাঠান</button>}</> : message.deliveryStatus === "READ" ? <CheckCheck size={14} /> : <Check size={13} />}</p>}
               </div>

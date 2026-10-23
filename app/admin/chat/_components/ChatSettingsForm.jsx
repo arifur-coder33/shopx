@@ -407,7 +407,7 @@ export default function ChatSettingsForm({
             })}
           </div>
           <p className="text-xs leading-5 text-text-muted">
-            Meta app-এ WhatsApp webhook fields, Messenger-এর messages ও
+            Meta app-এ WhatsApp webhook fields, Messenger-এর messages, messaging_postbacks ও
             message_reactions এবং Instagram-এর messages fields subscribe করুন।
             Credentials না বসানো পর্যন্ত external channel off রাখুন।
             WhatsApp/Messenger reply delivery Meta-এর account setup, permissions

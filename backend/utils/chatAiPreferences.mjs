@@ -76,6 +76,10 @@ export function isProductImageRequest(text) {
   return /(?:\b(?:send|show|share|see|get)\b.{0,35}\b(?:photo|picture|image|pic)\b|\b(?:photo|picture|image|pic|chobi)\b.{0,35}\b(?:send|show|share|see|want|please|den|din|pathan|dekhan|chai)\b|ছবি|ফটো|পণ্যের\s*ছবি|প্রোডাক্টের\s*ছবি)/iu.test(message);
 }
 
+export function isProductVideoRequest(text) {
+  return /(?:\b(?:video|videos|vid|clip|vedio|vdo)\b|ভিডিও|ভিডিয়ো)/iu.test(String(text || ""));
+}
+
 export function hasInboundImage(metadata) {
   if (metadata?.image?.mediaId || metadata?.image?.url) return true;
   return (metadata?.attachments || []).some((attachment) => attachment?.type === "image" || attachment?.payload?.url && /image/i.test(attachment?.type || ""));

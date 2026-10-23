@@ -17,6 +17,7 @@ async function fingerprint(bytes) {
   const metadata = await source.metadata();
   const horizontal = await source.clone().resize(9, 8, { fit: "fill" }).grayscale().raw().toBuffer();
   const average = await source.clone().resize(8, 8, { fit: "fill" }).grayscale().raw().toBuffer();
+  const colors = await source.clone().resize(8, 8, { fit: "fill" }).removeAlpha().raw().toBuffer();
   let differenceHash = 0n;
   for (let y = 0; y < 8; y += 1) for (let x = 0; x < 8; x += 1) {
     differenceHash = (differenceHash << 1n) | BigInt(horizontal[y * 9 + x] > horizontal[y * 9 + x + 1] ? 1 : 0);
@@ -24,7 +25,7 @@ async function fingerprint(bytes) {
   const mean = average.reduce((total, pixel) => total + pixel, 0) / average.length;
   let averageHash = 0n;
   for (const pixel of average) averageHash = (averageHash << 1n) | BigInt(pixel >= mean ? 1 : 0);
-  return { differenceHash, averageHash, ratio: metadata.width / metadata.height };
+  return { differenceHash, averageHash, colors, ratio: metadata.width / metadata.height };
 }
 
 async function catalogFingerprint(media, siteUrl, deadline) {
@@ -82,7 +83,8 @@ export async function findMatchingCatalogImage(customerImage) {
       if (!match || Math.abs(match.ratio - target.ratio) > 0.12) continue;
       const difference = hamming(target.differenceHash, match.differenceHash);
       const average = hamming(target.averageHash, match.averageHash);
-      if (difference <= 7 && average <= 11) {
+      const colorDifference = target.colors.reduce((sum, value, index) => sum + Math.abs(value - match.colors[index]), 0) / target.colors.length;
+      if (difference <= 7 && average <= 11 && colorDifference <= 18) {
         const score = difference + average;
         if (!winner || score < winner.score) winner = { productId: item.productId, score };
       }

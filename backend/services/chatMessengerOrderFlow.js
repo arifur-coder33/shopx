@@ -51,7 +51,7 @@ export async function handleMessengerOrderFlow({ conversation, inbound, credenti
       else {
         next = null;
         reply = "তথ্য পেয়েছি। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।";
-        await prisma.chatConversation.update({ where: { id: conversation.id }, data: { customerName: flow.customerName, customerPhone: flow.phoneNumber, normalizedPhone: flow.phoneNumber.startsWith("88") ? `0${flow.phoneNumber.slice(2)}` : flow.phoneNumber, status: "PENDING" } });
+        await prisma.chatConversation.update({ where: { id: conversation.id }, data: { customerName: flow.customerName, customerPhone: flow.phoneNumber, normalizedPhone: flow.phoneNumber.startsWith("88") ? `0${flow.phoneNumber.slice(2)}` : flow.phoneNumber, status: "PENDING", aiModeEnabled: false } });
       }
     } else if (flow.step === "choice") {
       if (websiteChoice.test(text)) {

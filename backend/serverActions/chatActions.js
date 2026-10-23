@@ -11,6 +11,7 @@ import { groupChatInbox, normalizeChatPhone } from "@/lib/chatIdentity";
 import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscription } from "@/backend/services/orderPushService";
 import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
 import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
+import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 import { getMediaUsageIndex, syncLegacyChatMedia } from "@/backend/services/mediaUsageService";
 import jwt from "jsonwebtoken";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
@@ -121,14 +122,14 @@ export async function getChatSettingsAction() {
       success: true,
       data: {
         websiteChatEnabled: setting?.websiteChatEnabled ?? true,
-        chatOrderCreationEnabled: setting?.chatOrderCreationEnabled ?? true,
+        chatOrderCreationEnabled: isChatOrderCreationEnabled(setting),
         whatsappEnabled: setting?.whatsappEnabled ?? false,
         messengerEnabled: setting?.messengerEnabled ?? false,
         instagramEnabled: setting?.instagramEnabled ?? false,
         tiktokEnabled: setting?.tiktokEnabled ?? false,
         aiAutoReplyEnabled: setting?.aiAutoReplyEnabled ?? false,
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
-        quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies : [],
+        quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies.filter((item) => item?.shortcut && item?.text) : [],
         aiReplyTone: setting?.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো",
         aiReplyExamples: Array.isArray(setting?.aiReplyExamples) ? setting.aiReplyExamples : [],
         publicCredentials: {
@@ -182,6 +183,7 @@ export async function saveChatSettingsAction(formData) {
       const text = line.slice(separator + 1).trim().slice(0, 500);
       return shortcut && text ? { shortcut, text } : null;
     }).filter(Boolean).slice(0, 50);
+    quickReplies.push({ __chatOrderConfig: true, enabled: chatOrderCreationEnabled });
     const aiReplyTone = trim(formData.get("aiReplyTone")).replace(/[<>]/g, "").slice(0, 500) || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো";
     const aiReplyExamples = String(formData.get("aiReplyExamples") || "").split(/\r?\n/).map((line) => {
       const separator = line.indexOf("=>");
@@ -212,8 +214,8 @@ export async function saveChatSettingsAction(formData) {
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, chatOrderCreationEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, chatOrderCreationEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");

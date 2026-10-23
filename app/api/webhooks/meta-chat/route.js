@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { after } from "next/server";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
@@ -212,6 +212,15 @@ export async function POST(request) {
       }
       const messengerProfiles = new Map();
       for (const event of credentials.messengerEnabled && !isInstagramPayload ? entry.messaging || [] : []) {
+        if (event.postback?.payload && event.sender?.id) {
+          const payload = String(event.postback.payload).slice(0, 200);
+          if (/^(?:order|details):[a-zA-Z0-9_-]{5,80}$/u.test(payload)) {
+            const profile = messengerProfiles.get(event.sender.id) || await getMessengerCustomerProfile(event.sender.id, credentials);
+            messengerProfiles.set(event.sender.id, profile);
+            await saveInboundMessage({ channel: "MESSENGER", externalUserId: event.sender.id, customerName: profile?.name || null, profilePicUrl: profile?.profilePicUrl || null, messageId: `postback-${createHash("sha256").update(`${event.sender.id}:${event.timestamp}:${payload}`).digest("hex")}`, content: payload.startsWith("order:") ? "অর্ডার করতে চাই" : "এটা সম্পর্কে আরও জানতে চাই", metadata: { timestamp: event.timestamp, quickReplyPayload: payload } });
+          }
+          continue;
+        }
         if (event.reaction || event.message_reaction || event.message_reactions || event.message?.reaction) {
           await applyMessengerReaction(event, entry.id);
           continue;

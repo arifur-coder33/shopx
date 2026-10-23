@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
+import { after } from "next/server";
 import prisma from "@/lib/prisma";
 import { createOrder } from "@/backend/serverActions/orderActions";
+import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
+import { sendChatPushNotification } from "@/backend/services/chatPushService";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +26,9 @@ export async function POST(request) {
   if (!/^[a-f0-9-]{36}$/i.test(token) || (!productId && action !== "lead")) return Response.json({ success: false, message: "Invalid request." }, { status: 400 });
   const conversation = await prisma.chatConversation.findUnique({ where: { channel_externalUserId: { channel: "WEBSITE", externalUserId: createHash("sha256").update(token).digest("hex") } }, select: { id: true } });
   if (!conversation) return Response.json({ success: false, message: "Chat পাওয়া যায়নি।" }, { status: 404 });
-  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { websiteChatEnabled: true, chatOrderCreationEnabled: true } });
+  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { websiteChatEnabled: true, quickReplies: true } });
   if (setting?.websiteChatEnabled === false) return Response.json({ success: false, message: "Chat এখন বন্ধ আছে।" }, { status: 403 });
-  const canCreateOrder = setting?.chatOrderCreationEnabled ?? true;
+  const canCreateOrder = isChatOrderCreationEnabled(setting);
   const product = productId ? await prisma.product.findFirst({
     where: { id: productId, isActive: true, status: "ACTIVE" },
     select: { id: true, title: true, slug: true, description: true, seoDescription: true, allowOutOfStockOrder: true, codAvailable: true, advancePaymentType: true,
@@ -90,13 +93,13 @@ export async function POST(request) {
     if (!customerName || !validPhone(phoneNumber) || deliveryAddress.length < 8) return Response.json({ success: false, message: "নাম, সঠিক ফোন নম্বর ও সম্পূর্ণ ঠিকানা দিন।" }, { status: 400 });
     reply = "তথ্য পেয়েছি। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।";
     metadata = { ...metadata, type: "CONTACT_RECEIVED" };
-    await prisma.chatConversation.update({ where: { id: conversation.id }, data: { customerName, customerPhone: phoneNumber, normalizedPhone: phoneNumber.startsWith("88") ? `0${phoneNumber.slice(2)}` : phoneNumber, status: "PENDING" } });
     body.contactDetails = { customerName, phoneNumber, deliveryAddress };
   } else return Response.json({ success: false, message: "Unknown action." }, { status: 400 });
   const [inbound, outbound] = await prisma.$transaction([
     prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: action === "lead" ? `যোগাযোগের তথ্য:\nনাম: ${body.contactDetails.customerName}\nফোন: ${body.contactDetails.phoneNumber}\nঠিকানা: ${body.contactDetails.deliveryAddress}` : action === "place" ? "অর্ডার নিশ্চিত করুন" : action === "details" ? "এটা সম্পর্কে আরও জানতে চাই" : action === "order" ? "অর্ডার করতে চাই" : action === "website" ? "ওয়েবসাইটে অর্ডার করব" : "এখানে অর্ডার করব", deliveryStatus: "DELIVERED", metadata: { productId: product?.id || null, action } } }),
     prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "OUTBOUND", authorType: "AI", content: reply, deliveryStatus: "SENT", metadata } }),
-    prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: action === "lead" ? "PENDING" : "OPEN", unreadCount: { increment: 1 } } }),
+    prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: action === "lead" ? "PENDING" : "OPEN", ...(action === "lead" && { customerName: body.contactDetails.customerName, customerPhone: body.contactDetails.phoneNumber, normalizedPhone: body.contactDetails.phoneNumber.startsWith("88") ? `0${body.contactDetails.phoneNumber.slice(2)}` : body.contactDetails.phoneNumber, aiModeEnabled: false }), unreadCount: { increment: 1 } } }),
   ]);
+  if (action === "lead") after(() => sendChatPushNotification({ conversationId: conversation.id, channel: "WEBSITE", customerName: body.contactDetails.customerName, customerPhone: body.contactDetails.phoneNumber, content: inbound.content }).catch(() => {}));
   return Response.json({ success: true, data: { inboundId: inbound.id, outboundId: outbound.id, metadata } }, { headers: { "Cache-Control": "no-store" } });
 }

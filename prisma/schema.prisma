@@ -1749,7 +1749,6 @@ model ChatMessage {
 
 model ChatSetting {
   id                   String   @id
-  chatOrderCreationEnabled Boolean @default(true)
   websiteChatEnabled   Boolean  @default(true)
   whatsappEnabled      Boolean  @default(false)
   messengerEnabled     Boolean  @default(false)
