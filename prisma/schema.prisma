@@ -1755,6 +1755,7 @@ model ChatSetting {
   instagramEnabled     Boolean  @default(false)
   tiktokEnabled        Boolean  @default(false)
   aiAutoReplyEnabled   Boolean  @default(false)
+  aiProvider           String   @default("OPENAI")
   aiReplyTone          String   @default("বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো")
   aiReplyExamples      Json     @default("[]")
   welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")

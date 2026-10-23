@@ -221,7 +221,7 @@ export default function ChatSettingsForm({
         </section>
         <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
           <div>
-            <h2 className="font-bold text-text">ChatGPT AI auto reply</h2>
+            <h2 className="font-bold text-text">AI auto reply</h2>
             <p className="mt-1 text-xs leading-5 text-text-muted">
               Customer message এলে AI catalog-এর active product তথ্য দেখে উত্তর পাঠাবে। Product page থেকে chat এলে page-এর product চিনে নেবে; দাম বলার আগে product confirm করবে। অজানা দাম বা তথ্য অনুমান করবে না।
             </p>
@@ -229,6 +229,14 @@ export default function ChatSettingsForm({
           <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
             <span className="font-medium text-text">AI auto reply চালু করুন</span>
             <input name="aiAutoReplyEnabled" type="checkbox" defaultChecked={settings.aiAutoReplyEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-text">AI reply provider</span>
+            <select name="aiProvider" defaultValue={settings.aiProvider || "OPENAI"} disabled={!canUpdate} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50">
+              <option value="OPENAI">OpenAI</option>
+              <option value="GOOGLE_AI_STUDIO">Google AI Studio (Gemini)</option>
+            </select>
+            <span className="mt-1 block text-xs text-text-muted">নির্বাচিত provider-এর API key দিয়েই reply এবং product photo search চলবে।</span>
           </label>
           <div className="rounded-xl border border-border bg-background p-3 text-xs leading-5 text-text-muted">
             <p className="font-semibold text-text">Built-in AI guidance</p>
@@ -271,7 +279,31 @@ export default function ChatSettingsForm({
               </span>
             )}
           </label>
-          <p className="text-xs text-text-muted">API key encrypted অবস্থায় সংরক্ষিত হবে। AI reply WEBSITE এবং enabled external chat channel-এ পাঠানো হবে।</p>
+          <label className="block">
+            <span className="text-sm font-semibold text-text">Google AI Studio API key</span>
+            <span className="mt-1 flex rounded-lg border border-border bg-background focus-within:border-brand">
+              <input
+                name="googleAiStudioApiKey"
+                value={revealedCredentials.googleAiStudioApiKey || ""}
+                onChange={(event) => setRevealedCredentials((current) => ({ ...current, googleAiStudioApiKey: event.target.value }))}
+                type={showSecrets.googleAiStudioApiKey ? "text" : "password"}
+                placeholder={settings.configured?.googleAiStudioApiKey ? "•••••••••••• (সংরক্ষিত)" : "Google AI Studio API key"}
+                autoComplete="new-password"
+                disabled={!canUpdate}
+                className="min-w-0 flex-1 rounded-lg bg-transparent px-3 py-2 text-sm text-text outline-none disabled:opacity-50"
+              />
+              <button type="button" onClick={() => toggleCredential("googleAiStudioApiKey")} aria-label={showSecrets.googleAiStudioApiKey ? "Google AI Studio API key hide" : "Google AI Studio API key show"} className="px-3 text-text-muted">
+                {showSecrets.googleAiStudioApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </span>
+            {settings.configured?.googleAiStudioApiKey && (
+              <span className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+                <input type="checkbox" name="clear_googleAiStudioApiKey" value="true" disabled={!canUpdate} className="accent-[var(--color-brand)]" />
+                Saved API key মুছে দিন
+              </span>
+            )}
+          </label>
+          <p className="text-xs text-text-muted">OpenAI ও Google key encrypted অবস্থায় থাকবে। নির্বাচিত provider দিয়ে AI reply WEBSITE এবং enabled external chat channel-এ পাঠানো হবে।</p>
         </section>
         <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
           <div>

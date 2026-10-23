@@ -1,0 +1,2 @@
+ALTER TABLE "ChatSetting"
+ADD COLUMN "aiProvider" TEXT NOT NULL DEFAULT 'OPENAI';
