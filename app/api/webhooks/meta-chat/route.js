@@ -156,18 +156,32 @@ async function applyMessengerReaction(event, pageId) {
   });
 }
 
-async function applyMetaDeliveryStatus(channel, externalMessageId, status) {
+async function applyMetaDeliveryStatus(channel, externalMessageId, status, errors = []) {
   if (!externalMessageId) return;
   const mapped = ({ sent: "SENT", delivered: "DELIVERED", read: "READ", failed: "FAILED" })[status];
   if (!mapped) return;
   const message = await prisma.chatMessage.findFirst({
     where: { channel, externalMessageId, direction: "OUTBOUND" },
-    select: { id: true, deliveryStatus: true },
+    select: { id: true, deliveryStatus: true, metadata: true },
   });
   if (!message) return;
   const rank = { SENDING: 0, SENT: 1, DELIVERED: 2, READ: 3, FAILED: 4 };
   if ((rank[mapped] ?? 0) >= (rank[message.deliveryStatus] ?? 0)) {
-    await prisma.chatMessage.update({ where: { id: message.id }, data: { deliveryStatus: mapped } });
+    const failure = status === "failed" ? errors[0] : null;
+    await prisma.chatMessage.update({
+      where: { id: message.id },
+      data: {
+        deliveryStatus: mapped,
+        ...(failure && { metadata: {
+          ...(message.metadata || {}),
+          deliveryError: {
+            code: String(failure.code || "").slice(0, 40),
+            title: String(failure.title || "").slice(0, 180),
+            message: String(failure.message || failure.error_data?.details || "").slice(0, 400),
+          },
+        } }),
+      },
+    });
   }
 }
 
@@ -187,7 +201,7 @@ export async function POST(request) {
       for (const change of entry.changes || []) {
         const value = change.value || {};
         if (credentials.whatsappEnabled) {
-          for (const status of value.statuses || []) await applyMetaDeliveryStatus("WHATSAPP", status.id, status.status);
+          for (const status of value.statuses || []) await applyMetaDeliveryStatus("WHATSAPP", status.id, status.status, status.errors || []);
         }
         const contacts = new Map((value.contacts || []).map((contact) => [contact.wa_id, contact.profile?.name]));
         for (const message of credentials.whatsappEnabled ? value.messages || [] : []) {

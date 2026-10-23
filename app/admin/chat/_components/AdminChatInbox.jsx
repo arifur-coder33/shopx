@@ -1131,7 +1131,7 @@ export default function AdminChatInbox({
                     return groups;
                   }, []);
                   const imageUrls = [
-                    ...(!message.metadata?.productOptions?.length && message.metadata?.image?.url && !(message.authorType === "AI" && message.channel !== "WEBSITE" && message.metadata?.type !== "PRODUCT_MEDIA") ? [message.metadata.image.url] : []),
+                    ...(!message.metadata?.productOptions?.length && message.metadata?.image?.url && !(message.authorType === "AI" && message.channel !== "WEBSITE" && (message.metadata?.type !== "PRODUCT_MEDIA" || message.deliveryStatus === "FAILED")) ? [message.metadata.image.url] : []),
                     ...(message.metadata?.image?.mediaId && message.channel === "WHATSAPP"
                       ? [`/api/admin/chat/media/${encodeURIComponent(message.id)}`]
                       : []),
@@ -1316,7 +1316,7 @@ export default function AdminChatInbox({
                           <img src={imageUrl} alt="Customer sent image" loading="lazy" className="max-h-80 w-full object-contain" />
                         </a>
                       ))}
-                      {(message.channel === "WEBSITE" || (message.channel === "MESSENGER" && message.metadata?.type === "PRODUCT_MEDIA") ? message.metadata?.productOptions || [] : []).map((product, index) => (
+                      {(message.channel === "WEBSITE" || (message.channel === "MESSENGER" && message.metadata?.type === "PRODUCT_MEDIA" && message.deliveryStatus !== "FAILED") ? message.metadata?.productOptions || [] : []).map((product, index) => (
                         <div key={`${message.id}-product-${product.id}`} className="mb-2 max-w-sm overflow-hidden rounded-xl border border-black/10 bg-white">
                           {product.imageUrl && <a href={product.imageUrl} target="_blank" rel="noreferrer"><img src={product.imageUrl} alt={product.title} loading="lazy" className="max-h-64 w-full object-contain" /></a>}
                           <div className="p-3 text-sm"><strong>পণ্য-{message.metadata?.suggestionIndex || index + 1}: {product.title}</strong>{product.price != null && <p className="mt-1 font-semibold">৳{Number(product.price).toLocaleString("en-BD")}</p>}{product.features?.length > 0 && <p className="mt-1 text-xs text-slate-600">{product.features.join(" · ")}</p>}{product.variants?.length > 1 && <ul className="mt-2 space-y-2 text-xs text-slate-700">{product.variants.map((variant, variantIndex) => <li key={`${product.id}-variant-${variantIndex}`} className="flex items-center gap-2">{variant.imageUrl && <img src={variant.imageUrl} alt="" loading="lazy" className="h-8 w-8 rounded object-cover" />}<span>• {variant.label}{variant.price != null ? ` · ৳${Number(variant.price).toLocaleString("en-BD")}` : ""}{variant.inStock === false ? " · স্টক নেই" : ""}</span></li>)}</ul>}<div className="mt-3 flex gap-2">{product.url && <a href={product.url} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700">পণ্য দেখুন</a>}{product.buyNowUrl && <a href={product.buyNowUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">এখনই কিনুন</a>}</div></div>
@@ -1386,7 +1386,7 @@ export default function AdminChatInbox({
                                 <Check size={14} />
                               )}
                             </span>
-                            {message.deliveryStatus === "FAILED" &&
+                            {message.deliveryStatus === "FAILED" && message.authorType === "AGENT" &&
                               canUpdate && (
                                 <button
                                   type="button"
@@ -1401,6 +1401,12 @@ export default function AdminChatInbox({
                           </>
                         )}
                       </p>
+                      {message.metadata?.deliveryError && message.deliveryStatus === "FAILED" && (
+                        <p className="mt-1 text-xs text-red-700">Meta delivery error {message.metadata.deliveryError.code}: {message.metadata.deliveryError.title || message.metadata.deliveryError.message}</p>
+                      )}
+                      {message.metadata?.imageWarnings?.length > 0 && (
+                        <p className="mt-1 text-xs text-amber-700">পণ্যের ছবি পাঠানো যায়নি; customer-কে পণ্যের লিংক পাঠানো হয়েছে।</p>
+                      )}
                       {reactionGroups.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1" aria-label="Message reactions">
                           {reactionGroups.map((group) => (
