@@ -27,7 +27,7 @@ export async function GET(request) {
   if (!/^[a-f0-9-]{36}$/i.test(token)) return Response.json({ success: false }, { status: 400 });
   const conversation = await prisma.chatConversation.findUnique({
     where: { channel_externalUserId: { channel: "WEBSITE", externalUserId: hashToken(token) } },
-    select: { id: true, status: true, messages: { orderBy: { createdAt: "asc" }, take: 100, select: { id: true, direction: true, content: true, deliveryStatus: true, metadata: true, createdAt: true } } },
+    select: { id: true, status: true, messages: { where: { OR: [{ direction: "INBOUND" }, { deliveryStatus: { not: "FAILED" } }] }, orderBy: { createdAt: "asc" }, take: 100, select: { id: true, direction: true, content: true, deliveryStatus: true, metadata: true, createdAt: true } } },
   });
   if (conversation) await prisma.chatMessage.updateMany({
     where: { conversationId: conversation.id, direction: "OUTBOUND", deliveryStatus: "SENT" },

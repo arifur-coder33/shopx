@@ -339,20 +339,43 @@ async function requestAiOutput({ ai, model, instructions, input, maxOutputTokens
       else contents.push({ role, parts });
     }
     const googleModel = model?.startsWith("gemini-") ? model : "gemini-3.8-flash";
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": ai.apiKey },
-      body: JSON.stringify({
-        contents,
-        systemInstruction: { parts: [{ text: systemTexts.join("\n\n") }] },
-        generationConfig: { responseMimeType: "application/json", maxOutputTokens, ...(responseSchema && { responseSchema: googleSchema(responseSchema) }) },
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(30000),
-    });
-    const result = await response.json().catch(() => ({}));
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:generateContent`;
+    const sendGoogleRequest = (includeSchema) =>
+      fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": ai.apiKey,
+        },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: { parts: [{ text: systemTexts.join("\n\n") }] },
+          generationConfig: {
+            responseMimeType: "application/json",
+            // Gemini 3 counts its reasoning within the output budget; leave enough room for JSON.
+            maxOutputTokens: Math.max(Number(maxOutputTokens) || 0, 1024),
+            thinkingConfig: { thinkingLevel: "LOW" },
+            ...(includeSchema &&
+              responseSchema && {
+                responseSchema: googleSchema(responseSchema),
+              }),
+          },
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(45000),
+      });
+    let response = await sendGoogleRequest(true);
+    let result = await response.json().catch(() => ({}));
+    // Gemini may reject a schema keyword that its structured-output decoder does not support.
+    // JSON mode keeps the response parseable and lets the application validate the fields below.
+    if (!response.ok && response.status === 400 && responseSchema) {
+      response = await sendGoogleRequest(false);
+      result = await response.json().catch(() => ({}));
+    }
     if (!response.ok) {
-      const error = new Error(result?.error?.message || "Google AI Studio reply তৈরি করতে পারেনি।");
+      const error = new Error(
+        result?.error?.message || "Google AI Studio reply তৈরি করতে পারেনি।",
+      );
       error.code = result?.error?.status || `http_${response.status}`;
       throw error;
     }
@@ -2476,6 +2499,7 @@ async function stopForHumanTakeover(
 
 export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
   let aiMessage = null;
+  let aiProviderUsed = "OPENAI";
   try {
     const [setting, initialConversation, inbound] = await Promise.all([
       prisma.chatSetting.findUnique({
@@ -2544,6 +2568,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           ? credentials.googleAiStudioApiKey
           : credentials.openaiApiKey,
     };
+    aiProviderUsed = aiConfig.provider;
     if (
       await handleMessengerOrderFlow({
         conversation,
@@ -2919,17 +2944,22 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     ]);
   } catch (error) {
     if (error?.code === "P2002") return;
-    console.error("AI chat reply failed:", error?.message || error);
+    console.error("AI chat reply failed:", {
+      provider: aiProviderUsed,
+      code: error?.code || "ai_reply_failed",
+      message: error?.message || String(error),
+    });
     if (aiMessage?.id) {
       await prisma.chatMessage
         .update({
           where: { id: aiMessage.id },
           data: {
-            content:
-              "স্বয়ংক্রিয় উত্তর পাঠানো যায়নি। অনুগ্রহ করে customer-কে manual reply দিন।",
+            content: "AI reply তৈরি হয়নি। API configuration ও server log দেখুন।",
             deliveryStatus: "FAILED",
             metadata: {
               aiPromptVersion: CHAT_AI_PROMPT_VERSION,
+              aiProvider: aiProviderUsed,
+              internalOnly: true,
               aiErrorCode: String(error?.code || "ai_reply_failed").slice(
                 0,
                 100,
