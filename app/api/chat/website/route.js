@@ -78,12 +78,12 @@ export async function POST(request) {
     const conversation = await prisma.chatConversation.upsert({
       where: { channel_externalUserId: { channel: "WEBSITE", externalUserId } },
       create: { channel: "WEBSITE", externalUserId, customerName, customerPhone, customerUserId: account?.id || null, lastMessageAt: new Date() },
-      update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone }), ...(account?.id && { customerUserId: account.id }), lastMessageAt: new Date(), status: "OPEN" },
-      select: { id: true },
+      update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone }), ...(account?.id && { customerUserId: account.id }), lastMessageAt: new Date() },
+      select: { id: true, needsHumanAssistant: true },
     });
     const [message] = await prisma.$transaction([
       prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content, deliveryStatus: "DELIVERED", ...(websitePage && { metadata: { websitePage } }) } }),
-      prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } }),
+      prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: conversation.needsHumanAssistant ? "PENDING" : "OPEN", unreadCount: { increment: 1 } } }),
     ]);
     after(async () => {
       await Promise.allSettled([

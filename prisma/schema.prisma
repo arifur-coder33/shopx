@@ -1728,6 +1728,9 @@ model ChatConversation {
   lastMessageAt    DateTime               @default(now())
   unreadCount      Int                    @default(0)
   aiModeEnabled    Boolean                @default(true)
+  needsHumanAssistant Boolean            @default(false)
+  humanAssistantReason String?
+  awaitingHumanPhone Boolean             @default(false)
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   messages         ChatMessage[]
@@ -1737,6 +1740,7 @@ model ChatConversation {
   @@index([channel, status, lastMessageAt])
   @@index([normalizedPhone, lastMessageAt])
   @@index([assignedToId, status])
+  @@index([needsHumanAssistant, lastMessageAt])
   @@index([customerUserId])
 }
 

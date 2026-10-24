@@ -310,10 +310,11 @@ export async function getChatMediaLibraryAction() {
 export async function getChatInboxAction({ channel = "ALL", status = "OPEN", search = "" } = {}) {
   try {
     await requireProcurementPermission("chat", "view");
+    if (!["ALL", "OPEN", "PENDING", "CLOSED", "NEEDS_HUMAN"].includes(status)) throw new Error("Invalid conversation filter.");
     const conversations = await prisma.chatConversation.findMany({
       where: {
         ...(channel !== "ALL" && { channel }),
-        ...(status !== "ALL" && { status }),
+        ...(status === "NEEDS_HUMAN" ? { needsHumanAssistant: true } : status !== "ALL" && { status }),
         ...(trim(search) && { OR: [
           { customerName: { contains: trim(search), mode: "insensitive" } },
           { customerPhone: { contains: trim(search), mode: "insensitive" } },
@@ -325,6 +326,7 @@ export async function getChatInboxAction({ channel = "ALL", status = "OPEN", sea
       select: {
         id: true, channel: true, externalUserId: true, customerName: true, customerPhone: true, normalizedPhone: true, profilePicUrl: true, status: true,
         lastMessageAt: true, unreadCount: true, assignedToId: true, assignedTo: { select: { name: true } }, aiModeEnabled: true,
+        needsHumanAssistant: true, humanAssistantReason: true, awaitingHumanPhone: true,
         messages: { orderBy: { createdAt: "desc" }, take: 1, select: { content: true, direction: true, createdAt: true } },
       },
     });
@@ -349,6 +351,8 @@ export async function getChatConversationAction(conversationId) {
     ]);
     const conversation = {
       ...selected,
+      needsHumanAssistant: linked.some((item) => item.needsHumanAssistant),
+      humanAssistantReason: linked.find((item) => item.needsHumanAssistant)?.humanAssistantReason || null,
       customerName: linked.find((item) => item.channel === "MESSENGER" && item.customerName)?.customerName || linked.map((item) => item.customerName).filter(Boolean).sort((a, b) => b.trim().split(/\s+/).length - a.trim().split(/\s+/).length)[0] || selected.customerName,
       customerPhone: selected.customerPhone || linked.find((item) => item.customerPhone)?.customerPhone || null,
       profilePicUrl: linked.find((item) => item.profilePicUrl)?.profilePicUrl || null,
@@ -805,20 +809,23 @@ export async function deleteChatConversationAction(conversationId) {
   }
 }
 
-export async function updateChatConversationAction(conversationId, { status, assignedToId, aiModeEnabled } = {}) {
+export async function updateChatConversationAction(conversationId, { status, assignedToId, aiModeEnabled, needsHumanAssistant } = {}) {
   try {
     await requireProcurementPermission("chat", "update");
     if (status && !["OPEN", "PENDING", "CLOSED"].includes(status)) throw new Error("Invalid conversation status.");
     if (aiModeEnabled !== undefined && typeof aiModeEnabled !== "boolean") throw new Error("Invalid AI mode setting.");
+    if (needsHumanAssistant !== undefined && typeof needsHumanAssistant !== "boolean") throw new Error("Invalid assistance setting.");
     const selected = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, channel: true, normalizedPhone: true, assignedToId: true } });
     if (!selected) throw new Error("Conversation not found.");
     if (aiModeEnabled === true && (assignedToId || (assignedToId === undefined && selected.assignedToId))) throw new Error("আগে conversation unassign করুন, তারপর AI চালু করুন।");
     const data = { ...(status && { status }), ...(assignedToId !== undefined && { assignedToId }), ...(aiModeEnabled !== undefined && { aiModeEnabled }), ...((assignedToId || status === "PENDING") && { aiModeEnabled: false }) };
+    if (needsHumanAssistant === true) Object.assign(data, { needsHumanAssistant: true, humanAssistantReason: "MANUAL", awaitingHumanPhone: false, status: "PENDING", aiModeEnabled: false });
+    if (needsHumanAssistant === false || status === "CLOSED" || aiModeEnabled === true) Object.assign(data, { needsHumanAssistant: false, humanAssistantReason: null, awaitingHumanPhone: false });
     const where = selected.normalizedPhone && ["WHATSAPP", "MESSENGER"].includes(selected.channel)
       ? { normalizedPhone: selected.normalizedPhone, channel: { in: ["WHATSAPP", "MESSENGER"] } }
       : { id: conversationId };
     await prisma.chatConversation.updateMany({ where, data });
-    const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, status: true, assignedToId: true, aiModeEnabled: true } });
+    const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { id: true, status: true, assignedToId: true, aiModeEnabled: true, needsHumanAssistant: true, humanAssistantReason: true, awaitingHumanPhone: true } });
     return { success: true, data: conversation };
   } catch (error) {
     return actionError(error, "Conversation could not be updated.");

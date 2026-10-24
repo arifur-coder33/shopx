@@ -45,16 +45,16 @@ export async function POST(request) {
     inStock: product.allowOutOfStockOrder || variant.stocks.some((stock) => stock.available > 0),
   }));
   const buyNowUrl = product ? `/buynow/${encodeURIComponent(product.slug)}` : null;
-  if (action === "details" && setting?.aiAutoReplyEnabled && setting.encryptedCredentials && conversation.aiModeEnabled) {
+  if (["details", "select"].includes(action) && setting?.aiAutoReplyEnabled && setting.encryptedCredentials && conversation.aiModeEnabled) {
     const inbound = await prisma.chatMessage.create({
       data: {
         conversationId: conversation.id,
         channel: "WEBSITE",
         direction: "INBOUND",
         authorType: "CUSTOMER",
-        content: "এটা সম্পর্কে আরও জানতে চাই",
+        content: action === "select" ? `এই পণ্যটি নির্বাচন করলাম: ${product.title}। এটি সম্পর্কে বিস্তারিত জানান।` : "এটা সম্পর্কে আরও জানতে চাই",
         deliveryStatus: "DELIVERED",
-        metadata: { productId: product.id, quickReplyPayload: `details:${product.id}`, action: "details" },
+        metadata: { productId: product.id, quickReplyPayload: `${action}:${product.id}`, action },
       },
     });
     await prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } });
@@ -63,7 +63,10 @@ export async function POST(request) {
   }
   let reply;
   let metadata = { productId: product?.id || null };
-  if (action === "details") {
+  if (action === "select") {
+    reply = `জি, ${product.title} পণ্যটি নির্বাচন করা হয়েছে। এটি সম্পর্কে কী জানতে চান?`;
+    metadata = { ...metadata, type: "PRODUCT_SELECTED", selectedProductId: product.id };
+  } else if (action === "details") {
     const description = clean((product.description || product.seoDescription || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " "), 850);
     const features = product.specifications.map((spec) => `${spec.specification?.name}: ${spec.value}`).filter(Boolean);
     reply = [description || "এই পণ্যের বিস্তারিত বিবরণ এখন দেওয়া নেই।", ...features.map((feature) => `• ${feature}`)].join("\n");
@@ -113,7 +116,7 @@ export async function POST(request) {
     body.contactDetails = { customerName, phoneNumber, deliveryAddress };
   } else return Response.json({ success: false, message: "Unknown action." }, { status: 400 });
   const [inbound, outbound] = await prisma.$transaction([
-    prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: action === "lead" ? `যোগাযোগের তথ্য:\nনাম: ${body.contactDetails.customerName}\nফোন: ${body.contactDetails.phoneNumber}\nঠিকানা: ${body.contactDetails.deliveryAddress}` : action === "place" ? "অর্ডার নিশ্চিত করুন" : action === "details" ? "এটা সম্পর্কে আরও জানতে চাই" : action === "order" ? "অর্ডার করতে চাই" : action === "website" ? "ওয়েবসাইটে অর্ডার করব" : "এখানে অর্ডার করব", deliveryStatus: "DELIVERED", metadata: { productId: product?.id || null, action } } }),
+    prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: action === "lead" ? `যোগাযোগের তথ্য:\nনাম: ${body.contactDetails.customerName}\nফোন: ${body.contactDetails.phoneNumber}\nঠিকানা: ${body.contactDetails.deliveryAddress}` : action === "select" ? `এই পণ্যটি নির্বাচন করলাম: ${product.title}` : action === "place" ? "অর্ডার নিশ্চিত করুন" : action === "details" ? "এটা সম্পর্কে আরও জানতে চাই" : action === "order" ? "অর্ডার করতে চাই" : action === "website" ? "ওয়েবসাইটে অর্ডার করব" : "এখানে অর্ডার করব", deliveryStatus: "DELIVERED", metadata: { productId: product?.id || null, action, ...(action === "select" && { quickReplyPayload: `select:${product.id}` }) } } }),
     prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "OUTBOUND", authorType: "AI", content: reply, deliveryStatus: "SENT", metadata } }),
     prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: action === "lead" ? "PENDING" : "OPEN", ...(action === "lead" && { customerName: body.contactDetails.customerName, customerPhone: body.contactDetails.phoneNumber, normalizedPhone: body.contactDetails.phoneNumber.startsWith("88") ? `0${body.contactDetails.phoneNumber.slice(2)}` : body.contactDetails.phoneNumber, aiModeEnabled: false }), unreadCount: { increment: 1 } } }),
   ]);

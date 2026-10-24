@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
+import { whatsAppSelectedProduct } from "@/backend/utils/chatProductSelection.mjs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -71,8 +72,8 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
   const conversation = await prisma.chatConversation.upsert({
     where: { channel_externalUserId: { channel, externalUserId } },
     create: { channel, externalUserId, customerName: customerName || null, customerPhone: customerPhone || null, normalizedPhone, profilePicUrl: profilePicUrl || null, lastMessageAt: new Date() },
-    update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone, normalizedPhone }), ...(profilePicUrl && { profilePicUrl }), lastMessageAt: new Date(), status: "OPEN" },
-    select: { id: true },
+    update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone, normalizedPhone }), ...(profilePicUrl && { profilePicUrl }), lastMessageAt: new Date() },
+    select: { id: true, needsHumanAssistant: true },
   });
   const replyToExternalMessageId = metadata?.replyToExternalMessageId;
   let savedMetadata = metadata;
@@ -92,7 +93,7 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
     });
     await tx.chatConversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: new Date(), ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) },
+      data: { lastMessageAt: new Date(), status: conversation.needsHumanAssistant ? "PENDING" : "OPEN", ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) },
     });
     return inserted.count;
   });
@@ -206,7 +207,8 @@ export async function POST(request) {
         const contacts = new Map((value.contacts || []).map((contact) => [contact.wa_id, contact.profile?.name]));
         for (const message of credentials.whatsappEnabled ? value.messages || [] : []) {
           if (message.edit && await applyMetaMessageEdit("WHATSAPP", message.edit)) continue;
-          const text = message.text?.body || message.image?.caption || message.document?.caption || `[${message.type || "unsupported"} message]`;
+          const selectedProductId = whatsAppSelectedProduct(message);
+          const text = selectedProductId ? "এই পণ্যটি নির্বাচন করলাম। এটি সম্পর্কে বিস্তারিত জানান।" : message.text?.body || message.image?.caption || message.document?.caption || message.interactive?.button_reply?.title || `[${message.type || "unsupported"} message]`;
           await saveInboundMessage({
             channel: "WHATSAPP",
             externalUserId: message.from,
@@ -218,6 +220,7 @@ export async function POST(request) {
               type: message.type,
               timestamp: message.timestamp,
               phoneNumberId: value.metadata?.phone_number_id,
+              ...(selectedProductId && { productId: selectedProductId, quickReplyPayload: `select:${selectedProductId}`, action: "select" }),
               ...(message.context?.id && { replyToExternalMessageId: message.context.id }),
               ...(message.image?.id && { image: { mediaId: message.image.id, mimeType: message.image.mime_type || "image/jpeg", caption: message.image.caption || null } }),
             },
@@ -228,10 +231,10 @@ export async function POST(request) {
       for (const event of credentials.messengerEnabled && !isInstagramPayload ? entry.messaging || [] : []) {
         if (event.postback?.payload && event.sender?.id) {
           const payload = String(event.postback.payload).slice(0, 200);
-          if (/^(?:order|details):[a-zA-Z0-9_-]{5,80}$/u.test(payload)) {
+          if (/^(?:order|details|select):[a-zA-Z0-9_-]{5,80}$/u.test(payload)) {
             const profile = messengerProfiles.get(event.sender.id) || await getMessengerCustomerProfile(event.sender.id, credentials);
             messengerProfiles.set(event.sender.id, profile);
-            await saveInboundMessage({ channel: "MESSENGER", externalUserId: event.sender.id, customerName: profile?.name || null, profilePicUrl: profile?.profilePicUrl || null, messageId: `postback-${createHash("sha256").update(`${event.sender.id}:${event.timestamp}:${payload}`).digest("hex")}`, content: payload.startsWith("order:") ? "অর্ডার করতে চাই" : "এটা সম্পর্কে আরও জানতে চাই", metadata: { timestamp: event.timestamp, quickReplyPayload: payload } });
+            await saveInboundMessage({ channel: "MESSENGER", externalUserId: event.sender.id, customerName: profile?.name || null, profilePicUrl: profile?.profilePicUrl || null, messageId: `postback-${createHash("sha256").update(`${event.sender.id}:${event.timestamp}:${payload}`).digest("hex")}`, content: payload.startsWith("order:") ? "অর্ডার করতে চাই" : payload.startsWith("select:") ? "এই পণ্যটি নির্বাচন করলাম। এটি সম্পর্কে বিস্তারিত জানান।" : "এটা সম্পর্কে আরও জানতে চাই", metadata: { timestamp: event.timestamp, quickReplyPayload: payload } });
           }
           continue;
         }

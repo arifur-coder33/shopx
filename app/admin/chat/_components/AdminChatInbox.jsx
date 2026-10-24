@@ -768,6 +768,16 @@ export default function AdminChatInbox({
     else setError(result.message || "AI mode could not be updated.");
   };
 
+  const toggleHumanAssistance = async () => {
+    if (!conversation || !canUpdate) return;
+    const result = await updateChatConversationAction(selectedId, {
+      needsHumanAssistant: !conversation.needsHumanAssistant,
+      ...(conversation.needsHumanAssistant && { status: "OPEN" }),
+    });
+    if (result.success) await Promise.all([loadConversation(), loadInbox()]);
+    else setError(result.message || "Human assistance status could not be updated.");
+  };
+
   const enableNotifications = async () => {
     if (
       !("Notification" in window) ||
@@ -949,6 +959,7 @@ export default function AdminChatInbox({
               >
                 <option value="OPEN">Open</option>
                 <option value="PENDING">Pending</option>
+                <option value="NEEDS_HUMAN">Need human assistant</option>
                 <option value="CLOSED">Closed</option>
                 <option value="ALL">সব status</option>
               </select>
@@ -993,6 +1004,7 @@ export default function AdminChatInbox({
                             )}
                           </span>
                         </span>
+                        {item.needsHumanAssistant && <span className="mt-1 block text-[10px] font-semibold text-amber-700">Need human assistant</span>}
                         <span className="mt-1 block truncate text-xs text-text-muted">
                           {lastMessage?.direction === "OUTBOUND"
                             ? "আপনি: "
@@ -1044,6 +1056,7 @@ export default function AdminChatInbox({
                         conversation.customerName || conversation.customerPhone || `${channelLabels[conversation.channel]} · ${conversation.externalUserId.slice(-6)}`
                       )}
                     </h2>
+                    {conversation.needsHumanAssistant && <p className="text-xs font-semibold text-amber-700">Need human assistant{conversation.awaitingHumanPhone ? " · ফোন নম্বরের অপেক্ষায়" : ""}</p>}
                     <p className="text-xs text-text-muted">
                       {conversation.channels?.map((channel) => channelLabels[channel]).join(" + ") || channelLabels[conversation.channel]} ·{" "}
                       {statusLabels[conversation.status]}
@@ -1078,6 +1091,9 @@ export default function AdminChatInbox({
                       className={`rounded-lg border px-2 py-2 text-xs font-semibold disabled:opacity-50 ${conversation.aiModeEnabled ? "border-emerald-600/30 bg-emerald-50 text-emerald-800" : "border-border bg-background text-text-muted"}`}
                     >
                       AI {conversation.aiModeEnabled ? "On" : "Off"}
+                    </button>
+                    <button type="button" onClick={toggleHumanAssistance} className="rounded-lg border border-amber-600/30 bg-amber-50 px-2 py-2 text-xs font-semibold text-amber-800">
+                      {conversation.needsHumanAssistant ? "Mark handled" : "Need human assistant"}
                     </button>
                     <button
                       type="button"
@@ -1318,7 +1334,7 @@ export default function AdminChatInbox({
                       {(message.channel === "WEBSITE" || (message.channel === "MESSENGER" && message.metadata?.type === "PRODUCT_MEDIA" && message.deliveryStatus !== "FAILED") ? message.metadata?.productOptions || [] : []).map((product, index) => (
                         <div key={`${message.id}-product-${product.id}`} className="mb-2 max-w-sm overflow-hidden rounded-xl border border-black/10 bg-white">
                           {product.imageUrl && <a href={product.imageUrl} target="_blank" rel="noreferrer"><img src={product.imageUrl} alt={product.title} loading="lazy" className="max-h-64 w-full object-contain" /></a>}
-                          <div className="p-3 text-sm"><strong>পণ্য-{message.metadata?.suggestionIndex || index + 1}: {product.title}</strong>{product.price != null && <p className="mt-1 font-semibold">৳{Number(product.price).toLocaleString("en-BD")}</p>}<p className={`mt-1 text-xs font-semibold ${product.inStock === false ? "text-red-600" : "text-emerald-700"}`}>{product.inStock === false ? "স্টকে নেই" : "স্টকে আছে"}</p>{product.features?.length > 0 && <p className="mt-1 text-xs text-slate-600">{product.features.join(" · ")}</p>}{product.variants?.length > 1 && <ul className="mt-2 space-y-2 text-xs text-slate-700">{product.variants.map((variant, variantIndex) => <li key={`${product.id}-variant-${variantIndex}`} className="flex items-center gap-2">{variant.imageUrl && <img src={variant.imageUrl} alt="" loading="lazy" className="h-8 w-8 rounded object-cover" />}<span>• {variant.label}{variant.price != null ? ` · ৳${Number(variant.price).toLocaleString("en-BD")}` : ""}{variant.inStock === false ? " · স্টক নেই" : ""}</span></li>)}</ul>}<div className="mt-3 flex gap-2">{product.url && <a href={product.url} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700">পণ্য দেখুন</a>}{product.buyNowUrl && <a href={product.buyNowUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">এখনই কিনুন</a>}</div></div>
+                          <div className="p-3 text-sm"><strong>পণ্য-{message.metadata?.suggestionIndex || index + 1}: {product.title}</strong>{product.price != null && <p className="mt-1 font-semibold">৳{Number(product.price).toLocaleString("en-BD")}</p>}<p className={`mt-1 text-xs font-semibold ${product.inStock === false ? "text-red-600" : "text-emerald-700"}`}>{product.inStock === false ? "স্টকে নেই" : "স্টকে আছে"}</p>{product.features?.length > 0 && <p className="mt-1 text-xs text-slate-600">{product.features.join(" · ")}</p>}{product.variants?.length > 1 && <ul className="mt-2 space-y-2 text-xs text-slate-700">{product.variants.map((variant, variantIndex) => <li key={`${product.id}-variant-${variantIndex}`} className="flex items-center gap-2">{variant.imageUrl && <img src={variant.imageUrl} alt="" loading="lazy" className="h-8 w-8 rounded object-cover" />}<span>• {variant.label}{variant.price != null ? ` · ৳${Number(variant.price).toLocaleString("en-BD")}` : ""}{variant.inStock === false ? " · স্টক নেই" : ""}</span></li>)}</ul>}<div className="mt-3 flex gap-2">{product.url && <a href={product.url} target="_blank" rel="noreferrer" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700">পণ্য দেখুন</a>}{product.buyNowUrl && <a href={product.buyNowUrl} target="_blank" rel="noreferrer" className="flex-1 rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">এখনই কিনুন</a>}</div><div className="mt-2 rounded-lg bg-primary px-3 py-2 text-center text-xs font-semibold text-white">Select this product</div></div>
                         </div>
                       ))}
                       {!["PRODUCT_CARD", "ORDER_TIMELINE"].includes(

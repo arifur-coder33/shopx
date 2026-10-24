@@ -1,6 +1,7 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import { createMessengerOrderToken } from "@/backend/services/chatMessengerOrderLink";
 import sharp from "sharp";
+import { whatsAppImageContent } from "@/backend/utils/chatProductSelection.mjs";
 
 export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
   const text = String(content || "").slice(0, 700);
@@ -112,7 +113,7 @@ export async function sendMessengerProductCard(conversation, product, credential
     ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
     buttons: [
       { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
-      { type: "postback", title: "আরও জানতে চাই", payload: `details:${product.id}` },
+      { type: "postback", title: "Select this product", payload: `select:${product.id}` },
       { type: "web_url", url: orderFormUrl, title: "অর্ডার করতে চাই" },
     ],
   };
@@ -144,7 +145,7 @@ export async function sendMessengerProductCarousel(conversation, products, crede
       ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
       buttons: [
         { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
-        { type: "postback", title: "আরও জানতে চাই", payload: `details:${product.id}` },
+        { type: "postback", title: "Select this product", payload: `select:${product.id}` },
         { type: "web_url", url: orderFormUrl, title: "অর্ডার করতে চাই" },
       ],
     };
@@ -161,7 +162,7 @@ export async function sendMessengerProductCarousel(conversation, products, crede
   return { id: result.message_id || null, secondaryIds: [], warning: null };
 }
 
-export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null) {
+export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null, selectionProductId = null) {
   const url = new URL(imageUrl);
   if (url.protocol !== "https:") throw new Error("Product photo URL must use HTTPS.");
   if (conversation.channel === "WEBSITE") return { id: null, secondaryIds: [], warning: null };
@@ -236,8 +237,7 @@ export async function sendChatChannelImageMessage(conversation, caption, imageUr
           recipient_type: "individual",
           to: conversation.externalUserId,
           ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }),
-          type: "image",
-          image: { id: uploadResult.id, ...(caption.trim() && { caption: caption.slice(0, 1000) }) },
+          ...whatsAppImageContent(uploadResult.id, caption, selectionProductId),
         }),
         cache: "no-store",
         signal: AbortSignal.timeout(15000),
