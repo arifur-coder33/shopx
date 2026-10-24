@@ -1,5 +1,6 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import { createMessengerOrderToken } from "@/backend/services/chatMessengerOrderLink";
+import sharp from "sharp";
 
 export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
   const text = String(content || "").slice(0, 700);
@@ -41,6 +42,30 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
   throw new Error("এই chat channel-এ text reply supported নয়।");
 }
 
+async function sendWhatsAppApprovedTemplate(conversation, templateName, language, content, credentials, imageUrl = null) {
+  if (conversation.channel !== "WHATSAPP" || !templateName) throw new Error("WhatsApp approved template is not configured.");
+  const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
+  const resource = credentials.whatsappPhoneNumberId;
+  if (!credentials.whatsappAccessToken || !resource || !/^v\d+\.\d+$/.test(version || "")) throw new Error("WhatsApp reply credentials configure করা নেই।");
+  const components = [];
+  if (imageUrl) components.push({ type: "header", parameters: [{ type: "image", image: { link: imageUrl } }] });
+  components.push({ type: "body", parameters: [{ type: "text", text: String(content || "").slice(0, 1024) || "পণ্যের তথ্য" }] });
+  const response = await fetch(`https://graph.facebook.com/${version}/${resource}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${credentials.whatsappAccessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, type: "template", template: { name: templateName, language: { code: language || "bn" }, components } }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(result?.error?.message || "WhatsApp approved template পাঠানো যায়নি।");
+    error.code = result?.error?.code || `meta_http_${response.status}`;
+    throw error;
+  }
+  return { id: result?.messages?.[0]?.id || null, secondaryIds: [], warning: null };
+}
+
 export async function sendChatChannelTextMessage(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
   const request = buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId, quickReplies);
   if (!request) return { id: null, secondaryIds: [], warning: null };
@@ -61,6 +86,11 @@ export async function sendChatChannelTextMessage(conversation, content, credenti
     return { id: result.data?.message_id || null, secondaryIds: [], warning: null };
   }
   if (!response.ok) {
+    if (request.provider === "WHATSAPP" && Number(result?.error?.code) === 131047 && credentials.whatsappTextTemplateName) {
+      const delivered = await sendWhatsAppApprovedTemplate(conversation, credentials.whatsappTextTemplateName, credentials.whatsappTemplateLanguage, content, credentials);
+      credentials.whatsappWindowClosed = true;
+      return delivered;
+    }
     const error = new Error(result?.error?.message || "Meta message পাঠানো যায়নি।");
     error.code = result?.error?.code || `meta_http_${response.status}`;
     throw error;
@@ -143,9 +173,102 @@ export async function sendChatChannelImageMessage(conversation, caption, imageUr
     const resource = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
     if (!token || !resource || !/^v\d+\.\d+$/.test(version || "")) throw new Error("এই channel-এর reply credentials configure করা নেই।");
     const endpoint = `https://graph.facebook.com/${version}/${resource}/messages`;
-    const body = isWhatsApp
-      ? { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }), type: "image", image: { link: imageUrl, ...(caption.trim() && { caption: caption.slice(0, 1000) }) } }
-      : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...(replyToExternalMessageId && { reply_to: { mid: replyToExternalMessageId } }), message: { attachment: { type: "image", payload: { url: imageUrl, is_reusable: true } } } };
+    if (isWhatsApp) {
+      if (credentials.whatsappWindowClosed && credentials.whatsappImageTemplateName) {
+        const delivered = await sendWhatsAppApprovedTemplate(conversation, credentials.whatsappImageTemplateName, credentials.whatsappTemplateLanguage, caption || "পণ্যের ছবি", credentials, imageUrl);
+        return delivered;
+      }
+      const siteHost = new URL(await getSiteUrl()).hostname.toLowerCase().replace(/^www\./u, "");
+      const imageHost = url.hostname.toLowerCase().replace(/^www\./u, "");
+      const isCloudinary = imageHost === "cloudinary.com" || imageHost.endsWith(".cloudinary.com");
+      if (imageHost !== siteHost && !isCloudinary) throw new Error("WhatsApp-এ পাঠানোর ছবিটি আমাদের site বা Cloudinary থেকে হতে হবে।");
+
+      const sourceResponse = await fetch(url, {
+        redirect: "error",
+        cache: "no-store",
+        signal: AbortSignal.timeout(20000),
+      });
+      const sourceType = sourceResponse.headers.get("content-type")?.split(";")[0]?.toLowerCase() || "";
+      const sourceLength = Number(sourceResponse.headers.get("content-length")) || 0;
+      if (!sourceResponse.ok || !sourceType.startsWith("image/") || sourceLength > 15 * 1024 * 1024)
+        throw new Error("Product image download failed or exceeded the size limit.");
+      const sourceBytes = Buffer.from(await sourceResponse.arrayBuffer());
+      if (!sourceBytes.length || sourceBytes.length > 15 * 1024 * 1024)
+        throw new Error("Product image is empty or exceeded the size limit.");
+
+      let jpeg = await sharp(sourceBytes, { limitInputPixels: 40_000_000 })
+        .rotate()
+        .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toBuffer();
+      if (jpeg.length > 5 * 1024 * 1024) {
+        jpeg = await sharp(sourceBytes, { limitInputPixels: 40_000_000 })
+          .rotate()
+          .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 65, mozjpeg: true })
+          .toBuffer();
+      }
+      if (jpeg.length > 5 * 1024 * 1024) throw new Error("Image could not be compressed below WhatsApp's 5 MB limit.");
+
+      const uploadForm = new FormData();
+      uploadForm.set("messaging_product", "whatsapp");
+      uploadForm.set("type", "image/jpeg");
+      uploadForm.set("file", new Blob([jpeg], { type: "image/jpeg" }), "product.jpg");
+      const uploadResponse = await fetch(`https://graph.facebook.com/${version}/${resource}/media`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: uploadForm,
+        cache: "no-store",
+        signal: AbortSignal.timeout(20000),
+      });
+      const uploadResult = await uploadResponse.json().catch(() => ({}));
+      if (!uploadResponse.ok || !uploadResult.id) {
+        const error = new Error(uploadResult?.error?.message || "WhatsApp media upload failed.");
+        error.code = uploadResult?.error?.code || `meta_media_http_${uploadResponse.status}`;
+        throw error;
+      }
+
+      const sendResponse = await fetch(endpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: conversation.externalUserId,
+          ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }),
+          type: "image",
+          image: { id: uploadResult.id, ...(caption.trim() && { caption: caption.slice(0, 1000) }) },
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+      });
+      const sendResult = await sendResponse.json().catch(() => ({}));
+      if (!sendResponse.ok) {
+        if (Number(sendResult?.error?.code) === 131047 && credentials.whatsappImageTemplateName) {
+          const delivered = await sendWhatsAppApprovedTemplate(conversation, credentials.whatsappImageTemplateName, credentials.whatsappTemplateLanguage, caption || "পণ্যের ছবি", credentials, imageUrl);
+          credentials.whatsappWindowClosed = true;
+          return delivered;
+        }
+        const error = new Error(sendResult?.error?.message || "WhatsApp image message could not be sent.");
+        error.code = sendResult?.error?.code || `meta_http_${sendResponse.status}`;
+        throw error;
+      }
+      return { id: sendResult?.messages?.[0]?.id || null, secondaryIds: [], warning: null };
+    }
+
+    const body = {
+      recipient: { id: conversation.externalUserId },
+      messaging_type: "RESPONSE",
+      ...(replyToExternalMessageId && {
+        reply_to: { mid: replyToExternalMessageId },
+      }),
+      message: {
+        attachment: {
+          type: "image",
+          payload: { url: imageUrl, is_reusable: true },
+        },
+      },
+    };
     const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(15000) });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) { const error = new Error(result?.error?.message || "Product photo পাঠানো যায়নি।"); error.code = result?.error?.code || `meta_http_${response.status}`; throw error; }

@@ -190,6 +190,21 @@ export default function ChatSettingsForm({
               />
             </label>
           ))}
+          <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
+              <span className="text-sm font-semibold text-text">WhatsApp approved template language</span>
+              <input name="whatsappTemplateLanguage" defaultValue={settings.whatsappTemplateLanguage || "bn"} maxLength={35} disabled={!canUpdate} placeholder="bn বা en_US" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50" />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold text-text">Text fallback template name</span>
+              <input name="whatsappTextTemplateName" defaultValue={settings.whatsappTextTemplateName || ""} maxLength={512} disabled={!canUpdate} placeholder="approved_text_reply" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50" />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold text-text">Image fallback template name</span>
+              <input name="whatsappImageTemplateName" defaultValue={settings.whatsappImageTemplateName || ""} maxLength={512} disabled={!canUpdate} placeholder="approved_product_image" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50" />
+            </label>
+            <p className="text-xs leading-5 text-text-muted sm:col-span-2">Meta WhatsApp Manager-এ আগে approve করা template-এর নাম দিন। Text template-এ body-তে একটি {{1}} variable থাকতে হবে। Image template-এ IMAGE header এবং body-তে একটি {{1}} variable থাকতে হবে। ২৪ ঘণ্টার reply window শেষ হলে এই template-গুলো ব্যবহার হবে।</p>
+          </div>
           <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
             <span><span className="block font-medium text-text">Chat থেকে অর্ডার তৈরি</span><span className="mt-1 block text-xs text-text-muted">বন্ধ থাকলে website chat ও Messenger শুধু নাম, ফোন ও ঠিকানা সংগ্রহ করবে।</span></span>
             <input name="chatOrderCreationEnabled" type="checkbox" defaultChecked={settings.chatOrderCreationEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />

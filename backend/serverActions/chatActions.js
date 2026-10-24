@@ -139,6 +139,9 @@ export async function getChatSettingsAction() {
         googleAiStudioModel: isChatAiModelAllowed("GOOGLE_AI_STUDIO", setting?.googleAiStudioModel)
           ? setting.googleAiStudioModel
           : DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO,
+        whatsappTextTemplateName: setting?.whatsappTextTemplateName || "",
+        whatsappImageTemplateName: setting?.whatsappImageTemplateName || "",
+        whatsappTemplateLanguage: setting?.whatsappTemplateLanguage || "bn",
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
         quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies.filter((item) => item?.shortcut && item?.text) : [],
         aiReplyTone: setting?.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো",
@@ -190,6 +193,9 @@ export async function saveChatSettingsAction(formData) {
     if (!["OPENAI", "GOOGLE_AI_STUDIO"].includes(aiProvider)) throw new Error("AI provider নির্বাচনটি সঠিক নয়।");
     const openaiModel = trim(formData.get("openaiModel")) || DEFAULT_CHAT_AI_MODELS.OPENAI;
     const googleAiStudioModel = trim(formData.get("googleAiStudioModel")) || DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO;
+    const whatsappTextTemplateName = trim(formData.get("whatsappTextTemplateName")).replace(/[^a-zA-Z0-9_]/g, "").slice(0, 512) || null;
+    const whatsappImageTemplateName = trim(formData.get("whatsappImageTemplateName")).replace(/[^a-zA-Z0-9_]/g, "").slice(0, 512) || null;
+    const whatsappTemplateLanguage = trim(formData.get("whatsappTemplateLanguage")).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 35) || "bn";
     if (!isChatAiModelAllowed("OPENAI", openaiModel)) throw new Error("OpenAI model নির্বাচনটি সঠিক নয়।");
     if (!isChatAiModelAllowed("GOOGLE_AI_STUDIO", googleAiStudioModel)) throw new Error("Google AI model নির্বাচনটি সঠিক নয়।");
     const welcomeMessage = trim(formData.get("welcomeMessage")).slice(0, 300) || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?";
@@ -232,8 +238,8 @@ export async function saveChatSettingsAction(formData) {
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");

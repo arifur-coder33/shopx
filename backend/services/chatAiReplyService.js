@@ -43,6 +43,7 @@ import prisma from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/siteUrl";
 import Fuse from "fuse.js";
 import { htmlToText } from "html-to-text";
+import sharp from "sharp";
 import {
   createImageFingerprint,
   fingerprintDistance,
@@ -1296,7 +1297,7 @@ async function getCatalog(
       const fuzzyTerms = [...new Set(imageTerms)]
         .map((term) => String(term).trim().toLowerCase())
         .filter((term) => term.length >= 2 && !PRODUCT_SEARCH_STOPWORDS.has(term) && !PRODUCT_BROWSE_TERMS.has(term))
-        .slice(0, 12);
+        .slice(0, 40);
       for (const term of fuzzyTerms) {
         for (const result of fuse.search(term, { limit: 8 })) {
           const priorScore = fuzzyRank.get(result.item.id) ?? Infinity;
@@ -1577,7 +1578,7 @@ async function getCatalog(
             })
             .filter(Boolean),
         ),
-      ].slice(0, 32),
+      ],
       videos: (product.videos.length
         ? product.videos
         : product.videoUrl
@@ -1808,16 +1809,51 @@ async function rankCatalogImageCandidates(ai, image, description, products) {
 }
 
 async function rankCatalogImageHashes(image, candidateProductIds) {
-  if (!image?.base64 || !candidateProductIds.length) return [];
+  if (!image?.base64) return [];
   const fingerprint = await createImageFingerprint(
     Buffer.from(image.base64, "base64"),
   );
   if (!fingerprint) return [];
 
   const products = await prisma.product.findMany({
-    where: {
-      id: { in: candidateProductIds },
-    },
+    where: candidateProductIds.length
+      ? { id: { in: candidateProductIds } }
+      : {
+          isActive: true,
+          status: "ACTIVE",
+          OR: [
+            {
+              thumbnail: {
+                is: {
+                  imageDifferenceHash: { not: null },
+                  imageAverageHash: { not: null },
+                },
+              },
+            },
+            {
+              gallery: {
+                some: {
+                  media: {
+                    imageDifferenceHash: { not: null },
+                    imageAverageHash: { not: null },
+                  },
+                },
+              },
+            },
+            {
+              variations: {
+                some: {
+                  thumbnail: {
+                    is: {
+                      imageDifferenceHash: { not: null },
+                      imageAverageHash: { not: null },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
     take: 3000,
     orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
     select: {
@@ -1912,7 +1948,60 @@ async function readImageResponse(response, allowedHosts) {
   const bytes = await response.arrayBuffer();
   if (!bytes.byteLength || bytes.byteLength > 8 * 1024 * 1024)
     throw new Error("Customer photo is too large to inspect.");
-  return { mimeType, base64: Buffer.from(bytes).toString("base64") };
+  const source = Buffer.from(bytes);
+  let normalized = await sharp(source, { limitInputPixels: 40_000_000 })
+    .rotate()
+    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 82, mozjpeg: true })
+    .toBuffer();
+  if (normalized.length > 3 * 1024 * 1024) {
+    normalized = await sharp(source, { limitInputPixels: 40_000_000 })
+      .rotate()
+      .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 65, mozjpeg: true })
+      .toBuffer();
+  }
+  if (normalized.length > 3 * 1024 * 1024)
+    throw new Error("Customer photo could not be compressed for AI analysis.");
+  return { mimeType: "image/jpeg", base64: normalized.toString("base64") };
+}
+
+async function findProductLinkInMessage(messageText) {
+  const rawUrl = String(messageText || "").match(/https?:\/\/[^\s<>]+/iu)?.[0];
+  if (!rawUrl) return null;
+  let url;
+  try {
+    url = new URL(rawUrl.replace(/[),.!?;:।،]+$/u, ""));
+  } catch {
+    return { isUrl: true, isStoreDomain: false };
+  }
+  const siteUrl = new URL(await getSiteUrl());
+  const hostname = (value) => value.toLowerCase().replace(/^www\./u, "");
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    hostname(url.hostname) !== hostname(siteUrl.hostname) ||
+    url.username ||
+    url.password
+  )
+    return { isUrl: true, isStoreDomain: false };
+  const match = url.pathname.match(/^\/(?:product|buynow)\/([^/]+)\/?$/iu);
+  if (!match) return { isUrl: true, isStoreDomain: true };
+  let slug;
+  try {
+    slug = decodeURIComponent(match[1]);
+  } catch {
+    return { isUrl: true, isStoreDomain: true, isProductLink: true, productId: null };
+  }
+  const product = await prisma.product.findFirst({
+    where: { slug, isActive: true, status: "ACTIVE" },
+    select: { id: true },
+  });
+  return {
+    isUrl: true,
+    isStoreDomain: true,
+    isProductLink: true,
+    productId: product?.id || null,
+  };
 }
 
 async function getCustomerImage(conversation, attachment, credentials) {
@@ -3093,13 +3182,22 @@ async function deliverReply(
 
   // ১. মূল চ্যাট টেক্সট পাঠানো
   if (content.trim()) {
-    sent.push(
-      await sendChatChannelTextMessage(
-        conversation,
-        videoLinks.length ? content.split("\n")[0] : content,
-        credentials,
-      ),
-    );
+    try {
+      sent.push(
+        await sendChatChannelTextMessage(
+          conversation,
+          videoLinks.length ? content.split("\n")[0] : content,
+          credentials,
+        ),
+      );
+    } catch (error) {
+      const hasImageFollowup = Boolean(
+        credentials.whatsappImageTemplateName &&
+          (products.some((product) => product.imageUrls?.[0]) || mediaPhoto?.url || mediaPhotos.length),
+      );
+      if (conversation.channel !== "WHATSAPP" || Number(error?.code) !== 131047 || !hasImageFollowup) throw error;
+      credentials.whatsappWindowClosed = true;
+    }
   }
 
   // ২. ভিডিও লিংক থাকলে পাঠানো
@@ -3356,6 +3454,9 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           aiProvider: true,
           openaiModel: true,
           googleAiStudioModel: true,
+          whatsappTextTemplateName: true,
+          whatsappImageTemplateName: true,
+          whatsappTemplateLanguage: true,
           encryptedCredentials: true,
         },
       }),
@@ -3404,6 +3505,9 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     const credentials = decryptProviderCredentials(
       setting.encryptedCredentials,
     );
+    credentials.whatsappTextTemplateName = setting.whatsappTextTemplateName || "";
+    credentials.whatsappImageTemplateName = setting.whatsappImageTemplateName || "";
+    credentials.whatsappTemplateLanguage = setting.whatsappTemplateLanguage || "bn";
     const aiConfig = {
       provider:
         setting.aiProvider === "GOOGLE_AI_STUDIO"
@@ -3525,16 +3629,26 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         );
       }
     }
+    const inboundProductLink = customerImage
+      ? null
+      : await findProductLinkInMessage(inbound.content).catch((error) => {
+          console.warn(
+            "Product link lookup failed:",
+            error?.message || error,
+          );
+          return null;
+        });
     const [productContext, verifiedOrders] = await Promise.all([
       getCatalog(
         inbound.content,
         [
-          ...(imageDescription?.searchTerms || []),
           imageDescription?.productName,
           imageDescription?.productType,
-          ...(imageDescription?.materials || []),
+          imageDescription?.brandModel,
           ...(imageDescription?.useCases || []),
           ...(imageDescription?.visibleFeatures || []),
+          ...(imageDescription?.materials || []),
+          ...(imageDescription?.searchTerms || []),
           ...(imageDescription?.bengaliDescription
             ?.toLowerCase()
             .match(/[\p{L}\p{N}]{2,}/gu) || []),
@@ -3548,6 +3662,8 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         conversation.channel,
         customerImage
           ? []
+          : inboundProductLink?.productId
+            ? [inboundProductLink.productId]
           : (isProductImageRequest(inbound.content) ||
                 isProductVideoRequest(inbound.content)) &&
               !productMemory.newProductSearch &&
@@ -3561,7 +3677,9 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
             : productMemory.catalogProductIds,
         customerImage ? [] : productMemory.catalogCategoryIds,
         aiConfig,
-        Boolean(customerImage) || productMemory.newProductSearch,
+        Boolean(customerImage) ||
+          Boolean(inboundProductLink?.productId) ||
+          productMemory.newProductSearch,
       ),
       getVerifiedOrders(conversation, inbound.content, history),
     ]);
@@ -3569,7 +3687,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       (product) => product.id,
     );
     let imageHashBestProduct = null;
-    if (customerImage && productContext.products.length) {
+    if (customerImage) {
       const visionRanking = await rankCatalogImageCandidates(
         aiConfig,
         customerImage,
@@ -3582,7 +3700,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           ...visualCandidateOrder.filter((id) => !visionRanking.includes(id)),
         ];
       }
-      const hashRanking = await rankCatalogImageHashes(
+      let hashRanking = await rankCatalogImageHashes(
         customerImage,
         productContext.products.map((product) => product.id),
       ).catch((hashError) => {
@@ -3592,11 +3710,41 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         );
         return [];
       });
+      if (!(hashRanking[0]?.similarity >= 50)) {
+        const catalogHashRanking = await rankCatalogImageHashes(
+          customerImage,
+          [],
+        ).catch((hashError) => {
+          console.warn(
+            "Full catalog image hash ranking failed:",
+            hashError?.message || hashError,
+          );
+          return [];
+        });
+        if (catalogHashRanking[0]?.similarity >= 50)
+          hashRanking = catalogHashRanking;
+      }
       if (hashRanking[0]?.similarity >= 50) {
+        let matchedProduct = productContext.products.find(
+          (product) => product.id === hashRanking[0].id,
+        );
+        if (!matchedProduct) {
+          const exactMatchContext = await getCatalog(
+            inbound.content,
+            [],
+            conversation.channel,
+            [hashRanking[0].id],
+            [],
+            aiConfig,
+            true,
+          );
+          matchedProduct = exactMatchContext.products[0] || null;
+          if (matchedProduct)
+            productContext.products.unshift(matchedProduct);
+        }
+        if (matchedProduct)
         imageHashBestProduct = {
-          ...productContext.products.find(
-            (product) => product.id === hashRanking[0].id,
-          ),
+          ...matchedProduct,
           imageFingerprintSimilarity: hashRanking[0].similarity,
         };
       }
@@ -3617,8 +3765,33 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           imageMatch: "none",
           products: [],
         }
-      : customerImage && productContext.products.length
-        ? { text: "", imageMatch: "none", products: [] }
+      : inboundProductLink?.isUrl && !inboundProductLink.isStoreDomain
+        ? {
+            text: "দুঃখিত, এটি আমাদের ওয়েবসাইটের লিংক নয়। দয়া করে আমাদের ওয়েবসাইটের কোনো পণ্যের লিংক দিন।",
+            imageMatch: "none",
+            products: [],
+          }
+      : inboundProductLink?.isProductLink
+        ? inboundProductLink.productId && productContext.products[0]
+          ? {
+              text: `জি, আপনার পাঠানো লিংকের পণ্যটি হলো ${productContext.products[0].title}। বিস্তারিত কার্ডে দিলাম।`,
+              imageMatch: "none",
+              products: [productContext.products[0]],
+              selectedProductId: productContext.products[0].id,
+            }
+          : {
+              text: "দুঃখিত, এই লিংকে কোনো চালু পণ্য খুঁজে পেলাম না। পণ্যের সঠিক লিংকটি আবার পাঠাবেন?",
+              imageMatch: "none",
+              products: [],
+            }
+      : customerImage
+        ? productContext.products.length
+          ? { text: "", imageMatch: "none", products: [] }
+          : {
+              text: "ছবিটি পেয়েছি, তবে এখনো পণ্যটির সঙ্গে মিল খুঁজে পাইনি। পণ্যের নাম বা website link দিলে খুঁজে দেখব।",
+              imageMatch: "none",
+              products: [],
+            }
         : await generateReply(
           aiConfig,
           conversation,

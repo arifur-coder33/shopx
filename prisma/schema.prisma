@@ -1774,6 +1774,9 @@ model ChatSetting {
   aiProvider           String   @default("OPENAI")
   openaiModel          String   @default("gpt-6-luna")
   googleAiStudioModel  String   @default("gemini-3.8-flash")
+  whatsappTextTemplateName  String?
+  whatsappImageTemplateName String?
+  whatsappTemplateLanguage  String   @default("bn")
   aiReplyTone          String   @default("বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো")
   aiReplyExamples      Json     @default("[]")
   welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
