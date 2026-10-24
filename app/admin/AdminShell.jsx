@@ -17,11 +17,22 @@ export default function AdminShell({ children, siteSetting }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 639px)");
+    const media = window.matchMedia(isChatInbox ? "(max-width: 1023px)" : "(max-width: 639px)");
     const update = () => setIsMobile(media.matches);
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
+  }, [isChatInbox]);
+
+  useEffect(() => {
+    const openNavigation = () => setIsSidebarOpen(true);
+    const closeOnEscape = (event) => { if (event.key === "Escape") setIsSidebarOpen(false); };
+    window.addEventListener("admin:open-navigation", openNavigation);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("admin:open-navigation", openNavigation);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   const toggleSidebar = () => {

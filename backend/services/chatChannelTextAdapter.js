@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { whatsAppImageContent } from "@/backend/utils/chatProductSelection.mjs";
 
 export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
-  const text = String(content || "").slice(0, 700);
+  const text = String(content || "").slice(0, conversation.channel === "WHATSAPP" ? 4096 : 2000);
   if (conversation.channel === "WEBSITE") return null;
   if (["WHATSAPP", "MESSENGER", "INSTAGRAM"].includes(conversation.channel)) {
     const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
@@ -15,7 +15,17 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
     if (!token || !resource || !/^v\d+\.\d+$/.test(version || "")) throw new Error("এই channel-এর reply credentials configure করা নেই।");
     const reply = replyToExternalMessageId ? { reply_to: { mid: replyToExternalMessageId } } : {};
     const payload = isWhatsApp
-      ? { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }), type: "text", text: { body: text, preview_url: true } }
+      ? { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }),
+          ...(quickReplies.length > 0 && quickReplies.length <= 3 && text.length <= 1024 ? {
+            type: "interactive", interactive: { type: "button", body: { text }, action: { buttons: quickReplies.map((option) => ({ type: "reply", reply: {
+              id: String(typeof option === "string" ? option : option.payload).slice(0, 256), title: String(typeof option === "string" ? option : option.title).slice(0, 20),
+            } })) } },
+          } : quickReplies.length > 3 && quickReplies.length <= 10 && text.length <= 1024 ? {
+            type: "interactive", interactive: { type: "list", body: { text }, action: { button: "বেছে নিন", sections: [{ rows: quickReplies.map((option) => ({
+              id: String(typeof option === "string" ? option : option.payload).slice(0, 200), title: String(typeof option === "string" ? option : option.title).slice(0, 24),
+            })) }] } },
+          } : { type: "text", text: { body: text, preview_url: true } }),
+        }
       : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...reply, message: { text, ...(conversation.channel === "MESSENGER" && quickReplies.length && { quick_replies: quickReplies.slice(0, 10).map((option) => ({ content_type: "text", title: String(typeof option === "string" ? option : option.title).slice(0, 20), payload: String(typeof option === "string" ? option : option.payload).slice(0, 1000) })) }) } };
     return {
       provider: isWhatsApp ? "WHATSAPP" : "META",

@@ -413,6 +413,7 @@ model Combination {
 model Order {
   id                        String           @id @default(cuid())
   orderNo                   String           @unique
+  chatCheckoutKey           String?          @unique
   orderItems                OrderItem[]
   campaignUsages            CampaignUsage[]
   userId                    String? // Foreign key for User
@@ -1729,6 +1730,8 @@ model ChatConversation {
   unreadCount      Int                    @default(0)
   aiModeEnabled    Boolean                @default(true)
   consecutiveAiFailures Int               @default(0)
+  aiReplyLeaseToken String?
+  aiReplyLeaseUntil DateTime?
   needsHumanAssistant Boolean            @default(false)
   humanAssistantReason String?
   awaitingHumanPhone Boolean             @default(false)

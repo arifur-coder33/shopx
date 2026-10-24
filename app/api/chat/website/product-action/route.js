@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
 import { after } from "next/server";
 import prisma from "@/lib/prisma";
-import { createOrder } from "@/backend/serverActions/orderActions";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const validPhone = (value) => /^(?:01[3-9]\d{8}|8801[3-9]\d{8})$/.test(String(value || "").replace(/\D/g, ""));
 const clean = (value, limit = 150) => String(value || "").trim().slice(0, limit);
@@ -24,12 +24,25 @@ export async function POST(request) {
   const token = clean(body.token, 40);
   const productId = clean(body.productId, 80);
   const action = clean(body.action, 30);
-  if (!/^[a-f0-9-]{36}$/i.test(token) || (!productId && action !== "lead")) return Response.json({ success: false, message: "Invalid request." }, { status: 400 });
+  if (!/^[a-f0-9-]{36}$/i.test(token) || (!productId && !["lead", "checkout"].includes(action))) return Response.json({ success: false, message: "Invalid request." }, { status: 400 });
   const conversation = await prisma.chatConversation.findUnique({ where: { channel_externalUserId: { channel: "WEBSITE", externalUserId: createHash("sha256").update(token).digest("hex") } }, select: { id: true, aiModeEnabled: true } });
   if (!conversation) return Response.json({ success: false, message: "Chat পাওয়া যায়নি।" }, { status: 404 });
   const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { websiteChatEnabled: true, aiAutoReplyEnabled: true, encryptedCredentials: true, quickReplies: true } });
   if (setting?.websiteChatEnabled === false) return Response.json({ success: false, message: "Chat এখন বন্ধ আছে।" }, { status: 403 });
   const canCreateOrder = isChatOrderCreationEnabled(setting);
+  if (["order", "inbox", "checkout"].includes(action)) {
+    if (!conversation.aiModeEnabled || !setting?.aiAutoReplyEnabled) return Response.json({ success: false, message: "আমাদের প্রতিনিধি এই চ্যাটে আপনার অর্ডারটি নিতে সাহায্য করবেন।" }, { status: 409 });
+    const payload = action === "checkout" ? clean(body.payload, 240) : `order:${productId}`;
+    if (action === "checkout" && !/^checkout:[a-f0-9-]{36}:[a-f0-9-]{36}:[a-zA-Z0-9_-]+$/u.test(payload)) return Response.json({ success: false, message: "Invalid checkout action." }, { status: 400 });
+    const inbound = await prisma.chatMessage.create({ data: {
+      conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", deliveryStatus: "DELIVERED",
+      content: action === "checkout" ? clean(body.title || "অর্ডারের তথ্য বেছে নিলাম", 120) : "অর্ডার করতে চাই",
+      metadata: { ...(productId && { productId }), action, quickReplyPayload: payload },
+    } });
+    await prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), unreadCount: { increment: 1 } } });
+    after(() => maybeSendChatAiReply(conversation.id, inbound.id));
+    return Response.json({ success: true, data: { inboundId: inbound.id, metadata: { type: "CHAT_ORDER_PENDING" } } });
+  }
   const product = productId ? await prisma.product.findFirst({
     where: { id: productId, isActive: true, status: "ACTIVE" },
     select: { id: true, title: true, slug: true, description: true, seoDescription: true, allowOutOfStockOrder: true, codAvailable: true, advancePaymentType: true,
@@ -88,24 +101,7 @@ export async function POST(request) {
       metadata = { ...metadata, type: "ORDER_INBOX", variants, buyNowUrl };
     }
   } else if (action === "place") {
-    if (!canCreateOrder) return Response.json({ success: false, message: "Chat থেকে অর্ডার নেওয়া এখন বন্ধ আছে। যোগাযোগের তথ্য দিন।" }, { status: 403 });
-    const variantId = clean(body.variantId, 80);
-    const variant = variants.find((item) => item.id === variantId);
-    if (!variant || !variant.inStock) return Response.json({ success: false, message: "বাছাই করা ভ্যারিয়েন্টটি এখন স্টকে নেই।" }, { status: 400 });
-    const fields = { customerName: clean(body.customerName, 100), phoneNumber: clean(body.phoneNumber, 20).replace(/\D/g, ""), deliveryAddress: clean(body.deliveryAddress, 250), district: clean(body.district, 100), thana: clean(body.thana, 100) };
-    if (Object.values(fields).some((value) => !value) || !validPhone(fields.phoneNumber) || !["inside-dhaka", "outside-dhaka"].includes(body.deliveryArea)) return Response.json({ success: false, message: "নাম, সঠিক মোবাইল নম্বর, ঠিকানা, জেলা, থানা ও ডেলিভারি এলাকা দিন।" }, { status: 400 });
-    const paymentMethod = clean(body.paymentMethod, 10).toUpperCase();
-    if (paymentMethod !== "COD") return Response.json({ success: false, message: "অনলাইন পেমেন্টের জন্য ওয়েবসাইটের checkout ব্যবহার করুন।" }, { status: 400 });
-    const form = new FormData();
-    for (const [key, value] of Object.entries(fields)) form.set(key, value);
-    form.set("deliveryArea", body.deliveryArea);
-    form.set("paymentMethod", "COD");
-    form.set("products", JSON.stringify([{ title: product.title, productId: product.id, variation: { id: variant.id, combinations: [] }, quantity: 1 }]));
-    const order = await createOrder(form);
-    if (!order?.success || !order.data?.orderNo) return Response.json({ success: false, message: order?.error || "অর্ডার করা যায়নি। আবার চেষ্টা করুন।" }, { status: 400 });
-    const trackingUrl = `/tracking/?o=${encodeURIComponent(order.data.orderNo)}&p=${encodeURIComponent(order.data.phoneNumber)}`;
-    reply = `আপনার অর্ডারটি হয়েছে। অর্ডার নম্বর: ${order.data.orderNo}। নিচের লিংকে অর্ডারের অবস্থা দেখতে পারবেন।`;
-    metadata = { ...metadata, type: "ORDER_PLACED", orderNo: order.data.orderNo, trackingUrl };
+    return Response.json({ success: false, message: "আগে পণ্য নিশ্চিত করে অর্ডারের সারাংশ দেখুন। সর্বশেষ সারাংশের Place order বাটন ব্যবহার করুন।" }, { status: 409 });
   } else if (action === "lead") {
     const customerName = clean(body.customerName, 100);
     const phoneNumber = clean(body.phoneNumber, 20).replace(/\D/g, "");

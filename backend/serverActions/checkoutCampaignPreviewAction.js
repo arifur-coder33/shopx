@@ -270,6 +270,8 @@ export async function getCheckoutCampaignPreview({
         rows,
         itemDiscounts,
         cartOffers,
+        merchandiseTotal: money(paymentPricing.subtotal),
+        deliveryCharge: money(paymentDeliveryPricing.deliveryCharge),
         total: money(paymentPricing.subtotal + paymentDeliveryPricing.deliveryCharge),
       },
     };

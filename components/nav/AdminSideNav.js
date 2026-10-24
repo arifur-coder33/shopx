@@ -6,7 +6,7 @@ import Logout from "@/components/auth/Logout";
 import ThemeToggle from "@/components/TheamToggle";
 import { adminMenuItems } from "@/lib/adminMenuItems";
 import { filterMenuByPermission } from "@/lib/filterMenuByPermission";
-import { User } from "lucide-react";
+import { User, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import ModernNavItem from "./ModernNavItem";
@@ -110,18 +110,23 @@ export default function AdminSideNav({
     return (
       <>
         {isOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 z-40"
+          <button
+            type="button"
+            aria-label="নেভিগেশন বন্ধ করুন"
+            className="fixed inset-0 cursor-pointer bg-black/60 z-[75]"
             onClick={() => setIsOpen(false)}
-          ></div>
+          />
         )}
         <aside
+          inert={isOpen ? undefined : true}
+          aria-hidden={!isOpen}
           className={cn(
-            "fixed top-0 left-0 h-full w-64 border-r border-slate-700 bg-slate-900 text-slate-200 z-50 transition-transform duration-300 ease-in-out",
+            "fixed top-0 left-0 flex h-full w-64 flex-col border-r border-slate-700 bg-slate-900 text-slate-200 z-[80] transition-transform duration-300 ease-in-out",
             isOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <NavContent isCollapsed={false} onLinkClick={handleLinkClick} />
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-700 px-4 py-3"><span className="font-semibold">Admin menu</span><button type="button" onClick={() => setIsOpen(false)} aria-label="নেভিগেশন বন্ধ করুন" className="cursor-pointer rounded-lg p-2 hover:bg-slate-800"><X size={20} /></button></div>
+          <div className="min-h-0 flex-1"><NavContent isCollapsed={false} onLinkClick={handleLinkClick} /></div>
         </aside>
       </>
     );

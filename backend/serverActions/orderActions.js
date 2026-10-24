@@ -286,6 +286,14 @@ export async function createOrder(formData) {
     if (!["COD", "ONLINE", "EMI"].includes(requestedPaymentMethod)) {
       throw new Error("Select a valid payment method.");
     }
+    const chatCheckoutKey = /^chat:[a-f0-9-]{36}$/u.test(String(data.chatCheckoutKey || "")) ? data.chatCheckoutKey : null;
+    if (chatCheckoutKey) {
+      const existing = await prisma.order.findUnique({ where: { chatCheckoutKey }, select: { id: true, orderNo: true, phoneNumber: true } });
+      if (existing) {
+        if (existing.phoneNumber !== data.phoneNumber) throw new Error("Order request does not match.");
+        return { success: true, data: existing };
+      }
+    }
     if (!["FULL", "MINIMUM"].includes(paymentPlan)) throw new Error("Select a valid payment plan.");
     if (requestedPaymentMethod !== "COD" && !data.paymentGatewayId) {
       throw new Error("Select an online payment gateway.");
@@ -499,6 +507,7 @@ export async function createOrder(formData) {
       const totalDeliveryDiscount = deliveryPricing.discount + paymentDeliveryPricing.discount;
       const merchandiseTotal = paymentPricing.subtotal;
       const totalAmount = merchandiseTotal + deliveryCharge;
+      if (chatCheckoutKey && data.expectedTotal && Math.abs(Number(data.expectedTotal) - totalAmount) > 0.01) throw new Error("দাম বা ডেলিভারি চার্জ পরিবর্তিত হয়েছে। নতুন সারাংশ দেখে আবার নিশ্চিত করুন।");
       const requiredAdvance = (paymentRuleProducts.some((product) => product.advancePaymentType === "DELIVERY_FEE") ? deliveryCharge : 0) + pricedItems.reduce((sum, { item, variation, pricing }) => {
         const product = variation.product;
         if (product.advancePaymentType !== "PARTIAL") return sum;
@@ -554,6 +563,7 @@ export async function createOrder(formData) {
       const order = await tx.order.create({
         data: {
           orderNo: newOrderNumber,
+          chatCheckoutKey,
           userId: userId || null,
           customerName: data.customerName,
           phoneNumber: data.phoneNumber,

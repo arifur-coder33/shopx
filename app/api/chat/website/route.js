@@ -34,7 +34,7 @@ export async function GET(request) {
     data: { deliveryStatus: "DELIVERED" },
   });
   if (conversation) {
-    conversation.messages = conversation.messages.map((message) => message.direction === "OUTBOUND" && message.deliveryStatus === "SENT" ? { ...message, deliveryStatus: "DELIVERED" } : message);
+    conversation.messages = conversation.messages.filter((message) => !message.metadata?.internalOnly).map((message) => message.direction === "OUTBOUND" && message.deliveryStatus === "SENT" ? { ...message, deliveryStatus: "DELIVERED" } : message);
   }
   return Response.json({ success: true, data: conversation }, { headers: { "Cache-Control": "no-store" } });
 }
