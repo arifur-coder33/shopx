@@ -1728,6 +1728,7 @@ model ChatConversation {
   lastMessageAt    DateTime               @default(now())
   unreadCount      Int                    @default(0)
   aiModeEnabled    Boolean                @default(true)
+  consecutiveAiFailures Int               @default(0)
   needsHumanAssistant Boolean            @default(false)
   humanAssistantReason String?
   awaitingHumanPhone Boolean             @default(false)

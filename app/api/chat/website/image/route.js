@@ -63,7 +63,7 @@ export async function POST(request) {
     media = await prisma.media.create({ data: { url: upload.secure_url, name: mediaName, displayName: image.name.replace(/\.[^.]+$/, "").slice(0, 120) || "Customer chat photo", host: "cloudinary", width: Number.isFinite(upload.width) ? upload.width : null, height: Number.isFinite(upload.height) ? upload.height : null, sizeBytes: Number.isFinite(upload.bytes) ? upload.bytes : image.size } });
     const message = await prisma.$transaction(async (tx) => {
       const created = await tx.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: caption || "📷 Photo", deliveryStatus: "DELIVERED", mediaId: media.id, metadata: { type: "IMAGE", image: { url: upload.secure_url, mediaId: media.id, mimeType: image.type, caption }, ...(websitePage && { websitePage }) } } });
-      await tx.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: conversation.needsHumanAssistant ? "PENDING" : "OPEN", unreadCount: { increment: 1 } } });
+      await tx.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } });
       return created;
     });
     after(async () => {

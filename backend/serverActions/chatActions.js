@@ -819,8 +819,9 @@ export async function updateChatConversationAction(conversationId, { status, ass
     if (!selected) throw new Error("Conversation not found.");
     if (aiModeEnabled === true && (assignedToId || (assignedToId === undefined && selected.assignedToId))) throw new Error("আগে conversation unassign করুন, তারপর AI চালু করুন।");
     const data = { ...(status && { status }), ...(assignedToId !== undefined && { assignedToId }), ...(aiModeEnabled !== undefined && { aiModeEnabled }), ...((assignedToId || status === "PENDING") && { aiModeEnabled: false }) };
-    if (needsHumanAssistant === true) Object.assign(data, { needsHumanAssistant: true, humanAssistantReason: "MANUAL", awaitingHumanPhone: false, status: "PENDING", aiModeEnabled: false });
+    if (needsHumanAssistant === true) Object.assign(data, { needsHumanAssistant: true, humanAssistantReason: "MANUAL", awaitingHumanPhone: false, aiModeEnabled: false });
     if (needsHumanAssistant === false || status === "CLOSED" || aiModeEnabled === true) Object.assign(data, { needsHumanAssistant: false, humanAssistantReason: null, awaitingHumanPhone: false });
+    if (aiModeEnabled === true) data.consecutiveAiFailures = 0;
     const where = selected.normalizedPhone && ["WHATSAPP", "MESSENGER"].includes(selected.channel)
       ? { normalizedPhone: selected.normalizedPhone, channel: { in: ["WHATSAPP", "MESSENGER"] } }
       : { id: conversationId };

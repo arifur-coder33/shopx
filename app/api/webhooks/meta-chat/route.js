@@ -93,7 +93,7 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
     });
     await tx.chatConversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: new Date(), status: conversation.needsHumanAssistant ? "PENDING" : "OPEN", ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) },
+      data: { lastMessageAt: new Date(), status: "OPEN", ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) },
     });
     return inserted.count;
   });

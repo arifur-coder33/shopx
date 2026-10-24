@@ -1,10 +1,10 @@
 import prisma from "@/lib/prisma";
 import { handoffPhone } from "@/backend/utils/chatHumanHandoff.mjs";
 
-// Contact collection continues after AI is paused; it never calls a model.
+// Handle a shared phone number without interrupting normal product questions.
 export async function collectWebsiteHandoffContact(conversation, inbound) {
   if (conversation?.channel !== "WEBSITE" || !conversation.needsHumanAssistant || !conversation.awaitingHumanPhone || inbound?.conversationId !== conversation.id || inbound?.direction !== "INBOUND" || inbound?.authorType !== "CUSTOMER") return false;
-  if (conversation.status === "CLOSED" || conversation.assignedToId) return true;
+  if (conversation.status === "CLOSED" || conversation.assignedToId || !conversation.aiModeEnabled) return true;
   const newerAgentReply = await prisma.chatMessage.findFirst({
     where: { conversationId: conversation.id, direction: "OUTBOUND", authorType: "AGENT", createdAt: { gt: inbound.createdAt } },
     select: { id: true },
@@ -12,7 +12,8 @@ export async function collectWebsiteHandoffContact(conversation, inbound) {
   if (newerAgentReply) return true;
   const phone = handoffPhone(inbound.content) || handoffPhone(conversation.customerPhone);
   const declined = /(?:ফোন|নম্বর|phone|number).{0,20}(?:দেব না|দিব না|দিতে চাই না|dibo na|dite chai na)/iu.test(inbound.content);
-  if (!phone && !declined && !/[\d০-৯]{3}/u.test(inbound.content)) return true;
+  const looksLikePhone = /^\+?[\d০-৯\s().-]{8,}$/u.test(String(inbound.content || "").trim()) || /(?:ফোন|নম্বর|phone|number).*[\d০-৯]{3}/iu.test(inbound.content);
+  if (!phone && !declined && !looksLikePhone) return false;
   const existing = await prisma.chatMessage.findUnique({ where: { aiReplyForMessageId: inbound.id }, select: { id: true } });
   if (existing) return true;
   await prisma.$transaction([
@@ -22,7 +23,8 @@ export async function collectWebsiteHandoffContact(conversation, inbound) {
       metadata: { type: "HUMAN_ASSISTANCE", handoffRequired: true, awaitingHumanPhone: !phone && !declined },
     } }),
     prisma.chatConversation.update({ where: { id: conversation.id }, data: {
-      status: "PENDING", aiModeEnabled: false, lastMessageAt: new Date(),
+      lastMessageAt: new Date(),
+      consecutiveAiFailures: 0,
       awaitingHumanPhone: !phone && !declined,
       ...(phone && { customerPhone: phone, normalizedPhone: phone }),
     } }),

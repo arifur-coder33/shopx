@@ -1170,6 +1170,7 @@ export default function AdminChatInbox({
                     <div
                       className={`relative max-w-[85%] rounded-2xl px-3 py-2 transition-shadow duration-300 ${focusedReplyMessageId === message.id ? "ring-4 ring-violet-500 ring-offset-2 ring-offset-[#efeae2]" : ""} ${message.direction === "OUTBOUND" ? "rounded-tr-sm bg-[#d9fdd3] text-slate-900 shadow-sm" : "rounded-tl-sm bg-white text-slate-800 shadow-sm"}`}
                     >
+                      {message.metadata?.needsHumanAssistant && <p className="mb-1 rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">Need human assistant</p>}
                       {canUpdate && (
                         <div
                           ref={(element) => {
