@@ -98,6 +98,39 @@ export async function sendMessengerProductCard(conversation, product, credential
   return { id: result.message_id || null, secondaryIds: [], warning: null };
 }
 
+export async function sendMessengerProductCarousel(conversation, products, credentials) {
+  if (conversation.channel !== "MESSENGER") throw new Error("Messenger carousel requires a Messenger conversation.");
+  if (products.length < 2) throw new Error("Messenger carousel needs at least two products.");
+  const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
+  if (!credentials.messengerPageAccessToken || !credentials.messengerPageId || !/^v\d+\.\d+$/.test(version || "")) throw new Error("Messenger credentials configure করা নেই।");
+  const elements = await Promise.all(products.slice(0, 10).map(async (product) => {
+    const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
+    const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
+    const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
+    const orderFormUrl = new URL(`/chat/messenger-order?t=${encodeURIComponent(createMessengerOrderToken(conversation.id, product.id))}`, await getSiteUrl()).toString();
+    return {
+      title: String(product.title).slice(0, 80),
+      subtitle: [priceText, variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
+      ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
+      buttons: [
+        { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
+        { type: "postback", title: "আরও জানতে চাই", payload: `details:${product.id}` },
+        { type: "web_url", url: orderFormUrl, title: "অর্ডার করতে চাই" },
+      ],
+    };
+  }));
+  const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "template", payload: { template_type: "generic", elements } } } }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result?.error?.message || "Messenger product carousel পাঠানো যায়নি।");
+  return { id: result.message_id || null, secondaryIds: [], warning: null };
+}
+
 export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null) {
   const url = new URL(imageUrl);
   if (url.protocol !== "https:") throw new Error("Product photo URL must use HTTPS.");
