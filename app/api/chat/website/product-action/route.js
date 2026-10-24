@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { createOrder } from "@/backend/serverActions/orderActions";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
+import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +25,9 @@ export async function POST(request) {
   const productId = clean(body.productId, 80);
   const action = clean(body.action, 30);
   if (!/^[a-f0-9-]{36}$/i.test(token) || (!productId && action !== "lead")) return Response.json({ success: false, message: "Invalid request." }, { status: 400 });
-  const conversation = await prisma.chatConversation.findUnique({ where: { channel_externalUserId: { channel: "WEBSITE", externalUserId: createHash("sha256").update(token).digest("hex") } }, select: { id: true } });
+  const conversation = await prisma.chatConversation.findUnique({ where: { channel_externalUserId: { channel: "WEBSITE", externalUserId: createHash("sha256").update(token).digest("hex") } }, select: { id: true, aiModeEnabled: true } });
   if (!conversation) return Response.json({ success: false, message: "Chat পাওয়া যায়নি।" }, { status: 404 });
-  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { websiteChatEnabled: true, quickReplies: true } });
+  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { websiteChatEnabled: true, aiAutoReplyEnabled: true, encryptedCredentials: true, quickReplies: true } });
   if (setting?.websiteChatEnabled === false) return Response.json({ success: false, message: "Chat এখন বন্ধ আছে।" }, { status: 403 });
   const canCreateOrder = isChatOrderCreationEnabled(setting);
   const product = productId ? await prisma.product.findFirst({
@@ -44,6 +45,22 @@ export async function POST(request) {
     inStock: product.allowOutOfStockOrder || variant.stocks.some((stock) => stock.available > 0),
   }));
   const buyNowUrl = product ? `/buynow/${encodeURIComponent(product.slug)}` : null;
+  if (action === "details" && setting?.aiAutoReplyEnabled && setting.encryptedCredentials && conversation.aiModeEnabled) {
+    const inbound = await prisma.chatMessage.create({
+      data: {
+        conversationId: conversation.id,
+        channel: "WEBSITE",
+        direction: "INBOUND",
+        authorType: "CUSTOMER",
+        content: "এটা সম্পর্কে আরও জানতে চাই",
+        deliveryStatus: "DELIVERED",
+        metadata: { productId: product.id, quickReplyPayload: `details:${product.id}`, action: "details" },
+      },
+    });
+    await prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } });
+    after(() => maybeSendChatAiReply(conversation.id, inbound.id));
+    return Response.json({ success: true, data: { inboundId: inbound.id, metadata: { type: "AI_DETAILS_PENDING", productId: product.id } } }, { headers: { "Cache-Control": "no-store" } });
+  }
   let reply;
   let metadata = { productId: product?.id || null };
   if (action === "details") {

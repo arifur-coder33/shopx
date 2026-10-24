@@ -1008,7 +1008,13 @@ async function getCatalog(
       !productIds.length
     )
       return Promise.resolve([]);
-    const where = {
+    const where = rememberedProductIds.length
+      ? {
+          isActive: true,
+          status: "ACTIVE",
+          id: { in: rememberedProductIds },
+        }
+      : {
       isActive: true,
       status: "ACTIVE",
       OR: [
@@ -1063,13 +1069,13 @@ async function getCatalog(
         seoKeyWord: true,
         questionsAnswers: {
           orderBy: { sortOrder: "asc" },
-          take: 30,
+          take: rememberedProductIds.length ? undefined : 8,
           select: { question: true, answer: true },
         },
         categoryId: true,
         specifications: {
           orderBy: { sortOrder: "asc" },
-          take: 20,
+          take: rememberedProductIds.length ? undefined : 8,
           select: { value: true, specification: { select: { name: true } } },
         },
         deliveryMinDays: true,
@@ -1112,6 +1118,10 @@ async function getCatalog(
         .map((item) => `${item.specification?.name || ""} ${item.value || ""}`)
         .join(" ")
         .toLowerCase();
+      const questionAnswers = (product.questionsAnswers || [])
+        .map((item) => `${item.question || ""} ${item.answer || ""}`)
+        .join(" ")
+        .toLowerCase();
       const variants = (product.variations || [])
         .flatMap((variation) => variation.combinations || [])
         .map(
@@ -1140,6 +1150,7 @@ async function getCatalog(
           if (title.includes(term)) return total + (title === term ? 30 : 12);
           if (category.includes(term)) return total + 6;
           if (specifications.includes(term)) return total + 3;
+          if (questionAnswers.includes(term)) return total + 5;
           if (variants.includes(term)) return total + 10;
           if (description.includes(term)) return total + 1;
           return total;
@@ -1467,9 +1478,7 @@ async function getCatalog(
       category: product.category?.name || null,
       description: plainChatText(
         product.description || product.seoDescription || "",
-      )
-        .replace(/\s+/g, " ")
-        .slice(0, 2500),
+      ).replace(/\s+/g, " ").slice(0, rememberedProductIds.length ? undefined : 2500),
       questionsAnswers: (product.questionsAnswers || []).map((row) => ({
         question: plainChatText(row.question).slice(0, 500),
         answer: plainChatText(row.answer).slice(0, 3000),
@@ -1480,7 +1489,7 @@ async function getCatalog(
             `${specification.specification.name}: ${specification.value}`,
           ),
         )
-        .slice(0, 8),
+        .slice(0, rememberedProductIds.length ? undefined : 8),
       url: new URL(
         `/product/${encodeURIComponent(product.slug)}`,
         siteUrl,
@@ -2425,6 +2434,7 @@ async function generateReply(
       products: [],
     };
   const verifiedData = {
+    productDetailsRequested: /আরও\s*জানতে\s*চাই|\b(?:more\s+details|know\s+more)\b/iu.test(latestCustomerText),
     preferredAddress:
       ADDRESS_LABELS[preferredAddress] || "UNKNOWN; use neutral wording",
     catalog: products.products.map((product) => ({
@@ -2577,7 +2587,7 @@ async function generateReply(
   const output = await requestAiOutput({
     ai,
     model: ai.model,
-    instructions: `${CHAT_AI_INSTRUCTIONS}\n\nChannel style: ${channelStyle}\nFor broad product questions with several matching products, return up to three relevant distinct product IDs and give only a brief introductory reply; each product will appear in its own card message with price and features. Remember the selected product from the supplied conversation data. When newProductSearch is true, answer about the newly requested product type, not the previously selected product. For a stock question about a selected product, report only that product's verified stock; if it is out of stock, check the supplied related catalog products and show relevant in-stock alternatives with their catalog-backed names, prices, and photos when available. If no related alternative is in stock, clearly say that no matching product is currently in stock. Never report another product's stock as the selected product's stock. Do not resend a product photo already shown unless the customer asks for it again. Answer a follow-up about the selected product directly. Ask one natural follow-up only when it helps; do not append “anything else?” mechanically. For order-status requests, only report a matching verified order. If an order number is present but no verified match is available, ask for the phone number used for the order; do not ask for the order number again. For return, refund, or exchange policy questions, use only configured published policy-page content and include its provided link. If policy data could not be loaded, say you cannot verify it right now; if the page is missing or still contains a setup placeholder, say the policy details are not listed yet and share an available page link. Never invent policy terms. For campaign questions, use only active campaign records, summarize eligibility and discount details that are present, and include each provided campaign link exactly as a plain URL. If campaign data could not be loaded, say you cannot verify current offers right now; if it loaded and the active campaign list is empty, say there are no active campaigns. For a photo question, use only product facts in the catalog. If no catalog match is confident, politely say in Bengali that you could not find the pictured item in the catalog and ask if they would like to know about another product. If productIdsToShow contains a substitute, call it an alternative rather than the exact pictured item. For a stated budget, prefer matching products priced within it; if none fit, suggest the closest higher-priced option using verified catalog prices, and consider another available color or variant. For delivery questions about the selected product, calculate delivery from its catalog weight and the supplied base charge plus per-additional-kg rate; provide both Dhaka city and outside-Dhaka charges when location is unspecified. If product weight is missing, say the exact charge cannot be confirmed. For price negotiation, state the verified best current price; if the regular price is higher, explain whether the current lower price comes from a product discount or active campaign, and do not invent further discounts.`,
+    instructions: `${CHAT_AI_INSTRUCTIONS}\n\nChannel style: ${channelStyle}\nFor broad product questions with several matching products, return up to three relevant distinct product IDs and give only a brief introductory reply; each product will appear in its own card message with price and features. Remember the selected product from the supplied conversation data. When newProductSearch is true, answer about the newly requested product type, not the previously selected product. If productDetailsRequested is true, analyze the selected product's complete description, all supplied specifications/features, and its product-specific questionsAnswers; summarize the main useful points in natural Bengali, including warranty or guarantee details whenever they appear. Do not answer that a detail is unavailable if it is present in those fields. Do not send another product card for this request. For a stock question about a selected product, report only that product's verified stock; if it is out of stock, check the supplied related catalog products and show relevant in-stock alternatives with their catalog-backed names, prices, and photos when available. If no related alternative is in stock, clearly say that no matching product is currently in stock. Never report another product's stock as the selected product's stock. Do not resend a product photo already shown unless the customer asks for it again. Answer a follow-up about the selected product directly. Ask one natural follow-up only when it helps; do not append “anything else?” mechanically. For order-status requests, only report a matching verified order. If an order number is present but no verified match is available, ask for the phone number used for the order; do not ask for the order number again. For return, refund, or exchange policy questions, use only configured published policy-page content and include its provided link. If policy data could not be loaded, say you cannot verify it right now; if the page is missing or still contains a setup placeholder, say the policy details are not listed yet and share an available page link. Never invent policy terms. For campaign questions, use only active campaign records, summarize eligibility and discount details that are present, and include each provided campaign link exactly as a plain URL. If campaign data could not be loaded, say you cannot verify current offers right now; if it loaded and the active campaign list is empty, say there are no active campaigns. For a photo question, use only product facts in the catalog. If no catalog match is confident, politely say in Bengali that you could not find the pictured item in the catalog and ask if they would like to know about another product. If productIdsToShow contains a substitute, call it an alternative rather than the exact pictured item. For a stated budget, prefer matching products priced within it; if none fit, suggest the closest higher-priced option using verified catalog prices, and consider another available color or variant. For delivery questions about the selected product, calculate delivery from its catalog weight and the supplied base charge plus per-additional-kg rate; provide both Dhaka city and outside-Dhaka charges when location is unspecified. If product weight is missing, say the exact charge cannot be confirmed. For price negotiation, state the verified best current price; if the regular price is higher, explain whether the current lower price comes from a product discount or active campaign, and do not invent further discounts.`,
     input: requestInput,
     maxOutputTokens: 320,
     responseSchema: {
@@ -2606,9 +2616,12 @@ async function generateReply(
   }
   if (!parsed.reply)
     throw new Error("নির্বাচিত AI provider খালি reply দিয়েছে।");
-  const requestedProductIds = [...new Set(parsed.productIdsToShow || [])]
-    .filter((id) => candidates.some((product) => product.id === id))
-    .slice(0, 3);
+  const productDetailsRequested = /আরও\s*জানতে\s*চাই|\b(?:more\s+details|know\s+more)\b/iu.test(latestCustomerText);
+  const requestedProductIds = productDetailsRequested
+    ? []
+    : [...new Set(parsed.productIdsToShow || [])]
+        .filter((id) => candidates.some((product) => product.id === id))
+        .slice(0, 3);
   const recommendationSearch =
     productMemory.newProductSearch || productMemory.catalogCategoryIds?.length;
   const productIdsToShow = recommendationSearch
