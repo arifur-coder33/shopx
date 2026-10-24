@@ -36,6 +36,10 @@ import {
   shouldAutoReply,
   shouldFetchOrderContext,
 } from "@/backend/utils/chatAiPreferences.mjs";
+import {
+  createImageFingerprint,
+  fingerprintDistance,
+} from "@/backend/utils/imageFingerprint.mjs";
 import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 import { normalizeChatText } from "@/lib/chatText";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
@@ -44,10 +48,6 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import Fuse from "fuse.js";
 import { htmlToText } from "html-to-text";
 import sharp from "sharp";
-import {
-  createImageFingerprint,
-  fingerprintDistance,
-} from "@/backend/utils/imageFingerprint.mjs";
 
 const settingId = "primary";
 const ADDRESS_LABELS = {
@@ -552,8 +552,14 @@ function extractPriceBudget(value) {
 
 function isPriceNegotiation(value) {
   const text = normalizeDigits(value).replace(/,/g, "");
-  return /(?:\b(?:last|best|final)\s*price\b|\bprice\s*(?:kom|lower|less|reduce)|\b(?:ektu|aro)\s*kom\b|\bkom\s*koren\b|\bdam\s*kom\b|\bdiscount\s*(?:den|korben|hobe)?\b|দাম\s*কম|একটু\s*কম|আরও\s*কম|কম\s*রাখেন|কমানো\s*যাবে|ছাড়\s*হবে|ছাড়\s*হবে|সর্বশেষ\s*দাম|লাস্ট\s*প্রাইস)/iu.test(text) ||
-    /(?:\b\d{2,9}\s*(?:(?:taka(?:y|te)?)|tk|৳)?\s*(?:hobe|hoba|korben|kore|diben|den|niben|nibe|te|e)\b|(?:হবে|হইবে|দিবেন|দিবে|দেন|নিবেন|নিবে)\s*\d{2,9}|\d{2,9}\s*(?:টাকায়|টাকাতে|টাকা হলে|টাকা দিবেন|টাকা দিবে|টাকা দেন))/iu.test(text);
+  return (
+    /(?:\b(?:last|best|final)\s*price\b|\bprice\s*(?:kom|lower|less|reduce)|\b(?:ektu|aro)\s*kom\b|\bkom\s*koren\b|\bdam\s*kom\b|\bdiscount\s*(?:den|korben|hobe)?\b|দাম\s*কম|একটু\s*কম|আরও\s*কম|কম\s*রাখেন|কমানো\s*যাবে|ছাড়\s*হবে|ছাড়\s*হবে|সর্বশেষ\s*দাম|লাস্ট\s*প্রাইস)/iu.test(
+      text,
+    ) ||
+    /(?:\b\d{2,9}\s*(?:(?:taka(?:y|te)?)|tk|৳)?\s*(?:hobe|hoba|korben|kore|diben|den|niben|nibe|te|e)\b|(?:হবে|হইবে|দিবেন|দিবে|দেন|নিবেন|নিবে)\s*\d{2,9}|\d{2,9}\s*(?:টাকায়|টাকাতে|টাকা হলে|টাকা দিবেন|টাকা দিবে|টাকা দেন))/iu.test(
+      text,
+    )
+  );
 }
 
 function isStockQuestion(value) {
@@ -1279,36 +1285,41 @@ async function getCatalog(
       // otherwise hide the correct item when the vision model also emits a
       // broad word such as "battery" or "machine".
       const catalogIndex = await prisma.product.findMany({
-          where: { isActive: true, status: "ACTIVE" },
-          take: 3000,
-          orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
-          select: {
-            id: true,
-            title: true,
-            productCode: true,
-            searchText: true,
-            seoDescription: true,
-            seoKeyWord: true,
-            category: { select: { name: true } },
-          },
-        });
+        where: { isActive: true, status: "ACTIVE" },
+        take: 3000,
+        orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
+        select: {
+          id: true,
+          title: true,
+          productCode: true,
+          searchText: true,
+          seoDescription: true,
+          seoKeyWord: true,
+          category: { select: { name: true } },
+        },
+      });
       const fuse = new Fuse(catalogIndex, {
-          includeScore: true,
-          ignoreLocation: true,
-          threshold: 0.46,
-          minMatchCharLength: 2,
-          keys: [
-            { name: "title", weight: 4 },
-            { name: "seoKeyWord", weight: 2.5 },
-            { name: "category.name", weight: 1.5 },
-            { name: "searchText", weight: 1.5 },
-            { name: "seoDescription", weight: 1 },
-          ],
+        includeScore: true,
+        ignoreLocation: true,
+        threshold: 0.46,
+        minMatchCharLength: 2,
+        keys: [
+          { name: "title", weight: 4 },
+          { name: "seoKeyWord", weight: 2.5 },
+          { name: "category.name", weight: 1.5 },
+          { name: "searchText", weight: 1.5 },
+          { name: "seoDescription", weight: 1 },
+        ],
       });
       const fuzzyRank = new Map();
       const fuzzyTerms = [...new Set(imageTerms)]
         .map((term) => String(term).trim().toLowerCase())
-        .filter((term) => term.length >= 2 && !PRODUCT_SEARCH_STOPWORDS.has(term) && !PRODUCT_BROWSE_TERMS.has(term))
+        .filter(
+          (term) =>
+            term.length >= 2 &&
+            !PRODUCT_SEARCH_STOPWORDS.has(term) &&
+            !PRODUCT_BROWSE_TERMS.has(term),
+        )
         .slice(0, 40);
       for (const term of fuzzyTerms) {
         for (const result of fuse.search(term, { limit: 8 })) {
@@ -1328,7 +1339,9 @@ async function getCatalog(
         const exactFirst = matches.slice(0, imageTerms.length ? 4 : 2);
         const includedIds = new Set(exactFirst.map((product) => product.id));
         const fuzzyOnly = [...fuzzyProducts]
-          .sort((a, b) => (fuzzyRank.get(a.id) ?? 1) - (fuzzyRank.get(b.id) ?? 1))
+          .sort(
+            (a, b) => (fuzzyRank.get(a.id) ?? 1) - (fuzzyRank.get(b.id) ?? 1),
+          )
           .filter((product) => !includedIds.has(product.id));
         matches = [
           ...exactFirst,
@@ -1720,7 +1733,9 @@ async function getCatalog(
 
 async function rankCatalogImageCandidates(ai, image, description, products) {
   if (!image?.base64 || !products.length) return [];
-  const candidateById = new Map(products.map((product) => [product.id, product]));
+  const candidateById = new Map(
+    products.map((product) => [product.id, product]),
+  );
   const imageRows = products.flatMap((product) =>
     (product.imageUrls || []).map((url, index) => ({
       productId: product.id,
@@ -1914,18 +1929,14 @@ async function rankCatalogImageHashes(image, candidateProductIds) {
         fingerprint.imageAverageHash,
         item.imageAverageHash,
       );
-      bestScore = Math.min(
-        bestScore,
-        differenceDistance + averageDistance,
-      );
+      bestScore = Math.min(bestScore, differenceDistance + averageDistance);
     }
     if (Number.isFinite(bestScore)) {
       const similarity = Math.round((1 - bestScore / 128) * 100);
       ranked.push({ id: product.id, similarity });
     }
   }
-  return ranked
-    .sort((left, right) => right.similarity - left.similarity);
+  return ranked.sort((left, right) => right.similarity - left.similarity);
 }
 
 function imageAttachmentFor(message) {
@@ -1971,13 +1982,23 @@ async function readImageResponse(response, allowedHosts) {
   const source = Buffer.from(bytes);
   let normalized = await sharp(source, { limitInputPixels: 40_000_000 })
     .rotate()
-    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .resize({
+      width: 1600,
+      height: 1600,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
     .jpeg({ quality: 82, mozjpeg: true })
     .toBuffer();
   if (normalized.length > 3 * 1024 * 1024) {
     normalized = await sharp(source, { limitInputPixels: 40_000_000 })
       .rotate()
-      .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+      .resize({
+        width: 1200,
+        height: 1200,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .jpeg({ quality: 65, mozjpeg: true })
       .toBuffer();
   }
@@ -2010,7 +2031,12 @@ async function findProductLinkInMessage(messageText) {
   try {
     slug = decodeURIComponent(match[1]);
   } catch {
-    return { isUrl: true, isStoreDomain: true, isProductLink: true, productId: null };
+    return {
+      isUrl: true,
+      isStoreDomain: true,
+      isProductLink: true,
+      productId: null,
+    };
   }
   const product = await prisma.product.findFirst({
     where: { slug, isActive: true, status: "ACTIVE" },
@@ -2243,11 +2269,11 @@ Return strictly JSON with keys:
         "description",
         "bengaliDescription",
         "brandModel",
-      "productName",
-      "productType",
-      "materials",
-      "useCases",
-      "visibleFeatures",
+        "productName",
+        "productType",
+        "materials",
+        "useCases",
+        "visibleFeatures",
         "searchTerms",
       ],
     },
@@ -2268,7 +2294,9 @@ Return strictly JSON with keys:
         ? parsed.useCases.map((item) => String(item).slice(0, 120)).slice(0, 8)
         : [],
       visibleFeatures: Array.isArray(parsed.visibleFeatures)
-        ? parsed.visibleFeatures.map((item) => String(item).slice(0, 120)).slice(0, 10)
+        ? parsed.visibleFeatures
+            .map((item) => String(item).slice(0, 120))
+            .slice(0, 10)
         : [],
       searchTerms: Array.isArray(parsed.searchTerms)
         ? parsed.searchTerms
@@ -2671,9 +2699,14 @@ async function generateReply(
     products.products.find(
       (product) => product.id === productMemory.selectedProductId,
     ) || (products.products.length === 1 ? products.products[0] : null);
-  const asksProductWeight =
-    /(?:\bweight\b|\bwajan\b|\bojon\b|ওজন|ওজোন)/iu.test(latestCustomerText);
-  if (asksProductWeight && !isDeliveryQuestion(latestCustomerText) && selectedCatalogProduct) {
+  const asksProductWeight = /(?:\bweight\b|\bwajan\b|\bojon\b|ওজন|ওজোন)/iu.test(
+    latestCustomerText,
+  );
+  if (
+    asksProductWeight &&
+    !isDeliveryQuestion(latestCustomerText) &&
+    selectedCatalogProduct
+  ) {
     const weights = selectedCatalogProduct.variants
       .map((variant) => Number(variant.weightKg))
       .filter((weight) => Number.isFinite(weight) && weight > 0);
@@ -2709,14 +2742,18 @@ async function generateReply(
       .sort((a, b) => a.current - b.current);
     const best = pricedVariants[0];
     if (best) {
-      const previousRefusal = [...history].reverse().find(
-        (message) =>
-          message.direction === "OUTBOUND" &&
-          message.metadata?.priceNegotiation?.productId === selectedCatalogProduct.id,
-      );
-      const priceText = best.regular > best.current
-        ? `নিয়মিত দাম ৳${best.regular.toLocaleString("en-BD")}, তবে এখন ${best.variant.currentCampaignPrice ? "offer" : "ছাড়"} চলছে—তাই ৳${best.current.toLocaleString("en-BD")} টাকায় দিচ্ছি`
-        : `এই পণ্যের নির্ধারিত দাম ৳${best.current.toLocaleString("en-BD")}`;
+      const previousRefusal = [...history]
+        .reverse()
+        .find(
+          (message) =>
+            message.direction === "OUTBOUND" &&
+            message.metadata?.priceNegotiation?.productId ===
+              selectedCatalogProduct.id,
+        );
+      const priceText =
+        best.regular > best.current
+          ? `নিয়মিত দাম ৳${best.regular.toLocaleString("en-BD")}, তবে এখন ${best.variant.currentCampaignPrice ? "offer" : "ছাড়"} চলছে—তাই ৳${best.current.toLocaleString("en-BD")} টাকায় দিচ্ছি`
+          : `এই পণ্যের নির্ধারিত দাম ৳${best.current.toLocaleString("en-BD")}`;
       return {
         text: previousRefusal
           ? `না স্যার, ${selectedCatalogProduct.title}-এর ৳${best.current.toLocaleString("en-BD")} দামটাই fixed। এর বেশি নিচ্ছি না, আর এর চেয়ে কমানোও সম্ভব হচ্ছে না।`
@@ -3241,9 +3278,16 @@ async function deliverReply(
     } catch (error) {
       const hasImageFollowup = Boolean(
         credentials.whatsappImageTemplateName &&
-          (products.some((product) => product.imageUrls?.[0]) || mediaPhoto?.url || mediaPhotos.length),
+        (products.some((product) => product.imageUrls?.[0]) ||
+          mediaPhoto?.url ||
+          mediaPhotos.length),
       );
-      if (conversation.channel !== "WHATSAPP" || Number(error?.code) !== 131047 || !hasImageFollowup) throw error;
+      if (
+        conversation.channel !== "WHATSAPP" ||
+        Number(error?.code) !== 131047 ||
+        !hasImageFollowup
+      )
+        throw error;
       credentials.whatsappWindowClosed = true;
     }
   }
@@ -3553,9 +3597,12 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     const credentials = decryptProviderCredentials(
       setting.encryptedCredentials,
     );
-    credentials.whatsappTextTemplateName = setting.whatsappTextTemplateName || "";
-    credentials.whatsappImageTemplateName = setting.whatsappImageTemplateName || "";
-    credentials.whatsappTemplateLanguage = setting.whatsappTemplateLanguage || "bn";
+    credentials.whatsappTextTemplateName =
+      setting.whatsappTextTemplateName || "";
+    credentials.whatsappImageTemplateName =
+      setting.whatsappImageTemplateName || "";
+    credentials.whatsappTemplateLanguage =
+      setting.whatsappTemplateLanguage || "bn";
     const aiConfig = {
       provider:
         setting.aiProvider === "GOOGLE_AI_STUDIO"
@@ -3680,10 +3727,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     const inboundProductLink = customerImage
       ? null
       : await findProductLinkInMessage(inbound.content).catch((error) => {
-          console.warn(
-            "Product link lookup failed:",
-            error?.message || error,
-          );
+          console.warn("Product link lookup failed:", error?.message || error);
           return null;
         });
     const [productContext, verifiedOrders] = await Promise.all([
@@ -3712,17 +3756,17 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           ? []
           : inboundProductLink?.productId
             ? [inboundProductLink.productId]
-          : (isProductImageRequest(inbound.content) ||
-                isProductVideoRequest(inbound.content)) &&
-              !productMemory.newProductSearch &&
-              productMemory.pageProductId
-            ? [
-                ...new Set([
-                  ...productMemory.catalogProductIds,
-                  productMemory.pageProductId,
-                ]),
-              ]
-            : productMemory.catalogProductIds,
+            : (isProductImageRequest(inbound.content) ||
+                  isProductVideoRequest(inbound.content)) &&
+                !productMemory.newProductSearch &&
+                productMemory.pageProductId
+              ? [
+                  ...new Set([
+                    ...productMemory.catalogProductIds,
+                    productMemory.pageProductId,
+                  ]),
+                ]
+              : productMemory.catalogProductIds,
         customerImage ? [] : productMemory.catalogCategoryIds,
         aiConfig,
         Boolean(customerImage) ||
@@ -3771,7 +3815,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       const hashConflictsWithVision =
         bestVisionMatch &&
         bestVisionMatch.id !== hashRanking[0]?.id &&
-        bestVisionMatch.confidence >= 65;
+        bestVisionMatch.confidence >= 55;
       if (
         hashRanking[0]?.similarity >= minimumHashMatch &&
         (!hashConflictsWithVision || hashRanking[0].similarity >= 97)
@@ -3790,14 +3834,13 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
             true,
           );
           matchedProduct = exactMatchContext.products[0] || null;
-          if (matchedProduct)
-            productContext.products.unshift(matchedProduct);
+          if (matchedProduct) productContext.products.unshift(matchedProduct);
         }
         if (matchedProduct)
-        imageHashBestProduct = {
-          ...matchedProduct,
-          imageFingerprintSimilarity: hashRanking[0].similarity,
-        };
+          imageHashBestProduct = {
+            ...matchedProduct,
+            imageFingerprintSimilarity: hashRanking[0].similarity,
+          };
       }
     }
     const requiresHumanFollowUp = needsHumanFollowUp({
@@ -3826,56 +3869,61 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
             imageMatch: "none",
             products: [],
           }
-      : inboundProductLink?.isProductLink
-        ? inboundProductLink.productId && productContext.products[0]
-          ? {
-              text: `জি, আপনার পাঠানো লিংকের পণ্যটি হলো ${productContext.products[0].title}। বিস্তারিত কার্ডে দিলাম।`,
-              imageMatch: "none",
-              products: [productContext.products[0]],
-              selectedProductId: productContext.products[0].id,
-            }
-          : {
-              text: "দুঃখিত, এই লিংকে কোনো চালু পণ্য খুঁজে পেলাম না। পণ্যের সঠিক লিংকটি আবার পাঠাবেন?",
-              imageMatch: "none",
-              products: [],
-            }
-      : rejectsPreviousProductMatch
-        ? {
-            text: "দুঃখিত, আগের পণ্যের মিলটি ঠিক হয়নি। পণ্যের নাম বা আরেকটি পরিষ্কার ছবি দিলে আবার খুঁজে দেখব।",
-            imageMatch: "none",
-            products: [],
-          }
-      : customerImage
-        ? productContext.products.length
-          ? { text: "", imageMatch: "none", products: [] }
-          : {
-              text: "ছবিটি পেয়েছি, তবে এখনো পণ্যটির সঙ্গে মিল খুঁজে পাইনি। পণ্যের নাম বা website link দিলে খুঁজে দেখব।",
-              imageMatch: "none",
-              products: [],
-            }
-        : await generateReply(
-          aiConfig,
-          conversation,
-          history,
-          productContext,
-          verifiedOrders,
-          conversation.preferredAddress,
-          null,
-          setting.aiReplyTone,
-          setting.aiReplyExamples,
-          productMemory,
-        );
+        : inboundProductLink?.isProductLink
+          ? inboundProductLink.productId && productContext.products[0]
+            ? {
+                text: `জি, আপনার পাঠানো লিংকের পণ্যটি হলো ${productContext.products[0].title}। বিস্তারিত কার্ডে দিলাম।`,
+                imageMatch: "none",
+                products: [productContext.products[0]],
+                selectedProductId: productContext.products[0].id,
+              }
+            : {
+                text: "দুঃখিত, এই লিংকে কোনো চালু পণ্য খুঁজে পেলাম না। পণ্যের সঠিক লিংকটি আবার পাঠাবেন?",
+                imageMatch: "none",
+                products: [],
+              }
+          : rejectsPreviousProductMatch
+            ? {
+                text: "দুঃখিত, আগের পণ্যের মিলটি ঠিক হয়নি। পণ্যের নাম বা আরেকটি পরিষ্কার ছবি দিলে আবার খুঁজে দেখব।",
+                imageMatch: "none",
+                products: [],
+              }
+            : customerImage
+              ? productContext.products.length
+                ? { text: "", imageMatch: "none", products: [] }
+                : {
+                    text: "ছবিটি পেয়েছি, তবে এখনো পণ্যটির সঙ্গে মিল খুঁজে পাইনি। পণ্যের নাম বা website link দিলে খুঁজে দেখব।",
+                    imageMatch: "none",
+                    products: [],
+                  }
+              : await generateReply(
+                  aiConfig,
+                  conversation,
+                  history,
+                  productContext,
+                  verifiedOrders,
+                  conversation.preferredAddress,
+                  null,
+                  setting.aiReplyTone,
+                  setting.aiReplyExamples,
+                  productMemory,
+                );
     const hashMatchedProduct =
       !contactOnlyRequest && imageHashBestProduct?.id
         ? imageHashBestProduct
         : null;
-    const imageFallbackProducts = !contactOnlyRequest && customerImage
-      ? visionRanking
-          .filter((match) => match.confidence >= 55)
-          .map((match) => productContext.products.find((product) => product.id === match.id))
-          .filter((product) => product?.imageUrls?.length)
-          .slice(0, 3)
-      : [];
+    const imageFallbackProducts =
+      !contactOnlyRequest && customerImage
+        ? visionRanking
+            .filter((match) => match.confidence >= 55)
+            .map((match) =>
+              productContext.products.find(
+                (product) => product.id === match.id,
+              ),
+            )
+            .filter((product) => product?.imageUrls?.length)
+            .slice(0, 3)
+        : [];
     if (!contactOnlyRequest && customerImage && hashMatchedProduct) {
       generated = {
         ...generated,
@@ -3893,7 +3941,11 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         videoLinks: [],
         selectedProductId: hashMatchedProduct.id,
       };
-    } else if (!contactOnlyRequest && customerImage && imageFallbackProducts.length) {
+    } else if (
+      !contactOnlyRequest &&
+      customerImage &&
+      imageFallbackProducts.length
+    ) {
       generated = {
         ...generated,
         text: "ছবির বর্ণনার সঙ্গে মিল থাকতে পারে—এমন কয়েকটি পণ্য দিলাম। কার্ডগুলো দেখে পছন্দেরটি জানাবেন?",
@@ -4009,21 +4061,25 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       ...(delivery.imageWarnings.length && {
         imageWarnings: delivery.imageWarnings,
       }),
-      ...(!rejectsPreviousProductMatch && (generated.selectedProductId ||
-        (generated.products.length === 1 ? generated.products[0].id : null) ||
-        productMemory.selectedProductId) && {
-        selectedProductId:
-          generated.selectedProductId ||
+      ...(!rejectsPreviousProductMatch &&
+        (generated.selectedProductId ||
           (generated.products.length === 1 ? generated.products[0].id : null) ||
-          productMemory.selectedProductId,
-      }),
-      ...(!rejectsPreviousProductMatch && productMemory.pageProductId && {
-        pageProductId: productMemory.pageProductId,
-        pageProductTitle: productMemory.pageProductTitle,
-        pageProductConfirmed: productMemory.pageProductConfirmed,
-        pageProductConfirmationPending:
-          productMemory.pageProductConfirmationRequired,
-      }),
+          productMemory.selectedProductId) && {
+          selectedProductId:
+            generated.selectedProductId ||
+            (generated.products.length === 1
+              ? generated.products[0].id
+              : null) ||
+            productMemory.selectedProductId,
+        }),
+      ...(!rejectsPreviousProductMatch &&
+        productMemory.pageProductId && {
+          pageProductId: productMemory.pageProductId,
+          pageProductTitle: productMemory.pageProductTitle,
+          pageProductConfirmed: productMemory.pageProductConfirmed,
+          pageProductConfirmationPending:
+            productMemory.pageProductConfirmationRequired,
+        }),
       ...(imageDescription && {
         customerImageDescription: imageDescription.description,
         customerImageDescriptionBn: imageDescription.bengaliDescription,
@@ -4082,7 +4138,9 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
               media.product &&
               productOptions.find((product) => product.id === media.product.id);
             const carouselOptions = (media.products || [])
-              .map((item) => productOptions.find((product) => product.id === item.id))
+              .map((item) =>
+                productOptions.find((product) => product.id === item.id),
+              )
               .filter(Boolean);
             const shownOptions = carouselOptions.length
               ? carouselOptions
