@@ -312,7 +312,12 @@ function plainChatText(value) {
 }
 
 function canOrderCatalogProduct(product) {
-  return Boolean(product?.allowOutOfStockOrder) || (product?.variants || []).some((variant) => Number(variant.availableStock) > 0);
+  return (
+    Boolean(product?.allowOutOfStockOrder) ||
+    (product?.variants || []).some(
+      (variant) => Number(variant.availableStock) > 0,
+    )
+  );
 }
 
 function googleSchema(schema) {
@@ -529,14 +534,20 @@ function normalizeDigits(value) {
 function extractPriceBudget(value) {
   const text = normalizeDigits(value).replace(/,/g, "");
   const match =
-    text.match(/(\d{2,9})\s*(?:(?:টাকা|taka|tk)(?:র|er)?\s*)?(?:এর\s*|er\s*)?(?:মধ্যে|মাঝে|নিচে|moddhe|modde|under|within)/iu) ||
-    text.match(/(?:under|within|budget(?:\s+of)?|maximum|max)\s*(?:৳|টাকা|taka|tk)?\s*(\d{2,9})/iu);
+    text.match(
+      /(\d{2,9})\s*(?:(?:টাকা|taka|tk)(?:র|er)?\s*)?(?:এর\s*|er\s*)?(?:মধ্যে|মাঝে|নিচে|moddhe|modde|under|within)/iu,
+    ) ||
+    text.match(
+      /(?:under|within|budget(?:\s+of)?|maximum|max)\s*(?:৳|টাকা|taka|tk)?\s*(\d{2,9})/iu,
+    );
   const amount = Number(match?.[1]);
   return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
 function isPriceNegotiation(value) {
-  return /(?:\b(?:last|best|final)\s+price\b|\bprice\s*(?:kom|lower|less|reduce)|\b(?:ektu|aro)\s*kom\b|\bkom\s*koren\b|\bdam\s*kom\b|\bdiscount\s*(?:den|korben|hobe)?\b|দাম\s*কম|একটু\s*কম|আরও\s*কম|কম\s*রাখেন|কমানো\s*যাবে|ছাড়\s*হবে|ছাড়\s*হবে|সর্বশেষ\s*দাম|লাস্ট\s*প্রাইস)/iu.test(String(value || ""));
+  return /(?:\b(?:last|best|final)\s+price\b|\bprice\s*(?:kom|lower|less|reduce)|\b(?:ektu|aro)\s*kom\b|\bkom\s*koren\b|\bdam\s*kom\b|\bdiscount\s*(?:den|korben|hobe)?\b|দাম\s*কম|একটু\s*কম|আরও\s*কম|কম\s*রাখেন|কমানো\s*যাবে|ছাড়\s*হবে|ছাড়\s*হবে|সর্বশেষ\s*দাম|লাস্ট\s*প্রাইস)/iu.test(
+    String(value || ""),
+  );
 }
 
 function isStockQuestion(value) {
@@ -971,7 +982,10 @@ async function getCatalog(
   const rawTerms = [
     ...new Set([
       ...semanticSearchTerms.flatMap(
-        (term) => String(term).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [],
+        (term) =>
+          String(term)
+            .toLowerCase()
+            .match(/[\p{L}\p{N}]{3,}/gu) || [],
       ),
       ...(String(messageText)
         .toLowerCase()
@@ -1000,7 +1014,11 @@ async function getCatalog(
         .flatMap((term) => colorAliases[term] || [term]),
     ),
   ].slice(0, 14);
-  const queryCatalog = async (searchTerms, categoryIds = [], productIds = []) => {
+  const queryCatalog = async (
+    searchTerms,
+    categoryIds = [],
+    productIds = [],
+  ) => {
     if (
       !searchTerms.length &&
       !rememberedProductIds.length &&
@@ -1015,41 +1033,51 @@ async function getCatalog(
           id: { in: rememberedProductIds },
         }
       : {
-      isActive: true,
-      status: "ACTIVE",
-      OR: [
-        ...rememberedProductIds.map((id) => ({ id })),
-        ...productIds.map((id) => ({ id })),
-        ...(categoryIds.length ? [{ categoryId: { in: categoryIds } }] : []),
-        ...searchTerms.flatMap((term) => [
-          { title: { contains: term, mode: "insensitive" } },
-          { description: { contains: term, mode: "insensitive" } },
-          { searchText: { contains: term, mode: "insensitive" } },
-          { questionsAnswers: { some: { OR: [
-            { question: { contains: term, mode: "insensitive" } },
-            { answer: { contains: term, mode: "insensitive" } },
-          ] } } },
-          {
-            specifications: {
-              some: { value: { contains: term, mode: "insensitive" } },
-            },
-          },
-          {
-            variations: {
-              some: {
-                combinations: {
+          isActive: true,
+          status: "ACTIVE",
+          OR: [
+            ...rememberedProductIds.map((id) => ({ id })),
+            ...productIds.map((id) => ({ id })),
+            ...(categoryIds.length
+              ? [{ categoryId: { in: categoryIds } }]
+              : []),
+            ...searchTerms.flatMap((term) => [
+              { title: { contains: term, mode: "insensitive" } },
+              { description: { contains: term, mode: "insensitive" } },
+              { searchText: { contains: term, mode: "insensitive" } },
+              {
+                questionsAnswers: {
                   some: {
-                    variationValue: {
-                      is: { value: { contains: term, mode: "insensitive" } },
+                    OR: [
+                      { question: { contains: term, mode: "insensitive" } },
+                      { answer: { contains: term, mode: "insensitive" } },
+                    ],
+                  },
+                },
+              },
+              {
+                specifications: {
+                  some: { value: { contains: term, mode: "insensitive" } },
+                },
+              },
+              {
+                variations: {
+                  some: {
+                    combinations: {
+                      some: {
+                        variationValue: {
+                          is: {
+                            value: { contains: term, mode: "insensitive" },
+                          },
+                        },
+                      },
                     },
                   },
                 },
               },
-            },
-          },
-        ]),
-      ],
-    };
+            ]),
+          ],
+        };
     const found = await prisma.product.findMany({
       where,
       take: priceBudget ? 100 : 40,
@@ -1138,11 +1166,16 @@ async function getCatalog(
         })
         .filter((price) => price > 0);
       const lowestPrice = prices.length ? Math.min(...prices) : null;
-      const budgetBoost = !priceBudget || lowestPrice == null
-        ? 0
-        : lowestPrice <= priceBudget
-          ? 100 + Math.round(((priceBudget - lowestPrice) / priceBudget) * 10)
-          : Math.max(0, 45 - Math.round(((lowestPrice - priceBudget) / priceBudget) * 45));
+      const budgetBoost =
+        !priceBudget || lowestPrice == null
+          ? 0
+          : lowestPrice <= priceBudget
+            ? 100 + Math.round(((priceBudget - lowestPrice) / priceBudget) * 10)
+            : Math.max(
+                0,
+                45 -
+                  Math.round(((lowestPrice - priceBudget) / priceBudget) * 45),
+              );
       return (
         budgetBoost +
         (rememberedProductIds.includes(product.id) ? 1000 : 0) +
@@ -1273,7 +1306,11 @@ async function getCatalog(
           }
         }
         if (fuzzyRank.size) {
-          const fuzzyProducts = await queryCatalog([], [], [...fuzzyRank.keys()]);
+          const fuzzyProducts = await queryCatalog(
+            [],
+            [],
+            [...fuzzyRank.keys()],
+          );
           const existingIds = new Set(matches.map((product) => product.id));
           matches = [
             ...[...fuzzyProducts]
@@ -1478,7 +1515,9 @@ async function getCatalog(
       category: product.category?.name || null,
       description: plainChatText(
         product.description || product.seoDescription || "",
-      ).replace(/\s+/g, " ").slice(0, rememberedProductIds.length ? undefined : 2500),
+      )
+        .replace(/\s+/g, " ")
+        .slice(0, rememberedProductIds.length ? undefined : 2500),
       questionsAnswers: (product.questionsAnswers || []).map((row) => ({
         question: plainChatText(row.question).slice(0, 500),
         answer: plainChatText(row.answer).slice(0, 3000),
@@ -1943,6 +1982,72 @@ Return strictly JSON with keys:
     };
   }
 }
+
+async function analyzeCustomerProductImage(apiKey, image, customerText) {
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(25000),
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        store: false,
+        max_output_tokens: 400,
+        instructions:
+          "You are a product expert. Analyze customer photo and return ONLY JSON: {productName: string (English + Bangla), category: string, color: string, material: string, useCase: string, features: string[], searchKeywords: string[] (8 keywords mixing Bangla+English for catalog search)}. Return only JSON, no extra text.",
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `Customer message: ${String(customerText || "").slice(0, 300)}`,
+              },
+              {
+                type: "input_image",
+                image_url: `data:${image.mimeType};base64,${image.base64}`,
+                detail: "high",
+              },
+            ],
+          },
+        ],
+        text: { format: { type: "json_object" } },
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok)
+      throw new Error(result?.error?.message || "analysis failed");
+    const output =
+      (result.output || [])
+        .flatMap((item) => item.content || [])
+        .find((item) => item.type === "output_text")?.text || "{}";
+    const parsed = JSON.parse(output);
+    return {
+      productName: String(parsed.productName || "").slice(0, 200),
+      category: String(parsed.category || "").slice(0, 80),
+      color: String(parsed.color || "").slice(0, 80),
+      material: String(parsed.material || "").slice(0, 80),
+      useCase: String(parsed.useCase || "").slice(0, 150),
+      features: Array.isArray(parsed.features)
+        ? parsed.features.slice(0, 6)
+        : [],
+      searchKeywords: Array.isArray(parsed.searchKeywords)
+        ? parsed.searchKeywords
+            .map((s) => String(s).trim())
+            .filter((s) => s.length >= 2)
+            .slice(0, 10)
+        : [],
+    };
+  } catch (e) {
+    console.warn("Product image analysis failed:", e?.message || e);
+    return null;
+  }
+}
+
 function orderNumberFrom(text) {
   const normalized = normalizeDigits(text);
   const explicitOrderNo = normalized.match(
@@ -2321,8 +2426,7 @@ async function generateReply(
   const selectedCatalogProduct =
     products.products.find(
       (product) => product.id === productMemory.selectedProductId,
-    ) ||
-    (products.products.length === 1 ? products.products[0] : null);
+    ) || (products.products.length === 1 ? products.products[0] : null);
   if (
     isPriceNegotiation(latestCustomerText) &&
     selectedCatalogProduct?.variants?.length
@@ -2341,9 +2445,10 @@ async function generateReply(
       .sort((a, b) => a.current - b.current);
     const best = pricedVariants[0];
     if (best) {
-      const priceText = best.regular > best.current
-        ? `নিয়মিত দাম ৳${best.regular.toLocaleString("en-BD")}; ${best.variant.currentCampaignPrice ? "চলমান অফারে" : "বর্তমান ছাড়ে"} এখন ৳${best.current.toLocaleString("en-BD")}`
-        : `বর্তমান সেরা দাম ৳${best.current.toLocaleString("en-BD")}`;
+      const priceText =
+        best.regular > best.current
+          ? `নিয়মিত দাম ৳${best.regular.toLocaleString("en-BD")}; ${best.variant.currentCampaignPrice ? "চলমান অফারে" : "বর্তমান ছাড়ে"} এখন ৳${best.current.toLocaleString("en-BD")}`
+          : `বর্তমান সেরা দাম ৳${best.current.toLocaleString("en-BD")}`;
       return {
         text: `দুঃখিত, ${selectedCatalogProduct.title}-এর ${priceText}। এর চেয়ে কমানো সম্ভব নয়।`,
         imageMatch: "none",
@@ -2368,24 +2473,29 @@ async function generateReply(
         selectedProductId: selectedCatalogProduct.id,
       };
     }
-    const charges = (base) => weights.map((weight) =>
-      Math.round(
-        (Number(base) +
-          Math.max(0, Math.ceil(weight) - 1) *
-            Number(products.delivery.additionalKg || 0)) *
-          100,
-      ) / 100,
-    );
+    const charges = (base) =>
+      weights.map(
+        (weight) =>
+          Math.round(
+            (Number(base) +
+              Math.max(0, Math.ceil(weight) - 1) *
+                Number(products.delivery.additionalKg || 0)) *
+              100,
+          ) / 100,
+      );
     const inside = charges(products.delivery.insideDhakaBase);
     const outside = charges(products.delivery.outsideDhakaBase);
     const formatRange = (values) => {
       const low = Math.min(...values);
       const high = Math.max(...values);
-      return low === high ? `৳${low.toLocaleString("en-BD")}` : `৳${low.toLocaleString("en-BD")}–৳${high.toLocaleString("en-BD")}`;
+      return low === high
+        ? `৳${low.toLocaleString("en-BD")}`
+        : `৳${low.toLocaleString("en-BD")}–৳${high.toLocaleString("en-BD")}`;
     };
-    const weightText = Math.min(...weights) === Math.max(...weights)
-      ? `${Math.min(...weights)} কেজি`
-      : `${Math.min(...weights)}–${Math.max(...weights)} কেজি (ভ্যারিয়েন্টভেদে)`;
+    const weightText =
+      Math.min(...weights) === Math.max(...weights)
+        ? `${Math.min(...weights)} কেজি`
+        : `${Math.min(...weights)}–${Math.max(...weights)} কেজি (ভ্যারিয়েন্টভেদে)`;
     return {
       text: `${selectedCatalogProduct.title}-এর ওজন ${weightText}। ঢাকার সিটির ভিতরে ডেলিভারি ${formatRange(inside)}, ঢাকার বাইরে ${formatRange(outside)}।`,
       imageMatch: "none",
@@ -2434,7 +2544,10 @@ async function generateReply(
       products: [],
     };
   const verifiedData = {
-    productDetailsRequested: /আরও\s*জানতে\s*চাই|\b(?:more\s+details|know\s+more)\b/iu.test(latestCustomerText),
+    productDetailsRequested:
+      /আরও\s*জানতে\s*চাই|\b(?:more\s+details|know\s+more)\b/iu.test(
+        latestCustomerText,
+      ),
     preferredAddress:
       ADDRESS_LABELS[preferredAddress] || "UNKNOWN; use neutral wording",
     catalog: products.products.map((product) => ({
@@ -2542,7 +2655,9 @@ async function generateReply(
             : "জি, এই পণ্যটির অর্ডার নেওয়া যাচ্ছে।"
           : "দুঃখিত, পণ্যটি এই মুহূর্তে স্টকে নেই। চাইলে আমরা আবার সংগ্রহের চেষ্টা করতে পারি। স্টক এলে আপনাকে জানাতে আপনার ফোন নম্বরটি দেবেন?",
         imageMatch: "none",
-        products: stockProduct.variants.some((variant) => variant.availableStock > 0)
+        products: stockProduct.variants.some(
+          (variant) => variant.availableStock > 0,
+        )
           ? []
           : [stockProduct],
       };
@@ -2589,7 +2704,7 @@ async function generateReply(
     model: ai.model,
     instructions: `${CHAT_AI_INSTRUCTIONS}\n\nChannel style: ${channelStyle}\nFor broad product questions with several matching products, return up to three relevant distinct product IDs and give only a brief introductory reply; each product will appear in its own card message with price and features. Remember the selected product from the supplied conversation data. When newProductSearch is true, answer about the newly requested product type, not the previously selected product. If productDetailsRequested is true, analyze the selected product's complete description, all supplied specifications/features, and its product-specific questionsAnswers; summarize the main useful points in natural Bengali, including warranty or guarantee details whenever they appear. Do not answer that a detail is unavailable if it is present in those fields. Do not send another product card for this request. For a stock question about a selected product, report only that product's verified stock; if it is out of stock, check the supplied related catalog products and show relevant in-stock alternatives with their catalog-backed names, prices, and photos when available. If no related alternative is in stock, clearly say that no matching product is currently in stock. Never report another product's stock as the selected product's stock. Do not resend a product photo already shown unless the customer asks for it again. Answer a follow-up about the selected product directly. Ask one natural follow-up only when it helps; do not append “anything else?” mechanically. For order-status requests, only report a matching verified order. If an order number is present but no verified match is available, ask for the phone number used for the order; do not ask for the order number again. For return, refund, or exchange policy questions, use only configured published policy-page content and include its provided link. If policy data could not be loaded, say you cannot verify it right now; if the page is missing or still contains a setup placeholder, say the policy details are not listed yet and share an available page link. Never invent policy terms. For campaign questions, use only active campaign records, summarize eligibility and discount details that are present, and include each provided campaign link exactly as a plain URL. If campaign data could not be loaded, say you cannot verify current offers right now; if it loaded and the active campaign list is empty, say there are no active campaigns. For a photo question, use only product facts in the catalog. If no catalog match is confident, politely say in Bengali that you could not find the pictured item in the catalog and ask if they would like to know about another product. If productIdsToShow contains a substitute, call it an alternative rather than the exact pictured item. For a stated budget, prefer matching products priced within it; if none fit, suggest the closest higher-priced option using verified catalog prices, and consider another available color or variant. For delivery questions about the selected product, calculate delivery from its catalog weight and the supplied base charge plus per-additional-kg rate; provide both Dhaka city and outside-Dhaka charges when location is unspecified. If product weight is missing, say the exact charge cannot be confirmed. For price negotiation, state the verified best current price; if the regular price is higher, explain whether the current lower price comes from a product discount or active campaign, and do not invent further discounts.`,
     input: requestInput,
-    maxOutputTokens: 320,
+    maxOutputTokens: 1024,
     responseSchema: {
       type: "object",
       additionalProperties: false,
@@ -2616,7 +2731,10 @@ async function generateReply(
   }
   if (!parsed.reply)
     throw new Error("নির্বাচিত AI provider খালি reply দিয়েছে।");
-  const productDetailsRequested = /আরও\s*জানতে\s*চাই|\b(?:more\s+details|know\s+more)\b/iu.test(latestCustomerText);
+  const productDetailsRequested =
+    /আরও\s*জানতে\s*চাই|\b(?:more\s+details|know\s+more)\b/iu.test(
+      latestCustomerText,
+    );
   const requestedProductIds = productDetailsRequested
     ? []
     : [...new Set(parsed.productIdsToShow || [])]
@@ -2864,7 +2982,11 @@ async function deliverReply(
   const imageWarnings = [];
 
   // ৩. স্পেসিফিক ফটো রিকোয়েস্ট থাকলে পাঠানো
-  const photosToSend = mediaPhotos.length ? mediaPhotos : mediaPhoto?.url ? [mediaPhoto] : [];
+  const photosToSend = mediaPhotos.length
+    ? mediaPhotos
+    : mediaPhoto?.url
+      ? [mediaPhoto]
+      : [];
   for (const photo of photosToSend) {
     try {
       const result = await sendChatChannelImageMessage(
@@ -2880,7 +3002,10 @@ async function deliverReply(
         image: photo,
       });
     } catch (error) {
-      console.error("WhatsApp/Channel product photo send failed:", error?.message || error);
+      console.error(
+        "WhatsApp/Channel product photo send failed:",
+        error?.message || error,
+      );
       imageWarnings.push({
         productId: photo.productId,
         code: String(error?.code || "image_send_failed").slice(0, 80),
@@ -3166,7 +3291,9 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
       },
     });
 
-    const historyCutoff = new Date(inbound.createdAt.getTime() - 60 * 60 * 1000);
+    const historyCutoff = new Date(
+      inbound.createdAt.getTime() - 60 * 60 * 1000,
+    );
     const hourHistory = await prisma.chatMessage.findMany({
       where: {
         conversationId,
@@ -3217,6 +3344,9 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     const attachment = imageAttachmentFor(inbound);
     let customerImage = null;
     let imageDescription = null;
+    let productAnalysis = null;
+    let exactPhotoProductId = null;
+
     if (attachment && hasInboundImage(inbound.metadata)) {
       try {
         customerImage = await getCustomerImage(
@@ -3224,12 +3354,39 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           { ...attachment, messageId: inbound.externalMessageId },
           credentials,
         );
-        if (customerImage)
-          imageDescription = await describeCustomerImage(
-            aiConfig,
+        if (customerImage) {
+          // Step 1: Fingerprint exact match (fast)
+          exactPhotoProductId = await findMatchingCatalogImage(
+            customerImage,
+          ).catch((matchError) => {
+            console.warn(
+              "Fingerprint search failed:",
+              matchError?.message || matchError,
+            );
+            return null;
+          });
+
+          // Step 2: AI full analysis (name, color, use case)
+          productAnalysis = await analyzeCustomerProductImage(
+            credentials.openaiApiKey,
             customerImage,
             inbound.content,
           );
+
+          if (productAnalysis) {
+            imageDescription = {
+              description: `${productAnalysis.productName} ${productAnalysis.color} ${productAnalysis.useCase}`,
+              searchTerms: productAnalysis.searchKeywords,
+            };
+          } else if (!exactPhotoProductId) {
+            // Fallback to old method
+            imageDescription = await describeCustomerImage(
+              credentials.openaiApiKey,
+              customerImage,
+              inbound.content,
+            );
+          }
+        }
       } catch (imageError) {
         console.warn(
           "Customer chat image could not be analyzed:",
@@ -3242,31 +3399,34 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         inbound.content,
         [
           ...(imageDescription?.searchTerms || []),
-          ...(imageDescription?.bengaliDescription
-            ?.toLowerCase()
-            .match(/[\p{L}\p{N}]{2,}/gu) || []),
-          ...(imageDescription?.brandModel
-            ?.toLowerCase()
-            .match(/[\p{L}\p{N}]{2,}/gu) || []),
+          ...(productAnalysis?.searchKeywords || []),
+          ...(productAnalysis?.features || []),
+          productAnalysis?.category,
+          productAnalysis?.color,
+          productAnalysis?.material,
           ...(imageDescription?.description
             ?.toLowerCase()
             .match(/[\p{L}\p{N}]{3,}/gu) || []),
-        ],
+        ].filter(Boolean),
         conversation.channel,
-        (isProductImageRequest(inbound.content) ||
-          isProductVideoRequest(inbound.content)) &&
-        !productMemory.newProductSearch &&
-        productMemory.pageProductId
-          ? [
-              ...new Set([
-                ...productMemory.catalogProductIds,
-                productMemory.pageProductId,
-              ]),
-            ]
-          : productMemory.catalogProductIds,
+        exactPhotoProductId
+          ? [exactPhotoProductId]
+          : (isProductImageRequest(inbound.content) ||
+                isProductVideoRequest(inbound.content)) &&
+              !productMemory.newProductSearch &&
+              productMemory.pageProductId
+            ? [
+                ...new Set([
+                  ...productMemory.catalogProductIds,
+                  productMemory.pageProductId,
+                ]),
+              ]
+            : productMemory.catalogProductIds,
         productMemory.catalogCategoryIds,
-        aiConfig,
-        productMemory.newProductSearch,
+        credentials.openaiApiKey,
+        exactPhotoProductId
+          ? false
+          : Boolean(productAnalysis) || productMemory.newProductSearch,
       ),
       getVerifiedOrders(conversation, inbound.content, history),
     ]);
@@ -3287,17 +3447,17 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           products: [],
         }
       : await generateReply(
-            aiConfig,
-            conversation,
-            history,
-            productContext,
-            verifiedOrders,
-            conversation.preferredAddress,
-            customerImage,
-            setting.aiReplyTone,
-            setting.aiReplyExamples,
-            productMemory,
-          );
+          aiConfig,
+          conversation,
+          history,
+          productContext,
+          verifiedOrders,
+          conversation.preferredAddress,
+          customerImage,
+          setting.aiReplyTone,
+          setting.aiReplyExamples,
+          productMemory,
+        );
     const content = plainChatText(generated.text)
       .replace(/(?:আমাদের\s+)?(?:ক্যাটালগে|catalogue?-এ)/giu, "আমাদের কাছে")
       .replace(/(?:ক্যাটালগ|catalogue?)/giu, "পণ্যের তথ্য");
