@@ -42,6 +42,10 @@ import prisma from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/siteUrl";
 import Fuse from "fuse.js";
 import { htmlToText } from "html-to-text";
+import {
+  createImageFingerprint,
+  fingerprintDistance,
+} from "@/backend/utils/imageFingerprint.mjs";
 
 const settingId = "primary";
 const ADDRESS_LABELS = {
@@ -915,6 +919,7 @@ async function getCatalog(
   rememberedCategoryIds = [],
   ai = null,
   forceProductSearch = false,
+  imageHashProductIds = [],
 ) {
   const isBroadCatalogBrowse = BROAD_CATALOG_QUESTION.test(
     String(messageText || ""),
@@ -1179,6 +1184,7 @@ async function getCatalog(
       return (
         budgetBoost +
         (rememberedProductIds.includes(product.id) ? 1000 : 0) +
+        (imageHashProductIds.includes(product.id) ? 500 : 0) +
         normalizedTerms.reduce((total, term) => {
           if (title.includes(term)) return total + (title === term ? 30 : 12);
           if (category.includes(term)) return total + 6;
@@ -1255,23 +1261,12 @@ async function getCatalog(
 
     if (rememberedCategoryIds.length)
       return queryCatalog([], rememberedCategoryIds);
-    let matches = await queryCatalog(terms);
+    let matches = await queryCatalog(terms, [], imageHashProductIds);
     if (imageTerms.length) {
-      // Fall back to typo-tolerant matching when multilingual vision terms do
-      // not produce a confident title/category match through exact DB search.
-      const hasImageTitleMatch = matches.some((product) =>
-        imageTerms.some((term) => {
-          const normalizedTerm = String(term || "").toLowerCase();
-          return (
-            normalizedTerm.length >= 3 &&
-            `${product.title || ""} ${product.category?.name || ""}`
-              .toLowerCase()
-              .includes(normalizedTerm)
-          );
-        }),
-      );
-      if (!hasImageTitleMatch) {
-        const catalogIndex = await prisma.product.findMany({
+      // Search fuzzy catalog text as well as exact terms; exact matches can
+      // otherwise hide the correct item when the vision model also emits a
+      // broad word such as "battery" or "machine".
+      const catalogIndex = await prisma.product.findMany({
           where: { isActive: true, status: "ACTIVE" },
           take: 3000,
           orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
@@ -1279,53 +1274,52 @@ async function getCatalog(
             id: true,
             title: true,
             productCode: true,
+            searchText: true,
             seoDescription: true,
             seoKeyWord: true,
             category: { select: { name: true } },
           },
         });
-        const fuse = new Fuse(catalogIndex, {
+      const fuse = new Fuse(catalogIndex, {
           includeScore: true,
           ignoreLocation: true,
           threshold: 0.46,
           minMatchCharLength: 2,
           keys: [
-            { name: "title", weight: 3 },
-            { name: "seoKeyWord", weight: 2 },
+            { name: "title", weight: 4 },
+            { name: "seoKeyWord", weight: 2.5 },
             { name: "category.name", weight: 1.5 },
+            { name: "searchText", weight: 1.5 },
             { name: "seoDescription", weight: 1 },
           ],
-        });
-        const fuzzyRank = new Map();
-        for (const term of [...new Set(imageTerms)].slice(0, 12)) {
-          if (String(term).trim().length < 2) continue;
-          for (const result of fuse.search(String(term), { limit: 8 })) {
-            const priorScore = fuzzyRank.get(result.item.id) ?? Infinity;
-            if ((result.score ?? 1) < priorScore)
-              fuzzyRank.set(result.item.id, result.score ?? 1);
-          }
+      });
+      const fuzzyRank = new Map();
+      const fuzzyTerms = [...new Set(imageTerms)]
+        .map((term) => String(term).trim().toLowerCase())
+        .filter((term) => term.length >= 2 && !PRODUCT_SEARCH_STOPWORDS.has(term) && !PRODUCT_BROWSE_TERMS.has(term))
+        .slice(0, 12);
+      for (const term of fuzzyTerms) {
+        for (const result of fuse.search(term, { limit: 8 })) {
+          const priorScore = fuzzyRank.get(result.item.id) ?? Infinity;
+          if ((result.score ?? 1) < priorScore)
+            fuzzyRank.set(result.item.id, result.score ?? 1);
         }
-        if (fuzzyRank.size) {
-          const fuzzyProducts = await queryCatalog(
-            [],
-            [],
-            [...fuzzyRank.keys()],
-          );
-          const existingIds = new Set(matches.map((product) => product.id));
-          matches = [
-            ...[...fuzzyProducts]
-              .sort(
-                (a, b) =>
-                  (fuzzyRank.get(a.id) ?? 1) - (fuzzyRank.get(b.id) ?? 1),
-              )
-              .filter((product) => !existingIds.has(product.id)),
-            ...matches,
-          ].slice(0, 8);
-        }
+      }
+      if (fuzzyRank.size) {
+        const fuzzyProducts = await queryCatalog([], [], [...fuzzyRank.keys()]);
+        // Keep a couple of strong literal matches, then let visual semantics
+        // promote products whose titles use different wording.
+        const exactFirst = matches.slice(0, 2);
+        const includedIds = new Set(exactFirst.map((product) => product.id));
+        const fuzzyOnly = [...fuzzyProducts]
+          .sort((a, b) => (fuzzyRank.get(a.id) ?? 1) - (fuzzyRank.get(b.id) ?? 1))
+          .filter((product) => !includedIds.has(product.id));
+        matches = [...exactFirst, ...fuzzyOnly, ...matches.slice(2)].slice(0, 8);
       }
     }
     if (matches.length) {
       if (forceProductSearch) {
+        if (imageTerms.length) return matches.slice(0, 8);
         const directTitleMatches = matches.filter((product) =>
           terms.some(
             (term) =>
@@ -1704,6 +1698,111 @@ async function getCatalog(
   };
 }
 
+async function findCatalogProductsByImageHash(image) {
+  if (!image?.base64) return [];
+  const fingerprint = await createImageFingerprint(
+    Buffer.from(image.base64, "base64"),
+  );
+  if (!fingerprint) return [];
+
+  const products = await prisma.product.findMany({
+    where: {
+      isActive: true,
+      status: "ACTIVE",
+      OR: [
+        {
+          thumbnail: {
+            is: {
+              imageDifferenceHash: { not: null },
+              imageAverageHash: { not: null },
+            },
+          },
+        },
+        {
+          gallery: {
+            some: {
+              media: {
+                imageDifferenceHash: { not: null },
+                imageAverageHash: { not: null },
+              },
+            },
+          },
+        },
+        {
+          variations: {
+            some: {
+              thumbnail: {
+                is: {
+                  imageDifferenceHash: { not: null },
+                  imageAverageHash: { not: null },
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+    take: 3000,
+    orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
+    select: {
+      id: true,
+      thumbnail: {
+        select: { imageDifferenceHash: true, imageAverageHash: true },
+      },
+      gallery: {
+        select: {
+          media: {
+            select: { imageDifferenceHash: true, imageAverageHash: true },
+          },
+        },
+      },
+      variations: {
+        select: {
+          thumbnail: {
+            select: { imageDifferenceHash: true, imageAverageHash: true },
+          },
+        },
+      },
+    },
+  });
+  const ranked = [];
+  for (const product of products) {
+    const media = [
+      product.thumbnail,
+      ...(product.gallery || []).map((item) => item.media),
+      ...(product.variations || []).map((item) => item.thumbnail),
+    ].filter((item) => item?.imageDifferenceHash && item?.imageAverageHash);
+    let bestScore = Infinity;
+    for (const item of media) {
+      const differenceDistance = fingerprintDistance(
+        fingerprint.imageDifferenceHash,
+        item.imageDifferenceHash,
+      );
+      const averageDistance = fingerprintDistance(
+        fingerprint.imageAverageHash,
+        item.imageAverageHash,
+      );
+      // dHash handles resizing/compression; aHash helps reject unrelated
+      // images that happen to share a few edge transitions.
+      if (
+        (differenceDistance <= 8 && averageDistance <= 18) ||
+        (differenceDistance <= 14 && averageDistance <= 12)
+      ) {
+        bestScore = Math.min(
+          bestScore,
+          differenceDistance + averageDistance * 0.65,
+        );
+      }
+    }
+    if (Number.isFinite(bestScore))
+      ranked.push({ id: product.id, score: bestScore });
+  }
+  return ranked
+    .sort((left, right) => left.score - right.score)
+    .slice(0, 8)
+    .map((item) => item.id);
+}
+
 function imageAttachmentFor(message) {
   const metadata = message?.metadata || {};
   if (metadata.image?.mediaId || metadata.image?.url) return metadata.image;
@@ -1980,71 +2079,6 @@ Return strictly JSON with keys:
       brandModel: "",
       searchTerms: [],
     };
-  }
-}
-
-async function analyzeCustomerProductImage(apiKey, image, customerText) {
-  try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-      signal: AbortSignal.timeout(25000),
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        store: false,
-        max_output_tokens: 400,
-        instructions:
-          "You are a product expert. Analyze customer photo and return ONLY JSON: {productName: string (English + Bangla), category: string, color: string, material: string, useCase: string, features: string[], searchKeywords: string[] (8 keywords mixing Bangla+English for catalog search)}. Return only JSON, no extra text.",
-        input: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Customer message: ${String(customerText || "").slice(0, 300)}`,
-              },
-              {
-                type: "input_image",
-                image_url: `data:${image.mimeType};base64,${image.base64}`,
-                detail: "high",
-              },
-            ],
-          },
-        ],
-        text: { format: { type: "json_object" } },
-      }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok)
-      throw new Error(result?.error?.message || "analysis failed");
-    const output =
-      (result.output || [])
-        .flatMap((item) => item.content || [])
-        .find((item) => item.type === "output_text")?.text || "{}";
-    const parsed = JSON.parse(output);
-    return {
-      productName: String(parsed.productName || "").slice(0, 200),
-      category: String(parsed.category || "").slice(0, 80),
-      color: String(parsed.color || "").slice(0, 80),
-      material: String(parsed.material || "").slice(0, 80),
-      useCase: String(parsed.useCase || "").slice(0, 150),
-      features: Array.isArray(parsed.features)
-        ? parsed.features.slice(0, 6)
-        : [],
-      searchKeywords: Array.isArray(parsed.searchKeywords)
-        ? parsed.searchKeywords
-            .map((s) => String(s).trim())
-            .filter((s) => s.length >= 2)
-            .slice(0, 10)
-        : [],
-    };
-  } catch (e) {
-    console.warn("Product image analysis failed:", e?.message || e);
-    return null;
   }
 }
 
@@ -3344,8 +3378,7 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     const attachment = imageAttachmentFor(inbound);
     let customerImage = null;
     let imageDescription = null;
-    let productAnalysis = null;
-    let exactPhotoProductId = null;
+    let imageHashProductIds = [];
 
     if (attachment && hasInboundImage(inbound.metadata)) {
       try {
@@ -3355,37 +3388,18 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
           credentials,
         );
         if (customerImage) {
-          // Step 1: Fingerprint exact match (fast)
-          exactPhotoProductId = await findMatchingCatalogImage(
-            customerImage,
-          ).catch((matchError) => {
-            console.warn(
-              "Fingerprint search failed:",
-              matchError?.message || matchError,
-            );
-            return null;
-          });
-
-          // Step 2: AI full analysis (name, color, use case)
-          productAnalysis = await analyzeCustomerProductImage(
-            credentials.openaiApiKey,
-            customerImage,
-            inbound.content,
-          );
-
-          if (productAnalysis) {
-            imageDescription = {
-              description: `${productAnalysis.productName} ${productAnalysis.color} ${productAnalysis.useCase}`,
-              searchTerms: productAnalysis.searchKeywords,
-            };
-          } else if (!exactPhotoProductId) {
-            // Fallback to old method
-            imageDescription = await describeCustomerImage(
-              credentials.openaiApiKey,
-              customerImage,
-              inbound.content,
-            );
-          }
+          const [description, hashMatches] = await Promise.all([
+            describeCustomerImage(aiConfig, customerImage, inbound.content),
+            findCatalogProductsByImageHash(customerImage).catch((hashError) => {
+              console.warn(
+                "Catalog image hash lookup failed:",
+                hashError?.message || hashError,
+              );
+              return [];
+            }),
+          ]);
+          imageDescription = description;
+          imageHashProductIds = hashMatches;
         }
       } catch (imageError) {
         console.warn(
@@ -3399,18 +3413,19 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
         inbound.content,
         [
           ...(imageDescription?.searchTerms || []),
-          ...(productAnalysis?.searchKeywords || []),
-          ...(productAnalysis?.features || []),
-          productAnalysis?.category,
-          productAnalysis?.color,
-          productAnalysis?.material,
+          ...(imageDescription?.bengaliDescription
+            ?.toLowerCase()
+            .match(/[\p{L}\p{N}]{2,}/gu) || []),
+          ...(imageDescription?.brandModel
+            ?.toLowerCase()
+            .match(/[\p{L}\p{N}]{2,}/gu) || []),
           ...(imageDescription?.description
             ?.toLowerCase()
             .match(/[\p{L}\p{N}]{3,}/gu) || []),
         ].filter(Boolean),
         conversation.channel,
-        exactPhotoProductId
-          ? [exactPhotoProductId]
+        customerImage
+          ? []
           : (isProductImageRequest(inbound.content) ||
                 isProductVideoRequest(inbound.content)) &&
               !productMemory.newProductSearch &&
@@ -3422,11 +3437,10 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
                 ]),
               ]
             : productMemory.catalogProductIds,
-        productMemory.catalogCategoryIds,
-        credentials.openaiApiKey,
-        exactPhotoProductId
-          ? false
-          : Boolean(productAnalysis) || productMemory.newProductSearch,
+        customerImage ? [] : productMemory.catalogCategoryIds,
+        aiConfig,
+        Boolean(imageDescription) || productMemory.newProductSearch,
+        imageHashProductIds,
       ),
       getVerifiedOrders(conversation, inbound.content, history),
     ]);

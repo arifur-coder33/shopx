@@ -6,6 +6,7 @@ import { cloudinaryDestroy, cloudinaryUpload } from "../utils/cloudinary";
 import { newSlug } from "../utils/generateSlug";
 import { requireProcurementPermission } from "../utils/procurement";
 import { getMediaUsageIndex, syncLegacyChatMedia } from "@/backend/services/mediaUsageService";
+import { createImageFingerprint } from "@/backend/utils/imageFingerprint.mjs";
 
 export async function uploadImagesAction(formData) {
   try {
@@ -19,6 +20,9 @@ export async function uploadImagesAction(formData) {
         const fallbackName = file.name.replace(/\.[^.]+$/, "").trim() || "image";
         const displayName = String(displayNames[index] || fallbackName).trim().slice(0, 120);
         const slug = (await newSlug(displayName || fallbackName)) || "image";
+        const fingerprint = await createImageFingerprint(
+          Buffer.from(await file.arrayBuffer()),
+        );
         const upload = await cloudinaryUpload({ image: file, tag: slug, slug, perifix: "_media" });
         if (!upload?.secure_url) return null;
         return {
@@ -29,6 +33,7 @@ export async function uploadImagesAction(formData) {
           width: Number.isFinite(upload.width) ? upload.width : null,
           height: Number.isFinite(upload.height) ? upload.height : null,
           sizeBytes: Number.isFinite(upload.bytes) ? upload.bytes : file.size,
+          ...(fingerprint || {}),
         };
       } catch (error) {
         console.error("Media upload failed:", error?.message || error);

@@ -151,6 +151,8 @@ model Media {
   width                     Int?
   height                    Int?
   sizeBytes                 Int?
+  imageDifferenceHash       String?            @db.Char(16)
+  imageAverageHash          String?            @db.Char(16)
   categoryThumbnail         Category[]         @relation(name: "categoryThumbnail")
   categoryBanner            Category[]         @relation(name: "categoryBanner")
   // Reverse relations
