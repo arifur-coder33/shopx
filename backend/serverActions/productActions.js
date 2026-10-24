@@ -58,6 +58,17 @@ function parseProductReviewRows(formData) {
   return rows;
 }
 
+function parseProductQuestionsAnswers(data) {
+  if (!data.productQuestionsAnswers) return [];
+  let rows;
+  try { rows = JSON.parse(data.productQuestionsAnswers); } catch { throw new Error("Product Q&A data is invalid."); }
+  if (!Array.isArray(rows)) throw new Error("Product Q&A data must be a list.");
+  return rows.map((row) => ({
+    question: String(row?.question || "").trim().slice(0, 500),
+    answer: String(row?.answer || "").trim().slice(0, 3000),
+  })).filter((row) => row.question && row.answer);
+}
+
 function transformVariations(productVariations) {
   if (!productVariations || productVariations.length === 0) {
     return [];
@@ -348,6 +359,7 @@ export async function createProductAction(formData) {
     const createdBy = await getUserId();
     let data = Object.fromEntries(formData.entries());
     const productReviewRows = parseProductReviewRows(formData);
+    const productQuestionsAnswers = parseProductQuestionsAnswers(data);
     const fulfillmentSettings = parseProductFulfillmentSettings(data);
 
     // --- Basic Validation ---
@@ -474,6 +486,12 @@ export async function createProductAction(formData) {
       const product = await tx.product.create({
         data: preparedData,
       });
+
+      if (productQuestionsAnswers.length) {
+        await tx.productQuestionAnswer.createMany({
+          data: productQuestionsAnswers.map((row, sortOrder) => ({ ...row, productId: product.id, sortOrder })),
+        });
+      }
 
       const reviewImageIds = [...new Set(productReviewRows.map((row) => row.imageId).filter(Boolean))];
       if (reviewImageIds.length) {
@@ -621,6 +639,7 @@ export async function getProductById(id) {
           orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
           include: { image: { select: { id: true, name: true, displayName: true, width: true, height: true, sizeBytes: true } } },
         },
+        questionsAnswers: { orderBy: { sortOrder: "asc" } },
         // [UPDATED] New include structure for variations
         variations: {
           include: {
@@ -1164,6 +1183,7 @@ const getProductBySlugCached = cache(async (slug) => {
             fullPath: true,
           },
         },
+        questionsAnswers: { orderBy: { sortOrder: "asc" } },
         thumbnail: {
           select: {
             name: true,
@@ -1644,6 +1664,7 @@ export async function updateProductAction({ id: productId, formData }) {
   try {
     const data = Object.fromEntries(formData.entries());
     const productReviewRows = parseProductReviewRows(formData);
+    const productQuestionsAnswers = parseProductQuestionsAnswers(data);
     const updatedBy = await getUserId();
     const fulfillmentSettings = parseProductFulfillmentSettings(data);
     console.log("update data", data);
@@ -1723,6 +1744,13 @@ export async function updateProductAction({ id: productId, formData }) {
         where: { id: productId },
         data: productUpdateData,
       });
+
+      await tx.productQuestionAnswer.deleteMany({ where: { productId: updatedProduct.id } });
+      if (productQuestionsAnswers.length) {
+        await tx.productQuestionAnswer.createMany({
+          data: productQuestionsAnswers.map((row, sortOrder) => ({ ...row, productId: updatedProduct.id, sortOrder })),
+        });
+      }
 
       const reviewImageIds = [...new Set(productReviewRows.map((row) => row.imageId).filter(Boolean))];
       const validImageCount = reviewImageIds.length

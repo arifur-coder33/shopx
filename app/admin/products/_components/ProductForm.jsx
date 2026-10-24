@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { productFormFields } from "./productFormFields";
 import ProductPhotoReviewsField from "./ProductPhotoReviewsField";
+import ProductQuestionsAnswersField from "./ProductQuestionsAnswersField";
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
   loading: () => <LoadingSpinner />,
@@ -122,6 +123,7 @@ export default function ProductForm({ actionType, updateAction, id }) {
       updateAction={handleUpdateAction}
     >
       <ProductPhotoReviewsField reviews={data?.photoReviews || []} />
+      <ProductQuestionsAnswersField questionsAnswers={data?.questionsAnswers || []} />
     </DynamicForm>
   );
 }

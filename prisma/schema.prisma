@@ -151,8 +151,6 @@ model Media {
   width                     Int?
   height                    Int?
   sizeBytes                 Int?
-  imageDifferenceHash       String?
-  imageAverageHash          String?
   categoryThumbnail         Category[]         @relation(name: "categoryThumbnail")
   categoryBanner            Category[]         @relation(name: "categoryBanner")
   // Reverse relations
@@ -205,6 +203,7 @@ model Product {
   variations              ProductVariation[]
   orders                  OrderItem[]
   photoReviews            PhotoReview[]
+  questionsAnswers        ProductQuestionAnswer[]
   searchText              String?
   Purchase                PurchaseItem[]
   createdAt               DateTime           @default(now()) // Timestamp for product creation
@@ -259,6 +258,19 @@ model ProductVideo {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   header    String
   url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, sortOrder])
+}
+
+model ProductQuestionAnswer {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  question  String   @db.VarChar(500)
+  answer    String   @db.VarChar(3000)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

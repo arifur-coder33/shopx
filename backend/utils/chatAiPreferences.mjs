@@ -28,8 +28,14 @@ export function explicitAddressPreference(text) {
   return null;
 }
 
-export function compactConversationHistory(messages, { recentLimit = 12, summaryLimit = 8, messageLimit = 1200 } = {}) {
+export function compactConversationHistory(messages, { recentLimit = 12, summaryLimit = 8, messageLimit = 1200, includeAll = false } = {}) {
   const usable = (messages || []).filter((message) => message.deliveryStatus !== "FAILED");
+  if (includeAll) {
+    return usable.map((message) => ({
+      role: message.direction === "INBOUND" ? "user" : "assistant",
+      content: redactPrivateContext(String(message.content || "").slice(0, messageLimit)),
+    }));
+  }
   const recent = usable.slice(-recentLimit).map((message) => ({
     role: message.direction === "INBOUND" ? "user" : "assistant",
     content: redactPrivateContext(String(message.content || "").slice(0, messageLimit)),

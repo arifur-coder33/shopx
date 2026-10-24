@@ -2,14 +2,16 @@
 
 import { useRef, useState } from "react";
 import PhotoReviewCarousel from "@/components/reviews/PhotoReviewCarousel";
+import { Plus } from "lucide-react";
 
-export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos, reviews = [], reviewSubtitle }) {
+export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos, reviews = [], reviewSubtitle, questionsAnswers = [] }) {
   const [activeTab, setActiveTab] = useState("description");
   const descriptionRef = useRef(null);
   const specificationsRef = useRef(null);
   const videosRef = useRef(null);
   const photosRef = useRef(null);
   const reviewsRef = useRef(null);
+  const questionsAnswersRef = useRef(null);
   const hasReviews = reviews.length > 0;
 
   const selectTab = (tab) => {
@@ -21,6 +23,7 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
         videos: videosRef,
         photos: photosRef,
         reviews: reviewsRef,
+        questionsAnswers: questionsAnswersRef,
       };
       const target = targets[tab]?.current;
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -112,6 +115,18 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
             Review
           </button>
         )}
+        {questionsAnswers.length > 0 && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "questionsAnswers"}
+            aria-controls="product-questions-answers"
+            onClick={() => selectTab("questionsAnswers")}
+            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors sm:px-6 sm:text-base ${activeTab === "questionsAnswers" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-text"}`}
+          >
+            প্রশ্ন ও উত্তর
+          </button>
+        )}
       </div>
 
       <div ref={descriptionRef} id="product-description-panel" role="tabpanel" className="scroll-mt-24">
@@ -133,6 +148,22 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
             className="my-5 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
           />
         </div>
+      )}
+      {questionsAnswers.length > 0 && (
+        <section ref={questionsAnswersRef} id="product-questions-answers" role="tabpanel" className="scroll-mt-24 my-5 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+          <h2 className="mb-4 text-xl font-bold text-text-primary">সাধারণ প্রশ্ন ও উত্তর</h2>
+          <div className="divide-y divide-border">
+            {questionsAnswers.map((item, index) => (
+              <details key={item.id || `${item.question}-${index}`} className="group py-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-1 font-semibold text-text-primary marker:hidden [&::-webkit-details-marker]:hidden">
+                  <span>{item.question}</span>
+                  <Plus size={18} className="shrink-0 text-primary transition-transform group-open:rotate-45" aria-hidden="true" />
+                </summary>
+                <p className="whitespace-pre-line pt-3 text-sm leading-7 text-text-secondary">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
       )}
     </section>
   );

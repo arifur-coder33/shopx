@@ -1,7 +1,6 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { createCatalogImageFingerprint } from "@/backend/services/imageFingerprint";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { cloudinaryDestroy, cloudinaryUpload } from "../utils/cloudinary";
 import { newSlug } from "../utils/generateSlug";
@@ -22,9 +21,6 @@ export async function uploadImagesAction(formData) {
         const slug = (await newSlug(displayName || fallbackName)) || "image";
         const upload = await cloudinaryUpload({ image: file, tag: slug, slug, perifix: "_media" });
         if (!upload?.secure_url) return null;
-        const imageFingerprint = await createCatalogImageFingerprint(
-          Buffer.from(await file.arrayBuffer()),
-        );
         return {
           url: upload.secure_url,
           host: "cloudinary",
@@ -33,7 +29,6 @@ export async function uploadImagesAction(formData) {
           width: Number.isFinite(upload.width) ? upload.width : null,
           height: Number.isFinite(upload.height) ? upload.height : null,
           sizeBytes: Number.isFinite(upload.bytes) ? upload.bytes : file.size,
-          ...(imageFingerprint || {}),
         };
       } catch (error) {
         console.error("Media upload failed:", error?.message || error);

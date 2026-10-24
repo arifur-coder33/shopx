@@ -94,6 +94,7 @@ export default function ProductDataView({
           }
           reviews={reviews}
           reviewSubtitle={`Customer experiences with ${title}`}
+          questionsAnswers={data.questionsAnswers || []}
         />
         {!adminView && <ViewProductEvent product={trackingProduct} />}
       </div>
