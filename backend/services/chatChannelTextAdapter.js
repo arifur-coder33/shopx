@@ -137,12 +137,12 @@ export async function sendMessengerProductCard(conversation, product, credential
   return { id: result.message_id || null, secondaryIds: [], warning: null };
 }
 
-export async function sendMessengerProductCarousel(conversation, products, credentials) {
+export async function sendMessengerProductCarousel(conversation, products, credentials, seeMoreUrl = null) {
   if (conversation.channel !== "MESSENGER") throw new Error("Messenger carousel requires a Messenger conversation.");
   if (products.length < 2) throw new Error("Messenger carousel needs at least two products.");
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
   if (!credentials.messengerPageAccessToken || !credentials.messengerPageId || !/^v\d+\.\d+$/.test(version || "")) throw new Error("Messenger credentials configure করা নেই।");
-  const elements = products.slice(0, 10).map((product) => {
+  const elements = products.slice(0, seeMoreUrl ? 9 : 10).map((product) => {
     const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
     const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
     const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
@@ -156,6 +156,11 @@ export async function sendMessengerProductCarousel(conversation, products, crede
         { type: "postback", title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
       ],
     };
+  });
+  if (seeMoreUrl) elements.push({
+    title: "আরও পণ্য দেখুন",
+    subtitle: "বাকি সার্চ রেজাল্ট দেখতে চাপুন",
+    buttons: [{ type: "web_url", url: seeMoreUrl, title: "আরও দেখুন" }],
   });
   const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
     method: "POST",

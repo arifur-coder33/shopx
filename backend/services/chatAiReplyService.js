@@ -1091,7 +1091,7 @@ async function getCatalog(
         .flatMap((term) => colorAliases[term] || [term]),
     ),
   ].slice(0, 14);
-  const resultLimit = Math.max(rememberedProductIds.length, imageTerms.length ? 24 : 8);
+  const resultLimit = Math.max(rememberedProductIds.length, imageTerms.length ? 24 : ["WEBSITE", "MESSENGER"].includes(channel) ? 11 : 8);
   const queryCatalog = async (
     searchTerms,
     categoryIds = [],
@@ -1432,7 +1432,7 @@ async function getCatalog(
                 .includes(term),
           ),
         );
-        if (directTitleMatches.length) return directTitleMatches.slice(0, 8);
+        if (directTitleMatches.length) return directTitleMatches.slice(0, resultLimit);
       }
       const stockQuestion = isStockQuestion(messageText);
       const selected = matches.find((product) =>
@@ -2939,6 +2939,8 @@ async function generateReply(
   };
   const explicitPhotoRequest = isProductImageRequest(latestCustomerText);
   const stockQuestion = isStockQuestion(latestCustomerText);
+  const recommendationSearch = productMemory.newProductSearch || productMemory.catalogCategoryIds?.length;
+  const chatProductLimit = ["WEBSITE", "MESSENGER"].includes(channel) ? 11 : 3;
   if (productMemory.newProductSearch && stockQuestion) {
     const queryWords = (
       latestCustomerText.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []
@@ -2951,15 +2953,21 @@ async function generateReply(
     );
     const relevant = titleMatches.length ? titleMatches : products.products;
     const orderable = relevant.filter(canOrderCatalogProduct);
-    if (relevant.length)
+    if (relevant.length) {
+      const seeMoreUrl = relevant.length > 10 && ["WEBSITE", "MESSENGER"].includes(channel)
+        ? new URL(`/search?q=${encodeURIComponent(products.searchQuery || latestCustomerText)}`, await getSiteUrl()).toString()
+        : null;
+      const displayLimit = ["WEBSITE", "MESSENGER"].includes(channel) ? (seeMoreUrl ? 9 : 10) : 3;
       return {
         text: orderable.length
-          ? `জি, মিল থাকা ${Math.min(3, relevant.length)}টি পণ্য অর্ডার করা যাবে। কার্ডে বিস্তারিত দিলাম।`
+          ? `জি, মিল থাকা ${Math.min(displayLimit, relevant.length)}টি পণ্য অর্ডার করা যাবে। কার্ডে বিস্তারিত দিলাম।`
           : "দুঃখিত, পণ্যটি এই মুহূর্তে স্টকে নেই। চাইলে আমরা আবার সংগ্রহের চেষ্টা করতে পারি। স্টক এলে আপনাকে জানাতে আপনার ফোন নম্বরটি দেবেন?",
         imageMatch: "none",
-        products: relevant.slice(0, 3),
+        products: relevant.slice(0, displayLimit),
+        ...(seeMoreUrl && { seeMoreUrl }),
         ...(relevant.length === 1 && { selectedProductId: relevant[0].id }),
       };
+    }
   }
   if (!products.products.length && productMemory.newProductSearch && !customerImage) return {
     text: /[অ-৿]/u.test(latestCustomerText) || /\b(?:ache|ase|chai|lagbe|machin|koto|dam)\b/iu.test(latestCustomerText)
@@ -2979,14 +2987,19 @@ async function generateReply(
                 !productMemory.previousShownIds.includes(product.id))
             : !productMemory.previousShownIds.includes(product.id))),
     )
-    .slice(0, 8);
+    .slice(0, recommendationSearch ? chatProductLimit : 8);
   if (productMemory.newProductSearch && stockQuestion) {
     const orderableProducts = products.products.filter(canOrderCatalogProduct);
     if (!orderableProducts.length && products.products.length) {
+      const seeMoreUrl = products.products.length > 10 && ["WEBSITE", "MESSENGER"].includes(channel)
+        ? new URL(`/search?q=${encodeURIComponent(products.searchQuery || latestCustomerText)}`, await getSiteUrl()).toString()
+        : null;
+      const displayLimit = ["WEBSITE", "MESSENGER"].includes(channel) ? (seeMoreUrl ? 9 : 10) : 3;
       return {
         text: "দুঃখিত, পণ্যটি এই মুহূর্তে স্টকে নেই। চাইলে আমরা আবার সংগ্রহের চেষ্টা করতে পারি। স্টক এলে আপনাকে জানাতে আপনার ফোন নম্বরটি দেবেন?",
         imageMatch: "none",
-        products: products.products.slice(0, 3),
+        products: products.products.slice(0, displayLimit),
+        ...(seeMoreUrl && { seeMoreUrl }),
       };
     }
   }
@@ -3050,7 +3063,7 @@ async function generateReply(
   const output = await requestAiOutput({
     ai,
     model: ai.model,
-    instructions: `${CHAT_AI_INSTRUCTIONS}\n\nChannel style: ${channelStyle}\nFor broad product questions with several matching products, return up to three relevant distinct product IDs and give only a brief introductory reply; each product will appear in its own card message with price and features. Remember the selected product from the supplied conversation data. When newProductSearch is true, answer about the newly requested product type, not the previously selected product. If productDetailsRequested is true, analyze the selected product's complete description, all supplied specifications/features, and its product-specific questionsAnswers; summarize the main useful points in natural Bengali, including warranty or guarantee details whenever they appear. Do not answer that a detail is unavailable if it is present in those fields. Do not send another product card for this request. For a stock question about a selected product, report only that product's verified stock; if it is out of stock, check the supplied related catalog products and show relevant in-stock alternatives with their catalog-backed names, prices, and photos when available. If no related alternative is in stock, clearly say that no matching product is currently in stock. Never report another product's stock as the selected product's stock. Do not resend a product photo already shown unless the customer asks for it again. Answer a follow-up about the selected product directly. Ask one natural follow-up only when it helps; do not append “anything else?” mechanically. For order-status requests, only report a matching verified order. If an order number is present but no verified match is available, ask for the phone number used for the order; do not ask for the order number again. For return, refund, or exchange policy questions, use only configured published policy-page content and include its provided link. If policy data could not be loaded, say you cannot verify it right now; if the page is missing or still contains a setup placeholder, say the policy details are not listed yet and share an available page link. Never invent policy terms. For campaign questions, use only active campaign records, summarize eligibility and discount details that are present, and include each provided campaign link exactly as a plain URL. If campaign data could not be loaded, say you cannot verify current offers right now; if it loaded and the active campaign list is empty, say there are no active campaigns. For a photo question, use only product facts in the catalog. If no catalog match is confident, politely say in Bengali that you could not find the pictured item in the catalog and ask if they would like to know about another product. If productIdsToShow contains a substitute, call it an alternative rather than the exact pictured item. For a stated budget, prefer matching products priced within it; if none fit, suggest the closest higher-priced option using verified catalog prices, and consider another available color or variant. For delivery questions about the selected product, calculate delivery from its catalog weight and the supplied base charge plus per-additional-kg rate; provide both Dhaka city and outside-Dhaka charges when location is unspecified. Never mention product weight when answering delivery-charge questions; if weight is missing, calculate using the default base delivery charge. Mention the weight only when the customer explicitly asks for it, and say it is not provided if unavailable. For price negotiation, state the verified best current price; if the regular price is higher, explain whether the current lower price comes from a product discount or active campaign, and do not invent further discounts.`,
+    instructions: `${CHAT_AI_INSTRUCTIONS}\n\nChannel style: ${channelStyle}\nFor broad product questions with several matching products, return up to ${recommendationSearch && ["WEBSITE", "MESSENGER"].includes(channel) ? 11 : 3} relevant distinct product IDs and give only a brief introductory reply; each product will appear in a product card with price and features. Remember the selected product from the supplied conversation data. When newProductSearch is true, answer about the newly requested product type, not the previously selected product. If productDetailsRequested is true, analyze the selected product's complete description, all supplied specifications/features, and its product-specific questionsAnswers; summarize the main useful points in natural Bengali, including warranty or guarantee details whenever they appear. Do not answer that a detail is unavailable if it is present in those fields. Do not send another product card for this request. For a stock question about a selected product, report only that product's verified stock; if it is out of stock, check the supplied related catalog products and show relevant in-stock alternatives with their catalog-backed names, prices, and photos when available. If no related alternative is in stock, clearly say that no matching product is currently in stock. Never report another product's stock as the selected product's stock. Do not resend a product photo already shown unless the customer asks for it again. Answer a follow-up about the selected product directly. Ask one natural follow-up only when it helps; do not append “anything else?” mechanically. For order-status requests, only report a matching verified order. If an order number is present but no verified match is available, ask for the phone number used for the order; do not ask for the order number again. For return, refund, or exchange policy questions, use only configured published policy-page content and include its provided link. If policy data could not be loaded, say you cannot verify it right now; if the page is missing or still contains a setup placeholder, say the policy details are not listed yet and share an available page link. Never invent policy terms. For campaign questions, use only active campaign records, summarize eligibility and discount details that are present, and include each provided campaign link exactly as a plain URL. If campaign data could not be loaded, say you cannot verify current offers right now; if it loaded and the active campaign list is empty, say there are no active campaigns. For a photo question, use only product facts in the catalog. If no catalog match is confident, politely say in Bengali that you could not find the pictured item in the catalog and ask if they would like to know about another product. If productIdsToShow contains a substitute, call it an alternative rather than the exact pictured item. For a stated budget, prefer matching products priced within it; if none fit, suggest the closest higher-priced option using verified catalog prices, and consider another available color or variant. For delivery questions about the selected product, calculate delivery from its catalog weight and the supplied base charge plus per-additional-kg rate; provide both Dhaka city and outside-Dhaka charges when location is unspecified. Never mention product weight when answering delivery-charge questions; if weight is missing, calculate using the default base delivery charge. Mention the weight only when the customer explicitly asks for it, and say it is not provided if unavailable. For price negotiation, state the verified best current price; if the regular price is higher, explain whether the current lower price comes from a product discount or active campaign, and do not invent further discounts.`,
     input: requestInput,
     maxOutputTokens: 1024,
     responseSchema: {
@@ -3061,7 +3074,7 @@ async function generateReply(
         productIdsToShow: {
           type: "array",
           items: { type: "string" },
-          maxItems: 3,
+          maxItems: recommendationSearch && ["WEBSITE", "MESSENGER"].includes(channel) ? 11 : 3,
         },
         imageMatch: {
           type: "string",
@@ -3091,25 +3104,19 @@ async function generateReply(
     ? []
     : [...new Set(parsed.productIdsToShow || [])]
         .filter((id) => candidates.some((product) => product.id === id))
-        .slice(0, 3);
-  const recommendationSearch =
-    productMemory.newProductSearch || productMemory.catalogCategoryIds?.length;
+        .slice(0, recommendationSearch && ["WEBSITE", "MESSENGER"].includes(channel) ? 11 : 3);
   const productIdsToShow = recommendationSearch
     ? [
         ...new Set([
           ...requestedProductIds,
           ...candidates.map((product) => product.id),
         ]),
-      ].slice(0, 3)
+      ].slice(0, recommendationSearch && ["WEBSITE", "MESSENGER"].includes(channel) ? 11 : 3)
     : requestedProductIds;
   const selectedProducts = productIdsToShow
     .map((id) => products.products.find((product) => product.id === id))
     .filter(Boolean);
-  if (
-    selectedProducts.length > 1 &&
-    !products.priceBudget &&
-    (customerImage || recommendationSearch)
-  ) {
+  if (selectedProducts.length > 1 && !products.priceBudget && customerImage && !recommendationSearch) {
     const searchUrl = new URL("/search", await getSiteUrl());
     searchUrl.searchParams.set(
       "q",
@@ -3121,15 +3128,20 @@ async function generateReply(
       products: [],
     };
   }
+  const seeMoreUrl = recommendationSearch && ["WEBSITE", "MESSENGER"].includes(channel) && products.products.length > 10
+    ? new URL(`/search?q=${encodeURIComponent(products.searchQuery || latestCustomerText)}`, await getSiteUrl()).toString()
+    : null;
+  const displayProducts = seeMoreUrl ? selectedProducts.slice(0, 9) : selectedProducts.slice(0, 10);
   return {
     text:
-      recommendationSearch && selectedProducts.length
-        ? selectedProducts.length > 1
-          ? `জ্বি, এই ${selectedProducts.length}টি অপশন দেখতে পারেন। কোনটি সম্পর্কে জানতে চান?`
+      recommendationSearch && displayProducts.length
+        ? displayProducts.length > 1
+          ? `জ্বি, মিল থাকা ${displayProducts.length}টি পণ্য দিলাম।${seeMoreUrl ? " আরও পণ্য দেখতে শেষ কার্ডটি চাপুন।" : " কোনটি সম্পর্কে জানতে চান?"}`
           : "জ্বি, এই অপশনটি দেখতে পারেন।"
         : String(parsed.reply).slice(0, productDetailsRequested ? 1800 : 700),
     imageMatch: productIdsToShow.length ? parsed.imageMatch : "none",
-    products: selectedProducts,
+    products: displayProducts,
+    ...(seeMoreUrl && { seeMoreUrl }),
     ...(productMemory.newProductSearch &&
       products.products.length === 1 && {
         selectedProductId: products.products[0].id,
@@ -3301,6 +3313,7 @@ async function deliverReply(
   mediaPhoto = null,
   videoLinks = [],
   mediaPhotos = [],
+  seeMoreUrl = null,
 ) {
   if (conversation.channel === "WEBSITE")
     return { id: null, imageWarnings: [], mediaMessages: [] };
@@ -3389,12 +3402,14 @@ async function deliverReply(
         conversation,
         products,
         credentials,
+        seeMoreUrl,
       );
       sent.push(result);
       mediaMessages.push({
         id: result.id,
         content: "পণ্যের সাজেশন",
         products,
+        ...(seeMoreUrl && { seeMoreUrl }),
       });
       messengerCarouselSent = true;
     } catch (error) {
@@ -3530,6 +3545,17 @@ async function deliverReply(
       );
       sent.push(result);
       mediaMessages.push({ id: result.id, content: caption });
+    }
+  }
+
+  if (conversation.channel === "MESSENGER" && seeMoreUrl && !messengerCarouselSent) {
+    const text = `আরও পণ্য দেখুন: ${seeMoreUrl}`;
+    try {
+      const result = await sendChatChannelTextMessage(conversation, text, credentials);
+      sent.push(result);
+      mediaMessages.push({ id: result.id, content: text, seeMoreUrl });
+    } catch (error) {
+      console.warn("Messenger see-more link failed:", error?.message || error);
     }
   }
 
@@ -4071,6 +4097,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       generated.mediaPhoto,
       generated.videoLinks,
       generated.mediaPhotos,
+      generated.seeMoreUrl,
     );
     const productOptions = generated.products.map((product) => {
       const prices = product.variants
@@ -4187,6 +4214,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
                   productSuggestionGroupId: inbound.id,
                   productOptions,
                   shownProductIds: productOptions.map((product) => product.id),
+                  ...(generated.seeMoreUrl && { seeMoreUrl: generated.seeMoreUrl }),
                 },
               },
             }),
@@ -4258,6 +4286,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
                   ...(shownOptions.length > 1 && {
                     productSuggestionGroupId: inbound.id,
                   }),
+                  ...(media.seeMoreUrl && { seeMoreUrl: media.seeMoreUrl }),
                 },
               },
             });
