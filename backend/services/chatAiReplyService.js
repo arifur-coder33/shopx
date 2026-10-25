@@ -4004,17 +4004,14 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
         searchUrl.searchParams.set("similar", "1");
         allMatchesUrl = searchUrl.toString();
       }
-      const lowConfidenceText = imageSearchSimilarFallback
-        ? matches.length
-          ? "সরাসরি পণ্যের নাম দিয়ে না মিললেও ছবির মতো similar product খুঁজে পেয়েছি।"
-          : "ছবির সঙ্গে মেলে এমন পণ্য পাওয়া যায়নি।"
-        : matches.length > 1
-          ? "ছবির মতো কয়েকটি similar product পাওয়া গেছে।"
-          : "ছবির মতো similar product পাওয়া গেছে।";
+      const selectButtonLabel = channel === "WEBSITE" ? "Select this product" : "এটি বেছে নিন";
+      const productSuggestionText = matches.length > 1
+        ? `এই পণ্যগুলো দেখতে পারেন। পছন্দের পণ্যটির কার্ডে “${selectButtonLabel}” বাটনে চাপুন।`
+        : `এই পণ্যটি দেখতে পারেন। পছন্দ হলে কার্ডের “${selectButtonLabel}” বাটনে চাপুন।`;
       generated = {
         ...generated,
         text: matches.length
-          ? `${lowConfidenceText}${allMatchesUrl ? ` আরও মিল থাকা পণ্য দেখতে: ${allMatchesUrl}` : " কার্ডে “Select this product” চাপুন।"}`
+          ? `${productSuggestionText}${allMatchesUrl ? ` আরও পণ্য দেখতে: ${allMatchesUrl}` : ""}`
           : imageSearchFailed || !imageDescription?.productName
             ? 'ছবির তথ্য দিয়ে এই মুহূর্তে পণ্যটি খুঁজে বের করা যায়নি। পণ্যের নাম বা লিংক দিলে আবার খুঁজে দেখব।'
             : 'ছবির নাম, লেখা ও ব্যবহার দিয়ে মিল থাকা পণ্য পাওয়া যায়নি। পণ্যের লিংক বা কোড দিলে খুঁজে দেখব।',

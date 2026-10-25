@@ -86,7 +86,21 @@ async function saveAbandonedFlow(flow, product, deliveryAddress = flow.deliveryA
 
 // Website and social channels use the same persisted checkout steps.
 export async function handleChatOrderFlow({ conversation, inbound, credentials, canCreateOrder = true, existingOnly = false, startProductId }) {
-  if (/^(?:select|details):[a-zA-Z0-9_-]{5,80}$/u.test(String(inbound.metadata?.quickReplyPayload || ""))) {
+  const selectionPayload = String(inbound.metadata?.quickReplyPayload || "").match(/^select:([a-zA-Z0-9_-]{5,80})$/u)?.[1];
+  if (selectionPayload) {
+    const selected = await currentProduct(selectionPayload);
+    if (!selected) return persistReply({ conversation, inbound, credentials, text: "দুঃখিত, এই পণ্যটি এখন পাওয়া যাচ্ছে না। অন্য পণ্যটি বেছে দিন।", flow: { step: "done", reason: "product_selection" } });
+    const prices = selected.variations.map((variant) => Number(variant.discountPrice) > 0 && Number(variant.discountPrice) < Number(variant.regularPrice) ? Number(variant.discountPrice) : Number(variant.regularPrice)).filter((price) => price > 0);
+    const priceText = prices.length ? ` দাম ${money(Math.min(...prices))} থেকে।` : "";
+    return persistReply({
+      conversation,
+      inbound,
+      credentials,
+      text: `আপনি “${selected.title}” পণ্যটি বেছে নিয়েছেন।${priceText} পণ্যটি সম্পর্কে প্রশ্ন করতে পারেন। অর্ডার করতে চাইলে “অর্ডার করতে চাই” লিখুন।`,
+      flow: { step: "done", reason: "product_selection", productId: selected.id },
+    });
+  }
+  if (/^details:[a-zA-Z0-9_-]{5,80}$/u.test(String(inbound.metadata?.quickReplyPayload || ""))) {
     // Product details buttons must not be consumed as a name/phone/variant in an unfinished checkout.
     await prisma.chatMessage.updateMany({ where: { aiReplyForMessageId: inbound.id, deliveryStatus: "SENDING" }, data: {
       metadata: { chatOrderFlow: { step: "done", reason: "product_selection" } },
