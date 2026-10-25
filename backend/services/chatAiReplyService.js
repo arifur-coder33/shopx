@@ -27,6 +27,7 @@ import { runChatReplyBatch, mergedInboundMessage } from "@/backend/services/chat
 import { humanHandoffReason, humanHandoffReply, isRepeatedCustomerQuestion } from "@/backend/utils/chatHumanHandoff.mjs";
 import { searchImageCatalog, selectImageSearchProducts } from "@/backend/utils/chatImageSelection.mjs";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
+import { transcribeChatAudio } from "@/backend/services/chatAudioTranscriptionService";
 import {
   compactConversationHistory,
   explicitAddressPreference,
@@ -3621,13 +3622,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
     });
     if (existingReply) return;
 
-    const preference = explicitAddressPreference(inbound.content);
-    const conversation = preference
-      ? await prisma.chatConversation.update({
-          where: { id: conversationId },
-          data: { preferredAddress: preference },
-        })
-      : initialConversation;
+    let conversation = initialConversation;
 
     const newerHumanOutbound = await prisma.chatMessage.findFirst({
       where: {
@@ -3672,6 +3667,36 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
     };
     aiProviderUsed = aiConfig.provider;
     aiModelUsed = aiConfig.model;
+    const audioMessage = Boolean(
+      inbound.metadata?.audio?.mediaId || inbound.metadata?.audio?.url ||
+      inbound.metadata?.attachments?.some((attachment) => String(attachment?.type || "").toLowerCase() === "audio"),
+    );
+    if (audioMessage) {
+      try {
+        const transcript = await transcribeChatAudio(inbound, conversation.channel, credentials, aiConfig);
+        if (transcript) {
+          inbound.content = transcript;
+          inbound.metadata = { ...(inbound.metadata || {}), audioTranscription: { status: "COMPLETED", text: transcript } };
+        } else {
+          inbound.content = "The customer sent an audio message, but transcription was unavailable. Reply in the customer's language asking them to resend the audio or type their message.";
+          inbound.metadata = { ...(inbound.metadata || {}), audioTranscription: { status: "UNAVAILABLE" } };
+        }
+      } catch (error) {
+        console.warn("Customer chat audio transcription failed:", error?.message || error);
+        inbound.content = "The customer sent an audio message, but transcription failed. Reply in the customer's language asking them to resend the audio or type their message.";
+        inbound.metadata = { ...(inbound.metadata || {}), audioTranscription: { status: "FAILED" } };
+      }
+      await prisma.chatMessage.update({ where: { id: inbound.id }, data: { metadata: inbound.metadata } }).catch((error) => {
+        console.warn("Audio transcription status could not be saved:", error?.message || error);
+      });
+    }
+    const preference = explicitAddressPreference(inbound.content);
+    if (preference) {
+      conversation = await prisma.chatConversation.update({
+        where: { id: conversationId },
+        data: { preferredAddress: preference },
+      });
+    }
     aiMessage = await prisma.chatMessage.create({
       data: {
         conversationId,
@@ -3699,7 +3724,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
     const historyCutoff = new Date(
       inbound.createdAt.getTime() - 30 * 60 * 1000,
     );
-    const windowHistory = await prisma.chatMessage.findMany({
+    const windowHistoryRows = await prisma.chatMessage.findMany({
       where: {
         conversationId,
         createdAt: { gte: historyCutoff, lte: inbound.createdAt },
@@ -3707,6 +3732,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: {
+        id: true,
         direction: true,
         content: true,
         deliveryStatus: true,
@@ -3715,6 +3741,9 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
         createdAt: true,
       },
     });
+    const windowHistory = windowHistoryRows.map((message) => message.id === inbound.id
+      ? { ...message, content: inbound.content, metadata: inbound.metadata }
+      : message);
     const recentWindowHistory = windowHistory;
     let history = recentWindowHistory;
     if (recentWindowHistory.length < 20) {

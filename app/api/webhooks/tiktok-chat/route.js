@@ -44,8 +44,14 @@ async function saveTikTokMessage(envelope) {
   const rawText = message.text?.body || message.text || message.content?.text || message.body || content.text?.body || content.text || content.message_content?.text || "";
   const mediaUrl = message.image?.url || message.image_url || content.image?.url || content.image_url || null;
   const mediaId = message.image?.media_id || message.image?.mediaId || content.image?.media_id || content.media_id || null;
+  const audioUrl = message.audio?.url || message.audio_url || message.voice?.url || message.voice_url || content.audio?.url || content.audio_url || message.attachment?.url || null;
+  const audioId = message.audio?.media_id || message.audio?.mediaId || message.voice?.media_id || content.audio?.media_id || null;
+  const audioMimeType = message.audio?.mime_type || message.voice?.mime_type || content.audio?.mime_type || "audio/mpeg";
   const text = String(rawText || (mediaUrl ? "📷 Photo" : `[TikTok ${messageType} message]`)).slice(0, 4000);
-  const normalizedAttachments = mediaUrl ? [{ type: "image", payload: { url: mediaUrl } }] : [];
+  const normalizedAttachments = [
+    ...(mediaUrl ? [{ type: "image", payload: { url: mediaUrl } }] : []),
+    ...(audioUrl ? [{ type: "audio", payload: { url: audioUrl, mime_type: audioMimeType } }] : []),
+  ];
   const timestamp = message.timestamp || content.timestamp || envelope.create_time;
   const createdAt = Number(timestamp) ? new Date(Number(timestamp) < 10_000_000_000 ? Number(timestamp) * 1000 : Number(timestamp)) : new Date();
   const conversation = await prisma.chatConversation.upsert({
@@ -55,7 +61,7 @@ async function saveTikTokMessage(envelope) {
     select: { id: true },
   });
   const inserted = await prisma.chatMessage.createMany({
-    data: [{ conversationId: conversation.id, channel: "TIKTOK", direction: "INBOUND", authorType: "CUSTOMER", content: text, externalMessageId: String(messageId), deliveryStatus: "DELIVERED", metadata: { type: messageType, timestamp, ...(mediaId && { image: { mediaId: String(mediaId), mimeType: "image/jpeg", conversationId: String(conversationId) } }), ...(normalizedAttachments.length && { attachments: normalizedAttachments }) } }],
+    data: [{ conversationId: conversation.id, channel: "TIKTOK", direction: "INBOUND", authorType: "CUSTOMER", content: text, externalMessageId: String(messageId), deliveryStatus: "DELIVERED", metadata: { type: messageType, timestamp, ...(mediaId && { image: { mediaId: String(mediaId), mimeType: "image/jpeg", conversationId: String(conversationId) } }), ...(audioId && { audio: { mediaId: String(audioId), mimeType: audioMimeType } }), ...(normalizedAttachments.length && { attachments: normalizedAttachments }) } }],
     skipDuplicates: true,
   });
   await prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: createdAt, ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) } });

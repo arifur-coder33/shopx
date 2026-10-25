@@ -225,6 +225,7 @@ export async function POST(request) {
               ...(selectedProductId && { productId: selectedProductId, quickReplyPayload: `select:${selectedProductId}`, action: "select" }),
               ...(message.context?.id && { replyToExternalMessageId: message.context.id }),
               ...(message.image?.id && { image: { mediaId: message.image.id, mimeType: message.image.mime_type || "image/jpeg", caption: message.image.caption || null } }),
+              ...(message.audio?.id && { audio: { mediaId: message.audio.id, mimeType: message.audio.mime_type || "audio/ogg" } }),
             },
           });
         }
