@@ -8,7 +8,7 @@ export async function GET(req) {
   if (!q) {
     return NextResponse.json({ products: [] });
   }
-  const products = await findSearchProducts(
+  const matches = await findSearchProducts(
     q,
     {
       id: true,
@@ -18,8 +18,8 @@ export async function GET(req) {
         select: { name: true },
       },
     },
-    10,
+    100,
   );
 
-  return NextResponse.json({ products });
+  return NextResponse.json({ products: matches.slice(0, 10), allProductIds: matches.map((product) => product.id) });
 }

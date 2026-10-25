@@ -2110,22 +2110,33 @@ export const updateProductStatus = async ({ id, value }) => {
 
 export const searchProducts = async (rawQuery, rawFilters = {}, cursor = null) => {
   const { filters, productWhere, variationWhere } = buildStorefrontProductFilter(rawFilters);
+  const productIds = Array.isArray(rawFilters.productIds) ? rawFilters.productIds.filter((id) => typeof id === "string").slice(0, 100) : [];
   const pageSize = 24;
+  const select = {
+    id: true,
+    title: true,
+    slug: true,
+    categoryId: true,
+    hasVariations: true,
+    createdAt: true,
+    thumbnail: { select: { name: true } },
+    variations: {
+      ...(variationWhere && { where: variationWhere }),
+      select: { regularPrice: true, discountPrice: true },
+    },
+    category: { select: { name: true, slug: true } },
+  };
   const [products, campaigns] = await Promise.all([
-    findSearchProducts(rawQuery, {
-      id: true,
-      title: true,
-      slug: true,
-      categoryId: true,
-      hasVariations: true,
-      createdAt: true,
-      thumbnail: { select: { name: true } },
-      variations: {
-        ...(variationWhere && { where: variationWhere }),
-        select: { regularPrice: true, discountPrice: true },
-      },
-      category: { select: { name: true, slug: true } },
-    }, pageSize + 1, productWhere, cursor),
+    productIds.length
+      ? prisma.product.findMany({
+          where: { id: { in: productIds.slice(cursor ? Math.max(0, productIds.indexOf(cursor) + 1) : 0, (cursor ? Math.max(0, productIds.indexOf(cursor) + 1) : 0) + pageSize + 1) }, isActive: true, ...productWhere },
+          select,
+        }).then((rows) => {
+          const byId = new Map(rows.map((product) => [product.id, product]));
+          const offset = cursor ? Math.max(0, productIds.indexOf(cursor) + 1) : 0;
+          return productIds.slice(offset, offset + pageSize + 1).map((id) => byId.get(id)).filter(Boolean);
+        })
+      : findSearchProducts(rawQuery, select, pageSize + 1, productWhere, cursor),
     getActiveCampaigns(),
   ]);
 

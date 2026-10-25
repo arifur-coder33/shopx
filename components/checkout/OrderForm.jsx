@@ -24,7 +24,7 @@ import { calculateCampaignPreviewFallback } from "./campaignPreviewFallback";
 import CheckoutProgressOverlay from "./CheckoutProgressOverlay";
 import DeliveryAreaSelector from "./DeliveryAreaSelector";
 import PaymentMethodSelector from "./PaymentMethodSelector";
-const CHECKOUT_DRAFT_KEY = "checkout-customer-draft:v1";
+const CHECKOUT_DRAFT_KEY = "checkout-customer-draft:v2";
 
 export default function OrderForm({
   setDeliveryArea,
@@ -44,6 +44,8 @@ export default function OrderForm({
   const { data: session } = useSession();
   const { clearCart } = useCart();
   const [paymentSelection, setPaymentSelection] = useState(null);
+  const [addressAIEnabled, setAddressAIEnabled] = useState(false);
+  const [addressModeLoaded, setAddressModeLoaded] = useState(false);
   const formRef = useRef(null);
   const checkoutDraftLoaded = useRef(false);
   const [leadDraft, setLeadDraft] = useState(null);
@@ -72,6 +74,15 @@ export default function OrderForm({
       keepalive: true,
     }).catch(() => {});
   };
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/order-address/ai-status", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => { if (active) { setAddressAIEnabled(Boolean(result.enabled)); setAddressModeLoaded(true); } })
+      .catch(() => { if (active) { setAddressAIEnabled(false); setAddressModeLoaded(true); } });
+    return () => { active = false; };
+  }, []);
   const comboRewardGroups = useMemo(
     () =>
       resolveComboRewards(
@@ -89,6 +100,7 @@ export default function OrderForm({
   );
 
   useEffect(() => {
+    if (!addressModeLoaded) return;
     try {
       const saved = JSON.parse(
         window.localStorage.getItem(CHECKOUT_DRAFT_KEY) || "null",
@@ -117,7 +129,7 @@ export default function OrderForm({
       /* Ignore an invalid or unavailable local checkout draft. */
     }
     checkoutDraftLoaded.current = true;
-  }, [setDeliveryArea]);
+  }, [addressModeLoaded, setDeliveryArea]);
 
   const saveCheckoutDraft = (nextDeliveryArea, saveImmediately = false) => {
     if (!checkoutDraftLoaded.current || !formRef.current) return;
@@ -341,6 +353,10 @@ export default function OrderForm({
   };
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!addressModeLoaded) {
+      setError("ঠিকানা ফর্ম প্রস্তুত হচ্ছে। কয়েক সেকেন্ড পরে আবার Place Order চাপুন।");
+      return;
+    }
     if (!paymentSelection) {
       scrollToPaymentMethod();
       return;
@@ -392,6 +408,20 @@ export default function OrderForm({
 
       const response = await createOrder(formData);
       if (!response?.success || !response.data?.orderNo) {
+        const phoneNumber = String(formData.get("phoneNumber") || "").replace(/\D/g, "").replace(/^880(?=1[3-9]\d{8}$)/u, "0");
+        if (/^01[3-9]\d{8}$/u.test(phoneNumber)) {
+          await saveAbandonedCheckoutLeadAction({
+            customerName: formData.get("customerName"),
+            phoneNumber,
+            district: formData.get("district"),
+            thana: formData.get("thana"),
+            deliveryAddress: formData.get("deliveryAddress"),
+            email: formData.get("email"),
+            note: formData.get("note"),
+            deliveryArea,
+            items: leadItems,
+          }).catch(() => {});
+        }
         throw new Error(response?.error || "অর্ডার তৈরি করা যায়নি। আবার চেষ্টা করুন।");
       }
       createdOrder = response.data;
@@ -520,7 +550,9 @@ export default function OrderForm({
               <Truck /> <span>ডেলিভারি ঠিকানাঃ</span>
             </div>
             <>
-              <DeliveryAddress setDeliveryArea={setDeliveryArea} />
+              {addressModeLoaded
+                ? <DeliveryAddress addressAIEnabled={addressAIEnabled} />
+                : <p className="p-3 text-sm text-text-muted">অর্ডার ফর্ম প্রস্তুত হচ্ছে…</p>}
               <DeliveryAreaSelector
                 setDeliveryArea={setDeliveryArea}
                 selectedArea={deliveryArea}

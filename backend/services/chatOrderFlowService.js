@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { normalizeChatPhone } from "@/lib/chatIdentity";
 import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
+import { saveAbandonedCheckoutLead } from "@/backend/services/abandonedCheckoutService";
 
 const digits = (text) => String(text || "").replace(/[০-৯]/gu, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
 const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|confirm)[.!\s]*$/iu;
@@ -64,6 +65,23 @@ function summaryText(product, flow) {
     `সর্বমোট: ${money(flow.quote.total)}`, "পেমেন্ট: ক্যাশ অন ডেলিভারি",
     "সব ঠিক থাকলে Place order চাপুন। সংশোধনের জন্য Update, বাতিল করতে Cancel চাপুন।",
   ].filter(Boolean).join("\n");
+}
+
+async function saveAbandonedFlow(flow, product, deliveryAddress = flow.deliveryAddress) {
+  const phoneNumber = normalizeChatPhone(flow.phoneNumber);
+  if (!phoneNumber) return;
+  const variant = product?.variations?.find((item) => item.id === flow.variantId);
+  const regularPrice = Number(variant?.regularPrice) || 0;
+  const salePrice = Number(variant?.discountPrice) || 0;
+  await saveAbandonedCheckoutLead({
+    customerName: flow.customerName,
+    phoneNumber,
+    district: flow.district,
+    thana: flow.thana,
+    deliveryAddress,
+    deliveryArea: flow.deliveryArea,
+    items: product ? [{ name: product.title, quantity: 1, price: salePrice > 0 && salePrice < regularPrice ? salePrice : regularPrice, productUrl: product.slug ? `/product/${product.slug}` : null }] : [],
+  }).catch(() => {});
 }
 
 // Website and social channels use the same persisted checkout steps.
@@ -149,7 +167,10 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
           form.set("products", JSON.stringify([{ title: product.title, productId: product.id, variation: { id: flow.variantId, combinations: [] }, quantity: 1 }]));
           if (!await canContinue(conversation, inbound)) return true;
           const result = await createOrder(form);
-          if (!result.success || !result.data?.orderNo) reply = `${result.error || "অর্ডারটি তৈরি হয়নি।"} আবার চেষ্টা করতে Place order চাপুন।`;
+          if (!result.success || !result.data?.orderNo) {
+            await saveAbandonedFlow(flow, product);
+            reply = `${result.error || "অর্ডারটি তৈরি হয়নি।"} আবার চেষ্টা করতে Place order চাপুন।`;
+          }
           else {
             orderNo = result.data.orderNo;
             trackingUrl = new URL(`/tracking/?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(result.data.phoneNumber)}`, siteUrl).href;
@@ -174,7 +195,10 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       const addressResult = field === "address" && !flow.step.startsWith("lead_") ? parseBangladeshAddress(value) : null;
       const valid = addressResult ? addressResult.valid : validField(field, value);
       if (!fields[field]) return false;
-      if (!valid) reply = field === "phone" ? "সঠিক বাংলাদেশি মোবাইল নম্বরটি দিন (যেমন 01712345678)।" : addressResult?.error || prompts[field];
+      if (!valid) {
+        reply = field === "phone" ? "সঠিক বাংলাদেশি মোবাইল নম্বরটি দিন (যেমন 01712345678)।" : addressResult?.error || prompts[field];
+        if (addressResult && !addressResult.valid && !flow.step.startsWith("lead_")) await saveAbandonedFlow(flow, product, value);
+      }
       else {
         next = { ...flow, [fields[field]]: addressResult?.deliveryAddress || value };
         if (addressResult) { next.district = addressResult.district; next.thana = addressResult.thana; }

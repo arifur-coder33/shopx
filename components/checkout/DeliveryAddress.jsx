@@ -13,7 +13,7 @@ import PhoneInput from "../input/PhoneInput";
 //   };
 // };
 
-export default function DeliveryAddress({ setDeliveryArea }) {
+export default function DeliveryAddress({ addressAIEnabled = false }) {
   // const [division, setDivision] = useState(null);
   // const [district, setDistrict] = useState(null);
   // const [thana, setThana] = useState(null);
@@ -66,6 +66,31 @@ export default function DeliveryAddress({ setDeliveryArea }) {
         largeMobile
       />
 
+      {!addressAIEnabled && <>
+        <FloatingInput
+          defaultValue=""
+          type="text"
+          label="আপনার জেলাঃ"
+          name="district"
+          inputType="text"
+          autoComplete="address-level2"
+          colSpan="1"
+          required
+          largeMobile
+        />
+        <FloatingInput
+          defaultValue=""
+          type="text"
+          label="আপনার থানাঃ"
+          name="thana"
+          inputType="text"
+          autoComplete="address-level3"
+          colSpan="1"
+          required
+          largeMobile
+        />
+      </>}
+
       {/* <SearchableDropdown
         defaultId={division}
         label={"আপনার বিভাগঃ *"}
@@ -115,12 +140,12 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label={"ডেলিভারি ঠিকানা "}
+        label={addressAIEnabled ? "পূর্ণ ডেলিভারি ঠিকানা " : "বাসা/ফ্ল্যাট/রোডের ঠিকানা "}
         name={"deliveryAddress"}
         inputType={"text"}
         autoComplete="address-line1"
         colSpan={"full"}
-        placeholder="বাসা/রোড/এলাকা, থানা ও জেলা লিখুন"
+        placeholder={addressAIEnabled ? "বাসা/রোড/এলাকা, থানা ও জেলা লিখুন" : "বাসা/ফ্ল্যাট/রোড/এলাকা লিখুন"}
         required={true}
         largeMobile
       />

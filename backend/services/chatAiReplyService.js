@@ -539,6 +539,7 @@ async function requestAiOutput({
 
 export async function verifyBangladeshDeliveryAddress(address) {
   const unavailable = { available: false, valid: false };
+  let aiConfigured = false;
   try {
     const setting = await prisma.chatSetting.findUnique({
       where: { id: "primary" },
@@ -549,6 +550,7 @@ export async function verifyBangladeshDeliveryAddress(address) {
     const provider = setting.aiProvider === "GOOGLE_AI_STUDIO" ? "GOOGLE_AI_STUDIO" : "OPENAI";
     const apiKey = provider === "GOOGLE_AI_STUDIO" ? credentials.googleAiStudioApiKey : credentials.openaiApiKey;
     if (!apiKey) return unavailable;
+    aiConfigured = true;
     const model = provider === "GOOGLE_AI_STUDIO"
       ? (isChatAiModelAllowed(provider, setting.googleAiStudioModel) ? setting.googleAiStudioModel : DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO)
       : (isChatAiModelAllowed(provider, setting.openaiModel) ? setting.openaiModel : DEFAULT_CHAT_AI_MODELS.OPENAI);
@@ -574,7 +576,7 @@ export async function verifyBangladeshDeliveryAddress(address) {
     if (!parsed.valid) return { available: true, valid: false, error: parsed.error };
     return { available: true, valid: true, district: parsed.district, thana: parsed.thana };
   } catch {
-    // A provider outage should not prevent checkout; the raw address is retained as unverified.
+    if (aiConfigured) return { available: true, valid: false, error: "AI দিয়ে ঠিকানা যাচাই করা যাচ্ছে না। অনুগ্রহ করে একটু পরে আবার চেষ্টা করুন।" };
     return unavailable;
   }
 }
@@ -1873,6 +1875,63 @@ async function rankCatalogImageHashes(image, candidateProductIds) {
     }
   }
   return ranked.sort((left, right) => right.similarity - left.similarity);
+}
+
+export async function searchCatalogByCustomerImage(sourceBytes) {
+  const setting = await prisma.chatSetting.findUnique({
+    where: { id: "primary" },
+    select: { aiAutoReplyEnabled: true, aiProvider: true, openaiModel: true, googleAiStudioModel: true, encryptedCredentials: true },
+  });
+  if (!setting?.aiAutoReplyEnabled || !setting.encryptedCredentials) return { enabled: false, products: [] };
+  const credentials = decryptProviderCredentials(setting.encryptedCredentials);
+  const provider = setting.aiProvider === "GOOGLE_AI_STUDIO" ? "GOOGLE_AI_STUDIO" : "OPENAI";
+  const apiKey = provider === "GOOGLE_AI_STUDIO" ? credentials.googleAiStudioApiKey : credentials.openaiApiKey;
+  if (!apiKey) return { enabled: false, products: [] };
+  const model = provider === "GOOGLE_AI_STUDIO"
+    ? (isChatAiModelAllowed(provider, setting.googleAiStudioModel) ? setting.googleAiStudioModel : DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO)
+    : (isChatAiModelAllowed(provider, setting.openaiModel) ? setting.openaiModel : DEFAULT_CHAT_AI_MODELS.OPENAI);
+  const normalized = await sharp(sourceBytes, { limitInputPixels: 40_000_000 })
+    .rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+  if (!normalized.length || normalized.length > 3 * 1024 * 1024) throw new Error("ছবিটি AI-তে পাঠানোর জন্য ছোট করে নেওয়া যায়নি।");
+  const image = { mimeType: "image/jpeg", base64: normalized.toString("base64") };
+  const ai = { provider, model, apiKey };
+  const description = await describeCustomerImage(ai, image, "Navbar image search");
+  const candidates = await searchImageCatalog(description, (query) => findSearchProducts(query, {
+    id: true, title: true, status: true,
+  }, 80, { status: "ACTIVE" }));
+  if (!candidates.length) return { enabled: true, description, products: [] };
+  const fingerprints = candidates.length > 1
+    ? await rankCatalogImageHashes(image, candidates.map((product) => product.id)).catch(() => [])
+    : [];
+  const selection = selectImageSearchProducts(candidates, fingerprints);
+  const selectedIds = selection.products.map((product) => product.id);
+  const products = selectedIds.length ? await prisma.product.findMany({
+    where: { id: { in: selectedIds }, isActive: true, status: "ACTIVE" },
+    select: { id: true, title: true, slug: true, thumbnail: { select: { name: true } } },
+  }) : [];
+  const byId = new Map(products.map((product) => [product.id, product]));
+  return {
+    enabled: true,
+    query: description.productName || description.productType || description.searchTerms?.[0] || "",
+    products: selectedIds.map((id) => byId.get(id)).filter(Boolean),
+  };
+}
+
+export async function isConfiguredChatAIAvailable() {
+  try {
+    const setting = await prisma.chatSetting.findUnique({
+      where: { id: "primary" },
+      select: { aiAutoReplyEnabled: true, aiProvider: true, encryptedCredentials: true },
+    });
+    if (!setting?.aiAutoReplyEnabled || !setting.encryptedCredentials) return false;
+    const credentials = decryptProviderCredentials(setting.encryptedCredentials);
+    return setting.aiProvider === "GOOGLE_AI_STUDIO"
+      ? Boolean(credentials.googleAiStudioApiKey)
+      : Boolean(credentials.openaiApiKey);
+  } catch {
+    return false;
+  }
 }
 
 function imageAttachmentFor(message) {

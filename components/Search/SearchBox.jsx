@@ -2,7 +2,7 @@
 
 import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
-import { Search, X } from "lucide-react";
+import { Camera, Search, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,10 +14,24 @@ export default function SearchBox() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
+  const [imageSearchEnabled, setImageSearchEnabled] = useState(false);
+  const [imageResultIds, setImageResultIds] = useState([]);
+  const [imageError, setImageError] = useState("");
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
+  const imageInputRef = useRef(null);
   const router = useRouter();
   const { data: session } = useSession();
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/searchProduct/image", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => { if (active) setImageSearchEnabled(Boolean(data.enabled)); })
+      .catch(() => { if (active) setImageSearchEnabled(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const close = (event) => {
@@ -29,6 +43,7 @@ export default function SearchBox() {
 
   useEffect(() => {
     const searchText = query.trim();
+    if (imageResultIds.length) return;
     if (!searchText) {
       setResults([]);
       setLoading(false);
@@ -46,6 +61,7 @@ export default function SearchBox() {
         if (!response.ok) throw new Error("Search request failed");
         const data = await response.json();
         setResults(data.products ?? []);
+        setImageResultIds(data.allProductIds ?? (data.products || []).map((item) => item.id));
 
         trackEvent({
           event: EVENTS.SEARCH,
@@ -67,17 +83,53 @@ export default function SearchBox() {
       clearTimeout(delay);
       controller.abort();
     };
-  }, [query, session?.user?.email, session?.user?.phone]);
+  }, [query, imageResultIds.length, session?.user?.email, session?.user?.phone]);
 
   const clearSearch = () => {
     setQuery("");
     setResults([]);
+    setImageResultIds([]);
+    setImageError("");
     setOpen(false);
+  };
+
+  const handleImageSelected = async (event) => {
+    const image = event.target.files?.[0];
+    event.target.value = "";
+    if (!image) return;
+    const formData = new FormData();
+    formData.set("image", image);
+    setQuery("");
+    setResults([]);
+    setImageResultIds([]);
+    setLoading(false);
+    setImageSearchLoading(true);
+    setImageError("");
+    setOpen(true);
+    try {
+      const response = await fetch("/api/searchProduct/image", { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || "ছবি দিয়ে পণ্য খোঁজা যায়নি।");
+      setImageResultIds((data.products || []).map((product) => product.id));
+      setResults(data.products || []);
+      setQuery(data.query || "ছবি দিয়ে খোঁজা ফলাফল");
+      if (!data.products?.length) setImageError("ছবির সঙ্গে মেলে এমন কোনো পণ্য পাওয়া যায়নি।");
+    } catch (error) {
+      setImageResultIds([]);
+      setImageError(error.message || "ছবি দিয়ে পণ্য খোঁজা যায়নি।");
+    } finally {
+      setImageSearchLoading(false);
+    }
   };
 
   const handleSearch = () => {
     const searchText = query.trim();
-    if (!searchText) return;
+    if (!searchText && !imageResultIds.length) return;
+    if (imageResultIds.length) {
+      setOpen(false);
+      router.push(`/search?ids=${encodeURIComponent(imageResultIds.join(","))}&q=${encodeURIComponent(searchText)}`);
+      return;
+    }
     clearSearch();
     router.push(`/search?q=${encodeURIComponent(searchText)}`);
   };
@@ -86,10 +138,18 @@ export default function SearchBox() {
     <div ref={rootRef} className="relative mx-auto w-full max-w-2xl">
       <div className="flex h-11 items-center overflow-hidden rounded-brand border border-border bg-background shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 sm:h-12">
         <Search aria-hidden="true" className="ml-3 h-5 w-5 shrink-0 text-text-muted" />
+        {imageSearchEnabled && <>
+          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" aria-label="ছবি দিয়ে পণ্য খুঁজুন" onChange={handleImageSelected} />
+          <button type="button" onClick={() => imageInputRef.current?.click()} disabled={imageSearchLoading} aria-label="ছবি দিয়ে পণ্য খুঁজুন" title="ছবি দিয়ে পণ্য খুঁজুন" className="ml-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-text-muted transition hover:bg-primary-soft hover:text-primary disabled:opacity-50">
+            {imageSearchLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" /> : <Camera className="h-4 w-4" />}
+          </button>
+        </>}
         <input
           type="search"
           value={query}
           onChange={(event) => {
+            setImageResultIds([]);
+            setImageError("");
             setQuery(event.target.value);
             setOpen(true);
           }}
@@ -122,7 +182,7 @@ export default function SearchBox() {
         </button>
       </div>
 
-      {open && query.trim() && (
+      {open && (query.trim() || imageSearchLoading || imageError) && (
         <div
           id={resultsId}
           role="listbox"
@@ -136,13 +196,15 @@ export default function SearchBox() {
             </div>
           )}
 
-          {!loading && results.length === 0 && (
+          {!loading && !imageSearchLoading && results.length === 0 && (
             <p className="px-3 py-5 text-center text-sm text-text-muted">
-              “{query.trim()}” নামে কোনো পণ্য পাওয়া যায়নি
+              {imageError || `“${query.trim()}” নামে কোনো পণ্য পাওয়া যায়নি`}
             </p>
           )}
 
-          {!loading && results.map((item) => (
+          {imageSearchLoading && <div className="px-3 py-4 text-center text-sm text-text-muted">AI ছবি দেখে পণ্য খুঁজছে…</div>}
+
+          {!loading && !imageSearchLoading && results.map((item) => (
             <Link
               onClick={clearSearch}
               key={item.id}
@@ -169,7 +231,7 @@ export default function SearchBox() {
             </Link>
           ))}
 
-          {!loading && results.length > 0 && (
+          {!loading && !imageSearchLoading && results.length > 0 && (
             <button
               type="button"
               onClick={handleSearch}
