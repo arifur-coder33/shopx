@@ -3,6 +3,7 @@ import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeServi
 import { postCodCollection } from "@/backend/services/paymentPostingService";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
+import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
@@ -287,9 +288,10 @@ export async function createOrder(formData) {
       data.district = addressAI.district;
       data.thana = addressAI.thana;
     } else {
-      data.district = String(data.district || "").trim();
-      data.thana = String(data.thana || "").trim();
-      if (!data.district || !data.thana) throw new Error("AI address check বন্ধ আছে। অনুগ্রহ করে জেলা, থানা এবং বাসা/রোডের ঠিকানা পূরণ করুন।");
+      const parsedAddress = parseBangladeshAddress(data.deliveryAddress);
+      if (!parsedAddress.valid) throw new Error(parsedAddress.error);
+      data.district = parsedAddress.district;
+      data.thana = parsedAddress.thana;
     }
     if (!/^(?:01[3-9]\d{8}|8801[3-9]\d{8})$/.test(String(data.phoneNumber).replace(/\D/g, ""))) {
       throw new Error("সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01712345678 অথবা 8801712345678)।");

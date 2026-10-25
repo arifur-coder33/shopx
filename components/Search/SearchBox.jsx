@@ -17,6 +17,7 @@ export default function SearchBox() {
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
   const [imageSearchEnabled, setImageSearchEnabled] = useState(false);
   const [imageResultIds, setImageResultIds] = useState([]);
+  const [imageSimilarFallback, setImageSimilarFallback] = useState(false);
   const [imageError, setImageError] = useState("");
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
@@ -89,6 +90,7 @@ export default function SearchBox() {
     setQuery("");
     setResults([]);
     setImageResultIds([]);
+    setImageSimilarFallback(false);
     setImageError("");
     setOpen(false);
   };
@@ -102,6 +104,7 @@ export default function SearchBox() {
     setQuery("");
     setResults([]);
     setImageResultIds([]);
+    setImageSimilarFallback(false);
     setLoading(false);
     setImageSearchLoading(true);
     setImageError("");
@@ -111,11 +114,13 @@ export default function SearchBox() {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || "ছবি দিয়ে পণ্য খোঁজা যায়নি।");
       setImageResultIds((data.products || []).map((product) => product.id));
+      setImageSimilarFallback(Boolean(data.similarFallback));
       setResults(data.products || []);
       setQuery(data.query || "ছবি দিয়ে খোঁজা ফলাফল");
       if (!data.products?.length) setImageError("ছবির সঙ্গে মেলে এমন কোনো পণ্য পাওয়া যায়নি।");
     } catch (error) {
       setImageResultIds([]);
+      setImageSimilarFallback(false);
       setImageError(error.message || "ছবি দিয়ে পণ্য খোঁজা যায়নি।");
     } finally {
       setImageSearchLoading(false);
@@ -127,7 +132,8 @@ export default function SearchBox() {
     if (!searchText && !imageResultIds.length) return;
     if (imageResultIds.length) {
       setOpen(false);
-      router.push(`/search?ids=${encodeURIComponent(imageResultIds.join(","))}&q=${encodeURIComponent(searchText)}`);
+      const similarParam = imageSimilarFallback ? "&similar=1" : "";
+      router.push(`/search?ids=${encodeURIComponent(imageResultIds.join(","))}&q=${encodeURIComponent(searchText)}${similarParam}`);
       return;
     }
     clearSearch();
@@ -149,6 +155,7 @@ export default function SearchBox() {
           value={query}
           onChange={(event) => {
             setImageResultIds([]);
+            setImageSimilarFallback(false);
             setImageError("");
             setQuery(event.target.value);
             setOpen(true);
@@ -227,18 +234,22 @@ export default function SearchBox() {
               )}
               <span className="line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-5">
                 {item.title}
+                {item.matchType === "similar" && <span className="mt-0.5 block text-xs font-normal text-text-muted">ছবির সঙ্গে {item.similarity}% মিল · কাছাকাছি পণ্য</span>}
               </span>
             </Link>
           ))}
 
           {!loading && !imageSearchLoading && results.length > 0 && (
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="mt-1 flex min-h-11 w-full items-center justify-center rounded-brand border-t border-border px-3 pt-2 text-sm font-semibold text-primary hover:bg-primary-soft"
-            >
-              সব ফলাফল দেখুন
-            </button>
+            <>
+              {imageSimilarFallback && <p className="px-3 pt-2 text-center text-xs text-text-muted">ছবির সঙ্গে ৫০% বা তার বেশি মিল থাকা কাছাকাছি পণ্য</p>}
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="mt-1 flex min-h-11 w-full items-center justify-center rounded-brand border-t border-border px-3 pt-2 text-sm font-semibold text-primary hover:bg-primary-soft"
+              >
+                সব ফলাফল দেখুন
+              </button>
+            </>
           )}
         </div>
       )}

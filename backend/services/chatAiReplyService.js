@@ -1818,16 +1818,18 @@ async function getCatalog(
   };
 }
 
-async function rankCatalogImageHashes(image, candidateProductIds) {
-  if (!image?.base64 || !candidateProductIds.length) return [];
-  const fingerprint = await createImageFingerprint(
-    Buffer.from(image.base64, "base64"),
-  );
+async function rankCatalogImageHashes(image, candidateProductIds, preparedFingerprint = null) {
+  if (!image?.base64) return [];
+  const fingerprint = preparedFingerprint || await createImageFingerprint(Buffer.from(image.base64, "base64"));
   if (!fingerprint) return [];
 
   const products = await prisma.product.findMany({
-    where: { id: { in: candidateProductIds }, isActive: true, status: "ACTIVE" },
-    take: 3000,
+    where: {
+      ...(candidateProductIds.length ? { id: { in: candidateProductIds } } : {}),
+      isActive: true,
+      status: "ACTIVE",
+    },
+    take: candidateProductIds.length ? 3000 : 5000,
     orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
     select: {
       id: true,
@@ -1896,12 +1898,32 @@ export async function searchCatalogByCustomerImage(sourceBytes) {
   if (!normalized.length || normalized.length > 3 * 1024 * 1024) throw new Error("ছবিটি AI-তে পাঠানোর জন্য ছোট করে নেওয়া যায়নি।");
   const image = { mimeType: "image/jpeg", base64: normalized.toString("base64") };
   const ai = { provider, model, apiKey };
-  const description = await describeCustomerImage(ai, image, "Navbar image search");
+  const descriptionPromise = describeCustomerImage(ai, image, "Navbar image search", { fast: true });
+  const fingerprintFallbackPromise = createImageFingerprint(normalized).catch(() => null);
+  const description = await descriptionPromise;
   const candidates = await searchImageCatalog(description, (query) => findSearchProducts(query, {
     id: true, title: true, status: true,
   }, 80, { status: "ACTIVE" }));
-  if (!candidates.length) return { enabled: true, description, products: [] };
-  const fingerprints = candidates.length > 1
+  let similarFallback = false;
+  let fingerprints = [];
+  if (!candidates.length) {
+    fingerprints = await rankCatalogImageHashes(image, [], await fingerprintFallbackPromise).catch(() => []);
+    const scores = new Map(fingerprints.filter((match) => match.similarity >= 50).map((match) => [match.id, match.similarity]));
+    const ids = [...scores.keys()].slice(0, 4);
+    similarFallback = ids.length > 0;
+    const products = ids.length ? await prisma.product.findMany({
+      where: { id: { in: ids }, isActive: true, status: "ACTIVE" },
+      select: { id: true, title: true, slug: true, thumbnail: { select: { name: true } } },
+    }) : [];
+    const byId = new Map(products.map((product) => [product.id, product]));
+    return {
+      enabled: true,
+      query: description.productName || description.productType || description.searchTerms?.[0] || "",
+      similarFallback,
+      products: ids.map((id) => ({ ...byId.get(id), similarity: scores.get(id), matchType: "similar" })).filter((product) => product.id),
+    };
+  }
+  fingerprints = candidates.length > 1
     ? await rankCatalogImageHashes(image, candidates.map((product) => product.id)).catch(() => [])
     : [];
   const selection = selectImageSearchProducts(candidates, fingerprints);
@@ -2208,11 +2230,11 @@ async function getCustomerImage(conversation, attachment, credentials) {
 //     return { description: "", bengaliDescription: "", brandModel: "", searchTerms: [] };
 //   }
 // }
-async function describeCustomerImage(ai, image, customerText) {
+async function describeCustomerImage(ai, image, customerText, { fast = false } = {}) {
   const output = await requestAiOutput({
     ai,
     model: ai.model,
-    maxOutputTokens: 4096,
+    maxOutputTokens: fast ? 1400 : 4096,
     instructions: `You are an expert product-matching vision AI for an e-commerce shop in Bangladesh.
 Analyze the customer's uploaded product photo and identify:
 1. Product type and likely name in English, Bengali (বাংলা), and Banglish.
@@ -3738,6 +3760,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
     let customerImage = null;
     let imageDescription = null;
     let imageAnalysisFailed = false;
+    let imageFingerprintFallbackPromise = null;
 
     if (attachment && hasInboundImage(inbound.metadata)) {
       try {
@@ -3747,6 +3770,10 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
           credentials,
         );
         if (customerImage) {
+          imageFingerprintFallbackPromise = createImageFingerprint(Buffer.from(customerImage.base64, "base64")).catch((error) => {
+            console.warn("Fallback image fingerprints unavailable:", error?.message || error);
+            return null;
+          });
           imageDescription = await describeCustomerImage(
             aiConfig,
             customerImage,
@@ -3770,19 +3797,36 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
     let imageSearchCandidates = [];
     let imageSearchSelection = { products: [], threshold: null, steps: [] };
     let imageSearchFailed = imageAnalysisFailed;
+    let imageSearchSimilarFallback = false;
     if (customerImage) {
       try {
         imageSearchCandidates = await searchImageCatalog(imageDescription || {}, async (query) => {
           const products = await findSearchProducts(query, { id: true, title: true, status: true }, 100);
           return products.filter((product) => product.status === "ACTIVE");
         });
-        const fingerprints = imageSearchCandidates.length > 1
+        let fingerprints = imageSearchCandidates.length > 1
           ? await rankCatalogImageHashes(customerImage, imageSearchCandidates.map((product) => product.id)).catch((error) => {
               console.warn("Candidate image fingerprints unavailable:", error?.message || error);
               return [];
             })
           : [];
-        imageSearchSelection = selectImageSearchProducts(imageSearchCandidates, fingerprints);
+        if (!imageSearchCandidates.length && imageFingerprintFallbackPromise) {
+          fingerprints = await rankCatalogImageHashes(customerImage, [], await imageFingerprintFallbackPromise);
+          imageSearchCandidates = fingerprints
+            .filter((match) => match.similarity >= 50)
+            .slice(0, 4)
+            .map((match) => ({ id: match.id, similarity: match.similarity, matchType: "similar" }));
+          imageSearchSimilarFallback = imageSearchCandidates.length > 0;
+          if (imageSearchSimilarFallback) {
+            imageSearchSelection = {
+              products: imageSearchCandidates,
+              threshold: 50,
+              steps: [{ threshold: 50, count: imageSearchCandidates.length }],
+            };
+          }
+        } else {
+          imageSearchSelection = selectImageSearchProducts(imageSearchCandidates, fingerprints);
+        }
       } catch (error) {
         imageSearchFailed = true;
         console.warn("Image catalog search failed:", error?.message || error);
@@ -3881,7 +3925,13 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       const matches = productContext.products.slice(0, 4);
       generated = {
         ...generated,
-        text: matches.length === 1
+        text: imageSearchSimilarFallback
+          ? matches.length === 1
+            ? 'ছবির সঙ্গে অন্তত ৫০% মিল থাকা একটি কাছাকাছি পণ্য পাওয়া গেছে। কার্ডটি দেখে “Select this product” চাপুন।'
+            : matches.length > 1
+              ? 'ছবির সঙ্গে অন্তত ৫০% মিল থাকা কয়েকটি কাছাকাছি পণ্য পাওয়া গেছে। আপনার পণ্যটির কার্ডে “Select this product” চাপুন।'
+              : 'ছবির সঙ্গে ৫০% বা তার বেশি মিল থাকা পণ্য পাওয়া যায়নি।'
+          : matches.length === 1
           ? 'জি, ছবির তথ্য দিয়ে এই পণ্যটি পাওয়া গেছে। কার্ডটি দেখে “Select this product” চাপুন, তাহলে এটি সম্পর্কে বিস্তারিত জানাতে পারব।'
           : matches.length > 1
             ? 'ছবির তথ্যের সঙ্গে মিলে এমন কয়েকটি পণ্য পাওয়া গেছে। আপনার পণ্যটির কার্ডে “Select this product” চাপুন।'
@@ -3895,6 +3945,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
         videoLinks: [],
         imageSearch: {
           failed: imageSearchFailed,
+          similarFallback: imageSearchSimilarFallback,
           candidateCount: imageSearchCandidates.length,
           threshold: imageSearchSelection.threshold,
           steps: imageSearchSelection.steps,

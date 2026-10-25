@@ -16,19 +16,19 @@ export function imageSearchQueryGroups(description = {}) {
 export async function searchImageCatalog(description, findProducts) {
   for (const queries of imageSearchQueryGroups(description)) {
     const matches = new Map();
-    for (let offset = 0; offset < queries.length; offset += 4) {
-      const batch = queries.slice(offset, offset + 4);
-      const results = await Promise.allSettled(batch.map((query) => findProducts(query)));
-      for (const [index, result] of results.entries()) {
-        if (result.status === "rejected") throw result.reason;
-        for (const product of result.value) {
-          if (!product?.id) continue;
-          const prior = matches.get(product.id);
-          matches.set(product.id, {
-            ...product,
-            searchScore: (prior?.searchScore || 0) + 100 - Math.min(offset + index, 90),
-          });
-        }
+    // A short parallel batch keeps image search responsive without letting a
+    // verbose vision response fan out into dozens of catalog queries.
+    const batch = queries.slice(0, 8);
+    const results = await Promise.allSettled(batch.map((query) => findProducts(query)));
+    for (const [index, result] of results.entries()) {
+      if (result.status === "rejected") throw result.reason;
+      for (const product of result.value) {
+        if (!product?.id) continue;
+        const prior = matches.get(product.id);
+        matches.set(product.id, {
+          ...product,
+          searchScore: (prior?.searchScore || 0) + 100 - index,
+        });
       }
     }
     if (matches.size) return [...matches.values()].sort((a, b) => b.searchScore - a.searchScore);

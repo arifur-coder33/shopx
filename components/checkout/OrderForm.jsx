@@ -44,8 +44,6 @@ export default function OrderForm({
   const { data: session } = useSession();
   const { clearCart } = useCart();
   const [paymentSelection, setPaymentSelection] = useState(null);
-  const [addressAIEnabled, setAddressAIEnabled] = useState(false);
-  const [addressModeLoaded, setAddressModeLoaded] = useState(false);
   const formRef = useRef(null);
   const checkoutDraftLoaded = useRef(false);
   const [leadDraft, setLeadDraft] = useState(null);
@@ -75,14 +73,6 @@ export default function OrderForm({
     }).catch(() => {});
   };
 
-  useEffect(() => {
-    let active = true;
-    fetch("/api/order-address/ai-status", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((result) => { if (active) { setAddressAIEnabled(Boolean(result.enabled)); setAddressModeLoaded(true); } })
-      .catch(() => { if (active) { setAddressAIEnabled(false); setAddressModeLoaded(true); } });
-    return () => { active = false; };
-  }, []);
   const comboRewardGroups = useMemo(
     () =>
       resolveComboRewards(
@@ -100,7 +90,6 @@ export default function OrderForm({
   );
 
   useEffect(() => {
-    if (!addressModeLoaded) return;
     try {
       const saved = JSON.parse(
         window.localStorage.getItem(CHECKOUT_DRAFT_KEY) || "null",
@@ -129,7 +118,7 @@ export default function OrderForm({
       /* Ignore an invalid or unavailable local checkout draft. */
     }
     checkoutDraftLoaded.current = true;
-  }, [addressModeLoaded, setDeliveryArea]);
+  }, [setDeliveryArea]);
 
   const saveCheckoutDraft = (nextDeliveryArea, saveImmediately = false) => {
     if (!checkoutDraftLoaded.current || !formRef.current) return;
@@ -353,10 +342,6 @@ export default function OrderForm({
   };
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!addressModeLoaded) {
-      setError("ঠিকানা ফর্ম প্রস্তুত হচ্ছে। কয়েক সেকেন্ড পরে আবার Place Order চাপুন।");
-      return;
-    }
     if (!paymentSelection) {
       scrollToPaymentMethod();
       return;
@@ -550,9 +535,7 @@ export default function OrderForm({
               <Truck /> <span>ডেলিভারি ঠিকানাঃ</span>
             </div>
             <>
-              {addressModeLoaded
-                ? <DeliveryAddress addressAIEnabled={addressAIEnabled} />
-                : <p className="p-3 text-sm text-text-muted">অর্ডার ফর্ম প্রস্তুত হচ্ছে…</p>}
+              <DeliveryAddress />
               <DeliveryAreaSelector
                 setDeliveryArea={setDeliveryArea}
                 selectedArea={deliveryArea}
