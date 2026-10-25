@@ -262,11 +262,18 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
   if (orderNo) await prisma.chatMessage.update({ where: { aiReplyForMessageId: inbound.id }, data: {
     content: text, metadata: { type: "ORDER_PLACED", chatOrderFlow: flow, orderNo, trackingUrl, internalOnly: true },
   } });
-  const delivered = humanTookOver ? { id: null } : await sendChatChannelTextMessage(conversation, text, credentials, null, quickReplies);
   let imageWarning;
-  if (imageUrl && conversation.channel !== "WEBSITE") {
+  const sendImage = async () => {
+    if (!imageUrl || conversation.channel === "WEBSITE") return;
     try { await sendChatChannelImageMessage(conversation, "পণ্যের ছবি", imageUrl, credentials); }
     catch (error) { imageWarning = String(error?.message || "Image delivery failed").slice(0, 200); }
+  };
+  // Messenger quick replies disappear when another message arrives. Send the
+  // product photo first so the checkout buttons remain on the latest message.
+  if (conversation.channel === "MESSENGER") await sendImage();
+  const delivered = humanTookOver ? { id: null } : await sendChatChannelTextMessage(conversation, text, credentials, null, quickReplies);
+  if (conversation.channel !== "MESSENGER") {
+    await sendImage();
   }
   const data = {
     conversationId: conversation.id, channel: conversation.channel, direction: "OUTBOUND", authorType: "AI", content: text,
