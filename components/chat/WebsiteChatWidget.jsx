@@ -63,6 +63,7 @@ export default function WebsiteChatWidget() {
   const [phone, setPhone] = useState("");
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ordersOpen, setOrdersOpen] = useState(false);
@@ -77,6 +78,18 @@ export default function WebsiteChatWidget() {
   const [contactDraft, setContactDraft] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
   const endRef = useRef(null);
+  const photoUrlsRef = useRef(new Set());
+
+  useEffect(() => () => {
+    photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    photoUrlsRef.current.clear();
+  }, []);
+
+  const releasePhotoPreview = (url) => {
+    if (!url) return;
+    URL.revokeObjectURL(url);
+    photoUrlsRef.current.delete(url);
+  };
 
   useEffect(() => {
     setToken(getToken());
@@ -169,12 +182,14 @@ export default function WebsiteChatWidget() {
     const pendingId = `pending-${Date.now()}`;
     setBusy(true);
     setError("");
-    const previewUrl = photo ? URL.createObjectURL(photo) : null;
-    setMessages((current) => [...current, { id: pendingId, direction: "INBOUND", content: content || "📷 Photo", metadata: previewUrl ? { image: { url: previewUrl } } : null, createdAt: new Date().toISOString(), deliveryStatus: "SENDING" }]);
+    const previewUrl = photoPreviewUrl || (photo ? URL.createObjectURL(photo) : null);
+    if (previewUrl) photoUrlsRef.current.add(previewUrl);
+    setMessages((current) => [...current, { id: pendingId, direction: "INBOUND", content: content || "📷 Photo", metadata: previewUrl ? { image: { url: previewUrl, caption: content } } : null, createdAt: new Date().toISOString(), deliveryStatus: "SENDING" }]);
     setText("");
     const selectedPhoto = photo;
     const pagePath = window.location.pathname;
     setPhoto(null);
+    setPhotoPreviewUrl("");
     try {
       let response;
       if (selectedPhoto) {
@@ -185,12 +200,19 @@ export default function WebsiteChatWidget() {
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "বার্তা পাঠানো যায়নি।");
       setMessages((current) => current.map((message) => message.id === pendingId ? result.data : message));
+      if (previewUrl) releasePhotoPreview(previewUrl);
+      setPhotoPreviewUrl("");
+      setPhoto(null);
       refreshMessages();
     } catch (sendError) {
-      setMessages((current) => current.map((message) => message.id === pendingId ? { ...message, deliveryStatus: "FAILED", metadata: selectedPhoto ? { photoRetryUnsupported: true } : null } : message));
+      setMessages((current) => current.map((message) => message.id === pendingId ? {
+        ...message,
+        deliveryStatus: "FAILED",
+        ...(selectedPhoto && { retryFile: selectedPhoto }),
+        metadata: selectedPhoto ? { ...(message.metadata || {}), type: "IMAGE" } : null,
+      } : message));
       setError(sendError.message || "বার্তা পাঠানো যায়নি। আবার চেষ্টা করুন।");
     } finally {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setBusy(false);
     }
   };
@@ -200,10 +222,17 @@ export default function WebsiteChatWidget() {
     setBusy(true); setError("");
     setMessages((current) => current.map((item) => item.id === message.id ? { ...item, deliveryStatus: "SENDING" } : item));
     try {
-      const response = await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content: message.content, name, phone, pagePath: message.metadata?.websitePage?.path || window.location.pathname }) });
+      const response = message.retryFile
+        ? await (() => {
+            const form = new FormData();
+            form.set("token", token); form.set("content", message.metadata?.image?.caption || ""); form.set("name", name); form.set("phone", phone); form.set("pagePath", message.metadata?.websitePage?.path || window.location.pathname); form.set("image", message.retryFile);
+            return fetch("/api/chat/website/image", { method: "POST", body: form });
+          })()
+        : await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content: message.content, name, phone, pagePath: message.metadata?.websitePage?.path || window.location.pathname }) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "বার্তা পাঠানো যায়নি।");
-      setMessages((current) => current.map((item) => item.id === message.id ? result.data : item));
+      setMessages((current) => current.map((item) => item.id === message.id ? { ...result.data } : item));
+      if (message.metadata?.image?.url?.startsWith("blob:")) releasePhotoPreview(message.metadata.image.url);
       refreshMessages();
     } catch (retryError) {
       setMessages((current) => current.map((item) => item.id === message.id ? { ...item, deliveryStatus: "FAILED" } : item));
@@ -312,7 +341,7 @@ export default function WebsiteChatWidget() {
                 {message.authorType === "AI" && message.deliveryStatus === "SENDING" ? <div role="status" aria-label="AI উত্তর লিখছে" className="flex min-w-14 items-center justify-center gap-1 rounded-full bg-slate-100 px-3 py-2">{[0, 1, 2].map((dot) => <span key={dot} className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: `${dot * 160}ms` }} />)}</div> : !["PRODUCT_CARD", "ORDER_TIMELINE"].includes(message.metadata?.type) && !(message.metadata?.image?.url && message.content === "📷 Photo") && <p className="whitespace-pre-wrap break-words">{renderMessageText(message.content)}</p>}
                 {message.metadata?.checkoutOptions?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{message.metadata.checkoutOptions.map((option) => <button key={option.payload} type="button" disabled={actionBusy || messages.some((item) => item.metadata?.chatOrderFlow && new Date(item.createdAt) > new Date(message.createdAt))} onClick={() => productAction("checkout", message.metadata.orderProductId || "", { payload: option.payload, title: option.title })} className="rounded-lg border border-emerald-700 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">{option.title}</button>)}</div>}
                 {message.metadata?.edited && <p className="mt-1 text-right text-[10px] italic opacity-70">edited</p>}
-                {message.direction === "INBOUND" && message.deliveryStatus && <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-600">{message.deliveryStatus === "SENDING" ? <LoaderCircle size={12} className="animate-spin" /> : message.deliveryStatus === "FAILED" ? <><CircleAlert size={13} />{!message.metadata?.photoRetryUnsupported && <button type="button" onClick={() => retryMessage(message)} className="inline-flex items-center gap-1 underline"><RotateCw size={11} />আবার পাঠান</button>}</> : message.deliveryStatus === "READ" ? <CheckCheck size={14} /> : <Check size={13} />}</p>}
+                {message.direction === "INBOUND" && message.deliveryStatus && <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-600">{message.deliveryStatus === "SENDING" ? <LoaderCircle size={12} className="animate-spin" /> : message.deliveryStatus === "FAILED" ? <><CircleAlert size={13} />{!message.metadata?.photoRetryUnsupported && <button type="button" onClick={() => retryMessage(message)} className="inline-flex items-center gap-1 underline"><RotateCw size={11} />Resend</button>}</> : message.deliveryStatus === "READ" ? <CheckCheck size={14} /> : <Check size={13} />}</p>}
               </div>
             </div>)}
             <div ref={endRef} />
@@ -321,9 +350,9 @@ export default function WebsiteChatWidget() {
           {orderDraft && <form onSubmit={submitChatOrder} className="max-h-[48dvh] shrink-0 space-y-2 overflow-y-auto border-t border-slate-200 bg-white p-3 text-xs" aria-label="চ্যাটে অর্ডার ফর্ম"><div className="flex items-center justify-between"><strong>চ্যাটে অর্ডার করুন</strong><button type="button" onClick={() => setOrderDraft(null)} aria-label="অর্ডার ফর্ম বন্ধ করুন"><X size={16} /></button></div>{orderDraft.variants.length > 1 && <div><p className="mb-1">ভ্যারিয়েন্ট বেছে নিন</p><div className="flex flex-wrap gap-1">{orderDraft.variants.map((variant) => <button key={variant.id} type="button" disabled={!variant.canOrder} onClick={() => setOrderDraft((draft) => ({ ...draft, variantId: variant.id }))} className={`rounded-lg border px-2 py-1.5 ${orderDraft.variantId === variant.id ? "border-brand bg-primary-soft" : "border-slate-300"} disabled:opacity-40`}>{variant.label} · ৳{variant.price}{!variant.canOrder && " · স্টক নেই"}</button>)}</div></div>}{[["customerName", "আপনার নাম"], ["phoneNumber", "মোবাইল নম্বর"], ["deliveryAddress", "সম্পূর্ণ ঠিকানা"], ["district", "জেলা"], ["thana", "থানা"]].map(([field, label]) => <label key={field} className="block"><span>{label}</span><input required value={orderDraft[field]} type={field === "phoneNumber" ? "tel" : "text"} inputMode={field === "phoneNumber" ? "numeric" : undefined} maxLength={field === "phoneNumber" ? 13 : field === "deliveryAddress" ? 250 : 100} onChange={(event) => setOrderDraft((draft) => ({ ...draft, [field]: event.target.value }))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>)}<label className="block"><span>ডেলিভারি এলাকা</span><select value={orderDraft.deliveryArea} onChange={(event) => setOrderDraft((draft) => ({ ...draft, deliveryArea: event.target.value }))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"><option value="inside-dhaka">ঢাকার ভিতরে</option><option value="outside-dhaka">ঢাকার বাইরে</option></select></label><p>পেমেন্ট: ক্যাশ অন ডেলিভারি। অনলাইন পেমেন্টের জন্য ওয়েবসাইটে অর্ডার করুন।</p><button type="submit" disabled={actionBusy || !orderDraft.variantId} className="w-full rounded-lg bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">{actionBusy ? "অর্ডার হচ্ছে…" : "Place Order"}</button></form>}
           <form onSubmit={sendMessage} className="shrink-0 space-y-2 border-t border-black/5 bg-[#f0f2f5] p-3">
             {!identity && !messages.length && identityLoaded && <div className="grid grid-cols-2 gap-2"><input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} placeholder="আপনার নাম (ঐচ্ছিক)" aria-label="আপনার নাম (ঐচ্ছিক)" className="min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand" /><input value={phone} onChange={(event) => { const value = event.target.value.slice(0, 30); setPhone(value); setOrderPhone(value); try { sessionStorage.setItem(PHONE_KEY, value); } catch {} }} type="tel" inputMode="tel" autoComplete="tel" maxLength={30} placeholder="ফোন (ঐচ্ছিক)" aria-label="ফোন নম্বর (ঐচ্ছিক)" className="min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand" /></div>}
-            {photo && <div className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs text-slate-700"><span className="truncate">📷 {photo.name}</span><button type="button" onClick={() => setPhoto(null)} aria-label="Photo সরান" className="ml-2 rounded-full p-1 hover:bg-black/5"><X size={14} /></button></div>}
+            {photo && <div className="flex items-center gap-2 rounded-lg bg-white p-2 text-xs text-slate-700"><img src={photoPreviewUrl} alt="Photo preview" className="h-16 w-16 shrink-0 rounded-md object-cover" /><span className="min-w-0 flex-1">Photo selected</span><button type="button" onClick={() => { releasePhotoPreview(photoPreviewUrl); setPhotoPreviewUrl(""); setPhoto(null); }} aria-label="Photo সরান" className="ml-2 rounded-full p-1 hover:bg-black/5"><X size={14} /></button></div>}
             <div className="flex items-end gap-2">
-              <label className={`grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-black/5 hover:bg-slate-50 ${busy ? "pointer-events-none opacity-50" : ""}`} aria-label="Photo যোগ করুন"><ImagePlus size={18} /><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 5 * 1024 * 1024) { setError("Photo সর্বোচ্চ 5 MB হতে পারে।"); event.target.value = ""; return; } setPhoto(file); setError(""); }} /></label>
+              <label className={`grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-white text-slate-700 shadow-sm ring-1 ring-black/5 hover:bg-slate-50 ${busy ? "pointer-events-none opacity-50" : ""}`} aria-label="Photo যোগ করুন"><ImagePlus size={18} /><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 5 * 1024 * 1024) { setError("Photo সর্বোচ্চ 5 MB হতে পারে।"); event.target.value = ""; return; } releasePhotoPreview(photoPreviewUrl); const previewUrl = URL.createObjectURL(file); photoUrlsRef.current.add(previewUrl); setPhotoPreviewUrl(previewUrl); setPhoto(file); setError(""); }} /></label>
               <textarea value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) sendMessage(event); }} maxLength={2000} rows={1} placeholder="আপনার বার্তা লিখুন…" aria-label="বার্তা" className="max-h-28 min-h-10 flex-1 resize-none rounded-2xl border-0 bg-white px-4 py-2.5 text-base text-slate-800 outline-none ring-1 ring-black/5 focus:ring-primary sm:resize-y sm:text-sm" />
               <button type="submit" disabled={busy || (!text.trim() && !photo)} aria-label="বার্তা পাঠান" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-700 text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={18} /> : <Send size={18} />}</button>
             </div>

@@ -121,6 +121,7 @@ export default function AdminChatInbox({
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [reactionBusyId, setReactionBusyId] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
   const [selectedChatMedia, setSelectedChatMedia] = useState(null);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [chatMediaItems, setChatMediaItems] = useState([]);
@@ -158,12 +159,26 @@ export default function AdminChatInbox({
   const attachmentsMenuRef = useRef(null);
   const knownInboxRef = useRef(null);
   const photoInputRef = useRef(null);
+  const photoPreviewRef = useRef("");
+  const photoPreviewUrlsRef = useRef(new Set());
   const messageListRef = useRef(null);
   const messageElementsRef = useRef(new Map());
   const messageActionMenusRef = useRef(new Map());
   const replyHighlightTimerRef = useRef(null);
   const [focusedReplyMessageId, setFocusedReplyMessageId] = useState(null);
   selectedIdRef.current = selectedId;
+
+  const releasePhotoPreview = (url) => {
+    if (!url?.startsWith("blob:")) return;
+    URL.revokeObjectURL(url);
+    photoPreviewUrlsRef.current.delete(url);
+    if (photoPreviewRef.current === url) photoPreviewRef.current = "";
+  };
+
+  useEffect(() => () => {
+    photoPreviewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    photoPreviewUrlsRef.current.clear();
+  }, []);
 
   useEffect(() => {
     const requestedConversation = new URLSearchParams(window.location.search).get("conversation");
@@ -188,6 +203,10 @@ export default function AdminChatInbox({
     setProductQuery("");
     setOrdersExpanded(false);
     setPhotoFile(null);
+    photoPreviewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    photoPreviewUrlsRef.current.clear();
+    photoPreviewRef.current = "";
+    setPhotoPreviewUrl("");
     setSelectedChatMedia(null);
     setMediaPickerOpen(false);
     if (photoInputRef.current) photoInputRef.current.value = "";
@@ -631,21 +650,49 @@ export default function AdminChatInbox({
     if ((!photoFile && !selectedChatMedia) || !replyTarget || !canUpdate || busy) return;
     setBusy(true);
     setError("");
+    const pendingId = `pending-photo-${Date.now()}`;
+    const selectedFile = photoFile;
+    const selectedMedia = selectedChatMedia;
+    const previewUrl = selectedFile ? photoPreviewUrl : selectedMedia?.url;
+    const caption = draft.trim();
+    const pendingMessage = {
+      id: pendingId,
+      conversationId: replyTarget.id,
+      channel: replyTarget.channel,
+      direction: "OUTBOUND",
+      authorType: "AGENT",
+      content: caption || "📷 Photo",
+      deliveryStatus: "SENDING",
+      metadata: { type: "IMAGE", image: { url: previewUrl, mediaId: selectedMedia?.id || null, mimeType: selectedFile?.type || "image/jpeg" } },
+      createdAt: new Date().toISOString(),
+      ...(selectedFile && { retryFile: selectedFile }),
+      ...(selectedMedia && { retryMediaId: selectedMedia.id }),
+    };
+    setConversation((current) => current ? { ...current, messages: [...current.messages, pendingMessage] } : current);
+    setPhotoFile(null);
+    setSelectedChatMedia(null);
+    setPhotoPreviewUrl("");
+    photoPreviewRef.current = "";
+    if (photoInputRef.current) photoInputRef.current.value = "";
     const formData = new FormData();
-    if (photoFile) formData.set("image", photoFile);
-    else formData.set("mediaId", selectedChatMedia.id);
-    formData.set("caption", draft);
+    if (selectedFile) formData.set("image", selectedFile);
+    else formData.set("mediaId", selectedMedia.id);
+    formData.set("caption", caption);
     const result = await sendChatImageAction(replyTarget.id, formData, replyToMessage?.id || null).catch((failure) => ({ success: false, message: failure?.message || "ছবি পাঠানো যায়নি।" }));
     if (result.success) {
-      setConversation((current) => current ? { ...current, messages: [...current.messages, result.data] } : current);
+      setConversation((current) => current ? { ...current, messages: current.messages.map((item) => item.id === pendingId ? result.data : item) } : current);
       setDraft("");
       setPhotoFile(null);
       setSelectedChatMedia(null);
+      releasePhotoPreview(previewUrl);
       if (photoInputRef.current) photoInputRef.current.value = "";
       setReplyToMessage(null);
       if (result.warning) setError(result.warning);
       await loadInbox();
-    } else setError(result.message || "Photo পাঠানো যায়নি।");
+    } else {
+      setConversation((current) => current ? { ...current, messages: current.messages.map((item) => item.id === pendingId ? { ...item, deliveryStatus: "FAILED" } : item) } : current);
+      setError(result.message || "Photo পাঠানো যায়নি।");
+    }
     setBusy(false);
   };
 
@@ -661,6 +708,9 @@ export default function AdminChatInbox({
   const selectChatMedia = (item) => {
     setSelectedChatMedia(item);
     setPhotoFile(null);
+    releasePhotoPreview(photoPreviewRef.current);
+    photoPreviewRef.current = "";
+    setPhotoPreviewUrl("");
     if (photoInputRef.current) photoInputRef.current.value = "";
     setMediaPickerOpen(false);
   };
@@ -697,24 +747,34 @@ export default function AdminChatInbox({
         : current,
     );
     const message = conversation?.messages.find((item) => item.id === messageId);
-    const result = message?.metadata?.type === "IMAGE"
-      ? await retryChatImageAction(messageId)
-      : await sendChatReplyAction(message?.conversationId || selectedId, "", messageId);
+    let result;
+    if (message?.retryFile || message?.retryMediaId) {
+      const formData = new FormData();
+      if (message.retryFile) formData.set("image", message.retryFile);
+      else formData.set("mediaId", message.retryMediaId);
+      formData.set("caption", message.content === "📷 Photo" ? "" : message.content);
+      result = await sendChatImageAction(message.conversationId || replyTarget?.id || selectedId, formData, null)
+        .catch((failure) => ({ success: false, message: failure?.message || "ছবি আবার পাঠানো যায়নি।" }));
+    } else {
+      result = message?.metadata?.type === "IMAGE"
+        ? await retryChatImageAction(messageId)
+        : await sendChatReplyAction(message?.conversationId || selectedId, "", messageId);
+    }
     if (result.success) {
       setConversation((current) =>
         current
           ? {
               ...current,
-              messages: current.messages.map((item) =>
-                item.id === messageId ? result.data : item,
-              ),
+              messages: current.messages.map((item) => item.id === messageId ? result.data : item),
             }
           : current,
       );
+      if (message?.retryFile && message.metadata?.image?.url?.startsWith("blob:")) releasePhotoPreview(message.metadata.image.url);
       if (result.warning) setError(`${result.warning} আবার চেষ্টা করুন।`);
     } else {
       setError(result.message || "Retry failed.");
-      await loadConversation();
+      if (!message?.retryFile && !message?.retryMediaId) await loadConversation();
+      else setConversation((current) => current ? { ...current, messages: current.messages.map((item) => item.id === messageId ? { ...item, deliveryStatus: "FAILED" } : item) } : current);
     }
     setBusy(false);
   };
@@ -739,6 +799,9 @@ export default function AdminChatInbox({
     setReplyToMessage(message);
     setDraft("");
     setPhotoFile(null);
+    releasePhotoPreview(photoPreviewRef.current);
+    photoPreviewRef.current = "";
+    setPhotoPreviewUrl("");
     setSelectedChatMedia(null);
     if (photoInputRef.current) photoInputRef.current.value = "";
     setOpenMessageMenuId(null);
@@ -1432,7 +1495,7 @@ export default function AdminChatInbox({
                                   className="ml-1 inline-flex items-center gap-1 rounded bg-white/15 px-1.5 py-0.5 font-semibold hover:bg-white/25 disabled:opacity-50"
                                 >
                                   <RotateCw size={11} />
-                                  Retry
+                                  Resend
                                 </button>
                               )}
                           </>
@@ -1630,7 +1693,7 @@ export default function AdminChatInbox({
                 onSubmit={sendReply}
                 className="relative z-10 mt-auto shrink-0 border-t border-black/5 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4"
               >
-    <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { setPhotoFile(event.target.files?.[0] || null); setSelectedChatMedia(null); }} />
+    <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; releasePhotoPreview(photoPreviewRef.current); const url = URL.createObjectURL(file); photoPreviewRef.current = url; photoPreviewUrlsRef.current.add(url); setPhotoPreviewUrl(url); setPhotoFile(file); setSelectedChatMedia(null); }} />
                 {replyToMessage && (
                   <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-primary bg-primary-soft px-3 py-2 text-xs">
                     <Reply size={14} className="shrink-0 text-primary" />
@@ -1639,10 +1702,10 @@ export default function AdminChatInbox({
                   </div>
                 )}
                 {photoFile && (
-                  <div className="mb-2 flex items-center gap-2 rounded-lg bg-background px-3 py-2 text-xs">
-                    <ImagePlus size={14} className="text-primary" />
-                    <span className="min-w-0 flex-1 truncate">{photoFile.name}</span>
-                    <button type="button" onClick={() => { setPhotoFile(null); if (photoInputRef.current) photoInputRef.current.value = ""; }} aria-label="Photo সরান" className="rounded p-1 hover:bg-white"><X size={14} /></button>
+                  <div className="mb-2 flex items-center gap-2 rounded-lg bg-background px-2 py-2 text-xs">
+                    <img src={photoPreviewUrl} alt="Photo preview" className="h-16 w-16 shrink-0 rounded-md object-cover" />
+                    <span className="min-w-0 flex-1">Photo selected</span>
+                    <button type="button" onClick={() => { releasePhotoPreview(photoPreviewRef.current); photoPreviewRef.current = ""; setPhotoPreviewUrl(""); setPhotoFile(null); if (photoInputRef.current) photoInputRef.current.value = ""; }} aria-label="Photo সরান" className="rounded p-1 hover:bg-white"><X size={14} /></button>
                   </div>
                 )}
                 {selectedChatMedia && (

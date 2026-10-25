@@ -18,10 +18,12 @@ export default function SearchBox() {
   const [imageSearchEnabled, setImageSearchEnabled] = useState(false);
   const [imageResultIds, setImageResultIds] = useState([]);
   const [imageSimilarFallback, setImageSimilarFallback] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [imageError, setImageError] = useState("");
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const imageInputRef = useRef(null);
+  const imagePreviewRef = useRef("");
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -32,6 +34,10 @@ export default function SearchBox() {
       .then((data) => { if (active) setImageSearchEnabled(Boolean(data.enabled)); })
       .catch(() => { if (active) setImageSearchEnabled(false); });
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => () => {
+    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
   }, []);
 
   useEffect(() => {
@@ -91,6 +97,9 @@ export default function SearchBox() {
     setResults([]);
     setImageResultIds([]);
     setImageSimilarFallback(false);
+    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
+    imagePreviewRef.current = "";
+    setImagePreviewUrl("");
     setImageError("");
     setOpen(false);
   };
@@ -99,6 +108,9 @@ export default function SearchBox() {
     const image = event.target.files?.[0];
     event.target.value = "";
     if (!image) return;
+    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
+    imagePreviewRef.current = URL.createObjectURL(image);
+    setImagePreviewUrl(imagePreviewRef.current);
     const formData = new FormData();
     formData.set("image", image);
     setQuery("");
@@ -156,6 +168,9 @@ export default function SearchBox() {
           onChange={(event) => {
             setImageResultIds([]);
             setImageSimilarFallback(false);
+            if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current);
+            imagePreviewRef.current = "";
+            setImagePreviewUrl("");
             setImageError("");
             setQuery(event.target.value);
             setOpen(true);
@@ -209,7 +224,7 @@ export default function SearchBox() {
             </p>
           )}
 
-          {imageSearchLoading && <div className="px-3 py-4 text-center text-sm text-text-muted">AI ছবি দেখে পণ্য খুঁজছে…</div>}
+          {imagePreviewUrl && <div className="flex items-center gap-3 border-b border-border px-2 py-2"><img src={imagePreviewUrl} alt="আপনার খোঁজার ছবি" className="h-12 w-12 shrink-0 rounded-md object-cover" /><p className="text-sm text-text-muted">{imageSearchLoading ? "Searching similar products" : imageSimilarFallback ? "Similar photo results" : "Photo search results"}</p></div>}
 
           {!loading && !imageSearchLoading && results.map((item) => (
             <Link
