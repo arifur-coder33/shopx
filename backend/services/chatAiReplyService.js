@@ -1907,10 +1907,12 @@ export async function searchCatalogByCustomerImage(sourceBytes) {
   }, 80, { status: "ACTIVE" }));
   let similarFallback = false;
   let fingerprints = [];
+  let allProductIds = [];
   if (!candidates.length) {
     fingerprints = await rankCatalogImageHashes(image, [], await fingerprintFallbackPromise).catch(() => []);
-    const scores = new Map(fingerprints.filter((match) => match.similarity >= 50).map((match) => [match.id, match.similarity]));
-    const ids = [...scores.keys()].slice(0, 4);
+    const selection = selectImageSearchProducts(fingerprints, fingerprints);
+    const ids = selection.products.map((product) => product.id);
+    allProductIds = selection.allProductIds;
     similarFallback = ids.length > 0;
     const products = ids.length ? await prisma.product.findMany({
       where: { id: { in: ids }, isActive: true, status: "ACTIVE" },
@@ -1921,14 +1923,14 @@ export async function searchCatalogByCustomerImage(sourceBytes) {
       enabled: true,
       query: description.productName || description.productType || description.searchTerms?.[0] || "",
       similarFallback,
-      products: ids.map((id) => ({ ...byId.get(id), similarity: scores.get(id), matchType: "similar" })).filter((product) => product.id),
+      allProductIds,
+      products: ids.map((id) => ({ ...byId.get(id), similarity: fingerprints.find((match) => match.id === id)?.similarity, matchType: "similar" })).filter((product) => product.id),
     };
   }
-  fingerprints = candidates.length > 1
-    ? await rankCatalogImageHashes(image, candidates.map((product) => product.id)).catch(() => [])
-    : [];
+  fingerprints = await rankCatalogImageHashes(image, candidates.map((product) => product.id)).catch(() => []);
   const selection = selectImageSearchProducts(candidates, fingerprints);
   const selectedIds = selection.products.map((product) => product.id);
+  allProductIds = selection.allProductIds;
   const products = selectedIds.length ? await prisma.product.findMany({
     where: { id: { in: selectedIds }, isActive: true, status: "ACTIVE" },
     select: { id: true, title: true, slug: true, thumbnail: { select: { name: true } } },
@@ -1937,7 +1939,9 @@ export async function searchCatalogByCustomerImage(sourceBytes) {
   return {
     enabled: true,
     query: description.productName || description.productType || description.searchTerms?.[0] || "",
-    products: selectedIds.map((id) => byId.get(id)).filter(Boolean),
+    similarFallback: fingerprints.length > 0,
+    allProductIds,
+    products: selection.products.map((selected) => ({ ...byId.get(selected.id), ...(selected.similarity != null && { similarity: selected.similarity, matchType: "similar" }) })).filter((product) => product.id),
   };
 }
 
@@ -3833,7 +3837,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
           const products = await findSearchProducts(query, { id: true, title: true, status: true }, 100);
           return products.filter((product) => product.status === "ACTIVE");
         });
-        let fingerprints = imageSearchCandidates.length > 1
+        let fingerprints = imageSearchCandidates.length
           ? await rankCatalogImageHashes(customerImage, imageSearchCandidates.map((product) => product.id)).catch((error) => {
               console.warn("Candidate image fingerprints unavailable:", error?.message || error);
               return [];
@@ -3841,20 +3845,20 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
           : [];
         if (!imageSearchCandidates.length && imageFingerprintFallbackPromise) {
           fingerprints = await rankCatalogImageHashes(customerImage, [], await imageFingerprintFallbackPromise);
-          imageSearchCandidates = fingerprints
-            .filter((match) => match.similarity >= 50)
-            .slice(0, 4)
+          const selection = selectImageSearchProducts(fingerprints, fingerprints);
+          imageSearchCandidates = selection.products
             .map((match) => ({ id: match.id, similarity: match.similarity, matchType: "similar" }));
           imageSearchSimilarFallback = imageSearchCandidates.length > 0;
           if (imageSearchSimilarFallback) {
             imageSearchSelection = {
+              ...selection,
               products: imageSearchCandidates,
-              threshold: 50,
-              steps: [{ threshold: 50, count: imageSearchCandidates.length }],
             };
           }
         } else {
           imageSearchSelection = selectImageSearchProducts(imageSearchCandidates, fingerprints);
+          imageSearchCandidates = imageSearchSelection.products;
+          imageSearchSimilarFallback = fingerprints.length > 0;
         }
       } catch (error) {
         imageSearchFailed = true;
@@ -3895,11 +3899,22 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       /(?:অর্ডার\s*(?:করতে|করব|করবো|দিতে)|\border\s*(?:korbo|korte|dite|now)\b|কিনতে চাই|নিতে চাই)/iu.test(
         inbound.content,
       );
+    const selectedCardId = String(inbound.metadata?.quickReplyPayload || "").match(/^select:([a-zA-Z0-9_-]{5,80})$/u)?.[1];
+    const selectedCardProduct = selectedCardId
+      ? productContext.products.find((product) => product.id === selectedCardId)
+      : null;
     const rejectsPreviousProductMatch =
       /(?:\b(?:wrong\s+product|not\s+(?:this|same|matching)|doesn['’]?t\s+match|does\s+not\s+match)\b|(?:এটা|এইটা|এটি|eita|eta|this)\s*(?:মিলে\s*না|মেলেনি|ম্যাচ\s*(?:হয়নি|হয়নি|করে\s*না)|মিলেনা|mile\s*na[iy]|match\s*(?:kore\s*na|hoyni)|mila\s*na|না|vul|ভুল)|(?:মিলে\s*না|ম্যাচ\s*(?:হয়নি|হয়নি|করে\s*না)|মিলেনা|mile\s*na[iy]|ভুল\s*(?:প্রোডাক্ট|পণ্য)))/iu.test(
         inbound.content,
       );
-    let generated = contactOnlyRequest
+    let generated = selectedCardProduct
+      ? {
+          text: `আপনি “${selectedCardProduct.title}” পণ্যটি বেছে নিয়েছেন।${selectedCardProduct.variants.some((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice) > 0) ? ` দাম ${new Intl.NumberFormat("bn-BD", { style: "currency", currency: "BDT", maximumFractionDigits: 0 }).format(Math.min(...selectedCardProduct.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((price) => price > 0)))} থেকে।` : ""} এই পণ্যটি সম্পর্কে প্রশ্ন করুন, অথবা অর্ডার করতে “অর্ডার করতে চাই” বাটন চাপুন।`,
+          imageMatch: "none",
+          products: [],
+          selectedProductId: selectedCardProduct.id,
+        }
+      : contactOnlyRequest
       ? {
           text: "আপনার নাম, ফোন নম্বর ও সম্পূর্ণ ঠিকানা দিন। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।",
           imageMatch: "none",
@@ -3951,22 +3966,32 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
                   productMemory,
                 );
     if (!contactOnlyRequest && customerImage) {
-      const matches = productContext.products.slice(0, 4);
+      const matches = productContext.products.slice(0, 3);
+      const allMatchIds = imageSearchSelection.allProductIds?.length
+        ? imageSearchSelection.allProductIds
+        : imageSearchSelection.products.map((product) => product.id);
+      let allMatchesUrl = "";
+      if (allMatchIds.length > 3) {
+        const searchUrl = new URL("/search", await getSiteUrl());
+        searchUrl.searchParams.set("ids", allMatchIds.join(","));
+        searchUrl.searchParams.set("q", imageDescription?.productName || imageDescription?.productType || "ছবির পণ্য");
+        searchUrl.searchParams.set("similar", "1");
+        allMatchesUrl = searchUrl.toString();
+      }
+      const lowConfidenceText = imageSearchSimilarFallback
+        ? matches.length
+          ? "সরাসরি পণ্যের নাম দিয়ে না মিললেও ছবির মতো similar product খুঁজে পেয়েছি।"
+          : "ছবির সঙ্গে মেলে এমন পণ্য পাওয়া যায়নি।"
+        : matches.length > 1
+          ? "ছবির মতো কয়েকটি similar product পাওয়া গেছে।"
+          : "ছবির মতো similar product পাওয়া গেছে।";
       generated = {
         ...generated,
-        text: imageSearchSimilarFallback
-          ? matches.length === 1
-            ? 'ছবির সঙ্গে অন্তত ৫০% মিল থাকা একটি কাছাকাছি পণ্য পাওয়া গেছে। কার্ডটি দেখে “Select this product” চাপুন।'
-            : matches.length > 1
-              ? 'ছবির সঙ্গে অন্তত ৫০% মিল থাকা কয়েকটি কাছাকাছি পণ্য পাওয়া গেছে। আপনার পণ্যটির কার্ডে “Select this product” চাপুন।'
-              : 'ছবির সঙ্গে ৫০% বা তার বেশি মিল থাকা পণ্য পাওয়া যায়নি।'
-          : matches.length === 1
-          ? 'জি, ছবির তথ্য দিয়ে এই পণ্যটি পাওয়া গেছে। কার্ডটি দেখে “Select this product” চাপুন, তাহলে এটি সম্পর্কে বিস্তারিত জানাতে পারব।'
-          : matches.length > 1
-            ? 'ছবির তথ্যের সঙ্গে মিলে এমন কয়েকটি পণ্য পাওয়া গেছে। আপনার পণ্যটির কার্ডে “Select this product” চাপুন।'
-            : imageSearchFailed || !imageDescription?.productName
-              ? 'ছবির তথ্য দিয়ে এই মুহূর্তে পণ্যটি খুঁজে বের করা যায়নি। পণ্যের নাম বা লিংক দিলে আবার খুঁজে দেখব।'
-              : 'ছবির নাম, লেখা ও ব্যবহার দিয়ে খুঁজে মিল থাকা পণ্য পাওয়া যায়নি। পণ্যের লিংক বা কোড দিলে খুঁজে দেখব।',
+        text: matches.length
+          ? `${lowConfidenceText}${allMatchesUrl ? ` আরও মিল থাকা পণ্য দেখতে: ${allMatchesUrl}` : " কার্ডে “Select this product” চাপুন।"}`
+          : imageSearchFailed || !imageDescription?.productName
+            ? 'ছবির তথ্য দিয়ে এই মুহূর্তে পণ্যটি খুঁজে বের করা যায়নি। পণ্যের নাম বা লিংক দিলে আবার খুঁজে দেখব।'
+            : 'ছবির নাম, লেখা ও ব্যবহার দিয়ে মিল থাকা পণ্য পাওয়া যায়নি। পণ্যের লিংক বা কোড দিলে খুঁজে দেখব।',
         imageMatch: matches.length ? "alternative" : "none",
         products: matches,
         mediaPhoto: null,

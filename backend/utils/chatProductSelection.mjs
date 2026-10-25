@@ -6,7 +6,7 @@ export function whatsAppImageContent(mediaId, caption, productId = null) {
       type: "button",
       header: { type: "image", image: { id: mediaId } },
       body: { text: String(caption || "পণ্যের তথ্য").slice(0, 1024) },
-      action: { buttons: [{ type: "reply", reply: { id: `select:${productId}`, title: "Select this product" } }] },
+      action: { buttons: [{ type: "reply", reply: { id: `select:${productId}`, title: "এটি বেছে নিন" } }] },
     },
   };
 }

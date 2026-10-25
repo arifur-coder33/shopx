@@ -123,7 +123,22 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
     const productId = quickProductId || inbound.metadata?.productId || (startProductId !== undefined ? startProductId : source?.metadata?.selectedProductId || source?.metadata?.productOptions?.[0]?.id);
     product = await currentProduct(productId);
     if (!product && canCreateOrder) { reply = "কোন পণ্যটি অর্ডার করতে চান? পণ্যের নাম, লিংক বা কার্ডটি বেছে দিন।"; next = { step: "done" }; }
-    else {
+    else if (quickProductId && product) {
+      const variants = orderable(product);
+      if (!variants.length) { reply = "দুঃখিত, পণ্যটি এখন অর্ডার করা যাচ্ছে না।"; next = { step: "done" }; }
+      else if (product.codAvailable === false || ["DELIVERY_FEE", "PARTIAL"].includes(product.advancePaymentType)) {
+        next = { step: "done" };
+        reply = `এই পণ্যে অগ্রিম/অনলাইন পেমেন্ট লাগে। পণ্যটি দেখতে ও অর্ডার করতে এই লিংকে যান: ${new URL(`/buynow/${encodeURIComponent(product.slug)}`, siteUrl).href}`;
+      }
+      else if (product.hasVariations || variants.length > 1 || variants[0].combinations.length) {
+        next = { id: randomUUID(), step: "variant", productId: product.id };
+        reply = `“${product.title}” অর্ডার করতে কোন ভ্যারিয়েশনটি চান? নিচের অপশন থেকে বেছে নিন।`;
+      } else {
+        next = { id: randomUUID(), step: canCreateOrder ? "name" : "lead_name", productId: product.id, variantId: variants[0].id };
+        reply = canCreateOrder ? `“${product.title}” অর্ডারের জন্য ${prompts.name}` : "আপনার নাম লিখুন। ফোন নম্বর ও ঠিকানা নিয়ে আমাদের প্রতিনিধি যোগাযোগ করবেন।";
+      }
+      photo = true;
+    } else {
       next = { id: randomUUID(), step: canCreateOrder ? "product_confirm" : "lead_name", productId: product?.id || null };
       reply = canCreateOrder ? `আপনি কি “${product.title}” পণ্যটি অর্ডার করতে চান? হ্যাঁ বা না বেছে নিন।` : "আপনার নাম লিখুন। ফোন নম্বর ও ঠিকানা নিয়ে আমাদের একজন প্রতিনিধি আপনার সঙ্গে যোগাযোগ করবেন।";
       photo = Boolean(product);

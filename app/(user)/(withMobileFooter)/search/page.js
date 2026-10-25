@@ -23,7 +23,7 @@ export default async function SearchPage({ searchParams }) {
   return (
     <div className="p-5">
       <h1 className="text-xl font-bold mb-4">Search Results for {rawQuery}</h1>
-      {similarImageResults && <p className="mb-4 text-sm text-text-muted">ছবির সঙ্গে ৫০% বা তার বেশি মিল থাকা কাছাকাছি পণ্য দেখানো হচ্ছে।</p>}
+      {similarImageResults && <p className="mb-4 text-sm text-text-muted">ছবির মতো similar product দেখানো হচ্ছে।</p>}
       {!success ? <p className="text-danger">পণ্য খোঁজা যায়নি। আবার চেষ্টা করুন।</p> : <SearchProductGrid key={`${rawQuery}:${JSON.stringify(filters)}`} query={rawQuery} filters={filters} initialProducts={data} initialCursor={nextCursor} variationOptions={variationOptions} queryString={queryParams.toString()} />}
     </div>
   );

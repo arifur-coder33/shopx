@@ -1,5 +1,4 @@
 import { getSiteUrl } from "@/lib/siteUrl";
-import { createMessengerOrderToken } from "@/backend/services/chatMessengerOrderLink";
 import sharp from "sharp";
 import { whatsAppImageContent } from "@/backend/utils/chatProductSelection.mjs";
 
@@ -116,15 +115,14 @@ export async function sendMessengerProductCard(conversation, product, credential
   const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
   const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
   const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
-  const orderFormUrl = new URL(`/chat/messenger-order?t=${encodeURIComponent(createMessengerOrderToken(conversation.id, product.id))}`, await getSiteUrl()).toString();
   const element = {
     title: String(product.title).slice(0, 80),
     subtitle: [priceText, variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
     ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
     buttons: [
       { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
-      { type: "postback", title: "Select this product", payload: `select:${product.id}` },
-      { type: "web_url", url: orderFormUrl, title: "অর্ডার করতে চাই" },
+      { type: "postback", title: "এটি বেছে নিন", payload: `select:${product.id}` },
+      { type: "postback", title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
     ],
   };
   const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
@@ -144,22 +142,21 @@ export async function sendMessengerProductCarousel(conversation, products, crede
   if (products.length < 2) throw new Error("Messenger carousel needs at least two products.");
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
   if (!credentials.messengerPageAccessToken || !credentials.messengerPageId || !/^v\d+\.\d+$/.test(version || "")) throw new Error("Messenger credentials configure করা নেই।");
-  const elements = await Promise.all(products.slice(0, 10).map(async (product) => {
+  const elements = products.slice(0, 10).map((product) => {
     const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
     const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
     const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
-    const orderFormUrl = new URL(`/chat/messenger-order?t=${encodeURIComponent(createMessengerOrderToken(conversation.id, product.id))}`, await getSiteUrl()).toString();
     return {
       title: String(product.title).slice(0, 80),
       subtitle: [priceText, variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
       ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
       buttons: [
         { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
-        { type: "postback", title: "Select this product", payload: `select:${product.id}` },
-        { type: "web_url", url: orderFormUrl, title: "অর্ডার করতে চাই" },
+        { type: "postback", title: "এটি বেছে নিন", payload: `select:${product.id}` },
+        { type: "postback", title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
       ],
     };
-  }));
+  });
   const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}`, "Content-Type": "application/json" },

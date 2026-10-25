@@ -125,7 +125,7 @@ export default function SearchBox() {
       const response = await fetch("/api/searchProduct/image", { method: "POST", body: formData });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || "ছবি দিয়ে পণ্য খোঁজা যায়নি।");
-      setImageResultIds((data.products || []).map((product) => product.id));
+      setImageResultIds(data.allProductIds || (data.products || []).map((product) => product.id));
       setImageSimilarFallback(Boolean(data.similarFallback));
       setResults(data.products || []);
       setQuery(data.query || "ছবি দিয়ে খোঁজা ফলাফল");
@@ -249,14 +249,14 @@ export default function SearchBox() {
               )}
               <span className="line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-5">
                 {item.title}
-                {item.matchType === "similar" && <span className="mt-0.5 block text-xs font-normal text-text-muted">ছবির সঙ্গে {item.similarity}% মিল · কাছাকাছি পণ্য</span>}
+                {item.matchType === "similar" && <span className="mt-0.5 block text-xs font-normal text-text-muted">ছবির মতো similar product</span>}
               </span>
             </Link>
           ))}
 
           {!loading && !imageSearchLoading && results.length > 0 && (
             <>
-              {imageSimilarFallback && <p className="px-3 pt-2 text-center text-xs text-text-muted">ছবির সঙ্গে ৫০% বা তার বেশি মিল থাকা কাছাকাছি পণ্য</p>}
+              {imageSimilarFallback && <p className="px-3 pt-2 text-center text-xs text-text-muted">ছবির মতো similar product</p>}
               <button
                 type="button"
                 onClick={handleSearch}

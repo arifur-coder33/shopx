@@ -1241,6 +1241,11 @@ export default function AdminChatInbox({
                       .filter((attachment) => attachment.type === "image" && /^https:\/\//i.test(attachment.payload?.url || ""))
                       .map((attachment) => attachment.payload.url),
                   ];
+                  const hasAudio = Boolean(
+                    message.metadata?.audio?.mediaId || message.metadata?.audio?.url ||
+                    (message.metadata?.attachments || []).some((attachment) => String(attachment?.type || "").toLowerCase() === "audio"),
+                  );
+                  const audioUrl = hasAudio ? `/api/admin/chat/media/${encodeURIComponent(message.id)}?type=audio` : null;
                   return (
                   <div
                     key={message.id}
@@ -1416,6 +1421,11 @@ export default function AdminChatInbox({
                           <img src={imageUrl} alt="Customer sent image" loading="lazy" className="max-h-80 w-full object-contain" />
                         </a>
                       ))}
+                      {audioUrl && <div className="mb-2 max-w-sm rounded-xl border border-black/10 bg-white p-3">
+                        <p className="mb-2 text-xs font-semibold text-slate-600">Audio message</p>
+                        <audio controls preload="metadata" src={audioUrl} className="w-full">আপনার browser audio চালাতে পারছে না।</audio>
+                        {message.metadata?.audioTranscription?.text && <p className="mt-2 whitespace-pre-wrap text-xs text-slate-600"><span className="font-semibold">Transcript: </span>{message.metadata.audioTranscription.text}</p>}
+                      </div>}
                       {(message.channel === "WEBSITE" || (message.channel === "MESSENGER" && message.metadata?.type === "PRODUCT_MEDIA" && message.deliveryStatus !== "FAILED") ? message.metadata?.productOptions || [] : []).map((product, index) => (
                         <div key={`${message.id}-product-${product.id}`} className="mb-2 max-w-sm overflow-hidden rounded-xl border border-black/10 bg-white">
                           {product.imageUrl && <a href={product.imageUrl} target="_blank" rel="noreferrer"><img src={product.imageUrl} alt={product.title} loading="lazy" className="max-h-64 w-full object-contain" /></a>}

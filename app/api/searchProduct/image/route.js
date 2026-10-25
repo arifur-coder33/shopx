@@ -37,7 +37,7 @@ export async function POST(request) {
     }
     const result = await searchCatalogByCustomerImage(Buffer.from(await image.arrayBuffer()));
     if (!result.enabled) return Response.json({ success: false, enabled: false, message: "AI image search এখন চালু নেই।" }, { status: 503 });
-    return Response.json({ success: true, query: result.query || "", products: result.products || [] }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ success: true, query: result.query || "", products: result.products || [], allProductIds: result.allProductIds || (result.products || []).map((product) => product.id), similarFallback: Boolean(result.similarFallback) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return Response.json({ success: false, message: error?.message || "ছবি দিয়ে পণ্য খোঁজা যায়নি। আবার চেষ্টা করুন।" }, { status: 500 });
   }
