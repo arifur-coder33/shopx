@@ -1,7 +1,45 @@
 import { getInvoiceTemplate } from "@/backend/lib/pdf/InvoiceTemplate";
+import { getInvoicePDF } from "@/backend/lib/pdf/invoiceGenerate";
+import prisma from "@/lib/prisma";
 import chromium from "@sparticuz/chromium";
 import { NextResponse } from "next/server";
 import puppeteer from "puppeteer-core";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(request) {
+  const params = new URL(request.url).searchParams;
+  const orderNo = String(params.get("o") || "").trim().slice(0, 40);
+  const phone = String(params.get("p") || "").replace(/\D/gu, "").slice(0, 20);
+  if (!orderNo || phone.length < 7) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: { orderNo },
+      select: {
+        orderNo: true, customerName: true, phoneNumber: true, email: true, deliveryAddress: true,
+        deliveryCharge: true, taxAmount: true, orderPrice: true, dueAmount: true, paidAmount: true, cartDiscount: true, paymentDiscount: true, paymentMethod: true, paymentStatus: true,
+        note: true, createdAt: true,
+        orderItems: { select: { productName: true, quantity: true, price: true, combinations: true } },
+      },
+    });
+    const savedPhone = String(order?.phoneNumber || "").replace(/\D/gu, "");
+    if (!order || savedPhone.length < 7 || savedPhone !== phone) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+
+    const pdf = await getInvoicePDF({ ...order, tax: order.taxAmount || 0 });
+    return new NextResponse(pdf, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename=invoice-${order.orderNo}.pdf`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (error) {
+    console.error("Verified invoice generation failed:", error?.message || error);
+    return NextResponse.json({ error: "Failed to generate invoice" }, { status: 500 });
+  }
+}
 
 // লোকাল ডেভেলপমেন্টের জন্য Chromium পাথ সেটআপ (Windows/Mac এর জন্য ভিন্ন হতে পারে)
 // সাধারণত লোকাল টেস্ট এর জন্য 'puppeteer' প্যাকেজ ব্যবহার করা ভালো,

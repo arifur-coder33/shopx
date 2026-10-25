@@ -184,10 +184,12 @@ import path from "path";
 import QRCode from "qrcode";
 import { getSiteUrl } from "@/lib/siteUrl";
 
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/gu, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+
 export async function getInvoiceTemplate(orderData) {
   const siteUrl = await getSiteUrl();
   // ১. QR কোড জেনারেট (Data URL)
-  const invoiceLink = `${siteUrl}/invoice/${orderData.orderNo}`;
+  const invoiceLink = `${siteUrl}/api/pdf/invoice?o=${encodeURIComponent(orderData.orderNo)}&p=${encodeURIComponent(orderData.phoneNumber)}`;
   const qrCodeDataUrl = await QRCode.toDataURL(invoiceLink);
 
   // ২. লোকাল ফন্ট লোড করে Base64 এ কনভার্ট করা (দ্রুত লোডিংয়ের জন্য)
@@ -236,8 +238,9 @@ export async function getInvoiceTemplate(orderData) {
     (acc, item) => acc + item.price * item.quantity,
     0,
   );
-  const total =
-    subTotal + (orderData.deliveryCharge || 0) + (orderData.tax || 0);
+  const total = orderData.dueAmount != null && Number.isFinite(Number(orderData.dueAmount))
+    ? Number(orderData.dueAmount) + Number(orderData.paidAmount || 0)
+    : subTotal + (orderData.deliveryCharge || 0) + (orderData.tax || 0);
 
   // ৬. আইটেম রো জেনারেট
   const itemsHtml = orderData.orderItems
@@ -246,12 +249,12 @@ export async function getInvoiceTemplate(orderData) {
     <tr>
         <td style="text-align: center;">${index + 1}</td>
         <td>
-            <div class="item-name">${item.productName}</div>
+            <div class="item-name">${escapeHtml(item.productName)}</div>
             <div class="item-desc">
                 ${
                   item.combinations
                     ? JSON.parse(item.combinations)
-                        .map((c) => `${c.name}: ${c.value}`)
+                        .map((c) => `${escapeHtml(c.name)}: ${escapeHtml(c.value)}`)
                         .join(", ")
                     : ""
                 }
@@ -326,7 +329,7 @@ export async function getInvoiceTemplate(orderData) {
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Invoice - ${orderData.orderNo}</title>
+        <title>Invoice - ${escapeHtml(orderData.orderNo)}</title>
         <style>${css}</style>
     </head>
     <body>
@@ -346,10 +349,10 @@ export async function getInvoiceTemplate(orderData) {
                 <div class="invoice-details">
                     <div class="invoice-title">INVOICE</div>
                     <div class="invoice-meta">
-                        <p><strong>Invoice #:</strong> ${orderData.orderNo}</p>
+                        <p><strong>Invoice #:</strong> ${escapeHtml(orderData.orderNo)}</p>
                         <p><strong>Date:</strong> ${formattedDate}</p>
                         <p><strong>Due Date:</strong> ${
-                          orderData.dueDate || "N/A"
+                          escapeHtml(orderData.dueDate || "N/A")
                         }</p>
                     </div>
                 </div>
@@ -359,16 +362,16 @@ export async function getInvoiceTemplate(orderData) {
             <div class="addresses">
                 <div class="address-col">
                     <div class="col-title">Bill To</div>
-                    <p class="customer-name">${orderData.customerName}</p>
-                    <p>${orderData.deliveryAddress}</p>
-                    <p>${orderData.phoneNumber}</p>
-                    <p>${orderData.email}</p>
+                    <p class="customer-name">${escapeHtml(orderData.customerName)}</p>
+                    <p>${escapeHtml(orderData.deliveryAddress)}</p>
+                    <p>${escapeHtml(orderData.phoneNumber)}</p>
+                    <p>${escapeHtml(orderData.email)}</p>
                 </div>
                 <div class="address-col">
                     <div class="col-title">Ship To</div>
-                    <p class="customer-name">${orderData.customerName}</p>
-                    <p>${orderData.deliveryAddress}</p>
-                    <p>${orderData.phoneNumber}</p>
+                    <p class="customer-name">${escapeHtml(orderData.customerName)}</p>
+                    <p>${escapeHtml(orderData.deliveryAddress)}</p>
+                    <p>${escapeHtml(orderData.phoneNumber)}</p>
                 </div>
             </div>
 
@@ -395,6 +398,8 @@ export async function getInvoiceTemplate(orderData) {
                         <span>Subtotal:</span>
                         <span>${subTotal.toLocaleString("en-BD")} Tk</span>
                     </div>
+                    ${orderData.cartDiscount ? `<div class="total-row"><span>Cart discount:</span><span>-${Number(orderData.cartDiscount).toLocaleString("en-BD")} Tk</span></div>` : ""}
+                    ${orderData.paymentDiscount ? `<div class="total-row"><span>Payment discount:</span><span>-${Number(orderData.paymentDiscount).toLocaleString("en-BD")} Tk</span></div>` : ""}
                     ${
                       orderData.deliveryCharge
                         ? `
@@ -422,7 +427,7 @@ export async function getInvoiceTemplate(orderData) {
  <br/>
                        <div class="total-row ">
                         <span>Due:</span>
-                        <span>${orderData?.dueAmount.toLocaleString("en-BD")} Tk</span>
+                        <span>${Number(orderData.dueAmount || 0).toLocaleString("en-BD")} Tk</span>
                     </div>
                 </div>
             </div>
@@ -431,11 +436,11 @@ export async function getInvoiceTemplate(orderData) {
             <div class="footer">
                 <div class="notes">
                     <p style="font-weight: bold; color: #374151; margin-bottom: 5px;">Notes:</p>
-                    <p>${orderData.note || "Thanks for your business!"}</p>
+                    <p>${escapeHtml(orderData.note || "Thanks for your business!")}</p>
                     <p style="margin-top: 10px;"><strong>Payment Method:</strong> ${
-                      orderData.paymentMethod
+                      escapeHtml(orderData.paymentMethod)
                     }
-                      [${orderData.paymentStatus}]  
+                      [${escapeHtml(orderData.paymentStatus)}]
                     </p>
                 </div>
                 <div class="qr-area">

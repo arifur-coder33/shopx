@@ -19,6 +19,7 @@ import {
   sendMessengerProductCarousel,
 } from "@/backend/services/chatChannelTextAdapter";
 import { handleMessengerOrderFlow } from "@/backend/services/chatMessengerOrderFlow";
+import { handleChatOrderStatusFlow } from "@/backend/services/chatOrderStatusService";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
 import { findSearchProducts } from "@/backend/utils/findSearchProducts";
@@ -3749,6 +3750,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       })
     )
       return;
+    if (await handleChatOrderStatusFlow({ conversation, inbound, credentials })) return;
     if (!aiConfig.apiKey) throw new Error("নির্বাচিত AI provider-এর API key configure করা নেই।");
 
     const historyCutoff = new Date(
@@ -4004,7 +4006,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
         searchUrl.searchParams.set("similar", "1");
         allMatchesUrl = searchUrl.toString();
       }
-      const selectButtonLabel = channel === "WEBSITE" ? "Select this product" : "এটি বেছে নিন";
+      const selectButtonLabel = conversation.channel === "WEBSITE" ? "Select this product" : "এটি বেছে নিন";
       const productSuggestionText = matches.length > 1
         ? `এই পণ্যগুলো দেখতে পারেন। পছন্দের পণ্যটির কার্ডে “${selectButtonLabel}” বাটনে চাপুন।`
         : `এই পণ্যটি দেখতে পারেন। পছন্দ হলে কার্ডের “${selectButtonLabel}” বাটনে চাপুন।`;

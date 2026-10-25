@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { CheckCircle2, Home, PackageCheck } from "lucide-react";
+import { CheckCircle2, FileText, Home, PackageCheck } from "lucide-react";
 import ProductCard from "@/components/products/ProductCard";
 import { reconfirmCustomerOrderAction } from "@/backend/serverActions/orderActions";
 
@@ -28,7 +28,7 @@ export default function OrderSuccessExperience({ order, phoneNumber, reconfirm, 
         {confirmed ? <p role="status" className="mt-4 font-semibold text-primary">আপনার অর্ডার re-confirm করা হয়েছে।</p> : <button type="button" disabled={pending} onClick={reConfirm} className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-brand bg-primary px-6 py-3 font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-60"><PackageCheck size={20} />{pending ? "Confirming…" : "Re-confirm Order"}</button>}
         {notice && !confirmed && <p role="alert" className="mt-3 text-sm text-danger">{notice}</p>}
       </div>}
-      <div className="mt-6 flex flex-wrap justify-center gap-3"><Link href={`/tracking?o=${encodeURIComponent(order.orderNo)}&p=${encodeURIComponent(phoneNumber)}`} className="inline-flex min-h-11 items-center gap-2 rounded-brand bg-secondary px-5 py-2.5 font-semibold text-white"><PackageCheck size={18} />অর্ডারের বিস্তারিত</Link><Link href="/" className="inline-flex min-h-11 items-center gap-2 rounded-brand border border-border px-5 py-2.5 font-semibold"><Home size={18} />কেনাকাটা চালিয়ে যান</Link></div>
+      <div className="mt-6 flex flex-wrap justify-center gap-3"><Link href={`/tracking?o=${encodeURIComponent(order.orderNo)}&p=${encodeURIComponent(phoneNumber)}`} className="inline-flex min-h-11 items-center gap-2 rounded-brand bg-secondary px-5 py-2.5 font-semibold text-white"><PackageCheck size={18} />অর্ডারের বিস্তারিত</Link><a href={`/api/pdf/invoice?o=${encodeURIComponent(order.orderNo)}&p=${encodeURIComponent(phoneNumber)}`} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-brand border border-primary px-5 py-2.5 font-semibold text-primary"><FileText size={18} />View invoice</a><Link href="/" className="inline-flex min-h-11 items-center gap-2 rounded-brand border border-border px-5 py-2.5 font-semibold"><Home size={18} />কেনাকাটা চালিয়ে যান</Link></div>
     </section>
     {products.length > 0 && <section><div className="mb-4"><h2 className="text-xl font-black sm:text-2xl">You may also like</h2><p className="mt-1 text-sm text-text-muted">আপনার অর্ডারের পছন্দের সঙ্গে মিল আছে এমন কিছু পণ্য</p></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">{products.map((product, index) => <ProductCard key={product.id} product={product} priority={index < 2} />)}</div></section>}
   </main>;

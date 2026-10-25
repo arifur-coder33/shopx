@@ -129,6 +129,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   let photo = false;
   const siteUrl = await getSiteUrl();
   let trackingUrl;
+  let invoiceUrl;
   let orderNo;
   if (flow && (cancel.test(action) || action === "cancel")) {
     next = { step: "done" }; reply = "ঠিক আছে, অর্ডারটি বাতিল করেছি। কোনো অর্ডার তৈরি হয়নি।";
@@ -203,8 +204,9 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
           else {
             orderNo = result.data.orderNo;
             trackingUrl = new URL(`/tracking/?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(result.data.phoneNumber)}`, siteUrl).href;
+            invoiceUrl = new URL(`/api/pdf/invoice?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(result.data.phoneNumber)}`, siteUrl).href;
             next = { ...flow, step: "done", orderNo, trackingUrl };
-            reply = `আপনার অর্ডারটি হয়েছে। অর্ডার নম্বর: ${orderNo}\nঅর্ডার ট্র্যাক করুন: ${trackingUrl}`;
+            reply = `আপনার অর্ডারটি হয়েছে। অর্ডার নম্বর: ${orderNo}\nঅর্ডার ট্র্যাক করুন: ${trackingUrl}\nইনভয়েস দেখুন: ${invoiceUrl}`;
           }
         }
       } else reply = "অর্ডার করতে Place order, সংশোধন করতে Update, বাতিল করতে Cancel বেছে নিন।";
@@ -270,7 +272,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   if (next?.step === "edit") options = Object.entries({ name: "নাম", phone: "ফোন", address: "ঠিকানা", variant: "ভ্যারিয়েশন" }).map(([field, title]) => ({ title, action: `edit_${field}` }));
   if (next?.step === "variant") reply += `\n${options.map((option) => option.title).join("\n")}`;
   return persistReply({ conversation, inbound, credentials, text: reply, flow: next || { step: "done" }, options,
-    imageUrl: photo ? product?.thumbnail?.url || product?.gallery?.[0]?.media?.url : null, orderNo, trackingUrl });
+    imageUrl: photo ? product?.thumbnail?.url || product?.gallery?.[0]?.media?.url : null, orderNo, trackingUrl, invoiceUrl });
 }
 
 async function canContinue(conversation, inbound) {
@@ -281,7 +283,7 @@ async function canContinue(conversation, inbound) {
   return false;
 }
 
-async function persistReply({ conversation, inbound, credentials, text, flow, options = [], imageUrl, orderNo, trackingUrl, preserveFlow = false }) {
+async function persistReply({ conversation, inbound, credentials, text, flow, options = [], imageUrl, orderNo, trackingUrl, invoiceUrl, preserveFlow = false }) {
   // An already committed order must keep its receipt/state even if a new message arrived during checkout.
   if (!orderNo && !await canContinue(conversation, inbound)) return true;
   const current = orderNo ? await prisma.chatConversation.findUnique({ where: { id: conversation.id }, select: { aiModeEnabled: true, assignedToId: true } }) : null;
@@ -289,7 +291,7 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
   if (!preserveFlow) flow.version = randomUUID();
   const quickReplies = options.map((option) => ({ title: option.title, payload: `checkout:${flow.id}:${flow.version}:${option.action}` }));
   if (orderNo) await prisma.chatMessage.update({ where: { aiReplyForMessageId: inbound.id }, data: {
-    content: text, metadata: { type: "ORDER_PLACED", chatOrderFlow: flow, orderNo, trackingUrl, internalOnly: true },
+    content: text, metadata: { type: "ORDER_PLACED", chatOrderFlow: flow, orderNo, trackingUrl, invoiceUrl, internalOnly: true },
   } });
   let imageWarning;
   const sendImage = async () => {
@@ -309,7 +311,7 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
     deliveryStatus: "SENT", ...(delivered.id && { externalMessageId: delivered.id }), aiReplyForMessageId: inbound.id,
     metadata: { type: orderNo ? "ORDER_PLACED" : "CHAT_ORDER_FLOW", ...(!preserveFlow && { chatOrderFlow: flow }), orderProductId: flow.productId || null,
       ...(flow.productId && { selectedProductId: flow.productId }), checkoutOptions: quickReplies,
-      ...(imageUrl && { image: { url: imageUrl } }), ...(imageWarning && { imageWarning }), ...(orderNo && { orderNo, trackingUrl }),
+      ...(imageUrl && { image: { url: imageUrl } }), ...(imageWarning && { imageWarning }), ...(orderNo && { orderNo, trackingUrl, invoiceUrl }),
       ...(humanTookOver && { internalOnly: true }),
       batchedMessageIds: inbound.metadata?.batchedMessageIds || [inbound.id],
     },

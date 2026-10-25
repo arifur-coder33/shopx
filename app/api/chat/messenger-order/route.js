@@ -51,6 +51,7 @@ export async function POST(request) {
   if (!customerName || !validPhone(phoneNumber) || deliveryAddress.length < 8) return Response.json({ success: false, message: "নাম, সঠিক মোবাইল নম্বর ও সম্পূর্ণ ঠিকানা দিন।" }, { status: 400 });
   let orderNo = null;
   let trackingUrl = null;
+  let invoiceUrl = null;
   if (canCreateOrder) {
     const district = clean(body.district, 100);
     const thana = clean(body.thana, 100);
@@ -64,12 +65,14 @@ export async function POST(request) {
     const order = await createOrder(form);
     if (!order?.success || !order.data?.orderNo) return Response.json({ success: false, message: order?.error || "অর্ডার করা যায়নি।" }, { status: 400 });
     orderNo = order.data.orderNo;
-    trackingUrl = new URL(`/tracking/?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(phoneNumber)}`, await getSiteUrl()).toString();
+    const siteUrl = await getSiteUrl();
+    trackingUrl = new URL(`/tracking/?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(phoneNumber)}`, siteUrl).toString();
+    invoiceUrl = new URL(`/api/pdf/invoice?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(phoneNumber)}`, siteUrl).toString();
   }
-  const reply = canCreateOrder ? `আপনার অর্ডারটি হয়েছে। অর্ডার নম্বর: ${orderNo}। ট্র্যাক করুন: ${trackingUrl}` : "তথ্য পেয়েছি। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।";
+  const reply = canCreateOrder ? `আপনার অর্ডারটি হয়েছে। অর্ডার নম্বর: ${orderNo}। ট্র্যাক করুন: ${trackingUrl}। ইনভয়েস দেখুন: ${invoiceUrl}` : "তথ্য পেয়েছি। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।";
   const [inbound, outbound] = await prisma.$transaction([
     prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "MESSENGER", direction: "INBOUND", authorType: "CUSTOMER", content: `${product.title}\nনাম: ${customerName}\nফোন: ${phoneNumber}\nঠিকানা: ${deliveryAddress}${canCreateOrder ? `, ${clean(body.thana)}, ${clean(body.district)}` : ""}`, deliveryStatus: "DELIVERED", metadata: { type: canCreateOrder ? "CHAT_ORDER_FORM" : "CHAT_CONTACT_FORM", productId: product.id, orderNo } } }),
-    prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "MESSENGER", direction: "OUTBOUND", authorType: "AI", content: reply, deliveryStatus: "SENDING", metadata: { type: canCreateOrder ? "ORDER_PLACED" : "CONTACT_RECEIVED", productId: product.id, orderNo, trackingUrl } } }),
+    prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "MESSENGER", direction: "OUTBOUND", authorType: "AI", content: reply, deliveryStatus: "SENDING", metadata: { type: canCreateOrder ? "ORDER_PLACED" : "CONTACT_RECEIVED", productId: product.id, orderNo, trackingUrl, invoiceUrl } } }),
     prisma.chatConversation.update({ where: { id: conversation.id }, data: { customerName, customerPhone: phoneNumber, normalizedPhone: phoneNumber.startsWith("88") ? `0${phoneNumber.slice(2)}` : phoneNumber, status: canCreateOrder ? "OPEN" : "PENDING", ...(!canCreateOrder && { aiModeEnabled: false }), unreadCount: { increment: 1 }, lastMessageAt: new Date() } }),
   ]);
   after(async () => {
@@ -84,5 +87,5 @@ export async function POST(request) {
       await prisma.chatMessage.update({ where: { id: outbound.id }, data: { deliveryStatus: "FAILED" } }).catch(() => {});
     }
   });
-  return Response.json({ success: true, data: { orderNo, trackingUrl, message: reply } }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ success: true, data: { orderNo, trackingUrl, invoiceUrl, message: reply } }, { headers: { "Cache-Control": "no-store" } });
 }
