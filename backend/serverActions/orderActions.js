@@ -21,6 +21,7 @@ import { addOrderTimeline } from "./orderTimelineActin";
 import { firePurchaseServer } from "./SocialPurchaseEventAction";
 import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyPaymentDeliveryCampaign, applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority } from "@/backend/services/campaignService";
 import { CUSTOMER_ORDER_STATUS_GROUPS } from "@/lib/customerOrderStatus";
+import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 function compatibleCampaigns(campaigns, selectedCampaigns) {
   if (!selectedCampaigns.length) return campaigns;
   const selectedIds = new Set(selectedCampaigns.map((campaign) => campaign.id));
@@ -270,15 +271,28 @@ export async function createOrder(formData) {
     if (
       !data?.customerName ||
       !data?.phoneNumber ||
-      !data?.district ||
-      !data?.thana ||
       !data?.deliveryAddress ||
       !Array.isArray(orderItems) ||
       !orderItems.length
     ) {
       throw new Error(
-        "আপনার নাম, মোবাইল নাম্বার, জেলা, থানা এবং ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
+        "আপনার নাম, মোবাইল নাম্বার এবং সম্পূর্ণ ডেলিভারি ঠিকানা সঠিকভাবে লিখুন।",
       );
+    }
+    const parsedAddress = parseBangladeshAddress(data.deliveryAddress);
+    const { verifyBangladeshDeliveryAddress } = await import("@/backend/services/chatAiReplyService");
+    const addressAI = await verifyBangladeshDeliveryAddress(data.deliveryAddress);
+    const addressVerificationAvailable = addressAI.available;
+    if (addressAI.available && !addressAI.valid) throw new Error(addressAI.error || parsedAddress.error);
+    if (addressAI.valid) {
+      data.district = addressAI.district;
+      data.thana = addressAI.thana;
+    } else if (parsedAddress.valid) {
+      data.district = parsedAddress.district;
+      data.thana = parsedAddress.thana;
+    } else {
+      data.district = String(data.district || "").trim();
+      data.thana = String(data.thana || "").trim();
     }
     if (!/^(?:01[3-9]\d{8}|8801[3-9]\d{8})$/.test(String(data.phoneNumber).replace(/\D/g, ""))) {
       throw new Error("সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01712345678 অথবা 8801712345678)।");
@@ -586,6 +600,7 @@ export async function createOrder(formData) {
           fraudRiskLevel: riskAssessment.level,
           fraudRiskFactors: [
             ...riskAssessment.factors,
+            ...(!addressVerificationAvailable ? [{ code: "ADDRESS_NOT_VERIFIED_BY_AI", points: 0, label: "ঠিকানা AI দিয়ে যাচাই হয়নি", detail: "AI address verification is unavailable; the customer-provided address was saved." }] : []),
             ...(Object.values(orderOrigin).some(Boolean) ? [{ code: "ORDER_ORIGIN", points: 0, origin: orderOrigin }] : []),
           ],
           appliedCouponCode: data.campaignCode ? String(data.campaignCode).trim().toUpperCase() : null,
@@ -602,7 +617,7 @@ export async function createOrder(formData) {
           fbc: data?.fbc,
           fbp: data?.fbp,
           gclid: data?.gclid,
-          ttclid: data?.ttclid,
+          ttclid: data?.ttclid || "",
           userAgent,
           ipAddress: ip,
           orderItems: {

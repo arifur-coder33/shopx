@@ -49,6 +49,7 @@ import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 import { normalizeChatText } from "@/lib/chatText";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import prisma from "@/lib/prisma";
+import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 import { getSiteUrl } from "@/lib/siteUrl";
 import Fuse from "fuse.js";
 import { htmlToText } from "html-to-text";
@@ -534,6 +535,48 @@ async function requestAiOutput({
     .trim();
   if (!output) throw new Error("OpenAI খালি reply দিয়েছে।");
   return output;
+}
+
+export async function verifyBangladeshDeliveryAddress(address) {
+  const unavailable = { available: false, valid: false };
+  try {
+    const setting = await prisma.chatSetting.findUnique({
+      where: { id: "primary" },
+      select: { aiAutoReplyEnabled: true, aiProvider: true, openaiModel: true, googleAiStudioModel: true, encryptedCredentials: true },
+    });
+    if (!setting?.aiAutoReplyEnabled || !setting.encryptedCredentials) return unavailable;
+    const credentials = decryptProviderCredentials(setting.encryptedCredentials);
+    const provider = setting.aiProvider === "GOOGLE_AI_STUDIO" ? "GOOGLE_AI_STUDIO" : "OPENAI";
+    const apiKey = provider === "GOOGLE_AI_STUDIO" ? credentials.googleAiStudioApiKey : credentials.openaiApiKey;
+    if (!apiKey) return unavailable;
+    const model = provider === "GOOGLE_AI_STUDIO"
+      ? (isChatAiModelAllowed(provider, setting.googleAiStudioModel) ? setting.googleAiStudioModel : DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO)
+      : (isChatAiModelAllowed(provider, setting.openaiModel) ? setting.openaiModel : DEFAULT_CHAT_AI_MODELS.OPENAI);
+    const schema = {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        valid: { type: "boolean" },
+        district: { type: "string" },
+        thana: { type: "string" },
+        reason: { type: "string" },
+      },
+      required: ["valid", "district", "thana", "reason"],
+    };
+    const output = await requestAiOutput({
+      ai: { provider, apiKey }, model, maxOutputTokens: 256, responseSchema: schema,
+      instructions: "যাচাইকারী হিসেবে শুধু বাংলাদেশের ঠিকানা যাচাই করুন। বাংলা, English বা Banglish বুঝুন। ঠিকানায় বাস্তব/পরিচিত জেলা ও তার অধীন থানা/উপজেলা আছে কি না যাচাই করুন। বাসা/রোড/গ্রাম/এলাকা উল্লেখ না থাকলে অসম্পূর্ণ বলুন। অনুমান করে জেলা বা থানা বানাবেন না। ভুল হলে বাংলায় ছোট কারণ এবং কীভাবে ঠিকানা লিখতে হবে তা reason-এ দিন।",
+      input: [{ role: "user", content: `এই ডেলিভারি ঠিকানাটি যাচাই করুন: ${String(address || "").slice(0, 500)}` }],
+    });
+    const result = JSON.parse(output);
+    if (!result.valid) return { available: true, valid: false, error: result.reason || "ঠিকানাটি সম্পূর্ণ নয়। বাসা/রোড/এলাকা, থানা ও জেলার নামসহ লিখুন।" };
+    const parsed = parseBangladeshAddress(address);
+    if (!parsed.valid) return { available: true, valid: false, error: parsed.error };
+    return { available: true, valid: true, district: parsed.district, thana: parsed.thana };
+  } catch {
+    // A provider outage should not prevent checkout; the raw address is retained as unverified.
+    return unavailable;
+  }
 }
 
 function normalizeDigits(value) {

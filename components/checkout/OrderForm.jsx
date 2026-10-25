@@ -97,8 +97,6 @@ export default function OrderForm({
       const fieldNames = [
         "customerName",
         "phoneNumber",
-        "district",
-        "thana",
         "deliveryAddress",
         "email",
         "note",
@@ -129,8 +127,6 @@ export default function OrderForm({
       [
         "customerName",
         "phoneNumber",
-        "district",
-        "thana",
         "deliveryAddress",
         "email",
         "note",

@@ -115,35 +115,12 @@ export default function DeliveryAddress({ setDeliveryArea }) {
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label={"আপনার জেলাঃ *"}
-        name="district"
-        inputType={"text"}
-        autoComplete="address-level2"
-        colSpan={"1"}
-        required={true}
-        largeMobile
-      />
-
-      <FloatingInput
-        defaultValue=""
-        type={"text"}
-        label={"আপনার থানা *"}
-        name="thana"
-        inputType={"text"}
-        autoComplete=""
-        colSpan={"1"}
-        required={true}
-        largeMobile
-      />
-      <FloatingInput
-        defaultValue=""
-        type={"text"}
-        label={"বাসা/ফ্ল্যাট/রোড "}
+        label={"ডেলিভারি ঠিকানা "}
         name={"deliveryAddress"}
         inputType={"text"}
         autoComplete="address-line1"
         colSpan={"full"}
-        placeholder=" বাসা/ফ্ল্যাট/রোড/ "
+        placeholder="বাসা/রোড/এলাকা, থানা ও জেলা লিখুন"
         required={true}
         largeMobile
       />

@@ -5,6 +5,7 @@ import { sendChatChannelTextMessage, sendChatChannelImageMessage } from "@/backe
 import prisma from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { normalizeChatPhone } from "@/lib/chatIdentity";
+import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 
 const digits = (text) => String(text || "").replace(/[০-৯]/gu, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
 const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|confirm)[.!\s]*$/iu;
@@ -12,8 +13,7 @@ const no = /^(?:না|na|no)[.!\s]*$/iu;
 const cancel = /^(?:cancel|বাতিল|stop)[.!\s]*$/iu;
 const prompts = {
   name: "আপনার নাম লিখুন।", phone: "আপনার মোবাইল নম্বরটি দিন (যেমন 01712345678)।",
-  district: "কোন জেলায় পাঠাব? জেলার নাম লিখুন।", thana: "থানার নাম লিখুন।",
-  address: "এবার জেলা ও থানা বাদ দিয়ে বাসা/গ্রাম, রোড, এলাকা ও ডেলিভারির ঠিকানা লিখুন।",
+  address: "একটি পূর্ণ ডেলিভারি ঠিকানা লিখুন—বাসা/রোড/এলাকা, থানা ও জেলা একসাথে। যেমন: House 34, Road 11, Sector 11, Uttara, Dhaka।",
   area: "ঠিকানাটি কি ঢাকা সিটির মধ্যে? ভিতরে বা বাইরে বেছে নিন।",
 };
 const label = (variant) => variant.combinations.map((part) => `${part.variationName?.name}: ${part.variationValue?.value}`).join(" / ") || "সাধারণ";
@@ -58,7 +58,7 @@ function summaryText(product, flow) {
   return ["অর্ডারের তথ্য একবার মিলিয়ে নিন:", product.title,
     variant?.combinations.length ? `ভ্যারিয়েশন: ${label(variant)}` : "",
     `নাম: ${flow.customerName}`, `ফোন: ${flow.phoneNumber}`,
-    `ঠিকানা: ${flow.deliveryAddress}, ${flow.thana}, ${flow.district}`,
+    `ঠিকানা: ${flow.deliveryAddress}`,
     `ডেলিভারি: ${flow.deliveryArea === "inside-dhaka" ? "ঢাকা সিটির মধ্যে" : "ঢাকা সিটির বাইরে"}`,
     `পণ্যের দাম: ${money(flow.quote.productPrice)}`, `ডেলিভারি চার্জ: ${money(flow.quote.deliveryCharge)}`,
     `সর্বমোট: ${money(flow.quote.total)}`, "পেমেন্ট: ক্যাশ অন ডেলিভারি",
@@ -137,7 +137,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       if (!selected) reply = "তালিকা থেকে ভ্যারিয়েশনের নাম বা নম্বর বেছে দিন।";
       else { next = { ...flow, step: flow.editing ? "confirm" : "name", editing: false, variantId: selected.id }; reply = flow.editing ? "" : prompts.name; }
     } else if (flow.step === "confirm") {
-      if (/^(?:update|সংশোধন|পরিবর্তন)$/iu.test(action)) { next = { ...flow, step: "edit" }; reply = "কোন তথ্যটি সংশোধন করবেন? নাম, ফোন, জেলা, থানা, ঠিকানা বা ভ্যারিয়েশন লিখুন।"; }
+      if (/^(?:update|সংশোধন|পরিবর্তন)$/iu.test(action)) { next = { ...flow, step: "edit" }; reply = "কোন তথ্যটি সংশোধন করবেন? নাম, ফোন, ঠিকানা বা ভ্যারিয়েশন লিখুন।"; }
       else if (/^(?:place|place order|confirm|হ্যাঁ|হ্যা|yes)$/iu.test(action)) {
         const quote = await quoteFor(flow);
         if (Math.abs(quote.total - flow.quote.total) > 0.01 || Math.abs(quote.deliveryCharge - flow.quote.deliveryCharge) > 0.01 || Math.abs(quote.productPrice - flow.quote.productPrice) > 0.01) {
@@ -159,9 +159,9 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
         }
       } else reply = "অর্ডার করতে Place order, সংশোধন করতে Update, বাতিল করতে Cancel বেছে নিন।";
     } else if (flow.step === "edit") {
-      const fields = { name: "name", নাম: "name", phone: "phone", ফোন: "phone", district: "district", জেলা: "district", thana: "thana", থানা: "thana", address: "address", ঠিকানা: "address", variant: "variant", ভ্যারিয়েশন: "variant" };
+      const fields = { name: "name", নাম: "name", phone: "phone", ফোন: "phone", address: "address", ঠিকানা: "address", variant: "variant", ভ্যারিয়েশন: "variant" };
       const field = fields[action.replace(/^edit_/u, "").toLowerCase()];
-      if (!field) reply = "নাম, ফোন, জেলা, থানা, ঠিকানা বা ভ্যারিয়েশন বেছে নিন।";
+      if (!field) reply = "নাম, ফোন, ঠিকানা বা ভ্যারিয়েশন বেছে নিন।";
       else { next = { ...flow, step: field, editing: true }; reply = prompts[field] || "নতুন ভ্যারিয়েশনটি বেছে নিন।"; }
     } else if (flow.step === "area") {
       if (/^(?:inside|ভিতরে|ঢাকার ভিতরে|1)$/iu.test(action)) next = { ...flow, deliveryArea: "inside-dhaka", step: "confirm" };
@@ -171,11 +171,13 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       const field = flow.step.replace(/^lead_/u, "");
       const parts = flow.editing ? [text.replace(/\n+/gu, " ")] : fieldParts(flow.step, text);
       const value = field === "phone" ? parts[0].replace(/[^\d]/gu, "") : parts[0];
-      const valid = validField(field, value);
+      const addressResult = field === "address" && !flow.step.startsWith("lead_") ? parseBangladeshAddress(value) : null;
+      const valid = addressResult ? addressResult.valid : validField(field, value);
       if (!fields[field]) return false;
-      if (!valid) reply = field === "phone" ? "সঠিক বাংলাদেশি মোবাইল নম্বরটি দিন (যেমন 01712345678)।" : prompts[field];
+      if (!valid) reply = field === "phone" ? "সঠিক বাংলাদেশি মোবাইল নম্বরটি দিন (যেমন 01712345678)।" : addressResult?.error || prompts[field];
       else {
-        next = { ...flow, [fields[field]]: value };
+        next = { ...flow, [fields[field]]: addressResult?.deliveryAddress || value };
+        if (addressResult) { next.district = addressResult.district; next.thana = addressResult.thana; }
         if (flow.step.startsWith("lead_")) {
           next.step = field === "name" ? "lead_phone" : field === "phone" ? "lead_address" : "done";
           reply = next.step === "done" ? "তথ্য পেয়েছি। আমাদের একজন প্রতিনিধি আপনার সঙ্গে যোগাযোগ করবেন।" : prompts[next.step.slice(5)];
@@ -186,17 +188,19 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
           else next.step = !next.deliveryArea ? "area" : "confirm";
           reply = prompts[next.step] || "";
         } else {
-          next.step = { name: "phone", phone: "district", district: "thana", thana: "address", address: isDhaka(flow.district) ? "area" : "confirm" }[field];
+          next.step = { name: "phone", phone: "address", district: "address", thana: "address", address: isDhaka(next.district) ? "area" : "confirm" }[field];
           if (field === "district") next.deliveryArea = isDhaka(value) ? null : "outside-dhaka";
           reply = prompts[next.step] || "";
           // A customer may send name, phone and address fields as separate messages in one burst.
           for (let index = 1; index < parts.length && fields[next.step]; index += 1) {
             const current = next.step;
             const extra = current === "address" ? parts.slice(index).join(", ") : current === "phone" ? parts[index].replace(/[^\d]/gu, "") : parts[index];
-            if (!validField(current, extra)) break;
-            next[fields[current]] = extra;
+            const parsedExtraAddress = current === "address" ? parseBangladeshAddress(extra) : null;
+            if (current === "address" ? !parsedExtraAddress.valid : !validField(current, extra)) break;
+            next[fields[current]] = current === "address" ? parsedExtraAddress.deliveryAddress : extra;
+            if (current === "address") { next.district = parsedExtraAddress.district; next.thana = parsedExtraAddress.thana; }
             if (current === "district") next.deliveryArea = isDhaka(extra) ? null : "outside-dhaka";
-            next.step = { phone: "district", district: "thana", thana: "address", address: isDhaka(next.district) ? "area" : "confirm" }[current];
+            next.step = { phone: "address", district: "address", thana: "address", address: isDhaka(next.district) ? "area" : "confirm" }[current];
             reply = prompts[next.step] || "";
             if (current === "address") break;
           }
@@ -210,7 +214,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   if (next?.step === "variant" && product) options = orderable(product).map((variant, index) => ({ title: `${index + 1}. ${label(variant)}`, action: `variant_${variant.id}` }));
   if (next?.step === "area") options = [{ title: "ঢাকার ভিতরে", action: "inside" }, { title: "ঢাকার বাইরে", action: "outside" }];
   if (next?.step === "confirm") options = [{ title: "Place order", action: "place" }, { title: "Update", action: "update" }, { title: "Cancel", action: "cancel" }];
-  if (next?.step === "edit") options = Object.entries({ name: "নাম", phone: "ফোন", district: "জেলা", thana: "থানা", address: "ঠিকানা", variant: "ভ্যারিয়েশন" }).map(([field, title]) => ({ title, action: `edit_${field}` }));
+  if (next?.step === "edit") options = Object.entries({ name: "নাম", phone: "ফোন", address: "ঠিকানা", variant: "ভ্যারিয়েশন" }).map(([field, title]) => ({ title, action: `edit_${field}` }));
   if (next?.step === "variant") reply += `\n${options.map((option) => option.title).join("\n")}`;
   return persistReply({ conversation, inbound, credentials, text: reply, flow: next || { step: "done" }, options,
     imageUrl: photo ? product?.thumbnail?.url || product?.gallery?.[0]?.media?.url : null, orderNo, trackingUrl });
