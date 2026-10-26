@@ -3480,12 +3480,15 @@ async function deliverReply(
       .map((f) => `✔ ${f}`)
       .join("\n");
 
-    // হোয়াটসঅ্যাপে বাটনের বিকল্প হিসেবে পরিষ্কার ক্লিক্যাবল লিংক:
+    const isWhatsApp = conversation.channel === "WHATSAPP";
+    const selectionReplies = isWhatsApp ? [{ title: "এটি বেছে নিন", payload: `select:${product.id}` }] : [];
     const captionLines = [
       `🛍️ *${product.title}*${priceText}`,
       featureLines ? `\n${featureLines}` : "",
-      `\n🔗 *বিস্তারিত দেখুন:* ${product.url}`,
-      `👉 *সরাসরি অর্ডার করতে ক্লিক করুন:* ${product.buyNowUrl}`,
+      ...(!isWhatsApp ? [
+        `\n🔗 *বিস্তারিত দেখুন:* ${product.url}`,
+        `👉 *সরাসরি অর্ডার করতে ক্লিক করুন:* ${product.buyNowUrl}`,
+      ] : []),
     ].filter(Boolean);
 
     const caption = captionLines.join("\n").slice(0, 950);
@@ -3529,11 +3532,13 @@ async function deliverReply(
           code: String(error?.code || "image_send_failed").slice(0, 80),
         });
 
-        // ছবি ফেইল করলে সুন্দর ফরম্যাটেড টেক্সট মেসেজ পাঠাবে
+        // Keep product selection available even when its photo cannot be sent.
         const result = await sendChatChannelTextMessage(
           conversation,
           caption,
           credentials,
+          null,
+          selectionReplies,
         );
         sent.push(result);
         mediaMessages.push({ id: result.id, content: caption });
@@ -3544,6 +3549,8 @@ async function deliverReply(
         conversation,
         caption,
         credentials,
+        null,
+        selectionReplies,
       );
       sent.push(result);
       mediaMessages.push({ id: result.id, content: caption });

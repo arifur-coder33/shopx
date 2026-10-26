@@ -1,8 +1,8 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import sharp from "sharp";
-import { whatsAppImageContent } from "@/backend/utils/chatProductSelection.mjs";
+import { whatsAppImageContent, whatsAppUrlButtonContent } from "@/backend/utils/chatProductSelection.mjs";
 
-export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
+export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null) {
   const text = String(content || "").slice(0, conversation.channel === "WHATSAPP" ? 4096 : 2000);
   if (conversation.channel === "WEBSITE") return null;
   if (["WHATSAPP", "MESSENGER", "INSTAGRAM"].includes(conversation.channel)) {
@@ -15,7 +15,7 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
     const reply = replyToExternalMessageId ? { reply_to: { mid: replyToExternalMessageId } } : {};
     const payload = isWhatsApp
       ? { messaging_product: "whatsapp", recipient_type: "individual", to: conversation.externalUserId, ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }),
-          ...(quickReplies.length > 0 && quickReplies.length <= 3 && text.length <= 1024 ? {
+          ...(urlButton ? whatsAppUrlButtonContent(text, urlButton) : quickReplies.length > 0 && quickReplies.length <= 3 && text.length <= 1024 ? {
             type: "interactive", interactive: { type: "button", body: { text }, action: { buttons: quickReplies.map((option) => ({ type: "reply", reply: {
               id: String(typeof option === "string" ? option : option.payload).slice(0, 256), title: String(typeof option === "string" ? option : option.title).slice(0, 20),
             } })) } },
@@ -76,8 +76,8 @@ async function sendWhatsAppApprovedTemplate(conversation, templateName, language
   return { id: result?.messages?.[0]?.id || null, secondaryIds: [], warning: null };
 }
 
-export async function sendChatChannelTextMessage(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = []) {
-  const request = buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId, quickReplies);
+export async function sendChatChannelTextMessage(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null) {
+  const request = buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId, quickReplies, urlButton);
   if (!request) return { id: null, secondaryIds: [], warning: null };
   const response = await fetch(request.url, {
     method: "POST",
