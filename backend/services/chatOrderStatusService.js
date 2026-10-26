@@ -1,6 +1,7 @@
 import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
 import { normalizeChatPhone } from "@/lib/chatIdentity";
 import prisma from "@/lib/prisma";
+import { newerInboundWhere } from "./chatReplyBatchCore.mjs";
 
 const normalizeDigits = (value) => String(value || "").replace(/[০-৯]/gu, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
 const statusIntent = (value) => /(?:\b(?:order|parcel|shipment)\b.{0,40}\b(?:status|update|where|when|delivery|pabo|ashbe|kobe)\b|\b(?:amar|amr)\b.{0,25}\b(?:order|parcel)\b.{0,40}\b(?:kothay|status|kobe|pabo|ashbe)\b|\btrack(?:ing)?\b|আমার.{0,25}অর্ডার.{0,40}(?:স্ট্যাটাস|অবস্থা|কোথায়|কোথায়|কবে|পাব|আসবে|পৌঁছাবে)|অর্ডার.{0,40}(?:স্ট্যাটাস|অবস্থা|কোথায়|কোথায়|কবে|পাব|আসবে|পৌঁছাবে))/iu.test(String(value || ""));
@@ -51,6 +52,16 @@ function orderStatusText(order) {
 }
 
 async function sendStatusReply({ conversation, inbound, credentials, text, statusLookup }) {
+  const [newer, fresh] = await Promise.all([
+    prisma.chatMessage.findFirst({ where: newerInboundWhere(inbound), select: { id: true } }),
+    prisma.chatConversation.findUnique({ where: { id: conversation.id }, select: { aiModeEnabled: true, assignedToId: true, status: true, aiReplyLeaseToken: true } }),
+  ]);
+  if (newer || !fresh?.aiModeEnabled || fresh.assignedToId || fresh.status !== "OPEN" || (inbound.replyLeaseToken && fresh.aiReplyLeaseToken !== inbound.replyLeaseToken)) {
+    await prisma.chatMessage.update({ where: { aiReplyForMessageId: inbound.id }, data: {
+      deliveryStatus: "FAILED", metadata: { internalOnly: true, aiErrorCode: newer ? "batch_superseded" : "human_takeover" },
+    } });
+    return true;
+  }
   const sent = await sendChatChannelTextMessage(conversation, text, credentials);
   await prisma.chatMessage.update({
     where: { aiReplyForMessageId: inbound.id },

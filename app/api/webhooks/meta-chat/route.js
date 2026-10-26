@@ -8,7 +8,7 @@ import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 import { chatProductAction, whatsAppProductAction } from "@/backend/utils/chatProductSelection.mjs";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 async function getCredentials() {
   const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true, instagramEnabled: true } });

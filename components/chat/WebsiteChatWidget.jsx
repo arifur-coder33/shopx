@@ -79,6 +79,7 @@ export default function WebsiteChatWidget() {
   const [actionBusy, setActionBusy] = useState(false);
   const endRef = useRef(null);
   const photoUrlsRef = useRef(new Set());
+  const refreshInFlightRef = useRef(false);
 
   useEffect(() => () => {
     photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -119,17 +120,23 @@ export default function WebsiteChatWidget() {
   }, [enabled]);
 
   const refreshMessages = useCallback(async () => {
-    if (!token) return;
+    if (!token || refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     try {
       const response = await fetch(`/api/chat/website?token=${encodeURIComponent(token)}`, { cache: "no-store" });
       const result = await response.json();
-      if (result.success && result.data?.messages) setMessages(result.data.messages);
+      if (result.success && result.data?.messages) setMessages((current) => [
+        ...result.data.messages,
+        ...current.filter((message) => message.id.startsWith("pending-")),
+      ]);
     } catch { /* Poll again on the next interval. */ }
+    finally { refreshInFlightRef.current = false; }
   }, [token]);
 
   useEffect(() => {
-    if (!open || !token || !messages.length) return;
+    if (!open || !token) return;
     refreshMessages();
+    if (!messages.length) return;
     let stopped = false;
     let socket = null;
     let reconnectTimer = null;
@@ -158,7 +165,7 @@ export default function WebsiteChatWidget() {
     connect();
     fallbackTimer = window.setInterval(() => {
       if (document.visibilityState === "visible" && socket?.readyState !== WebSocket.OPEN) refreshMessages();
-    }, 15000);
+    }, 2500);
     return () => {
       stopped = true;
       clearTimeout(reconnectTimer);
@@ -199,7 +206,7 @@ export default function WebsiteChatWidget() {
       } else response = await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content, name, phone, pagePath }) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "বার্তা পাঠানো যায়নি।");
-      setMessages((current) => current.map((message) => message.id === pendingId ? result.data : message));
+      setMessages((current) => current.filter((message) => message.id !== result.data.id).map((message) => message.id === pendingId ? result.data : message));
       if (previewUrl) releasePhotoPreview(previewUrl);
       setPhotoPreviewUrl("");
       setPhoto(null);
@@ -231,7 +238,7 @@ export default function WebsiteChatWidget() {
         : await fetch("/api/chat/website", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, content: message.content, name, phone, pagePath: message.metadata?.websitePage?.path || window.location.pathname }) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "বার্তা পাঠানো যায়নি।");
-      setMessages((current) => current.map((item) => item.id === message.id ? { ...result.data } : item));
+      setMessages((current) => current.filter((item) => item.id !== result.data.id).map((item) => item.id === message.id ? { ...result.data } : item));
       if (message.metadata?.image?.url?.startsWith("blob:")) releasePhotoPreview(message.metadata.image.url);
       refreshMessages();
     } catch (retryError) {
@@ -338,7 +345,7 @@ export default function WebsiteChatWidget() {
                 {message.metadata?.type === "ORDER_WEBSITE" && <a href={message.metadata.buyNowUrl} className="mt-2 block rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">অর্ডার পেজে যান</a>}
                 {message.metadata?.type === "ORDER_PLACED" && <><a href={message.metadata.trackingUrl} className="mt-2 block rounded-lg bg-emerald-700 px-3 py-2 text-center text-xs font-semibold text-white">অর্ডার ট্র্যাক করুন</a>{message.metadata.invoiceUrl && <a href={message.metadata.invoiceUrl} target="_blank" rel="noreferrer" className="mt-2 block rounded-lg border border-emerald-700 px-3 py-2 text-center text-xs font-semibold text-emerald-800">View invoice</a>}</>}
                 {message.metadata?.type === "ORDER_TIMELINE" && message.metadata.order && <div className="mb-1 rounded-xl bg-white p-3 text-gray-900"><strong className="block text-sm">অর্ডার {message.metadata.order.orderNo}</strong><p className="mt-1 text-xs">বর্তমান অবস্থা: {message.metadata.order.status}</p><ol className="mt-2 space-y-2 border-l border-gray-200 pl-3">{message.metadata.order.events.map((event, index) => <li key={`${event.status}-${index}`} className="text-xs"><b>{event.title}</b>{event.message ? ` · ${event.message}` : ""}{event.location ? ` · ${event.location}` : ""}<span className="mt-0.5 block text-[10px] text-gray-500">{new Intl.DateTimeFormat("bn-BD", { dateStyle: "short", timeStyle: "short" }).format(new Date(event.createdAt))}</span></li>)}</ol></div>}
-                {message.authorType === "AI" && message.deliveryStatus === "SENDING" ? <div role="status" aria-label="AI উত্তর লিখছে" className="flex min-w-14 items-center justify-center gap-1 rounded-full bg-slate-100 px-3 py-2">{[0, 1, 2].map((dot) => <span key={dot} className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: `${dot * 160}ms` }} />)}</div> : !["PRODUCT_CARD", "ORDER_TIMELINE"].includes(message.metadata?.type) && !(message.metadata?.image?.url && message.content === "📷 Photo") && <p className="whitespace-pre-wrap break-words">{renderMessageText(message.content)}</p>}
+                {message.authorType === "AI" && message.deliveryStatus === "SENDING" ? <div role="status" aria-label="উত্তর লিখছে" className="flex min-w-14 items-center justify-center gap-1 rounded-full bg-slate-100 px-3 py-2">{[0, 1, 2].map((dot) => <span key={dot} className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: `${dot * 160}ms` }} />)}</div> : !["PRODUCT_CARD", "ORDER_TIMELINE"].includes(message.metadata?.type) && !(message.metadata?.image?.url && message.content === "📷 Photo") && <p className="whitespace-pre-wrap break-words">{renderMessageText(message.content)}</p>}
                 {message.metadata?.checkoutOptions?.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{message.metadata.checkoutOptions.map((option) => <button key={option.payload} type="button" disabled={actionBusy || messages.some((item) => item.metadata?.chatOrderFlow && new Date(item.createdAt) > new Date(message.createdAt))} onClick={() => productAction("checkout", message.metadata.orderProductId || "", { payload: option.payload, title: option.title })} className="rounded-lg border border-emerald-700 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-40">{option.title}</button>)}</div>}
                 {message.metadata?.edited && <p className="mt-1 text-right text-[10px] italic opacity-70">edited</p>}
                 {message.direction === "INBOUND" && message.deliveryStatus && <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-600">{message.deliveryStatus === "SENDING" ? <LoaderCircle size={12} className="animate-spin" /> : message.deliveryStatus === "FAILED" ? <><CircleAlert size={13} />{!message.metadata?.photoRetryUnsupported && <button type="button" onClick={() => retryMessage(message)} className="inline-flex items-center gap-1 underline"><RotateCw size={11} />Resend</button>}</> : message.deliveryStatus === "READ" ? <CheckCheck size={14} /> : <Check size={13} />}</p>}

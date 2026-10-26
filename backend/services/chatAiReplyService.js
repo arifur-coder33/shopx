@@ -24,7 +24,8 @@ import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
 import { findSearchProducts } from "@/backend/utils/findSearchProducts";
 import { collectWebsiteHandoffContact } from "@/backend/services/chatHumanHandoffService";
-import { runChatReplyBatch, mergedInboundMessage } from "@/backend/services/chatReplyBatchService";
+import { runChatReplyBatch, mergedInboundMessage, newerInboundWhere } from "@/backend/services/chatReplyBatchService";
+import { startChatTypingIndicator } from "./chatTypingIndicator.mjs";
 import { dispatchChatReply } from "@/backend/services/chatReplyDispatch.mjs";
 import { humanHandoffReason, humanHandoffReply, isRepeatedCustomerQuestion } from "@/backend/utils/chatHumanHandoff.mjs";
 import { searchImageCatalog, selectImageSearchProducts } from "@/backend/utils/chatImageSelection.mjs";
@@ -3583,7 +3584,7 @@ async function stopForHumanTakeover(
   const [conversation, setting] = await Promise.all([
     prisma.chatConversation.findUnique({
       where: { id: conversationId },
-      select: { status: true, aiModeEnabled: true, assignedToId: true },
+      select: { status: true, aiModeEnabled: true, assignedToId: true, aiReplyLeaseToken: true },
     }),
     prisma.chatSetting.findUnique({
       where: { id: settingId },
@@ -3595,7 +3596,8 @@ async function stopForHumanTakeover(
     !conversation ||
     conversation.status !== "OPEN" ||
     !conversation.aiModeEnabled ||
-    conversation.assignedToId
+    conversation.assignedToId ||
+    (inboundMessage.replyLeaseToken && conversation.aiReplyLeaseToken !== inboundMessage.replyLeaseToken)
   )
     return true;
   const agentReply = await prisma.chatMessage.findFirst({
@@ -3616,13 +3618,14 @@ export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
     conversationId,
     inboundMessageId,
     db: prisma,
-    reply: (messageId) => sendBatchedChatAiReply(conversationId, messageId),
+    reply: (messageId, leaseToken) => sendBatchedChatAiReply(conversationId, messageId, leaseToken),
     batch: runChatReplyBatch,
   });
 }
 
-async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
+async function sendBatchedChatAiReply(conversationId, inboundMessageId, leaseToken) {
   let aiMessage = null;
+  let stopTyping = null;
   let aiProviderUsed = "OPENAI";
   let aiModelUsed = DEFAULT_CHAT_AI_MODELS.OPENAI;
   try {
@@ -3646,6 +3649,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       prisma.chatConversation.findUnique({ where: { id: conversationId } }),
       prisma.chatMessage.findUnique({ where: { id: inboundMessageId } }).then((message) => message ? mergedInboundMessage(message) : null),
     ]);
+    if (inbound) inbound.replyLeaseToken = leaseToken;
     if (await collectWebsiteHandoffContact(initialConversation, inbound)) return;
     if (
       !setting?.aiAutoReplyEnabled ||
@@ -3720,6 +3724,14 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
     };
     aiProviderUsed = aiConfig.provider;
     aiModelUsed = aiConfig.model;
+    stopTyping = startChatTypingIndicator(conversation, inbound, credentials, {
+      isActive: async () => {
+        const fresh = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: {
+          aiModeEnabled: true, assignedToId: true, status: true, aiReplyLeaseToken: true,
+        } });
+        return Boolean(fresh?.aiModeEnabled && !fresh.assignedToId && fresh.status === "OPEN" && (!leaseToken || fresh.aiReplyLeaseToken === leaseToken));
+      },
+    });
     const audioMessage = Boolean(
       inbound.metadata?.audio?.mediaId || inbound.metadata?.audio?.url ||
       inbound.metadata?.attachments?.some((attachment) => String(attachment?.type || "").toLowerCase() === "audio"),
@@ -3820,6 +3832,9 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       });
       history = [...fallbackHistory.reverse(), ...recentWindowHistory];
     }
+    // The newest inbound already contains the unanswered burst in order.
+    const batchedIds = new Set(inbound.metadata?.batchedMessageIds || []);
+    history = history.filter((message) => !batchedIds.has(message.id) || message.id === inbound.id);
     // Keep the last product/topic even when the discussion began before the history window.
     const productAnchor = await prisma.chatMessage.findFirst({
       where: {
@@ -4085,12 +4100,12 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
       .replace(/(?:আমাদের\s+)?(?:ক্যাটালগে|catalogue?-এ)/giu, "আমাদের কাছে")
       .replace(/(?:ক্যাটালগ|catalogue?)/giu, "পণ্যের তথ্য");
 
-    const newerInbound = await prisma.chatMessage.findFirst({ where: { conversationId, direction: "INBOUND", authorType: "CUSTOMER", createdAt: { gt: inbound.createdAt } }, select: { id: true } });
+    const newerInbound = await prisma.chatMessage.findFirst({ where: newerInboundWhere(inbound), select: { id: true } });
     if (newerInbound || await stopForHumanTakeover(conversationId, inbound, aiMessage.id)) {
       await prisma.chatMessage.update({
         where: { id: aiMessage.id },
         data: {
-          content: "AI reply paused because a human agent took over.",
+          content: newerInbound ? "Reply paused to include the customer's newer messages." : "AI reply paused because a human agent took over.",
           deliveryStatus: "FAILED",
           metadata: {
             aiPromptVersion: CHAT_AI_PROMPT_VERSION,
@@ -4379,5 +4394,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
         } } });
       }).catch((recordError) => console.error("Human assistance flag could not be saved:", recordError?.code || "update_failed"));
     }
+  } finally {
+    if (stopTyping) await stopTyping();
   }
 }

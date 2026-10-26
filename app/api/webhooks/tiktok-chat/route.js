@@ -6,7 +6,7 @@ import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 async function getTikTokSettings() {
   const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, tiktokEnabled: true } });

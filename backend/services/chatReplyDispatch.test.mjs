@@ -15,30 +15,29 @@ function context(payload = null, flow = null) {
         findFirst: async () => flow ? { metadata: { chatOrderFlow: flow } } : null,
       } },
       reply: async (id) => { calls.push(["reply", id]); },
-      // Reproduce a busy AI lease: the batch worker declines the event.
-      batch: async () => { calls.push(["busy-batch"]); },
+      batch: async () => { calls.push(["batch"]); },
     },
   };
 }
 
 for (const action of ["select:product123", "order:product123", "checkout:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222:place"]) {
-  test(`${action.split(":")[0]} button replies despite an unrelated busy AI worker`, async () => {
+  test(`${action.split(":")[0]} button waits for related follow-up messages`, async () => {
     const { options, calls } = context(action);
     await dispatchChatReply(options);
-    assert.deepEqual(calls, [["reply", "click"]]);
+    assert.deepEqual(calls, [["batch"]]);
   });
 }
 
-test("customer name and phone during checkout also bypass an old AI lease", async () => {
+test("customer name and phone during checkout use the shared batch worker", async () => {
   const { options, calls } = context(null, { step: "name", productId: "product123" });
   await dispatchChatReply(options);
-  assert.deepEqual(calls, [["reply", "click"]]);
+  assert.deepEqual(calls, [["batch"]]);
 });
 
 test("ordinary conversation after a completed checkout keeps normal batching", async () => {
   const { options, calls } = context(null, { step: "done" });
   await dispatchChatReply(options);
-  assert.deepEqual(calls, [["busy-batch"]]);
+  assert.deepEqual(calls, [["batch"]]);
 });
 
 test("ordinary text retains batching and its latest-message callback", async () => {

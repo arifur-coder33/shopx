@@ -7,11 +7,15 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import { normalizeChatPhone } from "@/lib/chatIdentity";
 import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 import { saveAbandonedCheckoutLead } from "@/backend/services/abandonedCheckoutService";
+import { newerInboundWhere } from "./chatReplyBatchCore.mjs";
 
 const digits = (text) => String(text || "").replace(/[০-৯]/gu, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
 const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|confirm)[.!\s]*$/iu;
 const no = /^(?:না|na|no)[.!\s]*$/iu;
 const cancel = /^(?:cancel|বাতিল|stop)[.!\s]*$/iu;
+// Let unrelated questions and social openers reach the normal AI path while
+// preserving the saved checkout step for the customer's next order detail.
+const checkoutInterruption = /(?:[?？]|\b(?:what|why|when|where|which|who|how|price|cost|color|colour|size|stock|available|delivery|charge|koto|kemon|keno|kokhon|kothay|kon|ki|dam|rong|size|ache|ase|bhai|apu|hello|hi|salam|assalamu|thanks|thank you)\b|কী|কি|কেমন|কেন|কখন|কোথায়|কোথায়|কোন|দাম|মূল্য|রং|সাইজ|স্টক|আছে|হবে|পাব|ডেলিভারি|চার্জ|ভাই|আপু|সালাম|আসসালামু|হ্যালো|হাই|ধন্যবাদ)/iu;
 const prompts = {
   name: "আপনার নাম লিখুন।", phone: "আপনার মোবাইল নম্বরটি দিন (যেমন 01712345678)।",
   address: "একটি পূর্ণ ডেলিভারি ঠিকানা লিখুন—বাসা/রোড/এলাকা, থানা ও জেলা একসাথে। যেমন: House 34, Road 11, Sector 11, Uttara, Dhaka।",
@@ -120,12 +124,15 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   const saved = recent.find((message) => message.metadata?.chatOrderFlow)?.metadata.chatOrderFlow;
   let flow = saved && saved.step !== "done" ? saved : null;
   const text = digits(inbound.content).trim();
+  const latestText = digits(inbound.metadata?.batchedLatestText ?? text).trim();
   const payload = String(inbound.metadata?.quickReplyPayload || "");
   const quickProductId = payload.match(/^order:([a-zA-Z0-9_-]{5,80})$/u)?.[1];
   if (quickProductId) flow = null;
+  const isCheckoutAction = /^checkout:[a-f0-9-]{36}:[a-f0-9-]{36}:/u.test(payload);
+  if (flow && !quickProductId && !isCheckoutAction && !cancel.test(latestText) && checkoutInterruption.test(text)) return false;
   const actionMatch = payload.match(/^checkout:([a-f0-9-]{36}):([a-f0-9-]{36}):(.+)$/u);
   if (actionMatch && (!flow || actionMatch[1] !== flow.id || actionMatch[2] !== flow.version)) return persistReply({ conversation, inbound, credentials, text: "এই পুরোনো বাটনটি আর সক্রিয় নেই। সর্বশেষ অর্ডার মেসেজের বাটন ব্যবহার করুন।", flow: saved || { step: "done" }, preserveFlow: true });
-  const action = actionMatch?.[3] || text;
+  const action = actionMatch?.[3] || (cancel.test(latestText) ? latestText : text);
   const intent = Boolean(quickProductId) || /(?:অর্ডার\s*(?:কর|দিতে)|\border\s*(?:kor|korte|dite|now)|কিনতে চাই|নিতে চাই|\b(?:buy|purchase)\b)/iu.test(text);
   if (!flow && existingOnly && !quickProductId && !actionMatch) return false;
   if (!flow && !intent) return false;
@@ -282,9 +289,9 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
 }
 
 async function canContinue(conversation, inbound) {
-  const fresh = await prisma.chatConversation.findUnique({ where: { id: conversation.id }, select: { aiModeEnabled: true, assignedToId: true } });
-  const newer = await prisma.chatMessage.findFirst({ where: { conversationId: conversation.id, direction: "INBOUND", authorType: "CUSTOMER", createdAt: { gt: inbound.createdAt } }, select: { id: true } });
-  if (fresh?.aiModeEnabled && !fresh.assignedToId && !newer) return true;
+  const fresh = await prisma.chatConversation.findUnique({ where: { id: conversation.id }, select: { aiModeEnabled: true, assignedToId: true, aiReplyLeaseToken: true } });
+  const newer = await prisma.chatMessage.findFirst({ where: newerInboundWhere(inbound), select: { id: true } });
+  if (fresh?.aiModeEnabled && !fresh.assignedToId && !newer && (!inbound.replyLeaseToken || fresh.aiReplyLeaseToken === inbound.replyLeaseToken)) return true;
   console.warn("Chat checkout reply superseded or paused:", { channel: conversation.channel, newerInbound: Boolean(newer), aiEnabled: Boolean(fresh?.aiModeEnabled), assignedToHuman: Boolean(fresh?.assignedToId) });
   await prisma.chatMessage.updateMany({ where: { aiReplyForMessageId: inbound.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "FAILED", metadata: { internalOnly: true, aiErrorCode: newer ? "batch_superseded" : "human_takeover" } } });
   return false;

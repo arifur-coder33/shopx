@@ -6,7 +6,7 @@ import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const validPhone = (value) => /^(?:01[3-9]\d{8}|8801[3-9]\d{8})$/.test(String(value || "").replace(/\D/g, ""));
 const clean = (value, limit = 150) => String(value || "").trim().slice(0, limit);

@@ -7,7 +7,7 @@ import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 import { getWebsitePageProductContext } from "@/backend/utils/chatWebsitePageContext.mjs";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
 const rateBuckets = globalThis.__websiteChatRateBuckets || (globalThis.__websiteChatRateBuckets = new Map());
@@ -27,14 +27,14 @@ export async function GET(request) {
   if (!/^[a-f0-9-]{36}$/i.test(token)) return Response.json({ success: false }, { status: 400 });
   const conversation = await prisma.chatConversation.findUnique({
     where: { channel_externalUserId: { channel: "WEBSITE", externalUserId: hashToken(token) } },
-    select: { id: true, status: true, messages: { where: { OR: [{ direction: "INBOUND" }, { deliveryStatus: { not: "FAILED" } }] }, orderBy: { createdAt: "asc" }, take: 100, select: { id: true, direction: true, content: true, deliveryStatus: true, metadata: true, createdAt: true } } },
+    select: { id: true, status: true, messages: { where: { OR: [{ direction: "INBOUND" }, { deliveryStatus: { not: "FAILED" } }] }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 100, select: { id: true, direction: true, authorType: true, content: true, deliveryStatus: true, metadata: true, createdAt: true } } },
   });
   if (conversation) await prisma.chatMessage.updateMany({
     where: { conversationId: conversation.id, direction: "OUTBOUND", deliveryStatus: "SENT" },
     data: { deliveryStatus: "DELIVERED" },
   });
   if (conversation) {
-    conversation.messages = conversation.messages.filter((message) => !message.metadata?.internalOnly).map((message) => message.direction === "OUTBOUND" && message.deliveryStatus === "SENT" ? { ...message, deliveryStatus: "DELIVERED" } : message);
+    conversation.messages = conversation.messages.reverse().filter((message) => !message.metadata?.internalOnly).map((message) => message.direction === "OUTBOUND" && message.deliveryStatus === "SENT" ? { ...message, deliveryStatus: "DELIVERED" } : message);
   }
   return Response.json({ success: true, data: conversation }, { headers: { "Cache-Control": "no-store" } });
 }

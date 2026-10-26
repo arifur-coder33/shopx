@@ -13,6 +13,7 @@ import { sendChatPushTestNotification } from "@/backend/services/chatPushService
 import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 import { ensureMessengerPostbacks } from "@/backend/services/chatMessengerSubscriptions.mjs";
+import { messengerReaction, messengerReactionPayload } from "@/backend/utils/chatMessengerReaction.mjs";
 import {
   DEFAULT_CHAT_AI_MODELS,
   isChatAiModelAllowed,
@@ -77,16 +78,14 @@ async function getSetting() {
   return prisma.chatSetting.findUnique({ where: { id: SETTING_ID } });
 }
 
-const CHAT_REACTION_CODES = { "👍": "like", "❤️": "love", "😂": "haha", "😮": "wow", "😢": "sad", "😡": "angry" };
-
 export async function setChatMessageReactionAction(messageId, emoji) {
   try {
     await requireProcurementPermission("chat", "update");
     const message = await prisma.chatMessage.findUnique({ where: { id: String(messageId) }, include: { conversation: true } });
     if (!message || message.channel !== "MESSENGER" || !message.externalMessageId) throw new Error("এই Messenger message-এ reaction দেওয়া যাচ্ছে না।");
-    const normalizedEmoji = trim(emoji).replace(/\uFE0F/g, "");
-    const reactionCode = Object.entries(CHAT_REACTION_CODES).find(([candidate]) => candidate.replace(/\uFE0F/g, "") === normalizedEmoji)?.[1];
-    if (!reactionCode) throw new Error("এই reaction-টি supported নয়।");
+    const reaction = messengerReaction(emoji);
+    if (!reaction) throw new Error("এই reaction-টি supported নয়।");
+    const reactionCode = reaction.code;
     const setting = await getSetting();
     const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
     const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
@@ -95,13 +94,8 @@ export async function setChatMessageReactionAction(messageId, emoji) {
 
     const currentReactions = Array.isArray(message.metadata?.reactions) ? message.metadata.reactions : [];
     const existingAgentReaction = currentReactions.find((item) => item.actorType === "AGENT");
-    const shouldRemove = existingAgentReaction?.code === reactionCode;
-    const payload = {
-      recipient: { id: message.conversation.externalUserId },
-      sender_action: shouldRemove ? "unreact" : "react",
-      // Meta needs the reaction code for both react and unreact actions.
-      payload: { message_id: message.externalMessageId, reaction: reactionCode },
-    };
+    const shouldRemove = existingAgentReaction?.code === reactionCode || messengerReaction(existingAgentReaction?.emoji)?.code === reactionCode;
+    const payload = messengerReactionPayload(message.conversation.externalUserId, message.externalMessageId, reaction.emoji, shouldRemove);
     const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
       method: "POST",
       headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}`, "Content-Type": "application/json" },
@@ -112,7 +106,7 @@ export async function setChatMessageReactionAction(messageId, emoji) {
     if (!response.ok) throw new Error(result?.error?.message || "Messenger reaction পাঠানো যায়নি।");
 
     const reactions = currentReactions.filter((item) => item.actorType !== "AGENT");
-    if (!shouldRemove) reactions.push({ actorId: "PAGE", actorType: "AGENT", code: reactionCode, emoji: trim(emoji) });
+    if (!shouldRemove) reactions.push({ actorId: "PAGE", actorType: "AGENT", code: reactionCode, emoji: reaction.emoji });
     const updated = await prisma.chatMessage.update({ where: { id: message.id }, data: { metadata: { ...(message.metadata || {}), reactions } } });
     return { success: true, data: updated, removed: shouldRemove };
   } catch (error) { return actionError(error, "Messenger reaction পাঠানো যায়নি।"); }
