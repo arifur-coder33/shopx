@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { whatsAppImageContent, whatsAppSelectedProduct, whatsAppUrlButtonContent } from "./chatProductSelection.mjs";
+import { chatProductAction, whatsAppProductAction, whatsAppImageContent, whatsAppSelectedProduct, whatsAppUrlButtonContent } from "./chatProductSelection.mjs";
 
 test("a WhatsApp card carries its photo and product-specific selection button", () => {
   const payload = whatsAppImageContent("uploaded-media", "Fan · ৳850", "product123");
@@ -34,4 +34,13 @@ test("WhatsApp URL buttons reject unsafe link schemes", () => {
   for (const url of ["http://shop.example/product", "javascript:alert(1)", "invalid-url"]) {
     assert.throws(() => whatsAppUrlButtonContent("পণ্যের তথ্য", { title: "পণ্য দেখুন", url }));
   }
+});
+
+test("Messenger and WhatsApp order buttons retain the chosen product", () => {
+  const expected = { action: "order", productId: "product123", quickReplyPayload: "order:product123" };
+  assert.deepEqual(chatProductAction("order:product123"), expected);
+  assert.deepEqual(whatsAppProductAction({ interactive: { button_reply: { id: "order:product123", title: "অর্ডার করতে চাই" } } }), expected);
+  assert.deepEqual(whatsAppProductAction({ button: { payload: "order:product123" } }), expected);
+  assert.equal(chatProductAction("order:../private"), null);
+  assert.equal(chatProductAction("checkout:unrelated"), null);
 });

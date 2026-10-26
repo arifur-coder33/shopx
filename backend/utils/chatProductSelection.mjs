@@ -12,8 +12,17 @@ export function whatsAppImageContent(mediaId, caption, productId = null) {
 }
 
 export function whatsAppSelectedProduct(message) {
-  const payload = message?.interactive?.button_reply?.id || message?.button?.payload || "";
-  return String(payload).match(/^select:([a-zA-Z0-9_-]{5,80})$/u)?.[1] || null;
+  const action = whatsAppProductAction(message);
+  return action?.action === "select" ? action.productId : null;
+}
+
+export function chatProductAction(payload) {
+  const match = String(payload || "").match(/^(select|order|details):([a-zA-Z0-9_-]{5,80})$/u);
+  return match ? { action: match[1], productId: match[2], quickReplyPayload: match[0] } : null;
+}
+
+export function whatsAppProductAction(message) {
+  return chatProductAction(message?.interactive?.button_reply?.id || message?.interactive?.list_reply?.id || message?.button?.payload);
 }
 
 export function whatsAppUrlButtonContent(content, button) {

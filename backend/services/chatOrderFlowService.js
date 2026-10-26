@@ -92,6 +92,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
     if (!selected) return persistReply({ conversation, inbound, credentials, text: "দুঃখিত, এই পণ্যটি এখন পাওয়া যাচ্ছে না। অন্য পণ্যটি বেছে দিন।", flow: { step: "done", reason: "product_selection" } });
     const prices = selected.variations.map((variant) => Number(variant.discountPrice) > 0 && Number(variant.discountPrice) < Number(variant.regularPrice) ? Number(variant.discountPrice) : Number(variant.regularPrice)).filter((price) => price > 0);
     const priceText = prices.length ? ` দাম ${money(Math.min(...prices))} থেকে।` : "";
+    const hasOrderButton = ["MESSENGER", "WHATSAPP"].includes(conversation.channel);
     const urlButton = conversation.channel === "WHATSAPP"
       ? { title: "ওয়েবসাইটে কিনুন", url: new URL(`/buynow/${encodeURIComponent(selected.slug)}`, await getSiteUrl()).href }
       : null;
@@ -99,7 +100,8 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       conversation,
       inbound,
       credentials,
-      text: `আপনি “${selected.title}” পণ্যটি বেছে নিয়েছেন।${priceText} পণ্যটি সম্পর্কে প্রশ্ন করতে পারেন। এই chat-এ অর্ডার করতে “অর্ডার করতে চাই” লিখুন।${urlButton ? " ওয়েবসাইটে অর্ডার করতে নিচের বাটনে চাপুন।" : ""}`,
+      text: `আপনি “${selected.title}” পণ্যটি বেছে নিয়েছেন।${priceText} পণ্যটি সম্পর্কে প্রশ্ন করতে পারেন।${hasOrderButton ? " এই chat-এ অর্ডার করতে নিচের “অর্ডার করতে চাই” বাটনে চাপুন।" : " অর্ডার করতে চাইলে “অর্ডার করতে চাই” লিখুন।"}`,
+      replyButtons: hasOrderButton ? [{ title: "অর্ডার করতে চাই", payload: `order:${selected.id}` }] : null,
       urlButton,
       flow: { step: "done", reason: "product_selection", productId: selected.id },
     });
@@ -287,13 +289,13 @@ async function canContinue(conversation, inbound) {
   return false;
 }
 
-async function persistReply({ conversation, inbound, credentials, text, flow, options = [], imageUrl, orderNo, trackingUrl, invoiceUrl, urlButton = null, preserveFlow = false }) {
+async function persistReply({ conversation, inbound, credentials, text, flow, options = [], replyButtons = null, imageUrl, orderNo, trackingUrl, invoiceUrl, urlButton = null, preserveFlow = false }) {
   // An already committed order must keep its receipt/state even if a new message arrived during checkout.
   if (!orderNo && !await canContinue(conversation, inbound)) return true;
   const current = orderNo ? await prisma.chatConversation.findUnique({ where: { id: conversation.id }, select: { aiModeEnabled: true, assignedToId: true } }) : null;
   const humanTookOver = Boolean(orderNo && (!current?.aiModeEnabled || current.assignedToId));
   if (!preserveFlow) flow.version = randomUUID();
-  const quickReplies = options.map((option) => ({ title: option.title, payload: `checkout:${flow.id}:${flow.version}:${option.action}` }));
+  const quickReplies = replyButtons || options.map((option) => ({ title: option.title, payload: `checkout:${flow.id}:${flow.version}:${option.action}` }));
   if (orderNo) await prisma.chatMessage.update({ where: { aiReplyForMessageId: inbound.id }, data: {
     content: text, metadata: { type: "ORDER_PLACED", chatOrderFlow: flow, orderNo, trackingUrl, invoiceUrl, internalOnly: true },
   } });
@@ -306,7 +308,18 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
   // Messenger quick replies disappear when another message arrives. Send the
   // product photo first so the checkout buttons remain on the latest message.
   if (conversation.channel === "MESSENGER") await sendImage();
-  const delivered = humanTookOver ? { id: null } : await sendChatChannelTextMessage(conversation, text, credentials, null, quickReplies, urlButton);
+  const separateUrlButton = conversation.channel === "WHATSAPP" && quickReplies.length > 0 && urlButton;
+  const delivered = humanTookOver ? { id: null } : await sendChatChannelTextMessage(conversation, text, credentials, null, quickReplies, separateUrlButton ? null : urlButton);
+  let urlButtonMessage = null;
+  if (separateUrlButton && !humanTookOver) {
+    const buttonText = "ওয়েবসাইটে অর্ডার করতে নিচের বাটন ব্যবহার করুন।";
+    try {
+      const sent = await sendChatChannelTextMessage(conversation, buttonText, credentials, null, [], urlButton);
+      urlButtonMessage = { conversationId: conversation.id, channel: conversation.channel, direction: "OUTBOUND", authorType: "AI", content: buttonText, deliveryStatus: "SENT", ...(sent.id && { externalMessageId: sent.id }), metadata: { type: "CHAT_URL_BUTTON", urlButton, selectedProductId: flow.productId } };
+    } catch (error) {
+      console.warn("WhatsApp purchase URL button delivery failed:", { code: error?.code || "url_button_failed" });
+    }
+  }
   if (conversation.channel !== "MESSENGER") {
     await sendImage();
   }
@@ -323,6 +336,7 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
   };
   await prisma.$transaction([
     prisma.chatMessage.upsert({ where: { aiReplyForMessageId: inbound.id }, create: data, update: data }),
+    ...(urlButtonMessage ? [prisma.chatMessage.create({ data: urlButtonMessage })] : []),
     prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), consecutiveAiFailures: 0 } }),
   ]);
   return true;

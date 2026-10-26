@@ -1,6 +1,7 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import sharp from "sharp";
 import { whatsAppImageContent, whatsAppUrlButtonContent } from "@/backend/utils/chatProductSelection.mjs";
+import { ensureMessengerPostbacks } from "@/backend/services/chatMessengerSubscriptions.mjs";
 
 export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null) {
   const text = String(content || "").slice(0, conversation.channel === "WHATSAPP" ? 4096 : 2000);
@@ -112,6 +113,7 @@ export async function sendMessengerProductCard(conversation, product, credential
   if (conversation.channel !== "MESSENGER") throw new Error("Messenger product card requires a Messenger conversation.");
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
   if (!credentials.messengerPageAccessToken || !credentials.messengerPageId || !/^v\d+\.\d+$/.test(version || "")) throw new Error("Messenger credentials configure করা নেই।");
+  const subscription = await ensureMessengerPostbacks(credentials);
   const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
   const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
   const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
@@ -134,7 +136,7 @@ export async function sendMessengerProductCard(conversation, product, credential
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result?.error?.message || "Messenger product card পাঠানো যায়নি।");
-  return { id: result.message_id || null, secondaryIds: [], warning: null };
+  return { id: result.message_id || null, secondaryIds: [], warning: subscription.warning };
 }
 
 export async function sendMessengerProductCarousel(conversation, products, credentials, seeMoreUrl = null) {
@@ -142,6 +144,7 @@ export async function sendMessengerProductCarousel(conversation, products, crede
   if (products.length < 2) throw new Error("Messenger carousel needs at least two products.");
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
   if (!credentials.messengerPageAccessToken || !credentials.messengerPageId || !/^v\d+\.\d+$/.test(version || "")) throw new Error("Messenger credentials configure করা নেই।");
+  const subscription = await ensureMessengerPostbacks(credentials);
   const elements = products.slice(0, seeMoreUrl ? 9 : 10).map((product) => {
     const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
     const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
@@ -171,7 +174,7 @@ export async function sendMessengerProductCarousel(conversation, products, crede
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result?.error?.message || "Messenger product carousel পাঠানো যায়নি।");
-  return { id: result.message_id || null, secondaryIds: [], warning: null };
+  return { id: result.message_id || null, secondaryIds: [], warning: subscription.warning };
 }
 
 export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null, selectionProductId = null) {

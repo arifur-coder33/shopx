@@ -12,6 +12,7 @@ import { getOrderPushPublicKey, saveOrderPushSubscription, removeOrderPushSubscr
 import { sendChatPushTestNotification } from "@/backend/services/chatPushService";
 import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
+import { ensureMessengerPostbacks } from "@/backend/services/chatMessengerSubscriptions.mjs";
 import {
   DEFAULT_CHAT_AI_MODELS,
   isChatAiModelAllowed,
@@ -243,7 +244,8 @@ export async function saveChatSettingsAction(formData) {
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");
-    return { success: true, message: "Chat settings saved." };
+    const subscription = messengerEnabled ? await ensureMessengerPostbacks(credentials, { force: true }) : null;
+    return { success: true, message: subscription?.warning ? `Chat settings saved. ${subscription.warning}` : "Chat settings saved." };
   } catch (error) {
     return actionError(error, "Chat settings could not be saved.");
   }
