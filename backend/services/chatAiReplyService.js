@@ -25,6 +25,7 @@ import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeServi
 import { findSearchProducts } from "@/backend/utils/findSearchProducts";
 import { collectWebsiteHandoffContact } from "@/backend/services/chatHumanHandoffService";
 import { runChatReplyBatch, mergedInboundMessage } from "@/backend/services/chatReplyBatchService";
+import { dispatchChatReply } from "@/backend/services/chatReplyDispatch.mjs";
 import { humanHandoffReason, humanHandoffReply, isRepeatedCustomerQuestion } from "@/backend/utils/chatHumanHandoff.mjs";
 import { searchImageCatalog, selectImageSearchProducts } from "@/backend/utils/chatImageSelection.mjs";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
@@ -3611,8 +3612,13 @@ async function stopForHumanTakeover(
 }
 
 export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
-  if (!inboundMessageId) return;
-  return runChatReplyBatch(conversationId, (latestId) => sendBatchedChatAiReply(conversationId, latestId));
+  return dispatchChatReply({
+    conversationId,
+    inboundMessageId,
+    db: prisma,
+    reply: (messageId) => sendBatchedChatAiReply(conversationId, messageId),
+    batch: runChatReplyBatch,
+  });
 }
 
 async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
@@ -3652,8 +3658,16 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId) {
         conversation: initialConversation,
         inbound,
       })
-    )
+    ) {
+      if (/^(?:select|order|checkout):/u.test(String(inbound?.metadata?.quickReplyPayload || ""))) console.warn("Chat checkout action blocked:", {
+        channel: initialConversation?.channel,
+        globalAiEnabled: Boolean(setting?.aiAutoReplyEnabled),
+        conversationAiEnabled: Boolean(initialConversation?.aiModeEnabled),
+        assignedToHuman: Boolean(initialConversation?.assignedToId),
+        conversationStatus: initialConversation?.status,
+      });
       return;
+    }
 
     const existingReply = await prisma.chatMessage.findUnique({
       where: { aiReplyForMessageId: inbound.id },

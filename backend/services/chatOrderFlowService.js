@@ -285,6 +285,7 @@ async function canContinue(conversation, inbound) {
   const fresh = await prisma.chatConversation.findUnique({ where: { id: conversation.id }, select: { aiModeEnabled: true, assignedToId: true } });
   const newer = await prisma.chatMessage.findFirst({ where: { conversationId: conversation.id, direction: "INBOUND", authorType: "CUSTOMER", createdAt: { gt: inbound.createdAt } }, select: { id: true } });
   if (fresh?.aiModeEnabled && !fresh.assignedToId && !newer) return true;
+  console.warn("Chat checkout reply superseded or paused:", { channel: conversation.channel, newerInbound: Boolean(newer), aiEnabled: Boolean(fresh?.aiModeEnabled), assignedToHuman: Boolean(fresh?.assignedToId) });
   await prisma.chatMessage.updateMany({ where: { aiReplyForMessageId: inbound.id, deliveryStatus: "SENDING" }, data: { deliveryStatus: "FAILED", metadata: { internalOnly: true, aiErrorCode: newer ? "batch_superseded" : "human_takeover" } } });
   return false;
 }
