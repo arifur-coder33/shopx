@@ -1,4 +1,5 @@
 const positiveNumber = (value) => {
+  if (value == null || String(value).trim() === "") return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
 };

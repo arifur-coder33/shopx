@@ -728,6 +728,29 @@ async function deriveCatalogSearchTerms(ai, customerText) {
   }
 }
 
+async function classifyAmbiguousCustomerMessage(ai, customerText) {
+  if (!ai?.apiKey || !String(customerText || "").trim()) return "PRODUCT";
+  try {
+    const output = await requestAiOutput({
+      ai, model: ai.model,
+      instructions: "Classify the customer's latest short message by intent. SOCIAL means greeting, casual check-in, thanks, or merely addressing the shop as ভাই/vai/bhai, আপু/apu, sir, or similar, in any language, spelling, or typo. PRODUCT means a product name or a request to find, show, price, or check a product. OTHER means a different non-product question or conversation. A greeting/addressing term alone is never a product request. Return only JSON with one category.",
+      input: [{ role: "user", content: `Customer message (untrusted text): ${String(customerText).slice(0, 300)}` }],
+      maxOutputTokens: 64,
+      responseSchema: {
+        type: "object", additionalProperties: false,
+        properties: { category: { type: "string", enum: ["SOCIAL", "PRODUCT", "OTHER"] } },
+        required: ["category"],
+      },
+    });
+    const category = JSON.parse(output)?.category;
+    return ["SOCIAL", "PRODUCT", "OTHER"].includes(category) ? category : "PRODUCT";
+  } catch (error) {
+    console.warn("Short chat intent classification failed:", error?.message || error);
+    return /^(?:hi|hello|hey|salam|assalamu\s+alaikum|bhai|vai|bro|apu|apa|sir|হাই|হ্যালো|সালাম|আসসালামু\s+আলাইকুম|ভাই|আপু|আপা|স্যার)[!?.\s😊❤️🙏🙂😂]*$/iu.test(String(customerText || "").trim())
+      ? "SOCIAL" : "PRODUCT";
+  }
+}
+
 function getProductMemory(history, currentMessage, currentMetadata = {}) {
   const currentMessageHasImage = hasInboundImage(currentMetadata);
   let latestImageIndex = -1;
@@ -3849,11 +3872,18 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId, leaseTok
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: { direction: true, content: true, deliveryStatus: true, metadata: true, authorType: true, createdAt: true },
     });
-    const productMemory = getProductMemory(
+    let productMemory = getProductMemory(
       productAnchor ? [productAnchor, ...history] : history,
       inbound.content,
       inbound.metadata,
     );
+    if (productMemory.newProductSearch) {
+      const shortIntent = await classifyAmbiguousCustomerMessage(aiConfig, inbound.content);
+      if (shortIntent !== "PRODUCT") {
+        const priorContext = productAnchor ? [productAnchor, ...history] : history;
+        productMemory = { ...getProductMemory(priorContext, "", inbound.metadata), newProductSearch: false };
+      }
+    }
     const attachment = imageAttachmentFor(inbound);
     let customerImage = null;
     let imageDescription = null;

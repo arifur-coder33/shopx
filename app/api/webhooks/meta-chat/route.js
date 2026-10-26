@@ -130,6 +130,24 @@ async function applyMetaMessageEdit(channel, edit) {
 
 const REACTION_EMOJI = { like: "👍", love: "❤️", haha: "😂", wow: "😮", sad: "😢", angry: "😡", dislike: "👎" };
 
+async function applyWhatsAppReaction(message) {
+  const externalMessageId = message.reaction?.message_id;
+  if (!externalMessageId || !message.from) return;
+  const target = await prisma.chatMessage.findFirst({
+    where: { channel: "WHATSAPP", externalMessageId, conversation: { externalUserId: message.from } },
+    select: { id: true, metadata: true },
+  });
+  if (!target) return;
+  const reactions = (Array.isArray(target.metadata?.reactions) ? target.metadata.reactions : [])
+    .filter((item) => !(item.actorType === "CUSTOMER" && item.actorId === message.from));
+  const emoji = String(message.reaction?.emoji || "").trim();
+  if (emoji) reactions.push({ actorId: message.from, actorType: "CUSTOMER", emoji });
+  await prisma.chatMessage.update({
+    where: { id: target.id },
+    data: { metadata: { ...(target.metadata || {}), reactions } },
+  });
+}
+
 async function applyMessengerReaction(event, pageId) {
   const reactionEvent = event?.reaction || event?.message_reaction || event?.message_reactions || event?.messaging_reaction || event?.message?.reaction || event?.value;
   if (Array.isArray(reactionEvent)) {
@@ -208,6 +226,10 @@ export async function POST(request) {
         const contacts = new Map((value.contacts || []).map((contact) => [contact.wa_id, contact.profile?.name]));
         for (const message of credentials.whatsappEnabled ? value.messages || [] : []) {
           if (message.edit && await applyMetaMessageEdit("WHATSAPP", message.edit)) continue;
+          if (message.type === "reaction") {
+            await applyWhatsAppReaction(message);
+            continue;
+          }
           const productAction = whatsAppProductAction(message);
           const text = productAction ? productAction.action === "order" ? "অর্ডার করতে চাই" : "এই পণ্যটি নির্বাচন করলাম। এটি সম্পর্কে বিস্তারিত জানান।" : message.text?.body || message.image?.caption || message.document?.caption || message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || `[${message.type || "unsupported"} message]`;
           await saveInboundMessage({
