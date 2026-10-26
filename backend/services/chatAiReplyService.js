@@ -2488,6 +2488,7 @@ async function generateReply(
   aiReplyExamples = [],
   productMemory = { previousShownIds: [], selectedProductId: null },
 ) {
+  const channel = conversation.channel;
   const input = compactConversationHistory(history, { includeAll: true, messageLimit: Infinity });
   const channelStyle =
     CHAT_AI_CHANNEL_TONE[conversation.channel] || CHAT_AI_CHANNEL_TONE.WEBSITE;
