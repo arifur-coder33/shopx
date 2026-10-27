@@ -20,8 +20,17 @@ export async function ensureMessengerPostbacks(credentials, { force = false, fet
     const response = await fetchImpl(`${endpoint}?fields=id,subscribed_fields`, { headers, cache: "no-store", signal: AbortSignal.timeout(5000) });
     const result = await response.json();
     if (!response.ok || !Array.isArray(result.data)) throw new Error(`subscription_read_${result.error?.code || response.status}`);
-    // With several apps, the token's app cannot be identified safely from this response.
-    if (result.data.length > 1) throw new Error("multiple_apps_manual_subscription_required");
+    // With several apps, only treat the page as ready when an app is already
+    // subscribed to both callback types. Avoid changing another app's fields.
+    if (result.data.length > 1) {
+      const hasPostbackSubscription = result.data.some((app) => requiredFields.every((field) => (app.subscribed_fields || []).includes(field)));
+      if (hasPostbackSubscription) {
+        const resultValue = { ready: true, warning: null };
+        checks.set(cacheKey, { result: resultValue, expiresAt: Date.now() + 3600000 });
+        return resultValue;
+      }
+      throw new Error("multiple_apps_manual_subscription_required");
+    }
     const currentFields = result.data[0]?.subscribed_fields || [];
     if (!requiredFields.every((field) => currentFields.includes(field))) {
       const subscribedFields = [...new Set([...currentFields, ...requiredFields])];

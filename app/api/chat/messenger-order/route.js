@@ -20,7 +20,7 @@ async function context(token) {
   if (!claim) return null;
   const [conversation, product, setting] = await Promise.all([
     prisma.chatConversation.findFirst({ where: { id: claim.conversationId, channel: "MESSENGER" }, select: { id: true, channel: true, externalUserId: true } }),
-    prisma.product.findFirst({ where: { id: claim.productId, isActive: true, status: "ACTIVE" }, select: { id: true, title: true, slug: true, allowOutOfStockOrder: true, codAvailable: true, advancePaymentType: true, variations: { take: 30, select: { id: true, regularPrice: true, discountPrice: true, stocks: { select: { available: true } }, combinations: { select: { variationName: { select: { name: true } }, variationValue: { select: { value: true } } } } } } } }),
+    prisma.product.findFirst({ where: { id: claim.productId, isActive: true, status: "ACTIVE" }, select: { id: true, title: true, slug: true, hasVariations: true, allowOutOfStockOrder: true, codAvailable: true, advancePaymentType: true, variations: { take: 30, select: { id: true, regularPrice: true, discountPrice: true, stocks: { select: { available: true } }, combinations: { select: { variationName: { select: { name: true } }, variationValue: { select: { value: true } } } } } } } }),
     prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { messengerEnabled: true, quickReplies: true, encryptedCredentials: true } }),
   ]);
   if (!conversation || !product || setting?.messengerEnabled === false) return null;
@@ -31,7 +31,8 @@ export async function GET(request) {
   const data = await context(new URL(request.url).searchParams.get("t"));
   if (!data) return Response.json({ success: false, message: "লিংকটির মেয়াদ শেষ বা পণ্যটি পাওয়া যাচ্ছে না।" }, { status: 404 });
   const { product, canCreateOrder } = data;
-  return Response.json({ success: true, data: { title: product.title, canCreateOrder, canOrderInChat: product.codAvailable !== false && !["DELIVERY_FEE", "PARTIAL"].includes(product.advancePaymentType), websiteUrl: `/buynow/${encodeURIComponent(product.slug)}`, variants: product.variations.map((variant) => { const hasStock = variant.stocks.some((stock) => stock.available > 0); const canOrder = hasStock || product.allowOutOfStockOrder; return { id: variant.id, label: variant.combinations.map((part) => `${part.variationName?.name}: ${part.variationValue?.value}`).join(" / ") || "সাধারণ", price: Number(variant.discountPrice) > 0 && Number(variant.discountPrice) < Number(variant.regularPrice) ? Number(variant.discountPrice) : Number(variant.regularPrice), inStock: canOrder, hasStock, canOrder }; }) } }, { headers: { "Cache-Control": "no-store" } });
+  const websiteUrl = product.hasVariations || product.variations.length > 1 ? `/product/${encodeURIComponent(product.slug)}` : `/buynow/${encodeURIComponent(product.slug)}`;
+  return Response.json({ success: true, data: { title: product.title, canCreateOrder, canOrderInChat: product.codAvailable !== false && !["DELIVERY_FEE", "PARTIAL"].includes(product.advancePaymentType), websiteUrl, variants: product.variations.map((variant) => { const hasStock = variant.stocks.some((stock) => stock.available > 0); const canOrder = hasStock || product.allowOutOfStockOrder; return { id: variant.id, label: variant.combinations.map((part) => `${part.variationName?.name}: ${part.variationValue?.value}`).join(" / ") || "সাধারণ", price: Number(variant.discountPrice) > 0 && Number(variant.discountPrice) < Number(variant.regularPrice) ? Number(variant.discountPrice) : Number(variant.regularPrice), inStock: canOrder, hasStock, canOrder }; }) } }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request) {

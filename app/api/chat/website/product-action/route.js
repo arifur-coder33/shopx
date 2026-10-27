@@ -45,19 +45,20 @@ export async function POST(request) {
   }
   const product = productId ? await prisma.product.findFirst({
     where: { id: productId, isActive: true, status: "ACTIVE" },
-    select: { id: true, title: true, slug: true, description: true, seoDescription: true, allowOutOfStockOrder: true, codAvailable: true, advancePaymentType: true,
+    select: { id: true, title: true, slug: true, description: true, seoDescription: true, hasVariations: true, allowOutOfStockOrder: true, codAvailable: true, advancePaymentType: true,
       specifications: { take: 8, orderBy: { sortOrder: "asc" }, select: { value: true, specification: { select: { name: true } } } },
-      variations: { take: 30, select: { id: true, regularPrice: true, discountPrice: true, stocks: { select: { available: true } }, combinations: { select: { variationName: { select: { name: true } }, variationValue: { select: { value: true } } } } } },
+      variations: { take: 30, select: { id: true, regularPrice: true, discountPrice: true, thumbnail: { select: { url: true } }, stocks: { select: { available: true } }, combinations: { select: { variationName: { select: { name: true } }, variationValue: { select: { value: true } } } } } },
     },
   }) : null;
   if (!product && action !== "lead") return Response.json({ success: false, message: "এই পণ্যটি এখন পাওয়া যাচ্ছে না।" }, { status: 404 });
   const variants = (product?.variations || []).map((variant) => ({
     id: variant.id,
     label: variant.combinations.map((part) => `${part.variationName?.name}: ${part.variationValue?.value}`).join(" / ") || "সাধারণ",
+    imageUrl: variant.thumbnail?.url || null,
     price: Number(variant.discountPrice) > 0 && Number(variant.discountPrice) < Number(variant.regularPrice) ? Number(variant.discountPrice) : Number(variant.regularPrice),
     inStock: product.allowOutOfStockOrder || variant.stocks.some((stock) => stock.available > 0),
   }));
-  const buyNowUrl = product ? `/buynow/${encodeURIComponent(product.slug)}` : null;
+  const buyNowUrl = product ? (product.hasVariations || variants.length > 1 ? `/product/${encodeURIComponent(product.slug)}` : `/buynow/${encodeURIComponent(product.slug)}`) : null;
   if (["details", "select"].includes(action) && setting?.aiAutoReplyEnabled && setting.encryptedCredentials && conversation.aiModeEnabled) {
     const inbound = await prisma.chatMessage.create({
       data: {

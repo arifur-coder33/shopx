@@ -1517,6 +1517,9 @@ export default function AdminChatInbox({
                       {message.metadata?.imageWarnings?.length > 0 && (
                         <p className="mt-1 text-xs text-amber-700">পণ্যের ছবি পাঠানো যায়নি; customer-কে পণ্যের লিংক পাঠানো হয়েছে।</p>
                       )}
+                      {message.metadata?.callbackWarning && (
+                        <p className="mt-1 max-w-sm text-xs text-amber-700">{message.metadata.callbackWarning}</p>
+                      )}
                       {reactionGroups.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1" aria-label="Message reactions">
                           {reactionGroups.map((group) => (

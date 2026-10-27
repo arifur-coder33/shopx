@@ -25,6 +25,12 @@ const label = (variant) => variant.combinations.map((part) => `${part.variationN
 const orderable = (product) => product.variations.filter((variant) => product.allowOutOfStockOrder || variant.stocks.some((stock) => stock.available > 0));
 const isDhaka = (value) => /^(?:ঢাকা|ঢাকা জেলা|ঢাকা সিটি|ঢাকা শহর|dhaka|dhaka district|dhaka city|dhaka zilla|dacca)$/iu.test(String(value).trim());
 const money = (value) => `৳${Number(value).toLocaleString("bn-BD")}`;
+const productOrderUrl = (product, siteUrl) => new URL(
+  product.hasVariations || product.variations.length > 1
+    ? `/product/${encodeURIComponent(product.slug)}`
+    : `/buynow/${encodeURIComponent(product.slug)}`,
+  siteUrl,
+).href;
 const fields = { name: "customerName", phone: "phoneNumber", district: "district", thana: "thana", address: "deliveryAddress" };
 const validField = (field, value) => field === "phone" ? /^(?:01[3-9]\d{8}|8801[3-9]\d{8})$/u.test(value)
   : value.length >= (field === "address" ? 5 : 2) && value.length <= (field === "address" ? 250 : 100);
@@ -44,8 +50,8 @@ async function currentProduct(id) {
   if (!id) return null;
   return prisma.product.findFirst({ where: { id, isActive: true, status: "ACTIVE" }, select: {
     id: true, title: true, slug: true, hasVariations: true, allowOutOfStockOrder: true, codAvailable: true, advancePaymentType: true,
-    thumbnail: { select: { url: true } }, gallery: { take: 1, select: { media: { select: { url: true } } } },
-    variations: { orderBy: { id: "asc" }, select: { id: true, regularPrice: true, discountPrice: true,
+    thumbnail: { select: { url: true, name: true } }, gallery: { take: 1, select: { media: { select: { url: true, name: true } } } },
+    variations: { orderBy: { id: "asc" }, select: { id: true, regularPrice: true, discountPrice: true, thumbnail: { select: { url: true, name: true } },
       stocks: { select: { available: true } },
       combinations: { select: { variationName: { select: { name: true } }, variationValue: { select: { value: true } } } },
     } },
@@ -98,7 +104,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
     const priceText = prices.length ? ` দাম ${money(Math.min(...prices))} থেকে।` : "";
     const hasOrderButton = ["MESSENGER", "WHATSAPP"].includes(conversation.channel);
     const urlButton = conversation.channel === "WHATSAPP"
-      ? { title: "ওয়েবসাইটে কিনুন", url: new URL(`/buynow/${encodeURIComponent(selected.slug)}`, await getSiteUrl()).href }
+      ? { title: "ওয়েবসাইটে কিনুন", url: productOrderUrl(selected, await getSiteUrl()) }
       : null;
     return persistReply({
       conversation,
@@ -156,7 +162,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       if (!variants.length) { reply = "দুঃখিত, পণ্যটি এখন অর্ডার করা যাচ্ছে না।"; next = { step: "done" }; }
       else if (product.codAvailable === false || ["DELIVERY_FEE", "PARTIAL"].includes(product.advancePaymentType)) {
         next = { step: "done" };
-        reply = `এই পণ্যে অগ্রিম/অনলাইন পেমেন্ট লাগে। পণ্যটি দেখতে ও অর্ডার করতে এই লিংকে যান: ${new URL(`/buynow/${encodeURIComponent(product.slug)}`, siteUrl).href}`;
+        reply = `এই পণ্যে অগ্রিম/অনলাইন পেমেন্ট লাগে। পণ্যটি দেখতে ও অর্ডার করতে এই লিংকে যান: ${productOrderUrl(product, siteUrl)}`;
       }
       else if (product.hasVariations || variants.length > 1 || variants[0].combinations.length) {
         next = { id: randomUUID(), step: "variant", productId: product.id };
@@ -173,7 +179,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
     }
   } else {
     product = await currentProduct(flow.productId);
-    const websiteUrl = product ? new URL(`/buynow/${encodeURIComponent(product.slug)}`, siteUrl).href : null;
+    const websiteUrl = product ? productOrderUrl(product, siteUrl) : null;
     if (!canCreateOrder && !flow.step.startsWith("lead_")) { next = { ...flow, step: "lead_name" }; reply = "আপনার নাম লিখুন। ফোন নম্বর ও ঠিকানা নিয়ে আমাদের প্রতিনিধি যোগাযোগ করবেন।"; }
     else if (!product && !flow.step.startsWith("lead_")) { next = { step: "done" }; reply = "এই পণ্যটি এখন পাওয়া যাচ্ছে না। অন্য পণ্যটি বেছে দিন।"; }
     else if (flow.variantId && !["product_confirm", "variant", "edit"].includes(flow.step) && !flow.step.startsWith("lead_") && !orderable(product).some((variant) => variant.id === flow.variantId)) {
@@ -196,7 +202,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       const selected = action.startsWith("variant_") ? variants.find((variant) => variant.id === action.slice(8))
         : variants[Number(action.match(/^([1-9]\d*)(?:\.|$)/u)?.[1]) - 1] || variants.find((variant) => label(variant).toLowerCase() === text.toLowerCase());
       if (!selected) reply = "তালিকা থেকে ভ্যারিয়েশনের নাম বা নম্বর বেছে দিন।";
-      else { next = { ...flow, step: flow.editing ? "confirm" : "name", editing: false, variantId: selected.id }; reply = flow.editing ? "" : prompts.name; }
+      else { next = { ...flow, step: flow.editing ? "confirm" : "name", editing: false, variantId: selected.id }; reply = flow.editing ? "" : prompts.name; photo = Boolean(selected.thumbnail?.url || selected.thumbnail?.name); }
     } else if (flow.step === "confirm") {
       if (/^(?:update|সংশোধন|পরিবর্তন)$/iu.test(action)) { next = { ...flow, step: "edit" }; reply = "কোন তথ্যটি সংশোধন করবেন? নাম, ফোন, ঠিকানা বা ভ্যারিয়েশন লিখুন।"; }
       else if (/^(?:place|place order|confirm|হ্যাঁ|হ্যা|yes)$/iu.test(action)) {
@@ -284,8 +290,16 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   if (next?.step === "confirm") options = [{ title: "Place order", action: "place" }, { title: "Update", action: "update" }, { title: "Cancel", action: "cancel" }];
   if (next?.step === "edit") options = Object.entries({ name: "নাম", phone: "ফোন", address: "ঠিকানা", variant: "ভ্যারিয়েশন" }).map(([field, title]) => ({ title, action: `edit_${field}` }));
   if (next?.step === "variant") reply += `\n${options.map((option) => option.title).join("\n")}`;
+  const selectedVariant = product?.variations?.find((variant) => variant.id === next?.variantId);
+  const rawImage = selectedVariant?.thumbnail?.url || (selectedVariant?.thumbnail?.name ? `/uploads/${selectedVariant.thumbnail.name}` : null)
+    || product?.thumbnail?.url || (product?.thumbnail?.name ? `/uploads/${product.thumbnail.name}` : null)
+    || product?.gallery?.[0]?.media?.url || (product?.gallery?.[0]?.media?.name ? `/uploads/${product.gallery[0].media.name}` : null);
+  let imageUrl = null;
+  if (photo && rawImage) {
+    try { const parsed = new URL(rawImage, siteUrl); if (parsed.protocol === "https:") imageUrl = parsed.href; } catch { imageUrl = null; }
+  }
   return persistReply({ conversation, inbound, credentials, text: reply, flow: next || { step: "done" }, options,
-    imageUrl: photo ? product?.thumbnail?.url || product?.gallery?.[0]?.media?.url : null, orderNo, trackingUrl, invoiceUrl });
+    imageUrl, orderNo, trackingUrl, invoiceUrl });
 }
 
 async function canContinue(conversation, inbound) {

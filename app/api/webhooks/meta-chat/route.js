@@ -255,14 +255,25 @@ export async function POST(request) {
       }
       const messengerProfiles = new Map();
       for (const event of credentials.messengerEnabled && !isInstagramPayload ? entry.messaging || [] : []) {
-        if (event.postback?.payload && event.sender?.id) {
-          const payload = String(event.postback.payload).slice(0, 200);
+        const messengerButtonPayload = event.postback?.payload || event.message?.quick_reply?.payload || event.message?.button?.payload;
+        if ((event.postback || event.message?.quick_reply || event.message?.button) && event.sender?.id) {
+          const payload = String(messengerButtonPayload || "").slice(0, 200);
           const productAction = chatProductAction(payload);
-          if (productAction) {
-            const profile = messengerProfiles.get(event.sender.id) || await getMessengerCustomerProfile(event.sender.id, credentials);
-            messengerProfiles.set(event.sender.id, profile);
-            await saveInboundMessage({ channel: "MESSENGER", externalUserId: event.sender.id, customerName: profile?.name || null, profilePicUrl: profile?.profilePicUrl || null, messageId: `postback-${createHash("sha256").update(`${event.sender.id}:${event.timestamp}:${payload}:${event.postback.mid || ""}`).digest("hex")}`, content: productAction.action === "order" ? "অর্ডার করতে চাই" : productAction.action === "select" ? "এই পণ্যটি নির্বাচন করলাম। এটি সম্পর্কে বিস্তারিত জানান।" : "এটা সম্পর্কে আরও জানতে চাই", metadata: { timestamp: event.timestamp, ...productAction } });
-          }
+          const profile = messengerProfiles.get(event.sender.id) || await getMessengerCustomerProfile(event.sender.id, credentials);
+          messengerProfiles.set(event.sender.id, profile);
+          const messageId = event.message?.mid || `postback-${createHash("sha256").update(`${event.sender.id}:${event.timestamp}:${payload}:${event.postback?.mid || ""}:${event.postback?.title || ""}`).digest("hex")}`;
+          const content = productAction
+            ? productAction.action === "order" ? "অর্ডার করতে চাই" : productAction.action === "select" ? "এই পণ্যটি নির্বাচন করলাম। এটি সম্পর্কে বিস্তারিত জানান।" : "এটা সম্পর্কে আরও জানতে চাই"
+            : String(event.postback?.title || event.message?.text || payload || "Messenger button চাপা হয়েছে।").slice(0, 500);
+          await saveInboundMessage({
+            channel: "MESSENGER",
+            externalUserId: event.sender.id,
+            customerName: profile?.name || null,
+            profilePicUrl: profile?.profilePicUrl || null,
+            messageId,
+            content,
+            metadata: { timestamp: event.timestamp, ...(productAction || {}), ...(event.message?.quick_reply?.payload && { quickReplyPayload: payload }), ...(event.postback && { type: "MESSENGER_POSTBACK" }) },
+          });
           continue;
         }
         if (event.reaction || event.message_reaction || event.message_reactions || event.message?.reaction) {
