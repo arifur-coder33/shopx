@@ -885,7 +885,9 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
   const quickReplyProductId = String(
     currentMetadata?.quickReplyPayload || "",
   ).match(/^(?:details|select):([a-zA-Z0-9_-]{5,80})$/u)?.[1];
-  if (quickReplyProductId) selectedProductId = quickReplyProductId;
+  if (quickReplyProductId || currentMetadata?.productId) selectedProductId = quickReplyProductId || currentMetadata.productId;
+  const selectingPreviousProduct = /(?:এটি বেছে নি|এই পণ্যটি নির্বাচন|\b(?:ei|eta|eita)\s+beche\s+(?:nilam|nisi|nibo)\b)/iu.test(text);
+  if (!selectedProductId && selectingPreviousProduct && latestOptions.length === 1) selectedProductId = latestOptions[0].id;
   if (!selectedProductId) {
     const matches = latestOptions.filter(
       (product) => product.title && text.includes(product.title.toLowerCase()),
@@ -926,6 +928,7 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
   );
   const requestsAnotherProduct =
     !selectedProductId &&
+    !selectingPreviousProduct &&
     !rememberedCategoryIds.length &&
     newProductTerms.length > 0 &&
     (/(?:\b(?:show|find|need|want|have|available|ache|ase|chai|lagbe|dekhao|dekhan|dekhte|kono)\b|দেখাও|দেখান|দেখতে|আছে|লাগবে|চাই|কোনো)/iu.test(
@@ -994,7 +997,7 @@ function getProductMemory(history, currentMessage, currentMetadata = {}) {
     latestOptions,
     previousShownIds,
     selectedProductId: chosenProductId,
-    explicitSelection: /^(?:select|details):/u.test(String(currentMetadata?.quickReplyPayload || "")),
+    explicitSelection: /^(?:select|details):/u.test(String(currentMetadata?.quickReplyPayload || "")) || ["select", "details"].includes(currentMetadata?.action) || (selectingPreviousProduct && Boolean(chosenProductId)),
     catalogProductIds,
     catalogCategoryIds: rememberedCategoryIds,
     newProductSearch: requestsAnotherProduct,
@@ -4016,22 +4019,11 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId, leaseTok
       /(?:অর্ডার\s*(?:করতে|করব|করবো|দিতে)|\border\s*(?:korbo|korte|dite|now)\b|কিনতে চাই|নিতে চাই)/iu.test(
         inbound.content,
       );
-    const selectedCardId = String(inbound.metadata?.quickReplyPayload || "").match(/^select:([a-zA-Z0-9_-]{5,80})$/u)?.[1];
-    const selectedCardProduct = selectedCardId
-      ? productContext.products.find((product) => product.id === selectedCardId)
-      : null;
     const rejectsPreviousProductMatch =
       /(?:\b(?:wrong\s+product|not\s+(?:this|same|matching)|doesn['’]?t\s+match|does\s+not\s+match)\b|(?:এটা|এইটা|এটি|eita|eta|this)\s*(?:মিলে\s*না|মেলেনি|ম্যাচ\s*(?:হয়নি|হয়নি|করে\s*না)|মিলেনা|mile\s*na[iy]|match\s*(?:kore\s*na|hoyni)|mila\s*na|না|vul|ভুল)|(?:মিলে\s*না|ম্যাচ\s*(?:হয়নি|হয়নি|করে\s*না)|মিলেনা|mile\s*na[iy]|ভুল\s*(?:প্রোডাক্ট|পণ্য)))/iu.test(
         inbound.content,
       );
-    let generated = selectedCardProduct
-      ? {
-          text: `আপনি “${selectedCardProduct.title}” পণ্যটি বেছে নিয়েছেন।${selectedCardProduct.variants.some((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice) > 0) ? ` দাম ${new Intl.NumberFormat("bn-BD", { style: "currency", currency: "BDT", maximumFractionDigits: 0 }).format(Math.min(...selectedCardProduct.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((price) => price > 0)))} থেকে।` : ""} এই পণ্যটি সম্পর্কে প্রশ্ন করুন, অথবা অর্ডার করতে “অর্ডার করতে চাই” বাটন চাপুন।`,
-          imageMatch: "none",
-          products: [],
-          selectedProductId: selectedCardProduct.id,
-        }
-      : contactOnlyRequest
+    let generated = contactOnlyRequest
       ? {
           text: "আপনার নাম, ফোন নম্বর ও সম্পূর্ণ ঠিকানা দিন। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।",
           imageMatch: "none",
@@ -4227,7 +4219,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId, leaseTok
       aiProvider: aiProviderUsed,
       aiModel: aiModelUsed,
       batchedMessageIds: inbound.metadata?.batchedMessageIds || [inbound.id],
-      ...(/^(?:select|details):/u.test(String(inbound.metadata?.quickReplyPayload || "")) && { chatOrderFlow: { step: "done", reason: "product_selection" } }),
+      ...(productMemory.explicitSelection && { chatOrderFlow: { step: "done", reason: "product_selection" } }),
       ...(contactOnlyRequest && {
         type: "CONTACT_FORM",
         productId: productMemory.selectedProductId || null,

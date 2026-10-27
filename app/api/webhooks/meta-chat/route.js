@@ -272,7 +272,7 @@ export async function POST(request) {
             profilePicUrl: profile?.profilePicUrl || null,
             messageId,
             content,
-            metadata: { timestamp: event.timestamp, ...(productAction || {}), ...(event.message?.quick_reply?.payload && { quickReplyPayload: payload }), ...(event.postback && { type: "MESSENGER_POSTBACK" }) },
+            metadata: { timestamp: event.timestamp, ...(productAction || {}), ...(payload && { quickReplyPayload: payload }), ...(event.postback && { type: "MESSENGER_POSTBACK" }) },
           });
           continue;
         }

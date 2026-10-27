@@ -27,6 +27,17 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
           } : { type: "text", text: { body: text, preview_url: true } }),
         }
       : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...reply, message: { text, ...(conversation.channel === "MESSENGER" && quickReplies.length && { quick_replies: quickReplies.slice(0, 10).map((option) => ({ content_type: "text", title: String(typeof option === "string" ? option : option.title).slice(0, 20), payload: String(typeof option === "string" ? option : option.payload).slice(0, 1000) })) }) } };
+    if (conversation.channel === "MESSENGER" && urlButton) {
+      const buttons = (Array.isArray(urlButton) ? urlButton : [urlButton]).slice(0, 3);
+      payload.message = { attachment: { type: "template", payload: {
+        template_type: "button", text: text.slice(0, 640),
+        buttons: buttons.map((button) => {
+          const target = new URL(button.url);
+          if (target.protocol !== "https:") throw new Error("URL buttons require HTTPS.");
+          return { type: "web_url", title: String(button.title).slice(0, 20), url: target.href };
+        }),
+      } } };
+    }
     return {
       provider: isWhatsApp ? "WHATSAPP" : "META",
       url: `https://graph.facebook.com/${version}/${resource}/messages`,
@@ -136,7 +147,11 @@ export async function sendMessengerProductCard(conversation, product, credential
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result?.error?.message || "Messenger product card পাঠানো যায়নি।");
-  return { id: result.message_id || null, secondaryIds: [], warning: subscription.warning };
+  const fallback = !subscription.ready ? await sendChatChannelTextMessage(conversation, "পণ্যটি সম্পর্কে জানতে বা অর্ডার করতে বেছে নিন।", credentials, null, [
+    { title: "এটি বেছে নিন", payload: `select:${product.id}` },
+    { title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
+  ]) : null;
+  return { id: result.message_id || null, secondaryIds: fallback?.id ? [fallback.id] : [], warning: subscription.warning };
 }
 
 export async function sendMessengerProductCarousel(conversation, products, credentials, seeMoreUrl = null) {
@@ -174,10 +189,12 @@ export async function sendMessengerProductCarousel(conversation, products, crede
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result?.error?.message || "Messenger product carousel পাঠানো যায়নি।");
-  return { id: result.message_id || null, secondaryIds: [], warning: subscription.warning };
+  const fallback = !subscription.ready ? await sendChatChannelTextMessage(conversation, "কোন পণ্যটি সম্পর্কে জানতে চান?", credentials, null,
+    products.slice(0, 10).map((product, index) => ({ title: `${index + 1}. ${product.title}`.slice(0, 20), payload: `select:${product.id}` }))) : null;
+  return { id: result.message_id || null, secondaryIds: fallback?.id ? [fallback.id] : [], warning: subscription.warning };
 }
 
-export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null, selectionProductId = null) {
+export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null, selectionProductId = null, imageBytes = null) {
   const url = new URL(imageUrl);
   if (url.protocol !== "https:") throw new Error("Product photo URL must use HTTPS.");
   if (conversation.channel === "WEBSITE") return { id: null, secondaryIds: [], warning: null };
@@ -199,7 +216,7 @@ export async function sendChatChannelImageMessage(conversation, caption, imageUr
       const isCloudinary = imageHost === "cloudinary.com" || imageHost.endsWith(".cloudinary.com");
       if (imageHost !== siteHost && !isCloudinary) throw new Error("WhatsApp-এ পাঠানোর ছবিটি আমাদের site বা Cloudinary থেকে হতে হবে।");
 
-      const sourceResponse = await fetch(url, {
+      const sourceResponse = imageBytes ? new Response(imageBytes, { headers: { "Content-Type": "image/png" } }) : await fetch(url, {
         redirect: "error",
         cache: "no-store",
         signal: AbortSignal.timeout(20000),
@@ -284,7 +301,16 @@ export async function sendChatChannelImageMessage(conversation, caption, imageUr
         },
       },
     };
-    const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(15000) });
+    let upload;
+    if (imageBytes && conversation.channel === "MESSENGER") {
+      const jpeg = await sharp(imageBytes).jpeg({ quality: 88 }).toBuffer();
+      upload = new FormData();
+      upload.set("recipient", JSON.stringify(body.recipient));
+      upload.set("messaging_type", "RESPONSE");
+      upload.set("message", JSON.stringify({ attachment: { type: "image", payload: { is_reusable: true } } }));
+      upload.set("filedata", new Blob([jpeg], { type: "image/jpeg" }), "order-confirmation.jpg");
+    }
+    const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${token}`, ...(!upload && { "Content-Type": "application/json" }) }, body: upload || JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(20000) });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) { const error = new Error(result?.error?.message || "Product photo পাঠানো যায়নি।"); error.code = result?.error?.code || `meta_http_${response.status}`; throw error; }
     const id = isWhatsApp ? result?.messages?.[0]?.id || null : result?.message_id || null;

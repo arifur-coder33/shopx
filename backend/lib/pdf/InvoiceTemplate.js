@@ -1,190 +1,16 @@
-// import QRCode from "qrcode";
-
-// export async function getInvoiceTemplate(orderData) {
-//   // ১. QR কোড জেনারেট (Data URL)
-//   const invoiceLink is built from the current request origin.
-//   const qrCodeDataUrl = await QRCode.toDataURL(invoiceLink);
-
-//   // লোগো URL (পূর্ণাঙ্গ URL হতে হবে অথবা Base64)
-//   const logo URL is built from the current request origin.
-
-//   // তারিখ ফরম্যাট
-//   const dateOptions = { year: "numeric", month: "long", day: "numeric" };
-//   const formattedDate = new Date(orderData.createdAt).toLocaleDateString(
-//     "en-BD",
-//     dateOptions
-//   );
-
-//   // ক্যালকুলেশন
-//   const subTotal = orderData.orderItems.reduce(
-//     (acc, item) => acc + item.price * item.quantity,
-//     0
-//   );
-//   const total =
-//     subTotal + (orderData.deliveryCharge || 0) + (orderData.tax || 0);
-
-//   // আইটেম রো জেনারেট
-//   const itemsHtml = orderData.orderItems
-//     .map(
-//       (item, index) => `
-//     <tr class="border-b">
-//         <td class="p-2 text-center">${index + 1}</td>
-//         <td class="p-2">
-//             <div class="font-bold">${item.productName}</div>
-//             <div class="text-xs text-gray-500">
-//                 ${
-//                   item.combinations
-//                     ? JSON.parse(item.combinations)
-//                         .map((c) => `${c.name}: ${c.value}`)
-//                         .join(", ")
-//                     : ""
-//                 }
-//             </div>
-//         </td>
-//         <td class="p-2 text-center">${item.quantity}</td>
-//         <td class="p-2 text-right">${item.price.toLocaleString("en-BD")}</td>
-//         <td class="p-2 text-right">${(
-//           item.price * item.quantity
-//         ).toLocaleString("en-BD")}</td>
-//     </tr>
-//   `
-//     )
-//     .join("");
-
-//   // ২. HTML রিটার্ন (Tailwind CSS CDN ব্যবহার করা সহজ উপায়)
-//   return `
-//     <!DOCTYPE html>
-//     <html>
-//     <head>
-//         <meta charset="UTF-8">
-//         <title>Invoice - ${orderData.orderNo}</title>
-//         <script src="https://cdn.tailwindcss.com"></script>
-//         <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
-//         <style>
-//             body { font-family: 'Hind Siliguri', sans-serif; }
-//             .print-area { padding: 40px; max-width: 800px; margin: 0 auto; }
-//         </style>
-//     </head>
-//     <body class="bg-white text-sm text-gray-800">
-//         <div class="print-area">
-
-//             <!-- Header -->
-//             <div class="flex justify-between items-start mb-8">
-//                 <div class="flex gap-4">
-//                     <img src="${logoUrl}" class="w-16 h-16 object-contain" />
-//                     <div>
-//                         <h1 class="text-xl font-bold text-blue-600">BD Mart 24</h1>
-//                         <p>Uttara Dhaka, Bangladesh</p>
-//                         <p>Phone: +880 1XXXXXXXXX</p>
-//                         <p>Email: hello@bdmart24.com</p>
-//                     </div>
-//                 </div>
-//                 <div class="text-right">
-//                     <h2 class="text-3xl font-bold text-gray-700 mb-2">INVOICE</h2>
-//                     <p><strong>Invoice #:</strong> ${orderData.orderNo}</p>
-//                     <p><strong>Date:</strong> ${formattedDate}</p>
-//                     <p><strong>Due Date:</strong> ${
-//                       orderData.dueDate || "N/A"
-//                     }</p>
-//                 </div>
-//             </div>
-
-//             <!-- Bill To / Ship To -->
-//             <div class="flex justify-between gap-8 mb-8 border-t pt-4">
-//                 <div class="w-1/2">
-//                     <h3 class="font-bold text-blue-600 mb-2">BILL TO</h3>
-//                     <p class="font-bold">${orderData.customerName}</p>
-//                     <p>${orderData.deliveryAddress}</p>
-//                     <p>${orderData.phoneNumber}</p>
-//                     <p>${orderData.email}</p>
-//                 </div>
-//                 <div class="w-1/2">
-//                     <h3 class="font-bold text-blue-600 mb-2">SHIP TO</h3>
-//                     <p class="font-bold">${orderData.customerName}</p>
-//                     <p>${orderData.deliveryAddress}</p>
-//                     <p>${orderData.phoneNumber}</p>
-//                 </div>
-//             </div>
-
-//             <!-- Table -->
-//             <table class="w-full mb-8 border-collapse">
-//                 <thead>
-//                     <tr class="bg-blue-600 text-white">
-//                         <th class="p-2 text-center w-10">#</th>
-//                         <th class="p-2 text-left">Item & Description</th>
-//                         <th class="p-2 text-center w-16">Qty</th>
-//                         <th class="p-2 text-right w-24">Price</th>
-//                         <th class="p-2 text-right w-24">Total</th>
-//                     </tr>
-//                 </thead>
-//                 <tbody>
-//                     ${itemsHtml}
-//                 </tbody>
-//             </table>
-
-//             <!-- Totals -->
-//             <div class="flex justify-end mb-12">
-//                 <div class="w-64">
-//                     <div class="flex justify-between mb-2">
-//                         <span>Subtotal:</span>
-//                         <span>${subTotal.toLocaleString("en-BD")} Tk</span>
-//                     </div>
-//                     ${
-//                       orderData.deliveryCharge
-//                         ? `
-//                     <div class="flex justify-between mb-2">
-//                         <span>Shipping:</span>
-//                         <span>${orderData.deliveryCharge.toLocaleString(
-//                           "en-BD"
-//                         )} Tk</span>
-//                     </div>`
-//                         : ""
-//                     }
-//                      ${
-//                        orderData.tax
-//                          ? `
-//                     <div class="flex justify-between mb-2">
-//                         <span>Tax:</span>
-//                         <span>${orderData.tax.toLocaleString("en-BD")} Tk</span>
-//                     </div>`
-//                          : ""
-//                      }
-//                     <div class="flex justify-between border-t border-gray-300 pt-2 font-bold text-blue-600 text-lg">
-//                         <span>GRAND TOTAL:</span>
-//                         <span>${total.toLocaleString("en-BD")} Tk</span>
-//                     </div>
-//                 </div>
-//             </div>
-
-//             <!-- Footer & QR -->
-//             <div class="flex justify-between items-end mt-auto pt-8 border-t">
-//                 <div class="text-xs text-gray-500 max-w-md">
-//                     <p class="font-bold text-gray-700">Notes:</p>
-//                     <p>${orderData.note || "Thanks for your business!"}</p>
-//                     <p class="mt-2">Payment Method: ${
-//                       orderData.paymentMethod
-//                     }</p>
-//                 </div>
-//                 <div class="text-center">
-//                     <img src="${qrCodeDataUrl}" class="w-20 h-20 mb-1" />
-//                     <p class="text-[10px] text-gray-500">Scan to View Online</p>
-//                 </div>
-//             </div>
-
-//             <div class="text-center text-xs text-gray-400 mt-8">
-//                 Thank you for doing business with us. <br/> www.bdmart24.com
-//             </div>
-//         </div>
-//     </body>
-//     </html>
-//   `;
-// }
 import fs from "fs";
 import path from "path";
 import QRCode from "qrcode";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/gu, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+
+function invoiceCombinations(value) {
+  try {
+    const rows = typeof value === "string" ? JSON.parse(value) : value;
+    return Array.isArray(rows) ? rows.filter((row) => row && typeof row === "object") : [];
+  } catch { return []; }
+}
 
 export async function getInvoiceTemplate(orderData) {
   const siteUrl = await getSiteUrl();
@@ -253,7 +79,7 @@ export async function getInvoiceTemplate(orderData) {
             <div class="item-desc">
                 ${
                   item.combinations
-                    ? JSON.parse(item.combinations)
+                    ? invoiceCombinations(item.combinations)
                         .map((c) => `${escapeHtml(c.name)}: ${escapeHtml(c.value)}`)
                         .join(", ")
                     : ""

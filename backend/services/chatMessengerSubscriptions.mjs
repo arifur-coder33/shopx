@@ -20,18 +20,15 @@ export async function ensureMessengerPostbacks(credentials, { force = false, fet
     const response = await fetchImpl(`${endpoint}?fields=id,subscribed_fields`, { headers, cache: "no-store", signal: AbortSignal.timeout(5000) });
     const result = await response.json();
     if (!response.ok || !Array.isArray(result.data)) throw new Error(`subscription_read_${result.error?.code || response.status}`);
-    // With several apps, only treat the page as ready when an app is already
-    // subscribed to both callback types. Avoid changing another app's fields.
+    let subscribedApp = result.data[0];
+    // Another app's subscription does not deliver callbacks to this app.
     if (result.data.length > 1) {
-      const hasPostbackSubscription = result.data.some((app) => requiredFields.every((field) => (app.subscribed_fields || []).includes(field)));
-      if (hasPostbackSubscription) {
-        const resultValue = { ready: true, warning: null };
-        checks.set(cacheKey, { result: resultValue, expiresAt: Date.now() + 3600000 });
-        return resultValue;
-      }
-      throw new Error("multiple_apps_manual_subscription_required");
+      const appResponse = await fetchImpl(`https://graph.facebook.com/${version}/app?fields=id`, { headers, cache: "no-store", signal: AbortSignal.timeout(5000) });
+      const app = await appResponse.json();
+      if (!appResponse.ok || !app.id) throw new Error("current_app_lookup_failed");
+      subscribedApp = result.data.find((entry) => entry.id === app.id);
     }
-    const currentFields = result.data[0]?.subscribed_fields || [];
+    const currentFields = subscribedApp?.subscribed_fields || [];
     if (!requiredFields.every((field) => currentFields.includes(field))) {
       const subscribedFields = [...new Set([...currentFields, ...requiredFields])];
       const saved = await fetchImpl(endpoint, { method: "POST", headers, body: JSON.stringify({ subscribed_fields: subscribedFields }), cache: "no-store", signal: AbortSignal.timeout(5000) });

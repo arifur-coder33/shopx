@@ -19,6 +19,7 @@ export function mergeInboundBatch(messages, inbound) {
     metadata: { ...(imageMessage?.metadata || {}), ...(actionMessage?.metadata || {}), ...(inbound.metadata || {}),
       // Later written input can correct/cancel an earlier button action.
       ...(actionMessage && { quickReplyPayload: actionMessage.id === inbound.id ? actionMessage.metadata.quickReplyPayload : null,
+        action: actionMessage.metadata.action || String(actionMessage.metadata.quickReplyPayload).split(":")[0],
         productId: actionMessage.metadata.productId || String(actionMessage.metadata.quickReplyPayload).match(/^(?:select|details|order):(.+)$/u)?.[1] }),
       ...(imageMessage?.metadata?.image && { image: imageMessage.metadata.image }),
       ...(imageMessage?.metadata?.attachments && { attachments: imageMessage.metadata.attachments }),

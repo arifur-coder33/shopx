@@ -7,6 +7,10 @@
 // });
 const nextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  outputFileTracingIncludes: {
+    "/api/pdf/invoice": ["./node_modules/@sparticuz/chromium/bin/**/*", "./public/fonts/**/*", "./public/android-chrome-192x192.png"],
+  },
   // cacheComponents: true,
   images: {
     qualities: [70, 75],

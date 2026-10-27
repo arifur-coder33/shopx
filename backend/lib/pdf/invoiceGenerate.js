@@ -8,14 +8,13 @@ const getBrowser = async () => {
     // Vercel / Production environment
     return await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: true,
       ignoreHTTPSErrors: true,
     });
   } else {
     // Local development
-    const puppeteerLocal = require("puppeteer");
+    const { default: puppeteerLocal } = await import("puppeteer");
     return await puppeteerLocal.launch({
       headless: "new",
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -38,6 +37,8 @@ export async function getInvoicePDF(orderData) {
 
     // ২. ফাস্ট রেন্ডারিং (যেহেতু সব ইনলাইন, তাই domcontentloaded যথেষ্ট)
     await page.setContent(htmlContent, { waitUntil: "domcontentloaded" });
+
+    await page.evaluate(() => document.fonts.ready);
 
     // ৩. PDF জেনারেট
     const pdfBuffer = await page.pdf({
