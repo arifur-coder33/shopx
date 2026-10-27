@@ -4,7 +4,8 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import { createOrder } from "@/backend/serverActions/orderActions";
 import { readMessengerOrderToken } from "@/backend/services/chatMessengerOrderLink";
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
-import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
+import { sendChatChannelImageMessage, sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
+import { signedChatOrderCardUrl } from "@/backend/utils/chatOrderCard.mjs";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 
@@ -53,6 +54,7 @@ export async function POST(request) {
   let orderNo = null;
   let trackingUrl = null;
   let invoiceUrl = null;
+  let orderCardUrl = null;
   if (canCreateOrder) {
     const district = clean(body.district, 100);
     const thana = clean(body.thana, 100);
@@ -69,11 +71,12 @@ export async function POST(request) {
     const siteUrl = await getSiteUrl();
     trackingUrl = new URL(`/tracking/?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(phoneNumber)}`, siteUrl).toString();
     invoiceUrl = new URL(`/api/pdf/invoice?o=${encodeURIComponent(orderNo)}&p=${encodeURIComponent(phoneNumber)}`, siteUrl).toString();
+    orderCardUrl = signedChatOrderCardUrl(orderNo, phoneNumber, siteUrl);
   }
-  const reply = canCreateOrder ? `আপনার অর্ডারটি হয়েছে। অর্ডার নম্বর: ${orderNo}। ট্র্যাক করুন: ${trackingUrl}। ইনভয়েস দেখুন: ${invoiceUrl}` : "তথ্য পেয়েছি। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।";
+  const reply = canCreateOrder ? `Congratulations! Your order has been placed successfully. 🎉\nঅর্ডার নম্বর: ${orderNo}। ট্র্যাক করুন: ${trackingUrl}। ইনভয়েস দেখুন: ${invoiceUrl}` : "তথ্য পেয়েছি। আমাদের একজন প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।";
   const [inbound, outbound] = await prisma.$transaction([
     prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "MESSENGER", direction: "INBOUND", authorType: "CUSTOMER", content: `${product.title}\nনাম: ${customerName}\nফোন: ${phoneNumber}\nঠিকানা: ${deliveryAddress}${canCreateOrder ? `, ${clean(body.thana)}, ${clean(body.district)}` : ""}`, deliveryStatus: "DELIVERED", metadata: { type: canCreateOrder ? "CHAT_ORDER_FORM" : "CHAT_CONTACT_FORM", productId: product.id, orderNo } } }),
-    prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "MESSENGER", direction: "OUTBOUND", authorType: "AI", content: reply, deliveryStatus: "SENDING", metadata: { type: canCreateOrder ? "ORDER_PLACED" : "CONTACT_RECEIVED", productId: product.id, orderNo, trackingUrl, invoiceUrl } } }),
+    prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "MESSENGER", direction: "OUTBOUND", authorType: "AI", content: reply, deliveryStatus: "SENDING", metadata: { type: canCreateOrder ? "ORDER_PLACED" : "CONTACT_RECEIVED", productId: product.id, orderNo, trackingUrl, invoiceUrl, ...(orderCardUrl && { image: { url: orderCardUrl } }) } } }),
     prisma.chatConversation.update({ where: { id: conversation.id }, data: { customerName, customerPhone: phoneNumber, normalizedPhone: phoneNumber.startsWith("88") ? `0${phoneNumber.slice(2)}` : phoneNumber, status: canCreateOrder ? "OPEN" : "PENDING", ...(!canCreateOrder && { aiModeEnabled: false }), unreadCount: { increment: 1 }, lastMessageAt: new Date() } }),
   ]);
   after(async () => {
@@ -83,6 +86,14 @@ export async function POST(request) {
       if (!credentials) throw new Error("Messenger credentials unavailable.");
       const sent = await sendChatChannelTextMessage(conversation, reply, credentials);
       await prisma.chatMessage.update({ where: { id: outbound.id }, data: { deliveryStatus: "SENT", ...(sent.id && { externalMessageId: sent.id }) } });
+      if (orderCardUrl) {
+        try {
+          const imageSent = await sendChatChannelImageMessage(conversation, "🎉 Congratulations! Your order has been placed successfully.", orderCardUrl, credentials);
+          await prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "MESSENGER", direction: "OUTBOUND", authorType: "AI", content: "🎉 Order confirmation card", deliveryStatus: "SENT", ...(imageSent.id && { externalMessageId: imageSent.id }), metadata: { type: "ORDER_CONFIRMATION_CARD", image: { url: orderCardUrl }, orderNo, invoiceUrl } } });
+        } catch (error) {
+          console.warn("Messenger order card could not be delivered:", error?.message || error);
+        }
+      }
     } catch (error) {
       console.warn("Messenger form confirmation could not be delivered:", error?.message || error);
       await prisma.chatMessage.update({ where: { id: outbound.id }, data: { deliveryStatus: "FAILED" } }).catch(() => {});

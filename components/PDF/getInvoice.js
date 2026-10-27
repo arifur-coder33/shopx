@@ -17,6 +17,11 @@ export default function InvoiceButton({ orderData, actionType }) {
     return new Blob([arr], { type: type });
   };
   const handleDownloadAPI = async () => {
+    if (actionType === "view" && orderData?.orderNo && orderData?.phoneNumber) {
+      const params = new URLSearchParams({ o: String(orderData.orderNo), p: String(orderData.phoneNumber) });
+      window.open(`/api/pdf/invoice?${params.toString()}`, "_blank", "noopener,noreferrer");
+      return;
+    }
     try {
       setIsLoading(true);
 
