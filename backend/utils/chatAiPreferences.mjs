@@ -50,11 +50,12 @@ export function shouldAutoReply({ globalEnabled, conversation, inbound }) {
   return Boolean(globalEnabled && conversation && conversation.aiModeEnabled && !conversation.assignedToId && conversation.status === "OPEN" && inbound?.authorType === "CUSTOMER" && inbound?.direction === "INBOUND");
 }
 
-export function needsHumanFollowUp({ messageText, hasVerifiedOrder }) {
+export function needsHumanFollowUp({ messageText }) {
   if (isPolicyInformationQuestion(messageText)) return false;
-  const normalizedDigits = String(messageText || "").replace(/[০-৯]/g, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
-  if (isOrderStatusQuestion(messageText) && /\b\d{5,9}\b/u.test(normalizedDigits)) return customerRequiresHumanFollowUp(messageText);
-  return customerRequiresHumanFollowUp(messageText) || (ACCOUNT_REQUEST_PATTERN.test(String(messageText || "")) && !hasVerifiedOrder);
+  // Mentioning an order is not itself a request for a human. In particular,
+  // purchase intent such as "order korbo" must stay in the checkout flow.
+  // Missing order verification is handled by AI asking for the needed details.
+  return customerRequiresHumanFollowUp(messageText);
 }
 
 export function isPolicyInformationQuestion(text) {

@@ -1778,6 +1778,7 @@ model ChatSetting {
   messengerEnabled     Boolean  @default(false)
   instagramEnabled     Boolean  @default(false)
   tiktokEnabled        Boolean  @default(false)
+  facebookCommentAutoReplyEnabled Boolean @default(false)
   aiAutoReplyEnabled   Boolean  @default(false)
   aiProvider           String   @default("OPENAI")
   openaiModel          String   @default("gpt-6-luna")
@@ -1794,4 +1795,29 @@ model ChatSetting {
   updatedAt            DateTime @updatedAt
   createdBy            String?
   updatedBy            String?
+}
+
+model FacebookPageCommentReply {
+  id              String   @id @default(cuid())
+  commentId       String   @unique
+  pageId          String
+  postId          String?
+  authorId        String?
+  authorName      String?
+  commentText     String   @db.Text
+  commentCreatedAt DateTime?
+  replyText       String?  @db.Text
+  replyCommentId  String?
+  privateReplyText String? @db.Text
+  privateReplyMessageId String?
+  privateReplyAt  DateTime?
+  privateReplyStatus String?
+  privateReplyError String?
+  status          String   @default("PENDING")
+  errorCode       String?
+  createdAt       DateTime @default(now())
+  repliedAt       DateTime?
+
+  @@index([pageId, createdAt])
+  @@index([status, createdAt])
 }

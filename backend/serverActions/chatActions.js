@@ -13,6 +13,7 @@ import { sendChatPushTestNotification } from "@/backend/services/chatPushService
 import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAdapter";
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 import { ensureMessengerPostbacks } from "@/backend/services/chatMessengerSubscriptions.mjs";
+import { sendFacebookPageCommentPrivateReply } from "@/backend/services/facebookPageCommentReplyService";
 import { messengerReaction, messengerReactionPayload } from "@/backend/utils/chatMessengerReaction.mjs";
 import {
   DEFAULT_CHAT_AI_MODELS,
@@ -25,6 +26,67 @@ import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary"
 const SETTING_ID = "primary";
 const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "instagramAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion", "tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret", "openaiApiKey", "googleAiStudioApiKey"];
 const trim = (value) => String(value ?? "").trim();
+
+export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
+  try {
+    await requireProcurementPermission("chat", "view");
+    const rows = await prisma.facebookPageCommentReply.findMany({
+      orderBy: { createdAt: "desc" },
+      take: Math.min(Math.max(Number(limit) || 100, 1), 250),
+      select: {
+        id: true, commentId: true, pageId: true, postId: true, authorName: true,
+        commentText: true, commentCreatedAt: true, replyText: true, status: true,
+        errorCode: true, createdAt: true, repliedAt: true, privateReplyText: true,
+        privateReplyAt: true, privateReplyStatus: true, privateReplyError: true,
+      },
+    });
+    return { success: true, data: rows };
+  } catch (error) { return actionError(error, "Facebook comment history load করা যায়নি।"); }
+}
+
+export async function sendFacebookPageCommentPrivateReplyAction(id, message) {
+  try {
+    await requireProcurementPermission("chat", "update");
+    const safeId = trim(id);
+    const safeMessage = trim(message);
+    if (!safeId || !safeMessage || safeMessage.length > 1000) throw new Error("Inbox message 1–1000 অক্ষরের মধ্যে লিখুন।");
+    const setting = await getSetting();
+    const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
+    if (!credentials.messengerPageId || !credentials.messengerPageAccessToken) throw new Error("Chat Settings-এ Facebook Page ID ও Page Access Token configure করুন।");
+    const data = await sendFacebookPageCommentPrivateReply({ id: safeId, message: safeMessage, credentials });
+    revalidatePath("/admin/chat/comments");
+    return { success: true, data };
+  } catch (error) { return actionError(error, "Comment থেকে inbox reply পাঠানো যায়নি।"); }
+}
+
+export async function getChatAiTeachingsAction() {
+  try {
+    await requireProcurementPermission("chat", "view");
+    const setting = await prisma.chatSetting.findUnique({ where: { id: SETTING_ID }, select: { aiReplyExamples: true } });
+    const teachings = Array.isArray(setting?.aiReplyExamples) ? setting.aiReplyExamples.filter((item) => item?.question && item?.answer).map((item) => ({ question: String(item.question), answer: String(item.answer) })) : [];
+    return { success: true, data: teachings };
+  } catch (error) { return actionError(error, "AI Teach data load করা যায়নি।"); }
+}
+
+export async function saveChatAiTeachingsAction(teachings) {
+  try {
+    const userId = await requireProcurementPermission("chat", "update");
+    if (!Array.isArray(teachings) || teachings.length > 40) throw new Error("সর্বোচ্চ ৪০টি teaching example রাখা যাবে।");
+    const cleanTeachings = teachings.map((item) => ({
+      question: String(item?.question || "").trim().replace(/[<>]/g, "").slice(0, 300),
+      answer: String(item?.answer || "").trim().replace(/[<>]/g, "").slice(0, 500),
+    })).filter((item) => item.question && item.answer);
+    await prisma.chatSetting.upsert({
+      where: { id: SETTING_ID },
+      update: { aiReplyExamples: cleanTeachings, updatedBy: userId },
+      create: { id: SETTING_ID, aiReplyExamples: cleanTeachings, createdBy: userId, updatedBy: userId },
+    });
+    revalidatePath("/admin/ai/teach");
+    revalidatePath("/admin/ai/settings");
+    revalidatePath("/admin/chat/settings");
+    return { success: true, data: cleanTeachings, message: "AI teaching examples সংরক্ষণ হয়েছে।" };
+  } catch (error) { return actionError(error, "AI teaching examples save করা যায়নি।"); }
+}
 
 export async function getChatPushConfigAction() {
   try {
@@ -124,6 +186,7 @@ export async function getChatSettingsAction() {
         chatOrderCreationEnabled: isChatOrderCreationEnabled(setting),
         whatsappEnabled: setting?.whatsappEnabled ?? false,
         messengerEnabled: setting?.messengerEnabled ?? false,
+        facebookCommentAutoReplyEnabled: setting?.facebookCommentAutoReplyEnabled ?? false,
         instagramEnabled: setting?.instagramEnabled ?? false,
         tiktokEnabled: setting?.tiktokEnabled ?? false,
         aiAutoReplyEnabled: setting?.aiAutoReplyEnabled ?? false,
@@ -181,6 +244,7 @@ export async function saveChatSettingsAction(formData) {
     const chatOrderCreationEnabled = formData.get("chatOrderCreationEnabled") === "on";
     const whatsappEnabled = formData.get("whatsappEnabled") === "on";
     const messengerEnabled = formData.get("messengerEnabled") === "on";
+    const facebookCommentAutoReplyEnabled = formData.get("facebookCommentAutoReplyEnabled") === "on";
     const instagramEnabled = formData.get("instagramEnabled") === "on";
     const tiktokEnabled = formData.get("tiktokEnabled") === "on";
     const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
@@ -216,6 +280,9 @@ export async function saveChatSettingsAction(formData) {
     if (messengerEnabled && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
       throw new Error("Messenger চালু করতে Page ID, Page Access Token, App Secret ও Webhook Verify Token দিন।");
     }
+    if (facebookCommentAutoReplyEnabled && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
+      throw new Error("Facebook comment auto-reply চালু করতে Page ID, Page Access Token, App Secret ও Webhook Verify Token দিন।");
+    }
     if (instagramEnabled && (!credentials.instagramAccountId || !credentials.instagramAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
       throw new Error("Instagram inbox চালু করতে Instagram Professional Account ID, access token, Meta App Secret ও Webhook Verify Token দিন।");
     }
@@ -230,15 +297,20 @@ export async function saveChatSettingsAction(formData) {
     }
     if (aiAutoReplyEnabled && aiProvider === "OPENAI" && !credentials.openaiApiKey) throw new Error("OpenAI বেছে নিলে AI auto reply চালু করতে OpenAI API key দিন।");
     if (aiAutoReplyEnabled && aiProvider === "GOOGLE_AI_STUDIO" && !credentials.googleAiStudioApiKey) throw new Error("Google AI Studio বেছে নিলে AI auto reply চালু করতে Google AI Studio API key দিন।");
+    if (facebookCommentAutoReplyEnabled && !aiAutoReplyEnabled) throw new Error("Facebook comment auto-reply চালাতে AI auto reply-ও চালু করুন।");
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");
-    const subscription = messengerEnabled ? await ensureMessengerPostbacks(credentials, { force: true }) : null;
+    const requiredMetaFields = [
+      ...(messengerEnabled ? ["messages", "messaging_postbacks"] : []),
+      ...(facebookCommentAutoReplyEnabled ? ["feed"] : []),
+    ];
+    const subscription = requiredMetaFields.length ? await ensureMessengerPostbacks(credentials, { force: true, requiredFields: requiredMetaFields }) : null;
     return { success: true, message: subscription?.warning ? `Chat settings saved. ${subscription.warning}` : "Chat settings saved." };
   } catch (error) {
     return actionError(error, "Chat settings could not be saved.");

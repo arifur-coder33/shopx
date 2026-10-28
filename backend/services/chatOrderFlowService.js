@@ -12,10 +12,10 @@ import { signedChatOrderCardUrl } from "@/backend/utils/chatOrderCard.mjs";
 import { loadChatOrderCard, renderChatOrderCard } from "@/backend/services/chatOrderCardService";
 
 const digits = (text) => String(text || "").replace(/[০-৯]/gu, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
-const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|confirm)[.!\s]*$/iu;
+const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|ok|okay|ঠিক\s*আছে|আচ্ছা|thik\s+ache|accha|confirm)[.!\s]*$/iu;
 const no = /^(?:না|na|no)[.!\s]*$/iu;
 const cancel = /^(?:cancel|বাতিল|stop)[.!\s]*$/iu;
-const wantsToOrder = /(?:অর্ডার\s*(?:করতে|দিতে)\s*চাই|কিনতে\s*চাই|নিতে\s*চাই|\border\s*(?:korte|dite)\s*chai\b|\b(?:i\s+)?want\s+to\s+order\b)/iu;
+const wantsToOrder = /(?:অর্ডার\s*(?:করতে|দিতে)\s*চাই|অর্ডার\s*(?:করব|করবো|দেব|দিব|নেব|নিব)|কিনতে\s*চাই|নিতে\s*চাই|\border\s*(?:korte|dite)\s*chai\b|\border\s*(?:korbo|dibo|debo|nibo|nebo)\b|\b(?:i\s+)?want\s+to\s+order\b)/iu;
 // Let unrelated questions and social openers reach the normal AI path while
 // preserving the saved checkout step for the customer's next order detail.
 const checkoutInterruption = /(?:[?？]|\b(?:what|why|when|where|which|who|how|price|cost|color|colour|size|stock|available|delivery|charge|koto|kemon|keno|kokhon|kothay|kon|ki|dam|rong|size|ache|ase|bhai|apu|hello|hi|salam|assalamu|thanks|thank you)\b|কী|কি|কেমন|কেন|কখন|কোথায়|কোথায়|কোন|দাম|মূল্য|রং|সাইজ|স্টক|আছে|হবে|পাব|ডেলিভারি|চার্জ|ভাই|আপু|সালাম|আসসালামু|হ্যালো|হাই|ধন্যবাদ)/iu;
@@ -177,7 +177,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   // During product confirmation, free text may be a question about the product.
   // Let the catalog-aware AI answer it and keep this checkout step for later.
   if (flow?.step === "product_confirm" && !wantsOrder && !no.test(action) && !cancel.test(action) && !isCheckoutAction) return false;
-  const intent = Boolean(quickProductId) || /(?:অর্ডার\s*(?:কর|দিতে)|\border\s*(?:kor|korte|dite|now)|কিনতে চাই|নিতে চাই|\b(?:buy|purchase)\b)/iu.test(text);
+  const intent = Boolean(quickProductId) || /(?:অর্ডার\s*(?:কর|দিতে|দেব|দিব|নেব|নিব)|\border\s*(?:kor|korte|dite|korbo|dibo|debo|nibo|nebo|now)|কিনতে চাই|নিতে চাই|\b(?:buy|purchase)\b)/iu.test(text);
   if (!flow && existingOnly && !quickProductId && !actionMatch) return false;
   if (!flow && !intent) return false;
   let next = flow ? { ...flow } : null;
@@ -254,7 +254,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       }
     } else if (flow.step === "more_items") {
       if (/^(?:yes|হ্যাঁ|হ্যা|জি|জী|add|যোগ|যোগ করব|আরও কিছু কিনতে চাই)$/iu.test(action)) { next = { ...flow, step: "await_product" }; reply = "পছন্দের আরেকটি পণ্যের কার্ডে ‘অর্ডার করতে চাই’ চাপুন।"; }
-      else if (/^(?:no|না|এতটুকুই|আর না|হবে না|না, শুধু এটিই|না, শুধু একটাই|না শুধু একটাই)$/iu.test(action)) { next = { ...flow, step: "customer_details" }; reply = prompts.customerDetails; }
+      else if (/^(?:no|না|এতটুকুই|আর না|হবে না|না, শুধু এটিই|না, শুধু একটাই|না শুধু একটাই|ok|okay|ঠিক\s*আছে|আচ্ছা|thik\s+ache|accha)$/iu.test(action)) { next = { ...flow, step: "customer_details" }; reply = prompts.customerDetails; }
       else reply = "আরেকটি পণ্য যোগ করতে ‘হ্যাঁ’, শেষ হলে ‘না’ বলুন।";
     } else if (flow.step === "await_product") {
       if (/^(?:no|না|এতটুকুই|আর না|হবে না|না, শুধু এটিই|না, শুধু একটাই|না শুধু একটাই)$/iu.test(action)) { next = { ...flow, step: "customer_details" }; reply = prompts.customerDetails; }

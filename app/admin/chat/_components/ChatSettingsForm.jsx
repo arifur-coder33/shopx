@@ -50,6 +50,7 @@ export default function ChatSettingsForm({
   webhookUrl,
   tiktokWebhookUrl,
   encryptionReady,
+  pageTitle = "Chat Settings",
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -142,9 +143,9 @@ export default function ChatSettingsForm({
   return (
     <main className="mx-auto w-full max-w-4xl space-y-5 pb-10">
       <header>
-        <p className="text-sm font-medium text-primary">Customer Support</p>
+        <p className="text-sm font-medium text-primary">AI</p>
         <h1 className="mt-1 text-2xl font-bold text-text sm:text-3xl">
-          Chat Settings
+          {pageTitle}
         </h1>
         <p className="mt-1 text-sm text-text-muted">
           Website chat এখনই ব্যবহার করুন; Meta channel credentials বসালে
@@ -173,6 +174,7 @@ export default function ChatSettingsForm({
             ["websiteChatEnabled", "Website chat", settings.websiteChatEnabled],
             ["whatsappEnabled", "WhatsApp inbox", settings.whatsappEnabled],
             ["messengerEnabled", "Messenger inbox", settings.messengerEnabled],
+            ["facebookCommentAutoReplyEnabled", "Facebook Page comment auto-reply", settings.facebookCommentAutoReplyEnabled],
             ["instagramEnabled", "Instagram inbox", settings.instagramEnabled],
             ["tiktokEnabled", "TikTok inbox", settings.tiktokEnabled],
           ].map(([name, label, checked]) => (
@@ -190,6 +192,7 @@ export default function ChatSettingsForm({
               />
             </label>
           ))}
+          <p className="text-xs leading-5 text-text-muted">Facebook comment reply-এর জন্য AI auto reply চালু থাকতে হবে। Meta App Webhooks → Page-এ <code>feed</code> subscribe করুন; public reply-তে <code>pages_manage_engagement</code>, webhook subscription-এ <code>pages_manage_metadata</code>, এবং comment থেকে inbox private reply-তে <code>pages_messaging</code> permission লাগবে।</p>
           <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
             <label className="block sm:col-span-2">
               <span className="text-sm font-semibold text-text">WhatsApp approved template language</span>
@@ -346,8 +349,8 @@ export default function ChatSettingsForm({
             <h2 className="font-bold text-text">Meta webhook</h2>
             <p className="mt-1 text-xs leading-5 text-text-muted">
               Meta Developer App-এর Webhooks settings-এ callback URL ও একই
-              verify token ব্যবহার করুন। Incoming WhatsApp, Messenger এবং Instagram message
-              এখানে আসবে।
+              verify token ব্যবহার করুন। Incoming WhatsApp, Messenger এবং Instagram message ও Facebook Page comment
+              এখানে process হবে।
             </p>
           </div>
           <div className="flex gap-2">
@@ -475,7 +478,8 @@ export default function ChatSettingsForm({
             })}
           </div>
           <p className="text-xs leading-5 text-text-muted">
-            Meta app-এ WhatsApp webhook fields, Messenger-এর messages, messaging_postbacks ও
+            Meta app-এ WhatsApp webhook fields, Messenger-এর messages, messaging_postbacks,
+            Facebook Page comment-এর feed এবং
             message_reactions এবং Instagram-এর messages fields subscribe করুন।
             Credentials না বসানো পর্যন্ত external channel off রাখুন।
             WhatsApp/Messenger reply delivery Meta-এর account setup, permissions

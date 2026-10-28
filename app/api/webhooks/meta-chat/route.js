@@ -6,14 +6,15 @@ import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 import { normalizeChatPhone, sharedChatPhone } from "@/lib/chatIdentity";
 import { chatProductAction, whatsAppProductAction } from "@/backend/utils/chatProductSelection.mjs";
+import { processFacebookPageComment, saveFacebookPageComment } from "@/backend/services/facebookPageCommentReplyService";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 async function getCredentials() {
-  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true, instagramEnabled: true } });
-  if (!setting?.encryptedCredentials) return { whatsappEnabled: setting?.whatsappEnabled ?? false, messengerEnabled: setting?.messengerEnabled ?? false, instagramEnabled: setting?.instagramEnabled ?? false };
-  return { ...decryptProviderCredentials(setting.encryptedCredentials), whatsappEnabled: setting.whatsappEnabled, messengerEnabled: setting.messengerEnabled, instagramEnabled: setting.instagramEnabled };
+  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true, instagramEnabled: true, facebookCommentAutoReplyEnabled: true } });
+  if (!setting?.encryptedCredentials) return { whatsappEnabled: setting?.whatsappEnabled ?? false, messengerEnabled: setting?.messengerEnabled ?? false, instagramEnabled: setting?.instagramEnabled ?? false, facebookCommentAutoReplyEnabled: setting?.facebookCommentAutoReplyEnabled ?? false };
+  return { ...decryptProviderCredentials(setting.encryptedCredentials), whatsappEnabled: setting.whatsappEnabled, messengerEnabled: setting.messengerEnabled, instagramEnabled: setting.instagramEnabled, facebookCommentAutoReplyEnabled: setting.facebookCommentAutoReplyEnabled };
 }
 
 export async function GET(request) {
@@ -323,10 +324,25 @@ export async function POST(request) {
           metadata: { timestamp: event.timestamp, attachments: event.message.attachments || [], ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
         });
       }
-      for (const change of credentials.messengerEnabled ? entry.changes || [] : []) {
-        if (change.field === "message_reactions") {
+      for (const change of entry.changes || []) {
+        if (credentials.messengerEnabled && change.field === "message_reactions") {
           const value = change.value || {};
           await applyMessengerReaction({ ...value, reaction: value.reaction || value }, entry.id);
+        }
+        if (!isInstagramPayload && payload.object === "page" && credentials.facebookCommentAutoReplyEnabled
+          && String(entry.id || "") === String(credentials.messengerPageId || "") && change.field === "feed") {
+          const value = change.value || {};
+          const authorId = String(value.from?.id || "");
+          const commentId = String(value.comment_id || "");
+          const commentText = String(value.message || "").trim();
+          if (value.item === "comment" && value.verb === "add" && commentId && commentText && authorId !== String(entry.id)) {
+            const createdAtSeconds = Number(value.created_time);
+            const comment = { commentId, pageId: String(entry.id), postId: value.post_id, authorId, authorName: value.from?.name, commentText,
+              commentCreatedAt: Number.isFinite(createdAtSeconds) && createdAtSeconds > 0 ? new Date(createdAtSeconds * 1000) : null };
+            if (await saveFacebookPageComment(comment)) {
+              after(async () => processFacebookPageComment({ ...comment, credentials }));
+            }
+          }
         }
       }
     }

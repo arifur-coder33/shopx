@@ -1056,6 +1056,12 @@ export default function AdminChatInbox({
                 >
                   Chat Settings
                 </a>
+                <a
+                  href="/admin/chat/comments"
+                  className="rounded-lg px-3 py-2 text-sm font-semibold text-text hover:bg-background"
+                >
+                  Page Comments
+                </a>
               </div>
             </details>
           </header>
