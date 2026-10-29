@@ -1,548 +1,125 @@
 "use client";
 
-import {
-  revealChatCredentialAction,
-  saveChatSettingsAction,
-} from "@/backend/serverActions/chatActions";
-import {
-  CHAT_AI_MODELS,
-  DEFAULT_CHAT_AI_MODELS,
-} from "@/backend/services/chatAiModels";
-import { CheckCircle2, Copy, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { saveChatChannelSectionAction, saveProviderCredentialsAction } from "@/backend/serverActions/chatActions";
+import ProviderCredentialsCard from "./ProviderCredentialsCard";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { CheckCircle2, Copy, Globe2, MessageCircle, Save, ShieldCheck, Store, Webhook } from "lucide-react";
 
-const secretFields = [
-  [
-    "whatsappPhoneNumberId",
-    "WhatsApp Phone Number ID",
-    "WhatsApp Cloud API Setup থেকে",
-  ],
-  ["whatsappAccessToken", "WhatsApp Access Token", "Meta System User token"],
-  ["messengerPageId", "Facebook Page ID", "যে Page-এর Messenger যুক্ত করবেন"],
-  [
-    "messengerPageAccessToken",
-    "Messenger Page Access Token",
-    "সংশ্লিষ্ট Facebook Page-এর token",
-  ],
-  ["instagramAccountId", "Instagram Professional Account ID", "যে Instagram account-এর DM যুক্ত করবেন"],
-  ["instagramAccessToken", "Instagram Access Token", "Instagram Messaging-এর জন্য অনুমোদিত token"],
-  ["metaAppSecret", "Meta App Secret", "Meta App Settings → Basic"],
-  [
-    "webhookVerifyToken",
-    "Webhook Verify Token",
-    "নিজে বানানো গোপন phrase; Meta dashboard-এ একইটি দিন",
-  ],
-  [
-    "graphApiVersion",
-    "Meta Graph API Version",
-    "যেমন vXX.0; Meta app-এর supported version দিন",
-  ],
-  ["tiktokBusinessId", "TikTok Business ID", "Authorization-এর open_id"],
-  ["tiktokClientKey", "TikTok Client Key", "TikTok for Business developer app থেকে"],
-  ["tiktokAccessToken", "TikTok Access Token", "Business Messaging API token"],
-  ["tiktokClientSecret", "TikTok Client Secret", "Webhook signature verify করতেও লাগে"],
-];
+const fieldClass = "mt-2 w-full rounded-xl border border-border bg-background px-3.5 py-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60";
 
-export default function ChatSettingsForm({
-  settings,
-  canUpdate,
-  webhookUrl,
-  tiktokWebhookUrl,
-  encryptionReady,
-  pageTitle = "Chat Settings",
-}) {
+export default function ChatSettingsForm({ settings, canUpdate, webhookUrl, tiktokWebhookUrl, encryptionReady }) {
   const router = useRouter();
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [showSecrets, setShowSecrets] = useState({});
-  const [revealedCredentials, setRevealedCredentials] = useState({});
-  const [generatedVerifyToken, setGeneratedVerifyToken] = useState("");
-  const [tokenCopied, setTokenCopied] = useState(false);
-  const [aiProvider, setAiProvider] = useState(settings.aiProvider || "OPENAI");
-  const [openaiModel, setOpenaiModel] = useState(settings.openaiModel || DEFAULT_CHAT_AI_MODELS.OPENAI);
-  const [googleAiStudioModel, setGoogleAiStudioModel] = useState(settings.googleAiStudioModel || DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO);
+  const chatForm = useRef(null);
+  const metaForm = useRef(null);
+  const tiktokForm = useRef(null);
+  const [savingAll, setSavingAll] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [copied, setCopied] = useState("");
 
-  const save = async (event) => {
+  const copyValue = async (value, label) => {
+    try { await navigator.clipboard.writeText(value); setCopied(label); window.setTimeout(() => setCopied(""), 1800); }
+    catch { setNotice("Clipboard access পাওয়া যায়নি।"); }
+  };
+
+  const saveChat = async (event) => {
     event.preventDefault();
-    if (!canUpdate || saving) return;
-    setSaving(true);
-    setMessage("");
-    const result = await saveChatSettingsAction(
-      new FormData(event.currentTarget),
-    );
-    setMessage(
-      result.message || (result.success ? "Saved" : "Could not save settings."),
-    );
-    if (result.success) router.refresh();
-    setSaving(false);
-  };
-
-  const copyWebhook = async () => {
-    await navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  };
-
-  const generateVerifyToken = () => {
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    setGeneratedVerifyToken(
-      Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(""),
-    );
-  };
-
-  const copyVerifyToken = async () => {
-    let token = generatedVerifyToken || revealedCredentials.webhookVerifyToken;
-    if (!token && settings.configured?.webhookVerifyToken) {
-      const result = await revealChatCredentialAction("webhookVerifyToken");
-      if (!result.success) {
-        setMessage(result.message || "Token copy করা যায়নি।");
-        return;
-      }
-      token = result.data.value;
-      setRevealedCredentials((current) => ({ ...current, webhookVerifyToken: token }));
-    }
-    if (!token) {
-      setMessage("আগে নতুন token generate করুন।");
-      return;
-    }
+    if (!canUpdate) return;
+    setNotice("");
     try {
-      await navigator.clipboard.writeText(token);
-      setTokenCopied(true);
-      setMessage("Token copied.");
-      window.setTimeout(() => setTokenCopied(false), 1800);
-    } catch {
-      setMessage("Token copy করা যায়নি।");
-    }
+      const result = await saveChatChannelSectionAction(new FormData(event.currentTarget));
+      setNotice(result.message || (result.success ? "Chat settings save হয়েছে।" : "Save করা যায়নি।"));
+      if (result.success) router.refresh();
+    } catch { setNotice("Chat settings save ব্যর্থ হয়েছে। আবার চেষ্টা করুন।"); }
   };
 
-  const toggleCredential = async (name) => {
-    if (showSecrets[name]) {
-      setShowSecrets((current) => ({ ...current, [name]: false }));
-      return;
-    }
-    if (
-      settings.configured?.[name] &&
-      !revealedCredentials[name] &&
-      !(name === "webhookVerifyToken" && generatedVerifyToken)
-    ) {
-      const result = await revealChatCredentialAction(name);
-      if (!result.success) {
-        setMessage(result.message || "Credential could not be revealed.");
-        return;
+  const saveAll = async () => {
+    if (!canUpdate || savingAll) return;
+    setSavingAll(true);
+    setNotice("");
+    const tasks = [
+      () => saveProviderCredentialsAction("META", new FormData(metaForm.current)),
+      () => saveProviderCredentialsAction("TIKTOK", new FormData(tiktokForm.current)),
+      () => saveChatChannelSectionAction(new FormData(chatForm.current)),
+    ];
+    try {
+      for (const task of tasks) {
+        const result = await task();
+        if (!result.success) {
+          setNotice(result.message || "সব Chat settings save করা যায়নি।");
+          return;
+        }
       }
-      setRevealedCredentials((current) => ({
-        ...current,
-        [name]: result.data.value,
-      }));
+      setNotice("Chat settings ও provider credentials সব save হয়েছে.");
+      router.refresh();
+    } catch { setNotice("Save all ব্যর্থ হয়েছে। আবার চেষ্টা করুন।"); }
+    finally {
+      setSavingAll(false);
     }
-    setShowSecrets((current) => ({ ...current, [name]: true }));
   };
 
-  return (
-    <main className="mx-auto w-full max-w-4xl space-y-5 pb-10">
-      <header>
-        <p className="text-sm font-medium text-primary">AI</p>
-        <h1 className="mt-1 text-2xl font-bold text-text sm:text-3xl">
-          {pageTitle}
-        </h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Website chat এখনই ব্যবহার করুন; Meta channel credentials বসালে
-          WhatsApp ও Messenger-ও একই inbox-এ যুক্ত হবে।
-        </p>
-      </header>
-      <div
-        className={`flex items-start gap-3 rounded-xl border p-4 text-sm ${encryptionReady ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}
-      >
-        <ShieldCheck className="mt-0.5 shrink-0" size={19} />
-        <p>
-          {encryptionReady
-            ? "External channel credentials database-এ encrypted অবস্থায় save হবে."
-            : "Credentials save করার আগে server-এ PROVIDER_CREDENTIAL_ENCRYPTION_KEY (কমপক্ষে 32 অক্ষর) সেট করতে হবে."}
-        </p>
+  const channels = [
+    ["websiteChatEnabled", "Website chat", "সাইটের chat widget", settings.websiteChatEnabled, Globe2, "sky"],
+    ["whatsappEnabled", "WhatsApp", "WhatsApp inbox ও auto reply", settings.whatsappEnabled, MessageCircle, "emerald"],
+    ["messengerEnabled", "Messenger", "Facebook Page inbox", settings.messengerEnabled, MessageCircle, "blue"],
+    ["facebookCommentAutoReplyEnabled", "Page comments", "Facebook comment auto-reply", settings.facebookCommentAutoReplyEnabled, MessageCircle, "indigo"],
+    ["instagramEnabled", "Instagram", "Instagram DM inbox", settings.instagramEnabled, MessageCircle, "pink"],
+    ["tiktokEnabled", "TikTok", "TikTok Business messages", settings.tiktokEnabled, MessageCircle, "slate"],
+  ];
+  const channelIconColors = { sky: "bg-sky-500/10 text-sky-700", emerald: "bg-emerald-500/10 text-emerald-700", blue: "bg-blue-500/10 text-blue-700", indigo: "bg-indigo-500/10 text-indigo-700", pink: "bg-pink-500/10 text-pink-700", slate: "bg-slate-500/10 text-slate-700" };
+
+  return <main className="mx-auto w-full max-w-6xl space-y-6 pb-28">
+    <header className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-sky-700 via-blue-700 to-indigo-800 p-6 text-white shadow-lg sm:p-9">
+      <div className="absolute -right-12 -top-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+      <div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+        <div><span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold"><Store size={14} />CHANNEL CONTROL CENTER</span><h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Chat Settings</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">Inbox channel, order flow ও webhook setup configure করুন। AI provider ও reply style আলাদা AI Settings page-এ আছে।</p></div>
+        <Link href="/admin/ai/settings" className="w-fit rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-bold transition hover:bg-white/20">AI Settings →</Link>
       </div>
-      <form onSubmit={save} className="space-y-5">
-        <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
-          <div>
-            <h2 className="font-bold text-text">Channel controls</h2>
-            <p className="mt-1 text-xs text-text-muted">
-              সাইটের chat widget ও external channel enable/disable করুন।
-            </p>
-          </div>
-          {[
-            ["websiteChatEnabled", "Website chat", settings.websiteChatEnabled],
-            ["whatsappEnabled", "WhatsApp inbox", settings.whatsappEnabled],
-            ["messengerEnabled", "Messenger inbox", settings.messengerEnabled],
-            ["facebookCommentAutoReplyEnabled", "Facebook Page comment auto-reply", settings.facebookCommentAutoReplyEnabled],
-            ["instagramEnabled", "Instagram inbox", settings.instagramEnabled],
-            ["tiktokEnabled", "TikTok inbox", settings.tiktokEnabled],
-          ].map(([name, label, checked]) => (
-            <label
-              key={name}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"
-            >
-              <span className="font-medium text-text">{label}</span>
-              <input
-                name={name}
-                type="checkbox"
-                defaultChecked={checked}
-                disabled={!canUpdate}
-                className="h-5 w-5 accent-[var(--color-brand)]"
-              />
-            </label>
-          ))}
-          <p className="text-xs leading-5 text-text-muted">Facebook comment reply-এর জন্য AI auto reply চালু থাকতে হবে। Meta App Webhooks → Page-এ <code>feed</code> subscribe করুন; public reply-তে <code>pages_manage_engagement</code>, webhook subscription-এ <code>pages_manage_metadata</code>, এবং comment থেকে inbox private reply-তে <code>pages_messaging</code> permission লাগবে।</p>
-          <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
-            <label className="block sm:col-span-2">
-              <span className="text-sm font-semibold text-text">WhatsApp approved template language</span>
-              <input name="whatsappTemplateLanguage" defaultValue={settings.whatsappTemplateLanguage || "bn"} maxLength={35} disabled={!canUpdate} placeholder="bn বা en_US" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50" />
-            </label>
-            <label className="block">
-              <span className="text-sm font-semibold text-text">Text fallback template name</span>
-              <input name="whatsappTextTemplateName" defaultValue={settings.whatsappTextTemplateName || ""} maxLength={512} disabled={!canUpdate} placeholder="approved_text_reply" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50" />
-            </label>
-            <label className="block">
-              <span className="text-sm font-semibold text-text">Image fallback template name</span>
-              <input name="whatsappImageTemplateName" defaultValue={settings.whatsappImageTemplateName || ""} maxLength={512} disabled={!canUpdate} placeholder="approved_product_image" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50" />
-            </label>
-            <p className="text-xs leading-5 text-text-muted sm:col-span-2">Meta WhatsApp Manager-এ আগে approve করা template-এর নাম দিন। Text template-এ body-তে একটি {"{{1}}"} variable থাকতে হবে। Image template-এ IMAGE header এবং body-তে একটি {"{{1}}"} variable থাকতে হবে। ২৪ ঘণ্টার reply window শেষ হলে এই template-গুলো ব্যবহার হবে।</p>
-          </div>
-          <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
-            <span><span className="block font-medium text-text">Chat থেকে অর্ডার তৈরি</span><span className="mt-1 block text-xs text-text-muted">বন্ধ থাকলে website chat ও Messenger শুধু নাম, ফোন ও ঠিকানা সংগ্রহ করবে।</span></span>
-            <input name="chatOrderCreationEnabled" type="checkbox" defaultChecked={settings.chatOrderCreationEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">
-              Website welcome message
-            </span>
-            <input
-              name="welcomeMessage"
-              defaultValue={settings.welcomeMessage}
-              maxLength={300}
-              disabled={!canUpdate}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">
-              Saved shortcut replies
-            </span>
-            <span className="mt-1 block text-xs text-text-muted">
-              প্রতি লাইনে /shortcut=reply লিখুন; chat input-এ / লিখলে suggestion
-              আসবে।
-            </span>
-            <textarea
-              name="quickReplies"
-              rows={5}
-              defaultValue={(settings.quickReplies || [])
-                .map((item) => `/${item.shortcut}=${item.text}`)
-                .join("\n")}
-              disabled={!canUpdate}
-              placeholder="/hello=আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?\n/delivery=ঢাকার ভিতরে ১–২ কর্মদিবসে ডেলিভারি হয়।"
-              className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50"
-            />
-          </label>
-        </section>
-        <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
-          <div>
-            <h2 className="font-bold text-text">AI auto reply</h2>
-            <p className="mt-1 text-xs leading-5 text-text-muted">
-              Customer message এলে AI catalog-এর active product তথ্য দেখে উত্তর পাঠাবে। Product page থেকে chat এলে page-এর product চিনে নেবে; দাম বলার আগে product confirm করবে। অজানা দাম বা তথ্য অনুমান করবে না।
-            </p>
-          </div>
-          <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
-            <span className="font-medium text-text">AI auto reply চালু করুন</span>
-            <input name="aiAutoReplyEnabled" type="checkbox" defaultChecked={settings.aiAutoReplyEnabled} disabled={!canUpdate} className="h-5 w-5 accent-[var(--color-brand)]" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">AI reply provider</span>
-            <select name="aiProvider" value={aiProvider} onChange={(event) => setAiProvider(event.target.value)} disabled={!canUpdate} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50">
-              <option value="OPENAI">OpenAI</option>
-              <option value="GOOGLE_AI_STUDIO">Google AI Studio (Gemini)</option>
-            </select>
-            <span className="mt-1 block text-xs text-text-muted">নির্বাচিত provider-এর API key দিয়েই reply এবং product photo search চলবে।</span>
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">{aiProvider === "OPENAI" ? "OpenAI model" : "Google AI Studio model"}</span>
-            <input type="hidden" name="openaiModel" value={openaiModel} />
-            <input type="hidden" name="googleAiStudioModel" value={googleAiStudioModel} />
-            <select
-              value={aiProvider === "OPENAI" ? openaiModel : googleAiStudioModel}
-              onChange={(event) => aiProvider === "OPENAI" ? setOpenaiModel(event.target.value) : setGoogleAiStudioModel(event.target.value)}
-              disabled={!canUpdate}
-              className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text disabled:opacity-50"
-            >
-              {CHAT_AI_MODELS[aiProvider].map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
-            </select>
-            <span className="mt-1 block text-xs text-text-muted">নির্বাচিত model database-এ সংরক্ষিত থাকবে। provider বদলালে সেই provider-এর model-ও আলাদা করে সংরক্ষণ করতে পারবেন।</span>
-          </label>
-          <div className="rounded-xl border border-border bg-background p-3 text-xs leading-5 text-text-muted">
-            <p className="font-semibold text-text">Built-in AI guidance</p>
-            <ul className="mt-1 list-disc space-y-1 pl-5">
-              <li>Product page থেকে দাম জানতে চাইলে AI product-এর নাম বলে আগে নিশ্চিত হবে; customer সম্মতি দিলে catalog-এর verified দাম জানাবে।</li>
-              <li>Order করার নিয়ম জানতে চাইলে Buy Now, তথ্য পূরণ, Dhaka delivery area, payment method, এবং Place Order—এই ধাপগুলো বুঝিয়ে দেবে।</li>
-            </ul>
-          </div>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">AI reply tone ও style</span>
-            <span className="mt-1 block text-xs text-text-muted">নিজের দোকানের মতো করে tone লিখুন। Banglish বা বাংলা—দুই ক্ষেত্রেই AI বাংলা অক্ষরে reply দেবে; customer English লিখলে English-এ উত্তর দেবে।</span>
-            <textarea name="aiReplyTone" rows={3} maxLength={500} defaultValue={settings.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো"} disabled={!canUpdate} placeholder="বন্ধুসুলভ, সহজ, natural; ছোট reply; অতিরিক্ত greeting বা emoji নয়" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-sm font-semibold text-text">ছেলে customer-কে কী বলে সম্বোধন করবে?</span>
-              <input name="aiMaleAddressTerm" maxLength={40} defaultValue={settings.aiMaleAddressTerm ?? "ভাইয়া"} disabled={!canUpdate} placeholder="যেমন: ভাইয়া" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
-            </label>
-            <label className="block">
-              <span className="text-sm font-semibold text-text">মেয়ে customer-কে কী বলে সম্বোধন করবে?</span>
-              <input name="aiFemaleAddressTerm" maxLength={40} defaultValue={settings.aiFemaleAddressTerm ?? "আপু"} disabled={!canUpdate} placeholder="যেমন: আপু" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
-            </label>
-          </div>
-          <p className="-mt-2 text-xs leading-5 text-text-muted">Facebook comment-এর auto-reply-তে নাম থেকে gender স্পষ্ট বোঝা গেলে এই সম্বোধন ব্যবহার হবে। অস্পষ্ট হলে neutral সম্বোধন দেবে। কোনো ঘর ফাঁকা রাখলে সেই সম্বোধন ব্যবহার করবে না।</p>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">Saved AI example Q&A</span>
-            <span className="mt-1 block text-xs text-text-muted">প্রতি লাইনে একটি করে লিখুন: প্রশ্ন =&gt; উত্তর। সর্বোচ্চ 40টি example; কাছাকাছি customer question এলে AI এগুলো থেকে ভাষা ও উত্তরের ধরন শিখবে। দাম, stock ও delivery-এর current তথ্য catalog থেকে নেবে।</span>
-            <textarea name="aiReplyExamples" rows={8} defaultValue={(settings.aiReplyExamples || []).map((item) => `${item.question} => ${item.answer}`).join("\n")} disabled={!canUpdate} placeholder={"Delivery charge কত? => এলাকা বললে delivery charge দেখে জানাচ্ছি।\nএই রং আছে? => কোন রংটা চাইছেন? available color দেখে বলছি।\nProduct-এর price কত? => product-এর নাম বা link দিলে current price জানাচ্ছি।"} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">OpenAI API key</span>
-            <span className="mt-1 flex rounded-lg border border-border bg-background focus-within:border-brand">
-              <input
-                name="openaiApiKey"
-                value={revealedCredentials.openaiApiKey || ""}
-                onChange={(event) => setRevealedCredentials((current) => ({ ...current, openaiApiKey: event.target.value }))}
-                type={showSecrets.openaiApiKey ? "text" : "password"}
-                placeholder={settings.configured?.openaiApiKey ? "•••••••••••• (সংরক্ষিত)" : "sk-…"}
-                autoComplete="new-password"
-                disabled={!canUpdate}
-                className="min-w-0 flex-1 rounded-lg bg-transparent px-3 py-2 text-sm text-text outline-none disabled:opacity-50"
-              />
-              <button type="button" onClick={() => toggleCredential("openaiApiKey")} aria-label={showSecrets.openaiApiKey ? "OpenAI API key hide" : "OpenAI API key show"} className="px-3 text-text-muted">
-                {showSecrets.openaiApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </span>
-            {settings.configured?.openaiApiKey && (
-              <span className="mt-2 flex items-center gap-2 text-xs text-text-muted">
-                <input type="checkbox" name="clear_openaiApiKey" value="true" disabled={!canUpdate} className="accent-[var(--color-brand)]" />
-                Saved API key মুছে দিন
-              </span>
-            )}
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-text">Google AI Studio API key</span>
-            <span className="mt-1 flex rounded-lg border border-border bg-background focus-within:border-brand">
-              <input
-                name="googleAiStudioApiKey"
-                value={revealedCredentials.googleAiStudioApiKey || ""}
-                onChange={(event) => setRevealedCredentials((current) => ({ ...current, googleAiStudioApiKey: event.target.value }))}
-                type={showSecrets.googleAiStudioApiKey ? "text" : "password"}
-                placeholder={settings.configured?.googleAiStudioApiKey ? "•••••••••••• (সংরক্ষিত)" : "Google AI Studio API key"}
-                autoComplete="new-password"
-                disabled={!canUpdate}
-                className="min-w-0 flex-1 rounded-lg bg-transparent px-3 py-2 text-sm text-text outline-none disabled:opacity-50"
-              />
-              <button type="button" onClick={() => toggleCredential("googleAiStudioApiKey")} aria-label={showSecrets.googleAiStudioApiKey ? "Google AI Studio API key hide" : "Google AI Studio API key show"} className="px-3 text-text-muted">
-                {showSecrets.googleAiStudioApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </span>
-            {settings.configured?.googleAiStudioApiKey && (
-              <span className="mt-2 flex items-center gap-2 text-xs text-text-muted">
-                <input type="checkbox" name="clear_googleAiStudioApiKey" value="true" disabled={!canUpdate} className="accent-[var(--color-brand)]" />
-                Saved API key মুছে দিন
-              </span>
-            )}
-          </label>
-          <p className="text-xs text-text-muted">OpenAI ও Google key encrypted অবস্থায় থাকবে। নির্বাচিত provider দিয়ে AI reply WEBSITE এবং enabled external chat channel-এ পাঠানো হবে।</p>
-        </section>
-        <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
-          <div>
-            <h2 className="font-bold text-text">Meta webhook</h2>
-            <p className="mt-1 text-xs leading-5 text-text-muted">
-              Meta Developer App-এর Webhooks settings-এ callback URL ও একই
-              verify token ব্যবহার করুন। Incoming WhatsApp, Messenger এবং Instagram message ও Facebook Page comment
-              এখানে process হবে।
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <input
-              readOnly
-              value={webhookUrl}
-              aria-label="Meta webhook callback URL"
-              className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text"
-            />
-            <button
-              type="button"
-              onClick={copyWebhook}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text"
-            >
-              {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {secretFields.map(([name, label, hint]) => {
-              const secret =
-                name !== "whatsappPhoneNumberId" &&
-                name !== "messengerPageId" &&
-                name !== "instagramAccountId" &&
-                name !== "tiktokBusinessId" &&
-                name !== "tiktokClientKey" &&
-                name !== "graphApiVersion";
-              return (
-                <label className="block" key={name}>
-                  <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-text">
-                    {label}
-                    {settings.configured?.[name]}
-                    {name === "webhookVerifyToken" && (
-                      <span className="inline-flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={generateVerifyToken}
-                          disabled={!canUpdate}
-                          className="button px-3 py-1.5 text-xs disabled:opacity-50"
-                        >
-                          Generate new
-                        </button>
-                        <button
-                          type="button"
-                          onClick={copyVerifyToken}
-                          disabled={!canUpdate}
-                          aria-label="Webhook token copy করুন"
-                          title="Copy token"
-                          className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-xs font-semibold text-text disabled:opacity-50"
-                        >
-                          {tokenCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-                          <span>{tokenCopied ? "Copied" : "Copy token"}</span>
-                        </button>
-                      </span>
-                    )}
-                  </span>
-                  {name === "webhookVerifyToken" && generatedVerifyToken && (
-                    <span className="mt-1 block text-xs text-amber-700">
-                      নতুন token input-এ বসেছে; সংরক্ষণ করতে Save চাপুন।
-                    </span>
-                  )}
-                  <span className="mt-1 flex rounded-lg border border-border bg-background focus-within:border-brand">
-                    <input
-                      name={name}
-                      value={
-                        !secret
-                          ? revealedCredentials[name] ?? settings.publicCredentials?.[name] ?? ""
-                          : name === "webhookVerifyToken"
-                          ? generatedVerifyToken ||
-                            revealedCredentials[name] ||
-                            ""
-                          : revealedCredentials[name] || ""
-                      }
-                      onChange={(event) => {
-                        setRevealedCredentials((current) => ({
-                          ...current,
-                          [name]: event.target.value,
-                        }));
-                        if (name === "webhookVerifyToken")
-                          setGeneratedVerifyToken(event.target.value);
-                      }}
-                      type={secret && !showSecrets[name] ? "password" : "text"}
-                      placeholder={
-                        secret && settings.configured?.[name] &&
-                        !revealedCredentials[name] &&
-                        !(name === "webhookVerifyToken" && generatedVerifyToken)
-                          ? "••••••••••••"
-                          : hint
-                      }
-                      autoComplete="new-password"
-                      disabled={!canUpdate}
-                      className="min-w-0 flex-1 rounded-lg bg-transparent px-3 py-2 text-sm text-text outline-none disabled:opacity-50"
-                    />
-                    {secret && (
-                      <button
-                        type="button"
-                        onClick={() => toggleCredential(name)}
-                        aria-label={
-                          showSecrets[name] ? `${label} hide` : `${label} show`
-                        }
-                        className="px-3 text-text-muted"
-                      >
-                        {showSecrets[name] ? (
-                          <EyeOff size={16} />
-                        ) : (
-                          <Eye size={16} />
-                        )}
-                      </button>
-                    )}
-                  </span>
-                  {settings.configured?.[name] && (
-                    <span className="mt-1 flex items-center gap-2 text-xs text-text-muted">
-                      <input
-                        type="checkbox"
-                        name={`clear_${name}`}
-                        value="true"
-                        disabled={!canUpdate}
-                        className="accent-[var(--color-brand)]"
-                      />
-                      Saved credential মুছে দিন
-                    </span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
-          <p className="text-xs leading-5 text-text-muted">
-            Meta app-এ WhatsApp webhook fields, Messenger-এর messages, messaging_postbacks,
-            Facebook Page comment-এর feed এবং
-            message_reactions এবং Instagram-এর messages fields subscribe করুন।
-            Credentials না বসানো পর্যন্ত external channel off রাখুন।
-            WhatsApp/Messenger reply delivery Meta-এর account setup, permissions
-            ও messaging rules-এর ওপর নির্ভর করে।
-          </p>
-          <a
-            className="text-sm font-semibold text-primary hover:underline"
-            href="https://developers.facebook.com/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open Meta for Developers ↗
-          </a>
-        </section>
-        <section className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
-          <div>
-            <h2 className="font-bold text-text">TikTok Business Messaging</h2>
-            <p className="mt-1 text-xs leading-5 text-text-muted">
-              TikTok for Business app-এ Business Messaging API access, authorization এবং DIRECT_MESSAGE webhook configure করুন। Callback URL:
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <input readOnly value={tiktokWebhookUrl} aria-label="TikTok webhook callback URL" className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text" />
-            <button type="button" onClick={async () => { await navigator.clipboard.writeText(tiktokWebhookUrl); setMessage("TikTok webhook URL copied."); }} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text"><Copy size={16} />Copy</button>
-          </div>
-          <p className="text-xs leading-5 text-text-muted">TikTok API access ও account authorization TikTok-এর approval-এর ওপর নির্ভর করে। Access token মেয়াদোত্তীর্ণ হলে নতুন token সংরক্ষণ করুন।</p>
-          <a className="text-sm font-semibold text-primary hover:underline" href="https://business-api.tiktok.com/portal/bm-api/education-hub" target="_blank" rel="noreferrer">TikTok Business Messaging docs ↗</a>
-        </section>
-        {message && (
-          <p
-            role="status"
-            className={`rounded-lg p-3 text-sm ${message.toLowerCase().includes("could not") || message.includes("Unauthorized") ? "bg-red-50 text-red-700" : "bg-background text-text"}`}
-          >
-            {message}
-          </p>
-        )}
-        {canUpdate && (
-          <button
-            type="submit"
-            disabled={saving}
-            className="button disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save chat settings"}
-          </button>
-        )}
-      </form>
-      <a
-        href="/admin/chat"
-        className="inline-block text-sm font-semibold text-primary hover:underline"
-      >
-        ← Chat Inbox
-      </a>
-    </main>
-  );
+    </header>
+
+    <div className={`flex items-start gap-3 rounded-2xl border p-4 ${encryptionReady ? "border-emerald-500/25 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}><ShieldCheck className={`mt-0.5 shrink-0 ${encryptionReady ? "text-emerald-600" : "text-amber-600"}`} size={20} /><div><p className="text-sm font-bold text-text">{encryptionReady ? "Credentials encrypted" : "Encryption key required"}</p><p className="mt-1 text-xs leading-5 text-text-muted">{encryptionReady ? "Provider credentials encrypted অবস্থায় database-এ থাকবে। প্রতিটি provider card আলাদা করে save করা যাবে।" : "Credentials save করতে server-এ PROVIDER_CREDENTIAL_ENCRYPTION_KEY কমপক্ষে 32 অক্ষরের হতে হবে।"}</p></div></div>
+
+    <form ref={chatForm} onSubmit={saveChat} className="space-y-6">
+      <section className="rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-7">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><h2 className="text-lg font-bold text-text">Channels & order flow</h2><p className="mt-1 text-xs leading-5 text-text-muted">যে channel connect করা আছে সেটি চালু করুন; প্রতিটি channel-এর credential নিচের provider card-এ রাখুন।</p></div><span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">6 channels</span></div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{channels.map(([name, title, subtitle, checked, Icon, color]) => <label key={name} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-background p-4 transition hover:border-primary/40 hover:shadow-sm"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${channelIconColors[color]}`}><Icon size={19} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-text">{title}</span><span className="mt-0.5 block text-xs text-text-muted">{subtitle}</span></span><input name={name} type="checkbox" defaultChecked={checked} disabled={!canUpdate} className="h-5 w-5 shrink-0 accent-primary" /></label>)}</div>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-border bg-background p-4"><span><span className="block text-sm font-bold text-text">Chat থেকে order তৈরি</span><span className="mt-1 block text-xs text-text-muted">বন্ধ করলে chat শুধু contact তথ্য সংগ্রহ করবে।</span></span><input name="chatOrderCreationEnabled" type="checkbox" defaultChecked={settings.chatOrderCreationEnabled} disabled={!canUpdate} className="h-5 w-5 accent-primary" /></div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2"><label className="block"><span className="text-sm font-bold text-text">Website welcome message</span><input name="welcomeMessage" defaultValue={settings.welcomeMessage || ""} maxLength={300} disabled={!canUpdate} placeholder="আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?" className={fieldClass} /></label><label className="block"><span className="text-sm font-bold text-text">WhatsApp template language</span><input name="whatsappTemplateLanguage" defaultValue={settings.whatsappTemplateLanguage || "bn"} maxLength={35} disabled={!canUpdate} placeholder="bn / en_US" className={fieldClass} /></label></div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2"><label className="block"><span className="text-sm font-bold text-text">WhatsApp text fallback template</span><input name="whatsappTextTemplateName" defaultValue={settings.whatsappTextTemplateName || ""} maxLength={512} disabled={!canUpdate} placeholder="approved_text_reply" className={fieldClass} /></label><label className="block"><span className="text-sm font-bold text-text">WhatsApp image fallback template</span><input name="whatsappImageTemplateName" defaultValue={settings.whatsappImageTemplateName || ""} maxLength={512} disabled={!canUpdate} placeholder="approved_product_image" className={fieldClass} /></label></div>
+        <p className="mt-2 text-xs leading-5 text-text-muted">Templateগুলো WhatsApp Manager-এ আগে approve থাকতে হবে। Text template-এ body-এর <code>{"{{1}}"}</code> variable এবং image template-এ IMAGE header ও body variable লাগবে।</p>
+        <label className="mt-5 block"><span className="text-sm font-bold text-text">Saved shortcut replies</span><span className="mt-1 block text-xs text-text-muted">প্রতি লাইনে /shortcut=reply লিখুন।</span><textarea name="quickReplies" rows={4} defaultValue={(settings.quickReplies || []).map((item) => `/${item.shortcut}=${item.text}`).join("\n")} disabled={!canUpdate} placeholder="/hello=আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?" className={fieldClass} /></label>
+        <p className="mt-4 rounded-xl bg-blue-500/5 p-3 text-xs leading-5 text-text-muted">Facebook comment reply-এর জন্য Page webhook-এ <code>feed</code> subscribe করুন। Comment public reply ও inbox private reply-র জন্য আলাদা permission প্রয়োজন হয়।</p>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><p aria-live="polite" className="text-xs text-text-muted">{notice}</p>{canUpdate && <button type="submit" className="inline-flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-bold text-blue-800 hover:bg-blue-500/15"><Save size={16} />Save channel settings</button>}</div>
+      </section>
+    </form>
+
+    <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]">
+      <div className="space-y-5">
+        <ProviderCredentialsCard provider="META" title="Meta · Facebook, WhatsApp & Instagram" description="Meta App credentials এবং connected channel token এখানে রাখুন। Credential encrypted থাকবে; কোনো field ফাঁকা রেখে save করলে আগের value থাকবে।" fields={[
+          { name: "whatsappPhoneNumberId", label: "WhatsApp Phone Number ID", hint: "WhatsApp Cloud API Setup" , secret: false },
+          { name: "whatsappAccessToken", label: "WhatsApp Access Token", hint: "System User বা approved access token" },
+          { name: "messengerPageId", label: "Facebook Page ID", hint: "Messenger ও Page comments-এর Page ID", secret: false },
+          { name: "messengerPageAccessToken", label: "Page Access Token", hint: "এই Page-এর token" },
+          { name: "instagramAccountId", label: "Instagram Professional Account ID", hint: "Connected Instagram account", secret: false },
+          { name: "instagramAccessToken", label: "Instagram Access Token", hint: "Instagram Messaging permission-সহ token" },
+          { name: "metaAppSecret", label: "Meta App Secret", hint: "Meta App Settings → Basic" },
+          { name: "webhookVerifyToken", label: "Webhook Verify Token", hint: "নিজের secret phrase; Meta dashboard-এ একই token দিন" },
+          { name: "graphApiVersion", label: "Graph API Version", hint: "যেমন v26.0", secret: false },
+        ]} settings={settings} canUpdate={canUpdate} formRef={metaForm} onSaved={() => router.refresh()} />
+        <ProviderCredentialsCard provider="TIKTOK" title="TikTok Business Messaging" description="TikTok Business Messaging API access ও webhook authorization-এর keys রাখুন। TikTok-এর approval লাগতে পারে।" fields={[
+          { name: "tiktokBusinessId", label: "TikTok Business ID", hint: "Authorization-এর open_id", secret: false },
+          { name: "tiktokClientKey", label: "TikTok Client Key", hint: "TikTok developer app", secret: false },
+          { name: "tiktokAccessToken", label: "TikTok Access Token", hint: "Business Messaging token" },
+          { name: "tiktokClientSecret", label: "TikTok Client Secret", hint: "Webhook signature verification key" },
+        ]} settings={settings} canUpdate={canUpdate} formRef={tiktokForm} onSaved={() => router.refresh()} />
+      </div>
+      <aside className="space-y-4">
+        <div className="rounded-3xl border border-border bg-surface p-5 shadow-sm"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-500/10 text-sky-700"><Webhook size={19} /></span><div><h2 className="font-bold text-text">Webhook endpoints</h2><p className="text-xs text-text-muted">Meta app-এ configure করুন।</p></div></div><div className="mt-5 space-y-4"><div><label className="text-xs font-bold text-text">Meta callback URL</label><div className="mt-1 flex gap-2"><input readOnly value={webhookUrl} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs text-text" /><button type="button" onClick={() => copyValue(webhookUrl, "meta")} className="rounded-xl border border-border px-3 text-text hover:bg-background">{copied === "meta" ? <CheckCircle2 size={16} /> : <Copy size={16} />}</button></div></div><div><label className="text-xs font-bold text-text">TikTok callback URL</label><div className="mt-1 flex gap-2"><input readOnly value={tiktokWebhookUrl} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs text-text" /><button type="button" onClick={() => copyValue(tiktokWebhookUrl, "tiktok")} className="rounded-xl border border-border px-3 text-text hover:bg-background">{copied === "tiktok" ? <CheckCircle2 size={16} /> : <Copy size={16} />}</button></div></div></div><a className="mt-4 inline-block text-sm font-bold text-primary hover:underline" href="https://developers.facebook.com/" target="_blank" rel="noreferrer">Meta for Developers ↗</a><a className="mt-2 block text-sm font-bold text-primary hover:underline" href="https://business-api.tiktok.com/portal/bm-api/education-hub" target="_blank" rel="noreferrer">TikTok Business docs ↗</a></div>
+        <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5"><h3 className="text-sm font-bold text-text">Connection checklist</h3><ul className="mt-2 space-y-2 text-xs leading-5 text-text-muted"><li>• আগে সংশ্লিষ্ট provider card-এ credentials save করুন।</li><li>• এরপর channel enable করে channel settings save করুন।</li><li>• Save all button সব card ও channel settings ধারাবাহিকভাবে save করবে।</li></ul></div>
+      </aside>
+    </section>
+
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 p-3 shadow-[0_-8px_30px_rgba(0,0,0,.08)] backdrop-blur sm:inset-x-auto sm:bottom-5 sm:right-6 sm:rounded-2xl sm:border sm:p-2"><button type="button" onClick={saveAll} disabled={!canUpdate || savingAll} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-700 to-indigo-700 px-5 py-3 text-sm font-black text-white shadow-md transition hover:brightness-110 disabled:opacity-60 sm:min-w-52">{savingAll ? "সব save হচ্ছে…" : <><Save size={16} />Save all Chat settings</>}</button></div>
+  </main>;
 }

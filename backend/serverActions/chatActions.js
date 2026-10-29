@@ -321,6 +321,116 @@ export async function saveChatSettingsAction(formData) {
   }
 }
 
+const PROVIDER_CREDENTIAL_FIELDS = {
+  OPENAI: ["openaiApiKey"],
+  GOOGLE_AI_STUDIO: ["googleAiStudioApiKey"],
+  META: ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "instagramAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion"],
+  TIKTOK: ["tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret"],
+};
+
+export async function saveProviderCredentialsAction(provider, formData) {
+  try {
+    const userId = await requireProcurementPermission("chat", "update");
+    const fields = PROVIDER_CREDENTIAL_FIELDS[String(provider || "").toUpperCase()];
+    if (!fields) throw new Error("Provider নির্বাচনটি সঠিক নয়।");
+    const existing = await getSetting();
+    const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
+    for (const key of fields) {
+      if (formData.get(`clear_${key}`) === "true") delete credentials[key];
+      else if (trim(formData.get(key))) credentials[key] = trim(formData.get(key));
+    }
+    if (provider === "META" && credentials.graphApiVersion && !/^v\d+\.\d+$/.test(credentials.graphApiVersion)) throw new Error("Graph API version এভাবে লিখুন: vXX.0");
+    if (Object.keys(credentials).length && (!process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY || process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY.length < 32)) {
+      throw new Error("Credentials encrypt করতে PROVIDER_CREDENTIAL_ENCRYPTION_KEY কমপক্ষে 32 অক্ষরের হতে হবে।");
+    }
+    const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
+    await prisma.chatSetting.upsert({
+      where: { id: SETTING_ID },
+      update: { encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, encryptedCredentials, createdBy: userId, updatedBy: userId },
+    });
+    revalidatePath("/admin/ai/settings");
+    revalidatePath("/admin/chat/settings");
+    return { success: true, message: `${String(provider).toUpperCase()} credentials encrypted and saved.` };
+  } catch (error) { return actionError(error, "Provider credentials save করা যায়নি।"); }
+}
+
+export async function saveAiSettingsSectionAction(formData) {
+  try {
+    const userId = await requireProcurementPermission("chat", "update");
+    const existing = await getSetting();
+    const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
+    const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
+    const aiProvider = trim(formData.get("aiProvider")) || "OPENAI";
+    const openaiModel = trim(formData.get("openaiModel")) || DEFAULT_CHAT_AI_MODELS.OPENAI;
+    const googleAiStudioModel = trim(formData.get("googleAiStudioModel")) || DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO;
+    if (!["OPENAI", "GOOGLE_AI_STUDIO"].includes(aiProvider)) throw new Error("AI provider নির্বাচনটি সঠিক নয়।");
+    if (!isChatAiModelAllowed("OPENAI", openaiModel)) throw new Error("OpenAI model নির্বাচনটি সঠিক নয়।");
+    if (!isChatAiModelAllowed("GOOGLE_AI_STUDIO", googleAiStudioModel)) throw new Error("Google AI model নির্বাচনটি সঠিক নয়।");
+    if (aiAutoReplyEnabled && aiProvider === "OPENAI" && !credentials.openaiApiKey) throw new Error("AI auto reply চালু করতে আগে OpenAI card-এ API key save করুন।");
+    if (aiAutoReplyEnabled && aiProvider === "GOOGLE_AI_STUDIO" && !credentials.googleAiStudioApiKey) throw new Error("AI auto reply চালু করতে আগে Google AI Studio card-এ API key save করুন।");
+    const data = {
+      aiAutoReplyEnabled,
+      aiProvider,
+      openaiModel,
+      googleAiStudioModel,
+      aiReplyTone: trim(formData.get("aiReplyTone")).replace(/[<>]/g, "").slice(0, 500) || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো",
+      aiMaleAddressTerm: trim(formData.get("aiMaleAddressTerm")).replace(/[<>]/g, "").slice(0, 40),
+      aiFemaleAddressTerm: trim(formData.get("aiFemaleAddressTerm")).replace(/[<>]/g, "").slice(0, 40),
+      updatedBy: userId,
+    };
+    await prisma.chatSetting.upsert({ where: { id: SETTING_ID }, update: data, create: { id: SETTING_ID, ...data, createdBy: userId } });
+    revalidatePath("/admin/ai/settings");
+    return { success: true, message: "AI settings save হয়েছে।" };
+  } catch (error) { return actionError(error, "AI settings save করা যায়নি।"); }
+}
+
+export async function saveChatChannelSectionAction(formData) {
+  try {
+    const userId = await requireProcurementPermission("chat", "update");
+    const existing = await getSetting();
+    const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
+    const websiteChatEnabled = formData.get("websiteChatEnabled") === "on";
+    const whatsappEnabled = formData.get("whatsappEnabled") === "on";
+    const messengerEnabled = formData.get("messengerEnabled") === "on";
+    const facebookCommentAutoReplyEnabled = formData.get("facebookCommentAutoReplyEnabled") === "on";
+    const instagramEnabled = formData.get("instagramEnabled") === "on";
+    const tiktokEnabled = formData.get("tiktokEnabled") === "on";
+    const chatOrderCreationEnabled = formData.get("chatOrderCreationEnabled") === "on";
+    if (facebookCommentAutoReplyEnabled && !existing?.aiAutoReplyEnabled) throw new Error("Facebook comment auto-reply চালাতে AI Settings page-এ AI auto-reply চালু করুন।");
+    if (whatsappEnabled && (!credentials.whatsappPhoneNumberId || !credentials.whatsappAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("WhatsApp চালুর আগে Chat Settings-এর Meta credentials card পূরণ করে save করুন।");
+    if ((messengerEnabled || facebookCommentAutoReplyEnabled) && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Messenger/Facebook comments চালুর আগে Meta credentials card পূরণ করে save করুন।");
+    if (instagramEnabled && (!credentials.instagramAccountId || !credentials.instagramAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Instagram চালুর আগে Meta credentials card পূরণ করে save করুন।");
+    if (tiktokEnabled && (!credentials.tiktokBusinessId || !credentials.tiktokAccessToken || !credentials.tiktokClientKey || !credentials.tiktokClientSecret)) throw new Error("TikTok চালুর আগে TikTok credentials card পূরণ করে save করুন।");
+    const quickReplies = String(formData.get("quickReplies") || "").split(/\r?\n/).map((line) => {
+      const separator = line.indexOf("=");
+      if (separator < 1) return null;
+      const shortcut = line.slice(0, separator).trim().replace(/^\//, "").slice(0, 40);
+      const text = line.slice(separator + 1).trim().slice(0, 500);
+      return shortcut && text ? { shortcut, text } : null;
+    }).filter(Boolean).slice(0, 50);
+    quickReplies.push({ __chatOrderConfig: true, enabled: chatOrderCreationEnabled });
+    const data = {
+      websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled,
+      instagramEnabled, tiktokEnabled, quickReplies,
+      whatsappTemplateLanguage: trim(formData.get("whatsappTemplateLanguage")).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 35) || "bn",
+      whatsappTextTemplateName: trim(formData.get("whatsappTextTemplateName")).replace(/[^a-zA-Z0-9_]/g, "").slice(0, 512) || null,
+      whatsappImageTemplateName: trim(formData.get("whatsappImageTemplateName")).replace(/[^a-zA-Z0-9_]/g, "").slice(0, 512) || null,
+      welcomeMessage: trim(formData.get("welcomeMessage")).slice(0, 300) || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
+      updatedBy: userId,
+    };
+    await prisma.chatSetting.upsert({ where: { id: SETTING_ID }, update: data, create: { id: SETTING_ID, ...data, createdBy: userId } });
+    revalidatePath("/admin/chat");
+    revalidatePath("/admin/chat/settings");
+    const requiredMetaFields = [
+      ...(messengerEnabled ? ["messages", "messaging_postbacks"] : []),
+      ...(facebookCommentAutoReplyEnabled ? ["feed"] : []),
+    ];
+    const subscription = requiredMetaFields.length ? await ensureMessengerPostbacks(credentials, { force: true, requiredFields: requiredMetaFields }) : null;
+    return { success: true, message: subscription?.warning ? `Chat settings save হয়েছে। ${subscription.warning}` : "Chat settings save হয়েছে." };
+  } catch (error) { return actionError(error, "Chat settings save করা যায়নি।"); }
+}
+
 export async function getChatCustomerOrdersAction(conversationId) {
   try {
     await requireProcurementPermission("chat", "view");
