@@ -69,6 +69,17 @@ import { htmlToText } from "html-to-text";
 import sharp from "sharp";
 
 const settingId = "primary";
+const AI_REPLY_CHANNEL_SETTINGS = {
+  WEBSITE: "aiReplyWebsiteEnabled",
+  WHATSAPP: "aiReplyWhatsAppEnabled",
+  MESSENGER: "aiReplyMessengerEnabled",
+  INSTAGRAM: "aiReplyInstagramEnabled",
+  TIKTOK: "aiReplyTikTokEnabled",
+};
+const isAiReplyEnabledForChannel = (setting, channel) => {
+  const field = AI_REPLY_CHANNEL_SETTINGS[String(channel || "").toUpperCase()];
+  return !field || setting?.[field] !== false;
+};
 const ADDRESS_LABELS = {
   BHAI: "ভাই",
   APU: "আপু",
@@ -3724,16 +3735,17 @@ async function stopForHumanTakeover(
   const [conversation, setting] = await Promise.all([
     prisma.chatConversation.findUnique({
       where: { id: conversationId },
-      select: { status: true, aiModeEnabled: true, assignedToId: true, aiReplyLeaseToken: true },
+      select: { status: true, channel: true, aiModeEnabled: true, assignedToId: true, aiReplyLeaseToken: true },
     }),
     prisma.chatSetting.findUnique({
       where: { id: settingId },
-      select: { aiAutoReplyEnabled: true },
+      select: { aiAutoReplyEnabled: true, aiReplyWebsiteEnabled: true, aiReplyWhatsAppEnabled: true, aiReplyMessengerEnabled: true, aiReplyInstagramEnabled: true, aiReplyTikTokEnabled: true },
     }),
   ]);
   if (
     !setting?.aiAutoReplyEnabled ||
     !conversation ||
+    !isAiReplyEnabledForChannel(setting, conversation.channel) ||
     conversation.status !== "OPEN" ||
     !conversation.aiModeEnabled ||
     conversation.assignedToId ||
@@ -3774,6 +3786,11 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId, leaseTok
         where: { id: settingId },
         select: {
           aiAutoReplyEnabled: true,
+          aiReplyWebsiteEnabled: true,
+          aiReplyWhatsAppEnabled: true,
+          aiReplyMessengerEnabled: true,
+          aiReplyInstagramEnabled: true,
+          aiReplyTikTokEnabled: true,
           quickReplies: true,
           aiReplyTone: true,
           aiMaleAddressTerm: true,
@@ -3795,6 +3812,7 @@ async function sendBatchedChatAiReply(conversationId, inboundMessageId, leaseTok
     if (await collectWebsiteHandoffContact(initialConversation, inbound)) return;
     if (
       !setting?.aiAutoReplyEnabled ||
+      !isAiReplyEnabledForChannel(setting, initialConversation?.channel) ||
       !setting.encryptedCredentials ||
       !initialConversation ||
       !inbound ||

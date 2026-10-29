@@ -6,7 +6,7 @@ import ProviderCredentialsCard from "@/app/admin/chat/_components/ProviderCreden
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { Bot, MessageSquareText, Save, Sparkles } from "lucide-react";
+import { Bot, CheckCircle2, MessageSquareText, Save, Sparkles } from "lucide-react";
 
 const fieldClass = "mt-2 w-full rounded-xl border border-border bg-background px-3.5 py-3 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60";
 
@@ -70,6 +70,14 @@ export default function AiSettingsForm({ settings, canUpdate }) {
       <form ref={aiForm} onSubmit={saveAiSettings} className="rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-7">
         <div className="flex items-start gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-violet-500/10 text-violet-700"><Bot size={22} /></span><div><h2 className="text-lg font-bold text-text">AI behavior</h2><p className="mt-1 text-xs leading-5 text-text-muted">কোন model চলবে এবং reply কীভাবে লিখবে সেট করুন।</p></div></div>
         <label className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-border bg-background p-4"><span><span className="block text-sm font-bold text-text">AI auto-reply</span><span className="mt-1 block text-xs text-text-muted">Customer message এলে AI উত্তর তৈরি করবে।</span></span><input name="aiAutoReplyEnabled" type="checkbox" defaultChecked={settings.aiAutoReplyEnabled} disabled={!canUpdate} className="h-5 w-5 accent-primary" /></label>
+        <div className="mt-5 rounded-2xl border border-border bg-background p-4"><div><h3 className="text-sm font-bold text-text">AI কোন channel-এ auto-reply দেবে?</h3><p className="mt-1 text-xs leading-5 text-text-muted">Channel চালু থাকা এবং AI auto-reply master switch on থাকাও প্রয়োজন।</p></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{[
+          ["aiReplyWebsiteEnabled", "Website chat", settings.aiReplyWebsiteEnabled],
+          ["aiReplyMessengerEnabled", "Messenger inbox", settings.aiReplyMessengerEnabled],
+          ["aiReplyWhatsAppEnabled", "WhatsApp inbox", settings.aiReplyWhatsAppEnabled],
+          ["aiReplyInstagramEnabled", "Instagram inbox", settings.aiReplyInstagramEnabled],
+          ["aiReplyTikTokEnabled", "TikTok inbox", settings.aiReplyTikTokEnabled],
+          ["facebookCommentAutoReplyEnabled", "Facebook Page comments", settings.facebookCommentAutoReplyEnabled],
+        ].map(([name, label, checked]) => <label key={name} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2.5"><span className="text-xs font-semibold text-text">{label}</span><input name={name} type="checkbox" defaultChecked={checked} disabled={!canUpdate} className="h-4 w-4 accent-primary" /></label>)}</div></div>
         <label className="mt-5 block"><span className="text-sm font-bold text-text">Active AI provider</span><select name="aiProvider" value={provider} onChange={(event) => setProvider(event.target.value)} disabled={!canUpdate} className={fieldClass}><option value="OPENAI">OpenAI</option><option value="GOOGLE_AI_STUDIO">Google AI Studio · Gemini</option></select><span className="mt-1 block text-xs text-text-muted">Provider বদলালে নিচের সেই provider-এর model ব্যবহার হবে।</span></label>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className="block"><span className="text-sm font-bold text-text">OpenAI model</span><input type="hidden" name="openaiModel" value={openaiModel} /><select value={openaiModel} onChange={(event) => setOpenaiModel(event.target.value)} disabled={!canUpdate} className={fieldClass}>{CHAT_AI_MODELS.OPENAI.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
