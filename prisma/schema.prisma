@@ -1787,6 +1787,8 @@ model ChatSetting {
   whatsappImageTemplateName String?
   whatsappTemplateLanguage  String   @default("bn")
   aiReplyTone          String   @default("বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো")
+  aiMaleAddressTerm    String   @default("ভাইয়া")
+  aiFemaleAddressTerm  String   @default("আপু")
   aiReplyExamples      Json     @default("[]")
   welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
   quickReplies         Json     @default("[]")
@@ -1813,6 +1815,7 @@ model FacebookPageCommentReply {
   privateReplyAt  DateTime?
   privateReplyStatus String?
   privateReplyError String?
+  privateReplyInboxSaved Boolean @default(false)
   status          String   @default("PENDING")
   errorCode       String?
   createdAt       DateTime @default(now())

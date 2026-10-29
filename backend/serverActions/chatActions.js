@@ -37,7 +37,7 @@ export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
         id: true, commentId: true, pageId: true, postId: true, authorName: true,
         commentText: true, commentCreatedAt: true, replyText: true, status: true,
         errorCode: true, createdAt: true, repliedAt: true, privateReplyText: true,
-        privateReplyAt: true, privateReplyStatus: true, privateReplyError: true,
+        privateReplyAt: true, privateReplyStatus: true, privateReplyError: true, privateReplyInboxSaved: true,
       },
     });
     return { success: true, data: rows };
@@ -46,14 +46,14 @@ export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
 
 export async function sendFacebookPageCommentPrivateReplyAction(id, message) {
   try {
-    await requireProcurementPermission("chat", "update");
+    const userId = await requireProcurementPermission("chat", "update");
     const safeId = trim(id);
     const safeMessage = trim(message);
     if (!safeId || !safeMessage || safeMessage.length > 1000) throw new Error("Inbox message 1–1000 অক্ষরের মধ্যে লিখুন।");
     const setting = await getSetting();
     const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
     if (!credentials.messengerPageId || !credentials.messengerPageAccessToken) throw new Error("Chat Settings-এ Facebook Page ID ও Page Access Token configure করুন।");
-    const data = await sendFacebookPageCommentPrivateReply({ id: safeId, message: safeMessage, credentials });
+    const data = await sendFacebookPageCommentPrivateReply({ id: safeId, message: safeMessage, credentials, authorId: userId });
     revalidatePath("/admin/chat/comments");
     return { success: true, data };
   } catch (error) { return actionError(error, "Comment থেকে inbox reply পাঠানো যায়নি।"); }
@@ -203,6 +203,8 @@ export async function getChatSettingsAction() {
         welcomeMessage: setting?.welcomeMessage || "আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?",
         quickReplies: Array.isArray(setting?.quickReplies) ? setting.quickReplies.filter((item) => item?.shortcut && item?.text) : [],
         aiReplyTone: setting?.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো",
+        aiMaleAddressTerm: setting?.aiMaleAddressTerm ?? "ভাইয়া",
+        aiFemaleAddressTerm: setting?.aiFemaleAddressTerm ?? "আপু",
         aiReplyExamples: Array.isArray(setting?.aiReplyExamples) ? setting.aiReplyExamples : [],
         publicCredentials: {
           whatsappPhoneNumberId: credentials.whatsappPhoneNumberId || "",
@@ -267,6 +269,8 @@ export async function saveChatSettingsAction(formData) {
     }).filter(Boolean).slice(0, 50);
     quickReplies.push({ __chatOrderConfig: true, enabled: chatOrderCreationEnabled });
     const aiReplyTone = trim(formData.get("aiReplyTone")).replace(/[<>]/g, "").slice(0, 500) || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো";
+    const aiMaleAddressTerm = trim(formData.get("aiMaleAddressTerm")).replace(/[<>]/g, "").slice(0, 40);
+    const aiFemaleAddressTerm = trim(formData.get("aiFemaleAddressTerm")).replace(/[<>]/g, "").slice(0, 40);
     const aiReplyExamples = String(formData.get("aiReplyExamples") || "").split(/\r?\n/).map((line) => {
       const separator = line.indexOf("=>");
       if (separator < 1) return null;
@@ -301,8 +305,8 @@ export async function saveChatSettingsAction(formData) {
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiMaleAddressTerm, aiFemaleAddressTerm, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiMaleAddressTerm, aiFemaleAddressTerm, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");

@@ -18,7 +18,7 @@ export async function saveFacebookPageComment({ commentId, pageId, postId, autho
   return result.count > 0;
 }
 
-export async function sendFacebookPageCommentPrivateReply({ id, message, credentials }) {
+export async function sendFacebookPageCommentPrivateReply({ id, message, credentials, authorId = null }) {
   const comment = await prisma.facebookPageCommentReply.findUnique({ where: { id } });
   if (!comment) throw new Error("Facebook comment পাওয়া যায়নি।");
   if (comment.privateReplyAt || comment.privateReplyStatus === "SENT") throw new Error("এই comment-এর জন্য private inbox reply আগেই পাঠানো হয়েছে।");
@@ -62,10 +62,45 @@ export async function sendFacebookPageCommentPrivateReply({ id, message, credent
       error.code = result?.error?.code || `meta_http_${response.status}`;
       throw error;
     }
-    return await prisma.facebookPageCommentReply.update({
+    const savedComment = await prisma.facebookPageCommentReply.update({
       where: { id },
       data: { privateReplyStatus: "SENT", privateReplyText: reply, privateReplyMessageId: String(result.message_id).slice(0, 120), privateReplyAt: new Date(), privateReplyError: null },
     });
+    const recipientId = String(result.recipient_id || comment.authorId || "").slice(0, 120);
+    let inboxSaved = false;
+    if (recipientId) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          const conversation = await tx.chatConversation.upsert({
+            where: { channel_externalUserId: { channel: "MESSENGER", externalUserId: recipientId } },
+            create: { channel: "MESSENGER", externalUserId: recipientId, customerName: comment.authorName || null, status: "OPEN", lastMessageAt: new Date() },
+            update: { ...(comment.authorName && { customerName: comment.authorName }), status: "OPEN", lastMessageAt: new Date() },
+            select: { id: true },
+          });
+          await tx.chatMessage.createMany({
+            data: [{
+              conversationId: conversation.id,
+              channel: "MESSENGER",
+              direction: "OUTBOUND",
+              authorType: "AGENT",
+              authorId,
+              content: reply,
+              externalMessageId: String(result.message_id).slice(0, 120),
+              deliveryStatus: "SENT",
+              metadata: { source: "FACEBOOK_COMMENT_PRIVATE_REPLY", commentId: comment.commentId, postId: comment.postId || null },
+            }],
+            skipDuplicates: true,
+          });
+        });
+        inboxSaved = true;
+        await prisma.facebookPageCommentReply.update({ where: { id }, data: { privateReplyInboxSaved: true } });
+      } catch (inboxError) {
+        console.error("Facebook comment private reply inbox save failed:", { commentId: comment.commentId, message: inboxError?.message || "unknown_error" });
+      }
+    } else {
+      console.error("Facebook comment private reply has no Messenger recipient id:", { commentId: comment.commentId });
+    }
+    return { ...savedComment, privateReplyInboxSaved: inboxSaved };
   } catch (error) {
     const safeError = String(error?.message || "Facebook inbox reply failed").slice(0, 300);
     await prisma.facebookPageCommentReply.update({ where: { id }, data: { privateReplyStatus: "FAILED", privateReplyError: safeError } }).catch(() => {});
@@ -73,14 +108,14 @@ export async function sendFacebookPageCommentPrivateReply({ id, message, credent
   }
 }
 
-export async function processFacebookPageComment({ commentId, pageId, postId, commentText, credentials }) {
+export async function processFacebookPageComment({ commentId, pageId, postId, authorName, commentText, credentials }) {
   const claimed = await prisma.facebookPageCommentReply.updateMany({
     where: { commentId, status: "PENDING" },
     data: { status: "PROCESSING" },
   });
   if (!claimed.count) return;
   try {
-    const reply = await generateFacebookCommentReply({ commentText, postId });
+    const reply = await generateFacebookCommentReply({ commentText, postId, authorName });
     if (!reply) {
       await prisma.facebookPageCommentReply.update({ where: { commentId }, data: { status: "SKIPPED" } });
       return;

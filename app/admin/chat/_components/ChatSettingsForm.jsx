@@ -289,6 +289,17 @@ export default function ChatSettingsForm({
             <span className="mt-1 block text-xs text-text-muted">নিজের দোকানের মতো করে tone লিখুন। Banglish বা বাংলা—দুই ক্ষেত্রেই AI বাংলা অক্ষরে reply দেবে; customer English লিখলে English-এ উত্তর দেবে।</span>
             <textarea name="aiReplyTone" rows={3} maxLength={500} defaultValue={settings.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো"} disabled={!canUpdate} placeholder="বন্ধুসুলভ, সহজ, natural; ছোট reply; অতিরিক্ত greeting বা emoji নয়" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
           </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-semibold text-text">ছেলে customer-কে কী বলে সম্বোধন করবে?</span>
+              <input name="aiMaleAddressTerm" maxLength={40} defaultValue={settings.aiMaleAddressTerm ?? "ভাইয়া"} disabled={!canUpdate} placeholder="যেমন: ভাইয়া" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold text-text">মেয়ে customer-কে কী বলে সম্বোধন করবে?</span>
+              <input name="aiFemaleAddressTerm" maxLength={40} defaultValue={settings.aiFemaleAddressTerm ?? "আপু"} disabled={!canUpdate} placeholder="যেমন: আপু" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none focus:border-brand disabled:opacity-50" />
+            </label>
+          </div>
+          <p className="-mt-2 text-xs leading-5 text-text-muted">Facebook comment-এর auto-reply-তে নাম থেকে gender স্পষ্ট বোঝা গেলে এই সম্বোধন ব্যবহার হবে। অস্পষ্ট হলে neutral সম্বোধন দেবে। কোনো ঘর ফাঁকা রাখলে সেই সম্বোধন ব্যবহার করবে না।</p>
           <label className="block">
             <span className="text-sm font-semibold text-text">Saved AI example Q&A</span>
             <span className="mt-1 block text-xs text-text-muted">প্রতি লাইনে একটি করে লিখুন: প্রশ্ন =&gt; উত্তর। সর্বোচ্চ 40টি example; কাছাকাছি customer question এলে AI এগুলো থেকে ভাষা ও উত্তরের ধরন শিখবে। দাম, stock ও delivery-এর current তথ্য catalog থেকে নেবে।</span>

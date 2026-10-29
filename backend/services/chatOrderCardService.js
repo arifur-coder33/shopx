@@ -42,7 +42,12 @@ export async function renderChatOrderCard(order, siteUrl) {
   const items = order.orderItems.slice(0, 20);
   const leadTimes = [...new Set(items.map((item) => item.product?.deliveryMinDays && item.product?.deliveryMaxDays ? `${item.product?.deliveryMinDays}–${item.product?.deliveryMaxDays} দিন` : "২–৫ দিন"))];
   const leadTime = leadTimes.length === 1 ? leadTimes[0] : "প্রতিটি পণ্যের জন্য আলাদা";
-  const fontData = await readFile(join(process.cwd(), "public", "fonts", "SolaimanLipi.ttf")).then((font) => font.toString("base64")).catch(() => "");
+  const fontData = await readFile(join(process.cwd(), "public", "fonts", "SolaimanLipi.ttf"))
+    .then((font) => font.toString("base64"))
+    .catch((error) => {
+      console.error("Bengali font unavailable for chat order card:", error?.code || error?.message || "font_read_failed");
+      throw new Error("chat_order_card_font_unavailable");
+    });
   const embeddedFont = fontData ? `@font-face{font-family:OrderCardBangla;src:url(data:font/ttf;base64,${fontData}) format('truetype');font-weight:400}` : "";
   const height = 860 + items.length * 110;
   const itemRows = items.map((item, index) => {
@@ -54,7 +59,25 @@ export async function renderChatOrderCard(order, siteUrl) {
   const totalsY = 500 + items.length * 110 + 24;
   const totalAmount = Number(order.dueAmount || 0) + Number(order.paidAmount || 0);
   const svg = `<svg width="900" height="${height}" viewBox="0 0 900 ${height}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f05a24"/><stop offset="1" stop-color="#dd3d0b"/></linearGradient><style>${embeddedFont}.title{font:700 54px OrderCardBangla, sans-serif;fill:#fff}.sub{font:400 25px OrderCardBangla, sans-serif;fill:#fff}.eyebrow{font:700 18px OrderCardBangla, sans-serif;letter-spacing:1px;fill:#ffe1d4}.metaLight{font:600 20px OrderCardBangla, sans-serif;fill:#fff}.section{font:700 21px OrderCardBangla, sans-serif;fill:#263348}.item{font:600 23px OrderCardBangla, sans-serif;fill:#263348}.meta{font:400 18px OrderCardBangla, sans-serif;fill:#718096}.total{font:700 34px OrderCardBangla, sans-serif;fill:#e64b17}.footer{font:400 17px OrderCardBangla, sans-serif;fill:#8290a3}</style></defs><rect width="900" height="${height}" rx="42" fill="#f4f7fb"/><rect x="0" y="0" width="900" height="390" rx="42" fill="url(#bg)"/><circle cx="770" cy="88" r="95" fill="#ffffff" opacity=".10"/><circle cx="840" cy="310" r="125" fill="#ffffff" opacity=".08"/><text x="76" y="92" class="eyebrow">অর্ডার নিশ্চিত</text><text x="76" y="176" class="title">ধন্যবাদ!</text><text x="76" y="232" class="sub">আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে।</text><text x="76" y="300" class="metaLight">অর্ডার নম্বর: ${escapeXml(order.orderNo)}</text><rect x="56" y="438" width="788" height="${items.length * 110 + 320}" rx="26" fill="#ffffff"/><text x="76" y="482" class="section">অর্ডারের বিবরণ</text>${itemRows}<line x1="76" y1="${totalsY}" x2="824" y2="${totalsY}" stroke="#e5eaf1" stroke-width="2"/><text x="76" y="${totalsY + 46}" class="meta">ডেলিভারি চার্জ</text><text x="824" y="${totalsY + 46}" text-anchor="end" class="item">${escapeXml(money(order.deliveryCharge))}</text><text x="76" y="${totalsY + 100}" class="section">সর্বমোট</text><text x="824" y="${totalsY + 100}" text-anchor="end" class="total">${escapeXml(money(totalAmount))}</text><rect x="56" y="${totalsY + 132}" width="788" height="96" rx="20" fill="#fff0e9"/><text x="84" y="${totalsY + 172}" class="meta">সম্ভাব্য ডেলিভারি</text><text x="84" y="${totalsY + 207}" class="item">${escapeXml(leadTime)}</text><text x="450" y="${height - 40}" text-anchor="middle" class="footer">আমাদের সঙ্গে কেনাকাটার জন্য ধন্যবাদ</text></svg>`;
-  let image = await sharp(Buffer.from(svg)).png().toBuffer();
+  let browser = null;
+  let image;
+  try {
+    const chromium = (await import("@sparticuz/chromium")).default;
+    const puppeteer = process.env.NODE_ENV === "production"
+      ? (await import("puppeteer-core")).default
+      : (await import("puppeteer")).default;
+    browser = await puppeteer.launch(process.env.NODE_ENV === "production"
+      ? { args: chromium.args, executablePath: await chromium.executablePath(), headless: true, ignoreHTTPSErrors: true }
+      : { headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 900, height, deviceScaleFactor: 1 });
+    await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>@page{margin:0}html,body{margin:0;padding:0;width:900px;height:${height}px;overflow:hidden}body{font-family:OrderCardBangla,sans-serif}</style></head><body>${svg}</body></html>`, { waitUntil: "domcontentloaded" });
+    await page.evaluate(() => document.fonts.ready);
+    image = Buffer.from(await page.screenshot({ type: "png", captureBeyondViewport: true }));
+    await page.close();
+  } finally {
+    if (browser) await browser.close();
+  }
   const photos = await Promise.all(items.map(async (item, index) => {
     const photo = await trustedProductImage(item, siteUrl);
     return photo ? { input: photo, left: 76, top: 505 + index * 110 } : null;

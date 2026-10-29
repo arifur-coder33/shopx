@@ -10,6 +10,9 @@ const nextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   outputFileTracingIncludes: {
     "/api/pdf/invoice": ["./node_modules/@sparticuz/chromium/bin/**/*", "./public/fonts/**/*", "./public/android-chrome-192x192.png"],
+    "/api/chat/order-card": ["./node_modules/@sparticuz/chromium/bin/**/*", "./public/fonts/SolaimanLipi.ttf"],
+    "/api/chat/messenger-order": ["./node_modules/@sparticuz/chromium/bin/**/*", "./public/fonts/SolaimanLipi.ttf"],
+    "/api/webhooks/meta-chat": ["./node_modules/@sparticuz/chromium/bin/**/*", "./public/fonts/SolaimanLipi.ttf"],
   },
   // cacheComponents: true,
   images: {
