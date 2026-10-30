@@ -1060,7 +1060,7 @@ export default function AdminChatInbox({
                   href="/admin/chat/comments"
                   className="rounded-lg px-3 py-2 text-sm font-semibold text-text hover:bg-background"
                 >
-                  Page Comments
+                  Social Comments
                 </a>
               </div>
             </details>

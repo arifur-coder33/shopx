@@ -1779,6 +1779,7 @@ model ChatSetting {
   instagramEnabled     Boolean  @default(false)
   tiktokEnabled        Boolean  @default(false)
   facebookCommentAutoReplyEnabled Boolean @default(false)
+  instagramCommentAutoReplyEnabled Boolean @default(false)
   aiAutoReplyEnabled   Boolean  @default(false)
   aiReplyWebsiteEnabled Boolean @default(true)
   aiReplyWhatsAppEnabled Boolean @default(true)
@@ -1806,7 +1807,8 @@ model ChatSetting {
 
 model FacebookPageCommentReply {
   id              String   @id @default(cuid())
-  commentId       String   @unique
+  platform         String   @default("FACEBOOK")
+  commentId       String
   pageId          String
   postId          String?
   authorId        String?
@@ -1826,6 +1828,7 @@ model FacebookPageCommentReply {
   createdAt       DateTime @default(now())
   repliedAt       DateTime?
 
-  @@index([pageId, createdAt])
+  @@unique([platform, commentId])
+  @@index([platform, pageId, createdAt])
   @@index([status, createdAt])
 }

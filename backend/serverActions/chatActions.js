@@ -14,6 +14,7 @@ import { sendChatChannelTextMessage } from "@/backend/services/chatChannelTextAd
 import { isChatOrderCreationEnabled } from "@/backend/services/chatOrderSettings";
 import { ensureMessengerPostbacks } from "@/backend/services/chatMessengerSubscriptions.mjs";
 import { sendFacebookPageCommentPrivateReply } from "@/backend/services/facebookPageCommentReplyService";
+import { ensureInstagramCommentSubscription } from "@/backend/services/instagramCommentSubscriptions.mjs";
 import { messengerReaction, messengerReactionPayload } from "@/backend/utils/chatMessengerReaction.mjs";
 import {
   DEFAULT_CHAT_AI_MODELS,
@@ -34,7 +35,7 @@ export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
       orderBy: { createdAt: "desc" },
       take: Math.min(Math.max(Number(limit) || 100, 1), 250),
       select: {
-        id: true, commentId: true, pageId: true, postId: true, authorName: true,
+        id: true, platform: true, commentId: true, pageId: true, postId: true, authorName: true,
         commentText: true, commentCreatedAt: true, replyText: true, status: true,
         errorCode: true, createdAt: true, repliedAt: true, privateReplyText: true,
         privateReplyAt: true, privateReplyStatus: true, privateReplyError: true, privateReplyInboxSaved: true,
@@ -52,7 +53,7 @@ export async function sendFacebookPageCommentPrivateReplyAction(id, message) {
     if (!safeId || !safeMessage || safeMessage.length > 1000) throw new Error("Inbox message 1–1000 অক্ষরের মধ্যে লিখুন।");
     const setting = await getSetting();
     const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
-    if (!credentials.messengerPageId || !credentials.messengerPageAccessToken) throw new Error("Chat Settings-এ Facebook Page ID ও Page Access Token configure করুন।");
+    if ((!credentials.messengerPageId && !credentials.instagramAccountId) || !credentials.messengerPageAccessToken) throw new Error("Chat Settings-এ Meta Page/Instagram ID ও Page Access Token configure করুন।");
     const data = await sendFacebookPageCommentPrivateReply({ id: safeId, message: safeMessage, credentials, authorId: userId });
     revalidatePath("/admin/chat/comments");
     return { success: true, data };
@@ -187,6 +188,7 @@ export async function getChatSettingsAction() {
         whatsappEnabled: setting?.whatsappEnabled ?? false,
         messengerEnabled: setting?.messengerEnabled ?? false,
         facebookCommentAutoReplyEnabled: setting?.facebookCommentAutoReplyEnabled ?? false,
+        instagramCommentAutoReplyEnabled: setting?.instagramCommentAutoReplyEnabled ?? false,
         instagramEnabled: setting?.instagramEnabled ?? false,
         tiktokEnabled: setting?.tiktokEnabled ?? false,
         aiAutoReplyEnabled: setting?.aiAutoReplyEnabled ?? false,
@@ -252,7 +254,8 @@ export async function saveChatSettingsAction(formData) {
     const chatOrderCreationEnabled = formData.get("chatOrderCreationEnabled") === "on";
     const whatsappEnabled = formData.get("whatsappEnabled") === "on";
     const messengerEnabled = formData.get("messengerEnabled") === "on";
-    const facebookCommentAutoReplyEnabled = formData.get("facebookCommentAutoReplyEnabled") === "on";
+    const facebookCommentAutoReplyEnabled = formData.has("facebookCommentAutoReplyEnabled") ? formData.get("facebookCommentAutoReplyEnabled") === "on" : Boolean(existing?.facebookCommentAutoReplyEnabled);
+    const instagramCommentAutoReplyEnabled = formData.has("instagramCommentAutoReplyEnabled") ? formData.get("instagramCommentAutoReplyEnabled") === "on" : Boolean(existing?.instagramCommentAutoReplyEnabled);
     const instagramEnabled = formData.get("instagramEnabled") === "on";
     const tiktokEnabled = formData.get("tiktokEnabled") === "on";
     const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
@@ -293,6 +296,9 @@ export async function saveChatSettingsAction(formData) {
     if (facebookCommentAutoReplyEnabled && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
       throw new Error("Facebook comment auto-reply চালু করতে Page ID, Page Access Token, App Secret ও Webhook Verify Token দিন।");
     }
+    if (instagramCommentAutoReplyEnabled && (!credentials.instagramAccountId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
+      throw new Error("Instagram comment auto-reply চালু করতে Instagram Professional Account ID, linked Page Access Token, App Secret ও Webhook Verify Token দিন।");
+    }
     if (instagramEnabled && (!credentials.instagramAccountId || !credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
       throw new Error("Instagram inbox চালু করতে linked Facebook Page ID ও Page Access Token, Instagram Professional Account ID, Meta App Secret ও Webhook Verify Token দিন।");
     }
@@ -307,12 +313,12 @@ export async function saveChatSettingsAction(formData) {
     }
     if (aiAutoReplyEnabled && aiProvider === "OPENAI" && !credentials.openaiApiKey) throw new Error("OpenAI বেছে নিলে AI auto reply চালু করতে OpenAI API key দিন।");
     if (aiAutoReplyEnabled && aiProvider === "GOOGLE_AI_STUDIO" && !credentials.googleAiStudioApiKey) throw new Error("Google AI Studio বেছে নিলে AI auto reply চালু করতে Google AI Studio API key দিন।");
-    if (facebookCommentAutoReplyEnabled && !aiAutoReplyEnabled) throw new Error("Facebook comment auto-reply চালাতে AI auto reply-ও চালু করুন।");
+    if ((facebookCommentAutoReplyEnabled || instagramCommentAutoReplyEnabled) && !aiAutoReplyEnabled) throw new Error("Comment auto-reply চালাতে AI auto reply-ও চালু করুন।");
     const encryptedCredentials = Object.keys(credentials).length ? encryptProviderCredentials(credentials) : null;
     await prisma.chatSetting.upsert({
       where: { id: SETTING_ID },
-      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiMaleAddressTerm, aiFemaleAddressTerm, aiReplyExamples, encryptedCredentials, updatedBy: userId },
-      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiMaleAddressTerm, aiFemaleAddressTerm, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
+      update: { websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiMaleAddressTerm, aiFemaleAddressTerm, aiReplyExamples, encryptedCredentials, updatedBy: userId },
+      create: { id: SETTING_ID, websiteChatEnabled, whatsappEnabled, messengerEnabled, facebookCommentAutoReplyEnabled, instagramCommentAutoReplyEnabled, instagramEnabled, tiktokEnabled, aiAutoReplyEnabled, aiProvider, openaiModel, googleAiStudioModel, whatsappTextTemplateName, whatsappImageTemplateName, whatsappTemplateLanguage, welcomeMessage, quickReplies, aiReplyTone, aiMaleAddressTerm, aiFemaleAddressTerm, aiReplyExamples, encryptedCredentials, createdBy: userId, updatedBy: userId },
     });
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");
@@ -321,7 +327,9 @@ export async function saveChatSettingsAction(formData) {
       ...(facebookCommentAutoReplyEnabled ? ["feed"] : []),
     ];
     const subscription = requiredMetaFields.length ? await ensureMessengerPostbacks(credentials, { force: true, requiredFields: requiredMetaFields }) : null;
-    return { success: true, message: subscription?.warning ? `Chat settings saved. ${subscription.warning}` : "Chat settings saved." };
+    const instagramSubscription = instagramEnabled || instagramCommentAutoReplyEnabled ? await ensureInstagramCommentSubscription(credentials) : null;
+    const warning = subscription?.warning || instagramSubscription?.warning;
+    return { success: true, message: warning ? `Chat settings saved. ${warning}` : "Chat settings saved." };
   } catch (error) {
     return actionError(error, "Chat settings could not be saved.");
   }
@@ -369,6 +377,7 @@ export async function saveAiSettingsSectionAction(formData) {
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
     const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
     const facebookCommentAutoReplyEnabled = formData.get("facebookCommentAutoReplyEnabled") === "on";
+    const instagramCommentAutoReplyEnabled = formData.get("instagramCommentAutoReplyEnabled") === "on";
     const aiProvider = trim(formData.get("aiProvider")) || "OPENAI";
     const openaiModel = trim(formData.get("openaiModel")) || DEFAULT_CHAT_AI_MODELS.OPENAI;
     const googleAiStudioModel = trim(formData.get("googleAiStudioModel")) || DEFAULT_CHAT_AI_MODELS.GOOGLE_AI_STUDIO;
@@ -377,11 +386,13 @@ export async function saveAiSettingsSectionAction(formData) {
     if (!isChatAiModelAllowed("GOOGLE_AI_STUDIO", googleAiStudioModel)) throw new Error("Google AI model নির্বাচনটি সঠিক নয়।");
     if (aiAutoReplyEnabled && aiProvider === "OPENAI" && !credentials.openaiApiKey) throw new Error("AI auto reply চালু করতে আগে OpenAI card-এ API key save করুন।");
     if (aiAutoReplyEnabled && aiProvider === "GOOGLE_AI_STUDIO" && !credentials.googleAiStudioApiKey) throw new Error("AI auto reply চালু করতে আগে Google AI Studio card-এ API key save করুন।");
-    if (facebookCommentAutoReplyEnabled && !aiAutoReplyEnabled) throw new Error("Facebook comment auto-reply চালাতে AI auto-reply master switch-ও চালু করুন।");
+    if ((facebookCommentAutoReplyEnabled || instagramCommentAutoReplyEnabled) && !aiAutoReplyEnabled) throw new Error("Comment auto-reply চালাতে AI auto-reply master switch-ও চালু করুন।");
     if (facebookCommentAutoReplyEnabled && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Facebook comment AI reply চালু করতে আগে Chat Settings-এর Meta credentials card পূরণ করে save করুন।");
+    if (instagramCommentAutoReplyEnabled && (!credentials.instagramAccountId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Instagram comment AI reply চালু করতে আগে Chat Settings-এর linked Instagram ID, Page token ও App credentials save করুন।");
     const data = {
       aiAutoReplyEnabled,
       facebookCommentAutoReplyEnabled,
+      instagramCommentAutoReplyEnabled,
       aiReplyWebsiteEnabled: formData.get("aiReplyWebsiteEnabled") === "on",
       aiReplyWhatsAppEnabled: formData.get("aiReplyWhatsAppEnabled") === "on",
       aiReplyMessengerEnabled: formData.get("aiReplyMessengerEnabled") === "on",
@@ -400,7 +411,9 @@ export async function saveAiSettingsSectionAction(formData) {
     revalidatePath("/admin/chat/settings");
     const requiredMetaFields = facebookCommentAutoReplyEnabled ? ["feed"] : [];
     const subscription = requiredMetaFields.length ? await ensureMessengerPostbacks(credentials, { force: true, requiredFields: requiredMetaFields }) : null;
-    return { success: true, message: subscription?.warning ? `AI settings save হয়েছে। ${subscription.warning}` : "AI settings save হয়েছে।" };
+    const instagramSubscription = instagramCommentAutoReplyEnabled ? await ensureInstagramCommentSubscription(credentials) : null;
+    const warning = subscription?.warning || instagramSubscription?.warning;
+    return { success: true, message: warning ? `AI settings save হয়েছে। ${warning}` : "AI settings save হয়েছে।" };
   } catch (error) { return actionError(error, "AI settings save করা যায়নি।"); }
 }
 
@@ -443,7 +456,9 @@ export async function saveChatChannelSectionAction(formData) {
       ...(messengerEnabled || instagramEnabled ? ["messages", "messaging_postbacks"] : []),
     ];
     const subscription = requiredMetaFields.length ? await ensureMessengerPostbacks(credentials, { force: true, requiredFields: requiredMetaFields }) : null;
-    return { success: true, message: subscription?.warning ? `Chat settings save হয়েছে। ${subscription.warning}` : "Chat settings save হয়েছে." };
+    const instagramSubscription = instagramEnabled ? await ensureInstagramCommentSubscription(credentials) : null;
+    const warning = subscription?.warning || instagramSubscription?.warning;
+    return { success: true, message: warning ? `Chat settings save হয়েছে। ${warning}` : "Chat settings save হয়েছে." };
   } catch (error) { return actionError(error, "Chat settings save করা যায়নি।"); }
 }
 

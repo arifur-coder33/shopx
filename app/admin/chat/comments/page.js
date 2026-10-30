@@ -3,7 +3,7 @@ import { getFacebookPageCommentsAction } from "@/backend/serverActions/chatActio
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import FacebookCommentsPage from "../_components/FacebookCommentsPage";
 
-export const metadata = { title: "Facebook Page Comments" };
+export const metadata = { title: "Facebook & Instagram Comments" };
 export const dynamic = "force-dynamic";
 
 export default async function FacebookPageCommentsRoute() {

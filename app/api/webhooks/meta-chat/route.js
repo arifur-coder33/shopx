@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 async function getCredentials() {
-  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true, instagramEnabled: true, facebookCommentAutoReplyEnabled: true } });
-  if (!setting?.encryptedCredentials) return { whatsappEnabled: setting?.whatsappEnabled ?? false, messengerEnabled: setting?.messengerEnabled ?? false, instagramEnabled: setting?.instagramEnabled ?? false, facebookCommentAutoReplyEnabled: setting?.facebookCommentAutoReplyEnabled ?? false };
-  return { ...decryptProviderCredentials(setting.encryptedCredentials), whatsappEnabled: setting.whatsappEnabled, messengerEnabled: setting.messengerEnabled, instagramEnabled: setting.instagramEnabled, facebookCommentAutoReplyEnabled: setting.facebookCommentAutoReplyEnabled };
+  const setting = await prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { encryptedCredentials: true, whatsappEnabled: true, messengerEnabled: true, instagramEnabled: true, facebookCommentAutoReplyEnabled: true, instagramCommentAutoReplyEnabled: true } });
+  if (!setting?.encryptedCredentials) return { whatsappEnabled: setting?.whatsappEnabled ?? false, messengerEnabled: setting?.messengerEnabled ?? false, instagramEnabled: setting?.instagramEnabled ?? false, facebookCommentAutoReplyEnabled: setting?.facebookCommentAutoReplyEnabled ?? false, instagramCommentAutoReplyEnabled: setting?.instagramCommentAutoReplyEnabled ?? false };
+  return { ...decryptProviderCredentials(setting.encryptedCredentials), whatsappEnabled: setting.whatsappEnabled, messengerEnabled: setting.messengerEnabled, instagramEnabled: setting.instagramEnabled, facebookCommentAutoReplyEnabled: setting.facebookCommentAutoReplyEnabled, instagramCommentAutoReplyEnabled: setting.instagramCommentAutoReplyEnabled };
 }
 
 export async function GET(request) {
@@ -344,6 +344,30 @@ export async function POST(request) {
             const comment = { commentId, pageId: String(entry.id), postId: value.post_id, authorId, authorName: value.from?.name, commentText,
               commentCreatedAt: Number.isFinite(createdAtSeconds) && createdAtSeconds > 0 ? new Date(createdAtSeconds * 1000) : null };
             if (await saveFacebookPageComment(comment)) {
+              after(async () => processFacebookPageComment({ ...comment, credentials }));
+            }
+          }
+        }
+        if (isInstagramPayload && (credentials.instagramEnabled || credentials.instagramCommentAutoReplyEnabled)
+          && String(entry.id || "") === String(credentials.instagramAccountId || "") && change.field === "comments") {
+          const commentId = String(value.id || value.comment_id || "");
+          const authorId = String(value.from?.id || "");
+          const commentText = String(value.text || value.message || "").trim();
+          const verb = String(value.verb || "add").toLowerCase();
+          if (commentId && commentText && verb === "add" && authorId !== String(credentials.instagramAccountId || "")) {
+            const rawTime = value.timestamp || value.created_time;
+            const numericTime = Number(rawTime);
+            const commentCreatedAt = Number.isFinite(numericTime) && numericTime > 0
+              ? new Date(numericTime < 10_000_000_000 ? numericTime * 1000 : numericTime)
+              : rawTime ? new Date(rawTime) : null;
+            const comment = {
+              platform: "INSTAGRAM", commentId, pageId: String(entry.id),
+              postId: value.media?.id || value.media_id || null,
+              authorId, authorName: value.from?.username || value.from?.name || null,
+              commentText,
+              commentCreatedAt: commentCreatedAt && !Number.isNaN(commentCreatedAt.getTime()) ? commentCreatedAt : null,
+            };
+            if (await saveFacebookPageComment(comment) && credentials.instagramCommentAutoReplyEnabled) {
               after(async () => processFacebookPageComment({ ...comment, credentials }));
             }
           }

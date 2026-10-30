@@ -77,6 +77,7 @@ export default function AiSettingsForm({ settings, canUpdate }) {
           ["aiReplyInstagramEnabled", "Instagram inbox", settings.aiReplyInstagramEnabled],
           ["aiReplyTikTokEnabled", "TikTok inbox", settings.aiReplyTikTokEnabled],
           ["facebookCommentAutoReplyEnabled", "Facebook Page comments", settings.facebookCommentAutoReplyEnabled],
+          ["instagramCommentAutoReplyEnabled", "Instagram comments", settings.instagramCommentAutoReplyEnabled],
         ].map(([name, label, checked]) => <label key={name} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2.5"><span className="text-xs font-semibold text-text">{label}</span><input name={name} type="checkbox" defaultChecked={checked} disabled={!canUpdate} className="h-4 w-4 accent-primary" /></label>)}</div></div>
         <label className="mt-5 block"><span className="text-sm font-bold text-text">Active AI provider</span><select name="aiProvider" value={provider} onChange={(event) => setProvider(event.target.value)} disabled={!canUpdate} className={fieldClass}><option value="OPENAI">OpenAI</option><option value="GOOGLE_AI_STUDIO">Google AI Studio · Gemini</option></select><span className="mt-1 block text-xs text-text-muted">Provider বদলালে নিচের সেই provider-এর model ব্যবহার হবে।</span></label>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -85,7 +86,7 @@ export default function AiSettingsForm({ settings, canUpdate }) {
         </div>
         <label className="mt-5 block"><span className="text-sm font-bold text-text">Reply tone ও style</span><textarea name="aiReplyTone" rows={3} maxLength={500} defaultValue={settings.aiReplyTone || "বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো"} disabled={!canUpdate} placeholder="বন্ধুসুলভ, সহজ, natural; ছোট reply; অতিরিক্ত greeting বা emoji নয়" className={fieldClass} /></label>
         <div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="block"><span className="text-sm font-bold text-text">ছেলে customer-এর সম্বোধন</span><input name="aiMaleAddressTerm" maxLength={40} defaultValue={settings.aiMaleAddressTerm ?? "ভাইয়া"} disabled={!canUpdate} placeholder="যেমন: ভাইয়া" className={fieldClass} /></label><label className="block"><span className="text-sm font-bold text-text">মেয়ে customer-এর সম্বোধন</span><input name="aiFemaleAddressTerm" maxLength={40} defaultValue={settings.aiFemaleAddressTerm ?? "আপু"} disabled={!canUpdate} placeholder="যেমন: আপু" className={fieldClass} /></label></div>
-        <p className="mt-2 text-xs leading-5 text-text-muted">নাম স্পষ্ট না হলে AI নিরপেক্ষ সম্বোধন করবে। Facebook comment ও chat reply-তে এই preference প্রযোজ্য।</p>
+        <p className="mt-2 text-xs leading-5 text-text-muted">নাম স্পষ্ট না হলে AI নিরপেক্ষ সম্বোধন করবে। Facebook/Instagram comment ও chat reply-তে এই preference প্রযোজ্য।</p>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><p className="text-xs text-text-muted">{notice}</p>{canUpdate && <button type="submit" className="inline-flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-800 hover:bg-violet-500/15"><Save size={16} />Save AI behavior</button>}</div>
       </form>
 
