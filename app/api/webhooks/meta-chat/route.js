@@ -87,7 +87,8 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
       const quotedProductId = quoted.metadata?.image?.productId
         || quoted.metadata?.selectedProductId
         || (quoted.metadata?.productOptions?.length === 1 ? quoted.metadata.productOptions[0].id : null);
-      savedMetadata = { ...metadata, replyTo: { id: quoted.id, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType, ...(quotedProductId && { productId: quotedProductId }) } };
+      const quotedVariantId = quoted.metadata?.image?.variantId || null;
+      savedMetadata = { ...metadata, replyTo: { id: quoted.id, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType, ...(quotedProductId && { productId: quotedProductId }), ...(quotedVariantId && { variantId: quotedVariantId, variantLabel: quoted.metadata.image.variantLabel || null }) } };
     } else savedMetadata = { ...metadata, replyTo: { content: "Replied to an earlier message" } };
   }
   const insertedCount = await prisma.$transaction(async (tx) => {

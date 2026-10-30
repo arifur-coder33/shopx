@@ -649,7 +649,7 @@ export async function generateReply(
     ? products.products.find((product) => product.id === (productMemory.selectedProductId || productMemory.pageProductId)) || (products.products.length === 1 ? products.products[0] : null)
     : null;
   const colorPhotos = detailProduct
-    ? [...new Map(detailProduct.variants.filter((variant) => variant.colorLabel && variant.imageUrl).map((variant) => [variant.colorLabel.toLocaleLowerCase(), { url: variant.imageUrl, productId: detailProduct.id, productTitle: `${detailProduct.title} · ${variant.colorLabel}` }])).values()]
+    ? [...new Map(detailProduct.variants.filter((variant) => variant.colorLabel && variant.imageUrl).map((variant) => [variant.colorLabel.toLocaleLowerCase(), { url: variant.imageUrl, productId: detailProduct.id, variantId: variant.id, variantLabel: variant.colorLabel, productTitle: `${detailProduct.title} · ${variant.colorLabel}` }])).values()]
     : [];
   if (selectedProducts.length > 1 && !products.priceBudget && customerImage && !recommendationSearch) {
     const searchUrl = new URL("/search", await getSiteUrl());

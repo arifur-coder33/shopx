@@ -1,7 +1,7 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import sharp from "sharp";
 import { whatsAppImageContent, whatsAppUrlButtonContent } from "@/backend/utils/chatProductSelection.mjs";
-import { ensureMessengerPostbacks } from "@/backend/services/chatMessengerSubscriptions.mjs";
+import { sendMessengerProductCard as sendMessengerCard, sendMessengerProductCarousel as sendMessengerCarousel } from "@/backend/services/chat/channelCards/messengerProductCards";
 
 export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null) {
   const text = String(content || "").slice(0, conversation.channel === "WHATSAPP" ? 4096 : 2000);
@@ -123,77 +123,11 @@ export async function sendChatChannelTextMessage(conversation, content, credenti
 }
 
 export async function sendMessengerProductCard(conversation, product, credentials) {
-  if (conversation.channel !== "MESSENGER") throw new Error("Messenger product card requires a Messenger conversation.");
-  const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
-  if (!credentials.messengerPageAccessToken || !credentials.messengerPageId || !/^v\d+\.\d+$/.test(version || "")) throw new Error("Messenger credentials configure করা নেই।");
-  const subscription = await ensureMessengerPostbacks(credentials);
-  const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
-  const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
-  const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
-  const element = {
-    title: String(product.title).slice(0, 80),
-    subtitle: [priceText, product.productCode ? `SKU: ${product.productCode}` : "", variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
-    ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
-    buttons: [
-      { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
-      { type: "postback", title: "এটি বেছে নিন", payload: `select:${product.id}` },
-      { type: "postback", title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
-    ],
-  };
-  const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "template", payload: { template_type: "generic", elements: [element] } } } }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(15000),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result?.error?.message || "Messenger product card পাঠানো যায়নি।");
-  const fallback = !subscription.ready ? await sendChatChannelTextMessage(conversation, "পণ্যটি সম্পর্কে জানতে বা অর্ডার করতে বেছে নিন।", credentials, null, [
-    { title: "এটি বেছে নিন", payload: `select:${product.id}` },
-    { title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
-  ]) : null;
-  return { id: result.message_id || null, secondaryIds: fallback?.id ? [fallback.id] : [], warning: subscription.warning };
+  return sendMessengerCard(conversation, product, credentials, sendChatChannelTextMessage);
 }
 
 export async function sendMessengerProductCarousel(conversation, products, credentials, seeMoreUrl = null) {
-  if (conversation.channel !== "MESSENGER") throw new Error("Messenger carousel requires a Messenger conversation.");
-  if (products.length < 2) throw new Error("Messenger carousel needs at least two products.");
-  const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
-  if (!credentials.messengerPageAccessToken || !credentials.messengerPageId || !/^v\d+\.\d+$/.test(version || "")) throw new Error("Messenger credentials configure করা নেই।");
-  const subscription = await ensureMessengerPostbacks(credentials);
-  const elements = products.slice(0, seeMoreUrl ? 9 : 10).map((product) => {
-    const prices = product.variants.map((variant) => Number(variant.currentCampaignPrice || variant.listedPrice || variant.regularPrice)).filter((value) => value > 0);
-    const priceText = prices.length ? `৳${Math.min(...prices).toLocaleString("en-BD")}${Math.max(...prices) !== Math.min(...prices) ? `–৳${Math.max(...prices).toLocaleString("en-BD")}` : ""}` : "দাম জানতে লিখুন";
-    const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
-    return {
-      title: String(product.title).slice(0, 80),
-      subtitle: [priceText, product.productCode ? `SKU: ${product.productCode}` : "", variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
-      ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
-      buttons: [
-        { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
-        { type: "postback", title: "এটি বেছে নিন", payload: `select:${product.id}` },
-        { type: "postback", title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
-      ],
-    };
-  });
-  if (seeMoreUrl) elements.push({
-    title: "আরও পণ্য দেখুন",
-    subtitle: "বাকি সার্চ রেজাল্ট দেখতে চাপুন",
-    buttons: [{ type: "web_url", url: seeMoreUrl, title: "আরও দেখুন" }],
-  });
-  const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "template", payload: { template_type: "generic", elements } } } }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(15000),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result?.error?.message || "Messenger product carousel পাঠানো যায়নি।");
-  const fallback = !subscription.ready ? await sendChatChannelTextMessage(conversation, "কোন পণ্যটি সম্পর্কে জানতে চান?", credentials, null,
-    products.slice(0, 10).map((product, index) => ({ title: `${index + 1}. ${product.title}`.slice(0, 20), payload: `select:${product.id}` }))) : null;
-  return { id: result.message_id || null, secondaryIds: fallback?.id ? [fallback.id] : [], warning: subscription.warning };
+  return sendMessengerCarousel(conversation, products, credentials, seeMoreUrl, sendChatChannelTextMessage);
 }
 
 export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null, selectionProductId = null, imageBytes = null, productActions = []) {

@@ -210,6 +210,8 @@ export async function sendBatchedChatAiReply(conversationId, inboundMessageId, l
         credentials,
         canCreateOrder: isChatOrderCreationEnabled(setting),
         existingOnly: true,
+        startProductId: inbound.metadata?.replyTo?.productId || null,
+        startVariantId: inbound.metadata?.replyTo?.variantId || null,
       })
     )
       return;
@@ -336,6 +338,7 @@ export async function sendBatchedChatAiReply(conversationId, inboundMessageId, l
     if (await handleMessengerOrderFlow({
       conversation, inbound, credentials, canCreateOrder: isChatOrderCreationEnabled(setting),
       startProductId: productContext.products.find((product) => product.id === productMemory.selectedProductId)?.id || (productContext.products.length === 1 ? productContext.products[0].id : null),
+      startVariantId: inbound.metadata?.replyTo?.variantId || null,
     })) return;
     const requiresHumanFollowUp = needsHumanFollowUp({
       messageText: inbound.content,

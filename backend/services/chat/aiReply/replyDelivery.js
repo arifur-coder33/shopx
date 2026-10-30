@@ -5,6 +5,8 @@
 import prisma from "@/lib/prisma";
 import { isAiReplyEnabledForChannel, settingId } from "./foundation.js";
 import { sendChatChannelImageMessage, sendChatChannelTextMessage, sendMessengerProductCard, sendMessengerProductCarousel } from "@/backend/services/chatChannelTextAdapter";
+import { sendInstagramProductCards } from "@/backend/services/chat/channelCards/instagramProductCards";
+import { buildWhatsAppProductCard } from "@/backend/services/chat/channelCards/whatsappProductCard";
 
 export async function deliverReply(
   conversation,
@@ -122,8 +124,21 @@ export async function deliverReply(
     }
   }
 
+  // Instagram supports Meta's Generic Template cards and horizontal carousels.
+  let instagramCardsSent = false;
+  if (conversation.channel === "INSTAGRAM" && products.length) {
+    try {
+      const result = await sendInstagramProductCards(conversation, products, credentials, seeMoreUrl);
+      sent.push(result);
+      mediaMessages.push({ id: result.id, content: products.length > 1 ? "পণ্যের সাজেশন" : products[0].title, products, ...(seeMoreUrl && { seeMoreUrl }) });
+      instagramCardsSent = true;
+    } catch (error) {
+      console.warn("Instagram product card failed; falling back to image and text:", error?.message || error);
+    }
+  }
+
   // ৫. অন্য চ্যানেল বা carousel failure হলে আলাদা product card
-  for (const product of messengerCarouselSent ? [] : products) {
+  for (const product of messengerCarouselSent || instagramCardsSent ? [] : products) {
     // মেসেঞ্জারের জন্য আগের মতোই বাটনসহ কার্ড থাকবে
     if (conversation.channel === "MESSENGER") {
       try {
@@ -157,44 +172,14 @@ export async function deliverReply(
     }
 
     // --- হোয়াটসঅ্যাপ (WHATSAPP) ও অন্যান্য চ্যানেলের জন্য বিশেষ ফরম্যাট ---
-    const prices = product.variants
-      .map(
-        (variant) =>
-          variant.currentCampaignPrice ||
-          variant.listedPrice ||
-          variant.regularPrice,
-      )
-      .filter((value) => Number(value) > 0)
-      .map(Number);
-
-    const priceText = prices.length
-      ? `\n💰 *মূল্য:* ৳${Math.min(...prices).toLocaleString("en-BD")}${
-          Math.max(...prices) !== Math.min(...prices)
-            ? ` – ৳${Math.max(...prices).toLocaleString("en-BD")}`
-            : ""
-        }`
-      : "";
-
-    const featureLines = product.features
-      .slice(0, 3)
-      .map((f) => `✔ ${f}`)
-      .join("\n");
-
     const isWhatsApp = conversation.channel === "WHATSAPP";
-    const whatsappProductActions = isWhatsApp ? [
-      { title: "এখনই অর্ডার করুন", payload: `order:${product.id}` },
-      { title: "আরও জানতে চাই", payload: `details:${product.id}` },
-    ] : [];
-    const variations = [...new Set(product.variants.flatMap((variant) => variant.options || []))];
-    const variationText = variations.length
-      ? `🎨 *ভ্যারিয়েশন:* ${variations.slice(0, 8).join(", ")}${variations.length > 8 ? ", আরও আছে" : ""}`
-      : "";
+    const whatsappCard = buildWhatsAppProductCard(product);
+    const whatsappProductActions = isWhatsApp ? whatsappCard.actions : [];
     const captionLines = [
-      `🛍️ *${product.title}*${priceText}`,
-      product.productCode ? `🏷️ *SKU:* ${product.productCode}` : "",
-      variationText,
-      featureLines ? `\n${featureLines}` : "",
+      ...(isWhatsApp ? [whatsappCard.caption] : []),
       ...(!isWhatsApp ? [
+        `🛍️ *${product.title}*`,
+        product.productCode ? `🏷️ *SKU:* ${product.productCode}` : "",
         `\n🔗 *বিস্তারিত দেখুন:* ${product.url}`,
         `👉 *সরাসরি অর্ডার করতে ক্লিক করুন:* ${product.buyNowUrl}`,
       ] : []),

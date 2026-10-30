@@ -15,7 +15,7 @@ const digits = (text) => String(text || "").replace(/[০-৯]/gu, (digit) => St
 const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|ok|okay|ঠিক\s*আছে|আচ্ছা|thik\s+ache|accha|confirm)[.!\s]*$/iu;
 const no = /^(?:না|na|no)[.!\s]*$/iu;
 const cancel = /^(?:cancel|বাতিল|stop)[.!\s]*$/iu;
-const wantsToOrder = /(?:অর্ডার\s*(?:করতে|দিতে)\s*চাই|অর্ডার\s*(?:করব|করবো|দেব|দিব|নেব|নিব)|কিনতে\s*চাই|নিতে\s*চাই|\border\s*(?:korte|dite)\s*chai\b|\border\s*(?:korbo|dibo|debo|nibo|nebo)\b|\b(?:i\s+)?want\s+to\s+order\b)/iu;
+const wantsToOrder = /(?:অর্ডার(?:টা|টি)?\s*(?:(?:করতে|দিতে)\s*চাই|(?:করব|করবো|দেব|দিব|নেব|নিব)|কনফার্ম\s*(?:করুন|করেন|করি|করব)?|নিশ্চিত\s*(?:করুন|করেন)?)|কিনতে\s*চাই|নিতে\s*চাই|\border\s*(?:korte|dite)\s*chai\b|\border\s*(?:er\s*)?(?:ta\s*)?(?:confirm|confrim|korbo|dibo|debo|nibo|nebo|koren)\b|\b(?:confirm|confrim)\s+order\b|\b(?:i\s+)?want\s+to\s+order\b)/iu;
 // Let unrelated questions and social openers reach the normal AI path while
 // preserving the saved checkout step for the customer's next order detail.
 const checkoutInterruption = /(?:[?？]|\b(?:what|why|when|where|which|who|how|price|cost|color|colour|size|stock|available|delivery|charge|koto|kemon|keno|kokhon|kothay|kon|ki|dam|rong|size|ache|ase|bhai|apu|hello|hi|salam|assalamu|thanks|thank you)\b|কী|কি|কেমন|কেন|কখন|কোথায়|কোথায়|কোন|দাম|মূল্য|রং|সাইজ|স্টক|আছে|হবে|পাব|ডেলিভারি|চার্জ|ভাই|আপু|সালাম|আসসালামু|হ্যালো|হাই|ধন্যবাদ)/iu;
@@ -72,6 +72,30 @@ function parseCustomerDetails(text, expectedFields = []) {
   return { customerName, phoneNumber, deliveryAddress };
 }
 
+// Reuse only customer details written after the product was shown in this chat.
+// This lets a customer give their address before saying “confirm the order”.
+async function detailsFromProductConversation(conversationId, productMessage, currentText) {
+  const since = productMessage?.createdAt || new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const messages = await prisma.chatMessage.findMany({
+    where: { conversationId, direction: "INBOUND", createdAt: { gte: since } },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: 20,
+    select: { content: true },
+  });
+  const candidates = [...messages.map((message) => message.content), currentText].filter(Boolean);
+  const details = { customerName: "", phoneNumber: "", deliveryAddress: "" };
+  for (const content of candidates) {
+    const parsed = parseCustomerDetails(content);
+    if (parsed.customerName) details.customerName = parsed.customerName;
+    if (parsed.phoneNumber) details.phoneNumber = parsed.phoneNumber;
+    if (parsed.deliveryAddress) details.deliveryAddress = parsed.deliveryAddress;
+    if (!details.deliveryAddress) {
+      const address = parseBangladeshAddress(content);
+      if (address.valid) details.deliveryAddress = address.deliveryAddress;
+    }
+  }
+  return details;
+}
+
 async function currentProduct(id) {
   if (!id) return null;
   return prisma.product.findFirst({ where: { id, isActive: true, status: "ACTIVE" }, select: {
@@ -122,6 +146,15 @@ function withCartItem(flow, product, variant) {
   return { ...flow, cartItems: flow.editing && previous.length ? [...previous.slice(0, -1), item] : [...previous, item] };
 }
 
+function matchVariantFromText(variants, text) {
+  const normalized = String(text || "").toLocaleLowerCase();
+  const matches = variants.filter((variant) => {
+    const values = variant.combinations.map((part) => part.variationValue?.value).filter((value) => String(value || "").trim().length >= 3);
+    return values.length > 0 && values.every((value) => normalized.includes(String(value).toLocaleLowerCase()));
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
 async function saveAbandonedFlow(flow, product, deliveryAddress = flow.deliveryAddress) {
   const phoneNumber = normalizeChatPhone(flow.phoneNumber);
   if (!phoneNumber) return;
@@ -145,7 +178,7 @@ async function saveAbandonedFlow(flow, product, deliveryAddress = flow.deliveryA
 }
 
 // Website and social channels use the same persisted checkout steps.
-export async function handleChatOrderFlow({ conversation, inbound, credentials, canCreateOrder = true, existingOnly = false, startProductId }) {
+export async function handleChatOrderFlow({ conversation, inbound, credentials, canCreateOrder = true, existingOnly = false, startProductId, startVariantId }) {
   if (/^(?:select|details):[a-zA-Z0-9_-]{5,80}$/u.test(String(inbound.metadata?.quickReplyPayload || "")) || ["select", "details"].includes(inbound.metadata?.action)) {
     // Product details buttons must not be consumed as a name/phone/variant in an unfinished checkout.
     await prisma.chatMessage.updateMany({ where: { aiReplyForMessageId: inbound.id, deliveryStatus: "SENDING" }, data: {
@@ -156,7 +189,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   const recent = await prisma.chatMessage.findMany({ where: { conversationId: conversation.id, direction: "OUTBOUND", OR: [
     { deliveryStatus: { not: "FAILED" } }, { metadata: { path: ["chatOrderFlow", "orderNo"], string_starts_with: "" } },
   ] },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50, select: { metadata: true } });
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50, select: { metadata: true, createdAt: true } });
   const saved = recent.find((message) => message.metadata?.chatOrderFlow)?.metadata.chatOrderFlow;
   let flow = saved && saved.step !== "done" ? saved : null;
   const text = digits(inbound.content).trim();
@@ -177,7 +210,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   // During product confirmation, free text may be a question about the product.
   // Let the catalog-aware AI answer it and keep this checkout step for later.
   if (flow?.step === "product_confirm" && !wantsOrder && !no.test(action) && !cancel.test(action) && !isCheckoutAction) return false;
-  const intent = Boolean(quickProductId) || /(?:অর্ডার\s*(?:কর|দিতে|দেব|দিব|নেব|নিব)|\border\s*(?:kor|korte|dite|korbo|dibo|debo|nibo|nebo|now)|কিনতে চাই|নিতে চাই|\b(?:buy|purchase)\b)/iu.test(text);
+  const intent = Boolean(quickProductId) || wantsToOrder.test(text) || /(?:অর্ডার\s*(?:কর|দিতে|দেব|দিব|নেব|নিব)|\border\s*(?:kor|korte|dite|korbo|dibo|debo|nibo|nebo|now)|কিনতে চাই|নিতে চাই|\b(?:buy|purchase)\b)/iu.test(text);
   if (!flow && existingOnly && !quickProductId && !actionMatch) return false;
   if (!flow && !intent) return false;
   let next = flow ? { ...flow } : null;
@@ -192,23 +225,39 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
   if (flow && (cancel.test(action) || action === "cancel")) {
     next = { step: "done" }; reply = "ঠিক আছে, অর্ডারটি বাতিল করেছি। কোনো অর্ডার তৈরি হয়নি।";
   } else if (!flow) {
-    const source = recent.find((message) => message.metadata?.selectedProductId || message.metadata?.productOptions?.length === 1);
-    const productId = quickProductId || inbound.metadata?.productId || (startProductId !== undefined ? startProductId : source?.metadata?.selectedProductId || source?.metadata?.productOptions?.[0]?.id);
+    const source = recent.find((message) => message.metadata?.selectedProductId || message.metadata?.productOptions?.length === 1 || message.metadata?.image?.productId);
+    // A reply-to photo/card product anchor wins over generic message metadata.
+    const productId = quickProductId || inbound.metadata?.replyTo?.productId || (startProductId !== undefined ? startProductId : null) || inbound.metadata?.productId || source?.metadata?.selectedProductId || source?.metadata?.productOptions?.[0]?.id;
     product = await currentProduct(productId);
     if (!product && canCreateOrder) { reply = "কোন পণ্যটি অর্ডার করতে চান? পণ্যের নাম, লিংক বা কার্ডটি বেছে দিন।"; next = { step: "done" }; }
-    else if (quickProductId && product) {
+    else if ((quickProductId || wantsOrder) && product) {
       const variants = orderable(product);
+      const repliedVariant = variants.find((variant) => variant.id === startVariantId) || (wantsOrder ? matchVariantFromText(variants, text) : null);
       if (!variants.length) { reply = "দুঃখিত, পণ্যটি এখন অর্ডার করা যাচ্ছে না।"; next = { step: "done" }; }
       else if (product.codAvailable === false || ["DELIVERY_FEE", "PARTIAL"].includes(product.advancePaymentType)) {
         next = { step: "done" };
         reply = `এই পণ্যে অগ্রিম/অনলাইন পেমেন্ট লাগে। পণ্যটি দেখতে ও অর্ডার করতে এই লিংকে যান: ${productOrderUrl(product, siteUrl)}`;
       }
-      else if (product.hasVariations || variants.length > 1 || variants[0].combinations.length) {
-        next = { id: randomUUID(), step: "variant", productId: product.id, leadOnly: !canCreateOrder };
+      else if ((product.hasVariations || variants.length > 1 || variants[0].combinations.length) && !repliedVariant) {
+        next = { id: randomUUID(), step: "variant", productId: product.id, leadOnly: !canCreateOrder, checkoutIntent: true };
         reply = `“${product.title}” অর্ডার করতে কোন ভ্যারিয়েশনটি চান? নিচের অপশন থেকে বেছে নিন।`;
       } else {
-        next = { id: randomUUID(), step: canCreateOrder ? "more_items" : "lead_details", productId: product.id, variantId: variants[0].id, cartItems: [{ productId: product.id, variantId: variants[0].id, quantity: 1 }] };
-        reply = canCreateOrder ? moreItemsPrompt(product) : prompts.customerDetails;
+        const selectedVariant = repliedVariant || variants[0];
+        const known = await detailsFromProductConversation(conversation.id, source, text);
+        const address = known.deliveryAddress ? parseBangladeshAddress(known.deliveryAddress) : null;
+        next = { id: randomUUID(), step: canCreateOrder ? "customer_details" : "lead_details", productId: product.id, variantId: selectedVariant.id, checkoutIntent: true,
+          cartItems: [{ productId: product.id, variantId: selectedVariant.id, quantity: 1 }],
+          customerName: known.customerName, phoneNumber: known.phoneNumber,
+          ...(address?.valid ? { deliveryAddress: address.deliveryAddress, district: address.district, thana: address.thana, addressVerified: true } : known.deliveryAddress ? { deliveryAddress: known.deliveryAddress } : {}),
+        };
+        const missing = !validField("name", next.customerName) ? prompts.name : !validField("phone", String(next.phoneNumber || "").replace(/\D/gu, "")) ? prompts.phone : !next.addressVerified ? prompts.address : "";
+        if (missing) reply = missing;
+        else if (!canCreateOrder) reply = prompts.customerDetails;
+        else {
+          next.deliveryArea = isDhaka(next.district) ? null : "outside-dhaka";
+          next.step = isDhaka(next.district) ? "area" : "confirm";
+          reply = prompts[next.step] || "";
+        }
       }
       photo = true;
     } else {
@@ -244,12 +293,27 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
       } else reply = "এই পণ্যটিই কি অর্ডার করবেন? হ্যাঁ বা না বলুন।";
     } else if (flow.step === "variant") {
       const variants = orderable(product);
-      const selected = action.startsWith("variant_") ? variants.find((variant) => variant.id === action.slice(8))
-        : variants[Number(action.match(/^([1-9]\d*)(?:\.|$)/u)?.[1]) - 1] || variants.find((variant) => label(variant).toLowerCase() === text.toLowerCase());
+      const selected = variants.find((variant) => variant.id === startVariantId) || (wantsOrder ? matchVariantFromText(variants, text) : null) || (action.startsWith("variant_") ? variants.find((variant) => variant.id === action.slice(8))
+        : variants[Number(action.match(/^([1-9]\d*)(?:\.|$)/u)?.[1]) - 1] || variants.find((variant) => label(variant).toLowerCase() === text.toLowerCase()));
       if (!selected) reply = "তালিকা থেকে ভ্যারিয়েশনের নাম বা নম্বর বেছে দিন।";
       else {
-        next = withCartItem({ ...flow, step: flow.editing ? "confirm" : flow.leadOnly ? "lead_details" : "more_items", editing: false, variantId: selected.id }, product, selected);
-        reply = flow.editing ? "" : flow.leadOnly ? prompts.customerDetails : moreItemsPrompt(product);
+        next = withCartItem({ ...flow, step: flow.editing ? "confirm" : flow.leadOnly ? "lead_details" : flow.checkoutIntent ? "customer_details" : "more_items", editing: false, variantId: selected.id }, product, selected);
+        if (flow.checkoutIntent && !flow.editing) {
+          const productMessage = recent.find((message) => message.metadata?.selectedProductId === product.id || message.metadata?.image?.productId === product.id || message.metadata?.productOptions?.some((option) => option.id === product.id));
+          const known = await detailsFromProductConversation(conversation.id, productMessage, text);
+          const address = known.deliveryAddress ? parseBangladeshAddress(known.deliveryAddress) : null;
+          Object.assign(next, { customerName: known.customerName, phoneNumber: known.phoneNumber });
+          if (address?.valid) Object.assign(next, { deliveryAddress: address.deliveryAddress, district: address.district, thana: address.thana, addressVerified: true });
+          else if (known.deliveryAddress) next.deliveryAddress = known.deliveryAddress;
+          if (!validField("name", next.customerName)) reply = prompts.name;
+          else if (!validField("phone", String(next.phoneNumber || "").replace(/\D/gu, ""))) reply = prompts.phone;
+          else if (!next.addressVerified) reply = address?.error || prompts.address;
+          else {
+            next.deliveryArea = isDhaka(next.district) ? null : "outside-dhaka";
+            next.step = isDhaka(next.district) ? "area" : "confirm";
+            reply = prompts[next.step] || "";
+          }
+        } else reply = flow.editing ? "" : flow.leadOnly ? prompts.customerDetails : flow.checkoutIntent ? prompts.customerDetails : moreItemsPrompt(product);
         photo = Boolean(selected.thumbnail?.url || selected.thumbnail?.name);
       }
     } else if (flow.step === "more_items") {
@@ -382,7 +446,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
         }
       }
     }
-  if (next?.step === "confirm" && flow.step !== "confirm") { next.quote = await quoteFor(next); const cartProducts = await productsForFlow(next, product); reply = summaryText(cartProducts, next); photo = true; }
+  if (next?.step === "confirm" && flow?.step !== "confirm") { next.quote = await quoteFor(next); const cartProducts = await productsForFlow(next, product); reply = summaryText(cartProducts, next); photo = true; }
   }
   let options = [];
   if (next?.step === "product_confirm") options = [{ title: "হ্যাঁ", action: "yes" }, { title: "না", action: "no" }];
