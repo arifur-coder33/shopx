@@ -31,7 +31,7 @@ import { loadConversationHistory } from "@/backend/services/chat/context/loadCon
 import { rankCatalogImageHashes } from "./catalogImages.js";
 import { runChatReplyBatch, mergedInboundMessage, newerInboundWhere } from "@/backend/services/chatReplyBatchService";
 import { searchImageCatalog, selectImageSearchProducts } from "@/backend/utils/chatImageSelection.mjs";
-import { startChatTypingIndicator } from "../chatTypingIndicator.mjs";
+import { startChatTypingIndicator } from "@/backend/services/chatTypingIndicator.mjs";
 import { transcribeChatAudio } from "@/backend/services/chatAudioTranscriptionService";
 
 export async function maybeSendChatAiReply(conversationId, inboundMessageId) {
