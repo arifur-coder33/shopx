@@ -417,26 +417,13 @@ export async function sendBatchedChatAiReply(conversationId, inboundMessageId, l
                   },
                 ]);
     if (!contactOnlyRequest && customerImage) {
-      const matches = productContext.products.slice(0, 3);
-      const allMatchIds = imageSearchSelection.allProductIds?.length
-        ? imageSearchSelection.allProductIds
-        : imageSearchSelection.products.map((product) => product.id);
-      let allMatchesUrl = "";
-      if (allMatchIds.length > 3) {
-        const searchUrl = new URL("/search", await getSiteUrl());
-        searchUrl.searchParams.set("ids", allMatchIds.join(","));
-        searchUrl.searchParams.set("q", imageDescription?.productName || imageDescription?.productType || "ছবির পণ্য");
-        searchUrl.searchParams.set("similar", "1");
-        allMatchesUrl = searchUrl.toString();
-      }
-      const selectButtonLabel = conversation.channel === "WEBSITE" ? "Select this product" : "এটি বেছে নিন";
-      const productSuggestionText = matches.length > 1
-        ? `এই পণ্যগুলো দেখতে পারেন। পছন্দের পণ্যটির কার্ডে “${selectButtonLabel}” বাটনে চাপুন।`
-        : `এই পণ্যটি দেখতে পারেন। পছন্দ হলে কার্ডের “${selectButtonLabel}” বাটনে চাপুন।`;
+      const asksForAlternatives = /(?:আরও|অন্যান্য|বিকল্প|এরকম\s*আর|এ\s*রকম\s*আর|similar|another|more\s+(?:option|product))/iu.test(inbound.content);
+      const matches = productContext.products.slice(0, asksForAlternatives ? 3 : 1);
+      const productSuggestionText = "আপনি এই পণ্যগুলো দেখতে পারেন।";
       generated = {
         ...generated,
         text: matches.length
-          ? `${productSuggestionText}${allMatchesUrl ? ` আরও পণ্য দেখতে: ${allMatchesUrl}` : ""}`
+          ? productSuggestionText
           : imageSearchFailed || !imageDescription?.productName
             ? 'ছবির তথ্য দিয়ে এই মুহূর্তে পণ্যটি খুঁজে বের করা যায়নি। পণ্যের নাম বা লিংক দিলে আবার খুঁজে দেখব।'
             : 'ছবির নাম, লেখা ও ব্যবহার দিয়ে মিল থাকা পণ্য পাওয়া যায়নি। পণ্যের লিংক বা কোড দিলে খুঁজে দেখব।',
@@ -705,6 +692,9 @@ export async function sendBatchedChatAiReply(conversationId, inboundMessageId, l
                   }),
                   ...(media.image?.productId && {
                     selectedProductId: media.image.productId,
+                  }),
+                  ...(media.productId && {
+                    selectedProductId: media.productId,
                   }),
                   ...(option && { selectedProductId: option.id }),
                   ...(shownOptions.length > 1 && {

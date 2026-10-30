@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { sendChatPushNotification } from "@/backend/services/chatPushService";
 import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 import { getWebsitePageProductContext } from "@/backend/utils/chatWebsitePageContext.mjs";
+import { resolveChatReplyTarget } from "@/backend/services/chat/context/resolveChatReplyTarget";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -81,8 +82,10 @@ export async function POST(request) {
       update: { ...(customerName && { customerName }), ...(customerPhone && { customerPhone }), ...(account?.id && { customerUserId: account.id }), lastMessageAt: new Date() },
       select: { id: true, needsHumanAssistant: true },
     });
+    const replyTarget = await resolveChatReplyTarget(prisma, conversation.id, String(body?.replyToMessageId || ""), body?.replyToProductId ? String(body.replyToProductId) : null);
+    if (!replyTarget.valid) return Response.json({ success: false, message: "যে পণ্যের message-এ reply দিচ্ছেন সেটি আর পাওয়া যাচ্ছে না।" }, { status: 400 });
     const [message] = await prisma.$transaction([
-      prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content, deliveryStatus: "DELIVERED", ...(websitePage && { metadata: { websitePage } }) } }),
+      prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content, deliveryStatus: "DELIVERED", ...((websitePage || replyTarget.replyTo) && { metadata: { ...(websitePage && { websitePage }), ...(replyTarget.replyTo && { replyTo: replyTarget.replyTo }) } }) } }),
       prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } }),
     ]);
     after(async () => {

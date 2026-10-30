@@ -81,10 +81,13 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
   if (replyToExternalMessageId) {
     const quoted = await prisma.chatMessage.findFirst({
       where: { conversationId: conversation.id, channel, externalMessageId: replyToExternalMessageId },
-      select: { id: true, content: true, direction: true, authorType: true },
+      select: { id: true, content: true, direction: true, authorType: true, metadata: true },
     });
     if (quoted) {
-      savedMetadata = { ...metadata, replyTo: { id: quoted.id, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType } };
+      const quotedProductId = quoted.metadata?.image?.productId
+        || quoted.metadata?.selectedProductId
+        || (quoted.metadata?.productOptions?.length === 1 ? quoted.metadata.productOptions[0].id : null);
+      savedMetadata = { ...metadata, replyTo: { id: quoted.id, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType, ...(quotedProductId && { productId: quotedProductId }) } };
     } else savedMetadata = { ...metadata, replyTo: { content: "Replied to an earlier message" } };
   }
   const insertedCount = await prisma.$transaction(async (tx) => {

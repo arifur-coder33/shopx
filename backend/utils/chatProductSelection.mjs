@@ -1,12 +1,21 @@
-export function whatsAppImageContent(mediaId, caption, productId = null) {
+export function whatsAppImageContent(mediaId, caption, productId = null, productActions = []) {
   if (!productId) return { type: "image", image: { id: mediaId, ...(String(caption || "").trim() && { caption: String(caption).slice(0, 1000) }) } };
+  const actions = productActions.length
+    ? productActions.slice(0, 3)
+    : [{ title: "এটি বেছে নিন", payload: `select:${productId}` }];
   return {
     type: "interactive",
     interactive: {
       type: "button",
       header: { type: "image", image: { id: mediaId } },
       body: { text: String(caption || "পণ্যের তথ্য").slice(0, 1024) },
-      action: { buttons: [{ type: "reply", reply: { id: `select:${productId}`, title: "এটি বেছে নিন" } }] },
+      action: { buttons: actions.map((action) => ({
+        type: "reply",
+        reply: {
+          id: String(action.payload).slice(0, 256),
+          title: String(action.title).slice(0, 20),
+        },
+      })) },
     },
   };
 }

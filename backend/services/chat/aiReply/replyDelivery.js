@@ -139,7 +139,7 @@ export async function deliverReply(
           productId: product.id,
           code: String(error?.code || "card_send_failed").slice(0, 80),
         });
-        const fallback = `*${product.title}*\n\n🛒 বিস্তারিত দেখুন: ${product.url}\n👉 এখনই অর্ডার করুন: ${product.buyNowUrl}`;
+        const fallback = `*${product.title}*${product.productCode ? `\nSKU: ${product.productCode}` : ""}\n\n🛒 বিস্তারিত দেখুন: ${product.url}\n👉 এখনই অর্ডার করুন: ${product.buyNowUrl}`;
         const result = await sendChatChannelTextMessage(
           conversation,
           fallback,
@@ -181,9 +181,18 @@ export async function deliverReply(
       .join("\n");
 
     const isWhatsApp = conversation.channel === "WHATSAPP";
-    const selectionReplies = isWhatsApp ? [{ title: "এটি বেছে নিন", payload: `select:${product.id}` }] : [];
+    const whatsappProductActions = isWhatsApp ? [
+      { title: "এখনই অর্ডার করুন", payload: `order:${product.id}` },
+      { title: "আরও জানতে চাই", payload: `details:${product.id}` },
+    ] : [];
+    const variations = [...new Set(product.variants.flatMap((variant) => variant.options || []))];
+    const variationText = variations.length
+      ? `🎨 *ভ্যারিয়েশন:* ${variations.slice(0, 8).join(", ")}${variations.length > 8 ? ", আরও আছে" : ""}`
+      : "";
     const captionLines = [
       `🛍️ *${product.title}*${priceText}`,
+      product.productCode ? `🏷️ *SKU:* ${product.productCode}` : "",
+      variationText,
       featureLines ? `\n${featureLines}` : "",
       ...(!isWhatsApp ? [
         `\n🔗 *বিস্তারিত দেখুন:* ${product.url}`,
@@ -208,6 +217,8 @@ export async function deliverReply(
           credentials,
           null,
           product.id,
+          null,
+          whatsappProductActions,
         );
         sent.push(result);
         mediaMessages.push({
@@ -238,7 +249,7 @@ export async function deliverReply(
           caption,
           credentials,
           null,
-          selectionReplies,
+          whatsappProductActions,
         );
         sent.push(result);
         mediaMessages.push({ id: result.id, content: caption });
@@ -250,10 +261,27 @@ export async function deliverReply(
         caption,
         credentials,
         null,
-        selectionReplies,
+        whatsappProductActions,
       );
       sent.push(result);
       mediaMessages.push({ id: result.id, content: caption });
+    }
+
+    if (isWhatsApp) {
+      try {
+        const result = await sendChatChannelTextMessage(
+          conversation,
+          "পণ্যের বিস্তারিত দেখতে নিচের বাটনে চাপুন।",
+          credentials,
+          null,
+          [],
+          { title: "পণ্য দেখুন", url: product.url },
+        );
+        sent.push(result);
+        mediaMessages.push({ id: result.id, content: "পণ্য দেখুন", productUrl: product.url, productId: product.id });
+      } catch (error) {
+        console.warn("WhatsApp product link button failed:", error?.message || error);
+      }
     }
   }
 

@@ -132,7 +132,7 @@ export async function sendMessengerProductCard(conversation, product, credential
   const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
   const element = {
     title: String(product.title).slice(0, 80),
-    subtitle: [priceText, variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
+    subtitle: [priceText, product.productCode ? `SKU: ${product.productCode}` : "", variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
     ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
     buttons: [
       { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
@@ -168,7 +168,7 @@ export async function sendMessengerProductCarousel(conversation, products, crede
     const variants = product.variants.slice(0, 3).map((variant) => variant.options.join(" / ")).filter(Boolean).join(" · ");
     return {
       title: String(product.title).slice(0, 80),
-      subtitle: [priceText, variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
+      subtitle: [priceText, product.productCode ? `SKU: ${product.productCode}` : "", variants || product.features.slice(0, 2).join(" · ")].filter(Boolean).join(" · ").slice(0, 80),
       ...(product.imageUrls?.[0] && { image_url: product.imageUrls[0] }),
       buttons: [
         { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
@@ -196,7 +196,7 @@ export async function sendMessengerProductCarousel(conversation, products, crede
   return { id: result.message_id || null, secondaryIds: fallback?.id ? [fallback.id] : [], warning: subscription.warning };
 }
 
-export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null, selectionProductId = null, imageBytes = null) {
+export async function sendChatChannelImageMessage(conversation, caption, imageUrl, credentials, replyToExternalMessageId = null, selectionProductId = null, imageBytes = null, productActions = []) {
   const url = new URL(imageUrl);
   if (url.protocol !== "https:") throw new Error("Product photo URL must use HTTPS.");
   if (conversation.channel === "WEBSITE") return { id: null, secondaryIds: [], warning: null };
@@ -270,7 +270,7 @@ export async function sendChatChannelImageMessage(conversation, caption, imageUr
           recipient_type: "individual",
           to: conversation.externalUserId,
           ...(replyToExternalMessageId && { context: { message_id: replyToExternalMessageId } }),
-          ...whatsAppImageContent(uploadResult.id, caption, selectionProductId),
+          ...whatsAppImageContent(uploadResult.id, caption, selectionProductId, productActions),
         }),
         cache: "no-store",
         signal: AbortSignal.timeout(15000),

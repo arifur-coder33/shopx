@@ -305,7 +305,10 @@ export function getProductMemory(history, currentMessage, currentMetadata = {}) 
   const quickReplyProductId = String(
     currentMetadata?.quickReplyPayload || "",
   ).match(/^(?:details|select):([a-zA-Z0-9_-]{5,80})$/u)?.[1];
-  if (quickReplyProductId || currentMetadata?.productId) selectedProductId = quickReplyProductId || currentMetadata.productId;
+  const quotedProductId = currentMetadata?.replyTo?.productId;
+  if (quickReplyProductId || currentMetadata?.productId || quotedProductId) {
+    selectedProductId = quickReplyProductId || currentMetadata.productId || quotedProductId;
+  }
   const selectingPreviousProduct = /(?:এটি বেছে নি|এই পণ্যটি নির্বাচন|\b(?:ei|eta|eita)\s+beche\s+(?:nilam|nisi|nibo)\b)/iu.test(text);
   if (!selectedProductId && selectingPreviousProduct && latestOptions.length === 1) selectedProductId = latestOptions[0].id;
   if (!selectedProductId) {
@@ -323,7 +326,7 @@ export function getProductMemory(history, currentMessage, currentMetadata = {}) 
         (category) =>
           category.name && text.includes(String(category.name).toLowerCase()),
       );
-  const selectedCategoryOption = !quickReplyProductId && categoryContextIsNewest
+  const selectedCategoryOption = !quickReplyProductId && !currentMetadata?.productId && !quotedProductId && categoryContextIsNewest
     ? categoryOptionFromMessage
     : null;
   if (selectedCategoryOption) selectedProductId = null;
@@ -417,7 +420,7 @@ export function getProductMemory(history, currentMessage, currentMetadata = {}) 
     latestOptions,
     previousShownIds,
     selectedProductId: chosenProductId,
-    explicitSelection: /^(?:select|details):/u.test(String(currentMetadata?.quickReplyPayload || "")) || ["select", "details"].includes(currentMetadata?.action) || (selectingPreviousProduct && Boolean(chosenProductId)),
+    explicitSelection: /^(?:select|details):/u.test(String(currentMetadata?.quickReplyPayload || "")) || ["select", "details"].includes(currentMetadata?.action) || Boolean(quotedProductId) || (selectingPreviousProduct && Boolean(chosenProductId)),
     catalogProductIds,
     catalogCategoryIds: rememberedCategoryIds,
     newProductSearch: requestsAnotherProduct,

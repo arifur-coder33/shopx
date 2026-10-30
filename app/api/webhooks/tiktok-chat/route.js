@@ -60,8 +60,31 @@ async function saveTikTokMessage(envelope) {
     update: { ...(customerName && { customerName }), ...(profilePicUrl && { profilePicUrl }), lastMessageAt: createdAt, status: "OPEN" },
     select: { id: true },
   });
+  // TikTok payload versions use different names for the message being quoted.
+  const replyToExternalMessageId = message.reply_to?.message_id
+    || message.reply_to?.id
+    || message.reply_to_message_id
+    || message.reply_message_id
+    || message.quoted_message_id
+    || message.in_reply_to_message_id
+    || content.reply_to?.message_id
+    || content.reply_to_message_id
+    || null;
+  let replyTo = null;
+  if (replyToExternalMessageId) {
+    const quoted = await prisma.chatMessage.findFirst({
+      where: { conversationId: conversation.id, channel: "TIKTOK", externalMessageId: String(replyToExternalMessageId) },
+      select: { id: true, content: true, direction: true, authorType: true, metadata: true },
+    });
+    if (quoted) {
+      const productId = quoted.metadata?.image?.productId
+        || quoted.metadata?.selectedProductId
+        || (quoted.metadata?.productOptions?.length === 1 ? quoted.metadata.productOptions[0].id : null);
+      replyTo = { id: quoted.id, content: quoted.content.slice(0, 300), direction: quoted.direction, authorType: quoted.authorType, ...(productId && { productId }) };
+    } else replyTo = { content: "Replied to an earlier message" };
+  }
   const inserted = await prisma.chatMessage.createMany({
-    data: [{ conversationId: conversation.id, channel: "TIKTOK", direction: "INBOUND", authorType: "CUSTOMER", content: text, externalMessageId: String(messageId), deliveryStatus: "DELIVERED", metadata: { type: messageType, timestamp, ...(mediaId && { image: { mediaId: String(mediaId), mimeType: "image/jpeg", conversationId: String(conversationId) } }), ...(audioId && { audio: { mediaId: String(audioId), mimeType: audioMimeType } }), ...(normalizedAttachments.length && { attachments: normalizedAttachments }) } }],
+    data: [{ conversationId: conversation.id, channel: "TIKTOK", direction: "INBOUND", authorType: "CUSTOMER", content: text, externalMessageId: String(messageId), deliveryStatus: "DELIVERED", metadata: { type: messageType, timestamp, ...(replyTo && { replyTo }), ...(mediaId && { image: { mediaId: String(mediaId), mimeType: "image/jpeg", conversationId: String(conversationId) } }), ...(audioId && { audio: { mediaId: String(audioId), mimeType: audioMimeType } }), ...(normalizedAttachments.length && { attachments: normalizedAttachments }) } }],
     skipDuplicates: true,
   });
   await prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: createdAt, ...(inserted.count > 0 && { unreadCount: { increment: inserted.count } }) } });
