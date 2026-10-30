@@ -26,7 +26,7 @@ function productElement(product) {
     ...(image && { image_url: image }),
     buttons: [
       { type: "web_url", url: product.url, title: "পণ্য দেখুন" },
-      { type: "postback", title: "অর্ডার করতে চাই", payload: `order:${product.id}` },
+      { type: "postback", title: "এখনই কিনুন", payload: `order:${product.id}` },
       { type: "postback", title: "আরও জানতে চাই", payload: `details:${product.id}` },
     ],
   };

@@ -9,7 +9,7 @@ import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 import { saveAbandonedCheckoutLead } from "@/backend/services/abandonedCheckoutService";
 import { newerInboundWhere } from "./chatReplyBatchCore.mjs";
 import { signedChatOrderCardUrl } from "@/backend/utils/chatOrderCard.mjs";
-import { loadChatOrderCard, renderChatOrderCard } from "@/backend/services/chatOrderCardService";
+import { loadChatOrderCard, publishChatOrderCard, removeTemporaryChatOrderCard, renderChatOrderCard } from "@/backend/services/chatOrderCardService";
 
 const digits = (text) => String(text || "").replace(/[০-৯]/gu, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
 const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|ok|okay|ঠিক\s*আছে|আচ্ছা|thik\s+ache|accha|confirm)[.!\s]*$/iu;
@@ -377,7 +377,17 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
           form.set("paymentMethod", "COD"); form.set("email", ""); form.set("chatCheckoutKey", `chat:${flow.id}`); form.set("expectedTotal", String(quote.total));
           const orderItems = flow.cartItems?.length ? flow.cartItems : [{ productId: product.id, variantId: flow.variantId, quantity: 1 }];
           const cartProducts = await productsForFlow(flow, product);
-          form.set("products", JSON.stringify(orderItems.map((item) => ({ title: cartProducts.find((entry) => entry.id === item.productId)?.title || product.title, productId: item.productId, variation: { id: item.variantId || item.variationId, combinations: [] }, quantity: Number(item.quantity) || 1 }))));
+          form.set("products", JSON.stringify(orderItems.map((item) => {
+            const selectedProduct = cartProducts.find((entry) => entry.id === item.productId) || product;
+            const selectedVariation = selectedProduct?.variations.find((variant) => variant.id === (item.variantId || item.variationId));
+            return { title: selectedProduct?.title || product.title, productId: item.productId, variation: {
+              id: item.variantId || item.variationId,
+              combinations: (selectedVariation?.combinations || []).map((part) => ({
+                variationName: { name: part.variationName?.name },
+                variationValue: { value: part.variationValue?.value },
+              })),
+            }, thumbnail: selectedVariation?.thumbnail?.url || null, quantity: Number(item.quantity) || 1 };
+          })));
           if (!await canContinue(conversation, inbound)) return true;
           const result = await createOrder(form);
           if (!result.success || !result.data?.orderNo) {
@@ -495,14 +505,34 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
   if (orderNo && conversation.channel === "WHATSAPP") urlButton = orderLinks[0];
   const sendImage = async () => {
     if (humanTookOver || (!imageUrl && !orderNo) || conversation.channel === "WEBSITE") return;
+    let temporaryCloudinaryPublicId = null;
     try {
       const card = orderNo ? await loadChatOrderCard(orderNo) : null;
       const bytes = card ? await renderChatOrderCard(card, await getSiteUrl()) : null;
-      const sourceUrl = imageUrl || new URL("/api/chat/order-card", await getSiteUrl()).href;
-      imageDelivered = await sendChatChannelImageMessage(conversation, orderNo ? "" : "পণ্যের ছবি", sourceUrl, credentials, null, null, bytes);
+      if (orderNo && conversation.channel === "INSTAGRAM" && bytes) {
+        try {
+          const temporaryAsset = await publishChatOrderCard(bytes, orderNo);
+          if (temporaryAsset) {
+            imageUrl = temporaryAsset.url;
+            temporaryCloudinaryPublicId = temporaryAsset.publicId;
+          }
+        } catch (error) { console.warn("Instagram order card hosting failed:", error?.message || "cloudinary_upload_failed"); }
+        if (!imageUrl) throw new Error("Instagram order card-এর জন্য একটি publicly accessible image URL পাওয়া যায়নি। Cloudinary configuration দেখুন।");
+      }
+      const sourceUrl = imageUrl || (orderNo ? null : new URL("/api/chat/order-card", await getSiteUrl()).href);
+      if (!sourceUrl && conversation.channel === "INSTAGRAM") throw new Error("Instagram order card-এর public image URL তৈরি হয়নি।");
+      imageDelivered = await sendChatChannelImageMessage(conversation, orderNo ? "" : "পণ্যের ছবি", sourceUrl || new URL("/api/chat/order-card", await getSiteUrl()).href, credentials, null, null, bytes);
     } catch (error) {
       imageWarning = String(error?.message || "Image delivery failed").slice(0, 200);
       console.error("Chat order image delivery failed:", { orderNo, channel: conversation.channel, message: imageWarning });
+    } finally {
+      // Meta fetches the public URL during Send API delivery. Remove the temporary
+      // CDN copy immediately after the request and retain only our signed app URL.
+      if (temporaryCloudinaryPublicId) {
+        try { await removeTemporaryChatOrderCard(temporaryCloudinaryPublicId); }
+        catch (error) { console.error("Temporary Instagram order card cleanup failed:", { orderNo, message: error?.message || "cloudinary_delete_failed" }); }
+        imageUrl = orderCardImageUrl || null;
+      }
     }
   };
   // Messenger quick replies disappear when another message arrives. Send the

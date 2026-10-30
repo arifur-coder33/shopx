@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import prisma from "@/lib/prisma";
+import cloudinary from "@/lib/cloudinary";
 
 const escapeXml = (value) => String(value ?? "").replace(/[&<>"']/gu, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[char]);
 const money = (value) => `৳${Number(value || 0).toLocaleString("en-BD", { maximumFractionDigits: 0 })}`;
@@ -49,16 +50,16 @@ export async function renderChatOrderCard(order, siteUrl) {
       throw new Error("chat_order_card_font_unavailable");
     });
   const embeddedFont = fontData ? `@font-face{font-family:OrderCardBangla;src:url(data:font/ttf;base64,${fontData}) format('truetype');font-weight:400}` : "";
-  const height = 860 + items.length * 110;
+  const height = 900 + items.length * 156;
   const itemRows = items.map((item, index) => {
     let combinations = "";
     try { combinations = (JSON.parse(item.combinations || "[]") || []).map((row) => `${row.name}: ${row.value}`).join(" · "); } catch {}
-    const y = 530 + index * 110;
-    return `<text x="180" y="${y}" class="item">${escapeXml(String(item.productName).slice(0, 38))}</text><text x="180" y="${y + 28}" class="meta">${escapeXml(item.productCode || item.sku || "")} ${combinations ? `· ${escapeXml(combinations.slice(0, 38))}` : ""} · পরিমাণ ${item.quantity}</text><text x="824" y="${y + 8}" text-anchor="end" class="item">${escapeXml(money(item.price * item.quantity))}</text>`;
+    const y = 552 + index * 156;
+    return `<text x="214" y="${y}" class="item">${escapeXml(String(item.productName).slice(0, 34))}</text><text x="214" y="${y + 42}" class="meta">${escapeXml(item.productCode || item.sku || "")}</text>${combinations ? `<text x="214" y="${y + 78}" class="variant">${escapeXml(combinations.slice(0, 44))}</text>` : ""}<text x="214" y="${y + 116}" class="meta">পরিমাণ ${item.quantity}</text><text x="824" y="${y + 18}" text-anchor="end" class="item">${escapeXml(money(item.price * item.quantity))}</text>`;
   }).join("");
-  const totalsY = 500 + items.length * 110 + 24;
+  const totalsY = 522 + items.length * 156 + 42;
   const totalAmount = Number(order.dueAmount || 0) + Number(order.paidAmount || 0);
-  const svg = `<svg width="900" height="${height}" viewBox="0 0 900 ${height}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f05a24"/><stop offset="1" stop-color="#dd3d0b"/></linearGradient><style>${embeddedFont}.title{font:700 54px OrderCardBangla, sans-serif;fill:#fff}.sub{font:400 25px OrderCardBangla, sans-serif;fill:#fff}.eyebrow{font:700 18px OrderCardBangla, sans-serif;letter-spacing:1px;fill:#ffe1d4}.metaLight{font:600 20px OrderCardBangla, sans-serif;fill:#fff}.section{font:700 21px OrderCardBangla, sans-serif;fill:#263348}.item{font:600 23px OrderCardBangla, sans-serif;fill:#263348}.meta{font:400 18px OrderCardBangla, sans-serif;fill:#718096}.total{font:700 34px OrderCardBangla, sans-serif;fill:#e64b17}.footer{font:400 17px OrderCardBangla, sans-serif;fill:#8290a3}</style></defs><rect width="900" height="${height}" rx="42" fill="#f4f7fb"/><rect x="0" y="0" width="900" height="390" rx="42" fill="url(#bg)"/><circle cx="770" cy="88" r="95" fill="#ffffff" opacity=".10"/><circle cx="840" cy="310" r="125" fill="#ffffff" opacity=".08"/><text x="76" y="92" class="eyebrow">অর্ডার নিশ্চিত</text><text x="76" y="176" class="title">ধন্যবাদ!</text><text x="76" y="232" class="sub">আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে।</text><text x="76" y="300" class="metaLight">অর্ডার নম্বর: ${escapeXml(order.orderNo)}</text><rect x="56" y="438" width="788" height="${items.length * 110 + 320}" rx="26" fill="#ffffff"/><text x="76" y="482" class="section">অর্ডারের বিবরণ</text>${itemRows}<line x1="76" y1="${totalsY}" x2="824" y2="${totalsY}" stroke="#e5eaf1" stroke-width="2"/><text x="76" y="${totalsY + 46}" class="meta">ডেলিভারি চার্জ</text><text x="824" y="${totalsY + 46}" text-anchor="end" class="item">${escapeXml(money(order.deliveryCharge))}</text><text x="76" y="${totalsY + 100}" class="section">সর্বমোট</text><text x="824" y="${totalsY + 100}" text-anchor="end" class="total">${escapeXml(money(totalAmount))}</text><rect x="56" y="${totalsY + 132}" width="788" height="96" rx="20" fill="#fff0e9"/><text x="84" y="${totalsY + 172}" class="meta">সম্ভাব্য ডেলিভারি</text><text x="84" y="${totalsY + 207}" class="item">${escapeXml(leadTime)}</text><text x="450" y="${height - 40}" text-anchor="middle" class="footer">আমাদের সঙ্গে কেনাকাটার জন্য ধন্যবাদ</text></svg>`;
+  const svg = `<svg width="900" height="${height}" viewBox="0 0 900 ${height}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f05a24"/><stop offset="1" stop-color="#dd3d0b"/></linearGradient><style>${embeddedFont}.title{font:700 60px OrderCardBangla, sans-serif;fill:#fff}.sub{font:400 30px OrderCardBangla, sans-serif;fill:#fff}.eyebrow{font:700 22px OrderCardBangla, sans-serif;letter-spacing:1px;fill:#ffe1d4}.metaLight{font:600 25px OrderCardBangla, sans-serif;fill:#fff}.section{font:700 29px OrderCardBangla, sans-serif;fill:#263348}.item{font:600 32px OrderCardBangla, sans-serif;fill:#263348}.meta{font:400 25px OrderCardBangla, sans-serif;fill:#536176}.variant{font:600 25px OrderCardBangla, sans-serif;fill:#087e67}.total{font:700 42px OrderCardBangla, sans-serif;fill:#e64b17}.footer{font:400 22px OrderCardBangla, sans-serif;fill:#64748b}</style></defs><rect width="900" height="${height}" rx="42" fill="#f4f7fb"/><rect x="0" y="0" width="900" height="390" rx="42" fill="url(#bg)"/><circle cx="770" cy="88" r="95" fill="#ffffff" opacity=".10"/><circle cx="840" cy="310" r="125" fill="#ffffff" opacity=".08"/><text x="76" y="92" class="eyebrow">অর্ডার নিশ্চিত</text><text x="76" y="176" class="title">ধন্যবাদ!</text><text x="76" y="232" class="sub">আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে।</text><text x="76" y="300" class="metaLight">অর্ডার নম্বর: ${escapeXml(order.orderNo)}</text><rect x="56" y="438" width="788" height="${items.length * 156 + 340}" rx="26" fill="#ffffff"/><text x="76" y="492" class="section">অর্ডারের বিবরণ</text>${itemRows}<line x1="76" y1="${totalsY}" x2="824" y2="${totalsY}" stroke="#e5eaf1" stroke-width="2"/><text x="76" y="${totalsY + 48}" class="meta">ডেলিভারি চার্জ</text><text x="824" y="${totalsY + 48}" text-anchor="end" class="item">${escapeXml(money(order.deliveryCharge))}</text><text x="76" y="${totalsY + 112}" class="section">সর্বমোট</text><text x="824" y="${totalsY + 112}" text-anchor="end" class="total">${escapeXml(money(totalAmount))}</text><rect x="56" y="${totalsY + 146}" width="788" height="110" rx="20" fill="#fff0e9"/><text x="84" y="${totalsY + 192}" class="meta">সম্ভাব্য ডেলিভারি</text><text x="84" y="${totalsY + 232}" class="item">${escapeXml(leadTime)}</text><text x="450" y="${height - 34}" text-anchor="middle" class="footer">আমাদের সঙ্গে কেনাকাটার জন্য ধন্যবাদ</text></svg>`;
   let browser = null;
   let image;
   try {
@@ -80,8 +81,30 @@ export async function renderChatOrderCard(order, siteUrl) {
   }
   const photos = await Promise.all(items.map(async (item, index) => {
     const photo = await trustedProductImage(item, siteUrl);
-    return photo ? { input: photo, left: 76, top: 505 + index * 110 } : null;
+    const image = photo ? await sharp(photo).resize(122, 122, { fit: "cover" }).png().toBuffer() : null;
+    return image ? { input: image, left: 76, top: 520 + index * 156 } : null;
   }));
   if (photos.some(Boolean)) image = await sharp(image).composite(photos.filter(Boolean)).png().toBuffer();
   return image;
+}
+
+export async function publishChatOrderCard(image, orderNo) {
+  if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET || !process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME) return null;
+  const publicId = `chat-order-card-${String(orderNo).replace(/[^a-z0-9_-]/giu, "")}-${Date.now()}`;
+  const uploaded = await cloudinary.uploader.upload(`data:image/png;base64,${Buffer.from(image).toString("base64")}`, {
+    folder: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER || "chat-order-cards",
+    public_id: publicId,
+    resource_type: "image",
+    format: "jpg",
+    transformation: [{ fetch_format: "jpg", quality: "auto:good" }],
+  });
+  return uploaded.secure_url ? { url: uploaded.secure_url, publicId: uploaded.public_id } : null;
+}
+
+export async function removeTemporaryChatOrderCard(publicId) {
+  if (!publicId) return;
+  const result = await cloudinary.uploader.destroy(publicId, { resource_type: "image", invalidate: true });
+  if (result?.result !== "ok" && result?.result !== "not found") {
+    throw new Error("temporary_order_card_cleanup_failed");
+  }
 }

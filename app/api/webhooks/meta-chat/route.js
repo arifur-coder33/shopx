@@ -313,8 +313,16 @@ export async function POST(request) {
       }
       const instagramProfiles = new Map();
       for (const event of credentials.instagramEnabled && isInstagramPayload ? entry.messaging || [] : []) {
-        if (event.message?.is_echo || !event.message?.mid) continue;
-        const text = event.message?.text || (event.message?.attachments?.some((attachment) => attachment.type === "image") ? "📷 Photo" : event.message?.attachments?.map((attachment) => attachment.type).filter(Boolean).join("\n") || "[Instagram attachment]");
+        if (event.message?.is_echo) continue;
+        const callbackPayload = String(event.postback?.payload || event.message?.quick_reply?.payload || event.message?.button?.payload || "").slice(0, 1000);
+        const productAction = chatProductAction(callbackPayload);
+        const messageId = event.message?.mid || event.postback?.mid || (callbackPayload
+          ? `ig-action-${createHash("sha256").update(`${event.sender?.id}:${event.timestamp}:${callbackPayload}`).digest("hex")}`
+          : null);
+        if (!messageId) continue;
+        const text = productAction
+          ? productAction.action === "order" ? "অর্ডার করতে চাই" : productAction.action === "select" ? "এই পণ্যটি নির্বাচন করলাম।" : "এটা সম্পর্কে আরও জানতে চাই"
+          : event.message?.text || event.message?.quick_reply?.title || event.postback?.title || (event.message?.attachments?.some((attachment) => attachment.type === "image") ? "📷 Photo" : event.message?.attachments?.map((attachment) => attachment.type).filter(Boolean).join("\n") || (callbackPayload ? "Instagram button selected" : "[Instagram attachment]"));
         const senderId = event.sender?.id;
         if (senderId && !instagramProfiles.has(senderId)) instagramProfiles.set(senderId, await getMessengerCustomerProfile(senderId, credentials, "INSTAGRAM"));
         const profile = instagramProfiles.get(senderId);
@@ -323,9 +331,15 @@ export async function POST(request) {
           externalUserId: senderId,
           customerName: profile?.name || null,
           profilePicUrl: profile?.profilePicUrl || null,
-          messageId: event.message.mid,
+          messageId,
           content: text,
-          metadata: { timestamp: event.timestamp, attachments: event.message.attachments || [], ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }) },
+          metadata: {
+            timestamp: event.timestamp,
+            attachments: event.message?.attachments || [],
+            ...(callbackPayload && { quickReplyPayload: callbackPayload }),
+            ...(productAction || {}),
+            ...(event.message?.reply_to?.mid && { replyToExternalMessageId: event.message.reply_to.mid }),
+          },
         });
       }
       for (const change of entry.changes || []) {

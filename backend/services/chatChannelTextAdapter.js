@@ -25,7 +25,7 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
             })) }] } },
           } : { type: "text", text: { body: text, preview_url: true } }),
         }
-      : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...reply, message: { text, ...(conversation.channel === "MESSENGER" && quickReplies.length && { quick_replies: quickReplies.slice(0, 10).map((option) => ({ content_type: "text", title: String(typeof option === "string" ? option : option.title).slice(0, 20), payload: String(typeof option === "string" ? option : option.payload).slice(0, 1000) })) }) } };
+      : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...reply, message: { text, ...(["MESSENGER", "INSTAGRAM"].includes(conversation.channel) && quickReplies.length && { quick_replies: quickReplies.slice(0, 10).map((option) => ({ content_type: "text", title: String(typeof option === "string" ? option : option.title).slice(0, 20), payload: String(typeof option === "string" ? option : option.payload).slice(0, 1000) })) }) } };
     if (conversation.channel === "MESSENGER" && urlButton) {
       const buttons = (Array.isArray(urlButton) ? urlButton : [urlButton]).slice(0, 3);
       payload.message = { attachment: { type: "template", payload: {
