@@ -39,12 +39,11 @@ function hasValidSignature(rawBody, header, appSecret) {
 
 async function getMessengerCustomerProfile(senderId, credentials, channel = "MESSENGER") {
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
-  const accessToken = channel === "INSTAGRAM" ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
+  const accessToken = credentials.messengerPageAccessToken;
   if (!senderId || !accessToken || !/^v\d+\.\d+$/.test(version || "")) return null;
   try {
     const fields = channel === "INSTAGRAM" ? "name,username,profile_pic" : "first_name,middle_name,last_name,profile_pic";
-    const host = channel === "INSTAGRAM" ? "graph.instagram.com" : "graph.facebook.com";
-    const url = `https://${host}/${version}/${encodeURIComponent(senderId)}?fields=${fields}`;
+    const url = `https://graph.facebook.com/${version}/${encodeURIComponent(senderId)}?fields=${fields}`;
     let response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",

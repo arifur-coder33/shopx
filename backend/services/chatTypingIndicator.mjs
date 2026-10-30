@@ -3,15 +3,14 @@ export function buildChatTypingRequest(conversation, inbound, credentials, activ
   if (!["MESSENGER", "WHATSAPP", "INSTAGRAM"].includes(channel)) return null;
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
   const whatsapp = channel === "WHATSAPP";
-  const instagram = channel === "INSTAGRAM";
-  const token = whatsapp ? credentials.whatsappAccessToken : instagram ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
-  const resource = whatsapp ? credentials.whatsappPhoneNumberId : instagram ? credentials.instagramAccountId : credentials.messengerPageId;
+  const token = whatsapp ? credentials.whatsappAccessToken : credentials.messengerPageAccessToken;
+  const resource = whatsapp ? credentials.whatsappPhoneNumberId : credentials.messengerPageId;
   if (!token || !resource || !/^v\d+\.\d+$/u.test(version || "")) return null;
   // WhatsApp clears the indicator on delivery or after 25 seconds; it has no
   // typing_off request. Its read/typing receipt requires an inbound message ID.
   if (whatsapp && (!active || !inbound.externalMessageId)) return null;
   return {
-    url: `https://${instagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resource}/messages`,
+    url: `https://graph.facebook.com/${version}/${resource}/messages`,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: whatsapp
       ? { messaging_product: "whatsapp", status: "read", message_id: inbound.externalMessageId, typing_indicator: { type: "text" } }

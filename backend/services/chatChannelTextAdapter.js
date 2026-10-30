@@ -9,9 +9,8 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
   if (["WHATSAPP", "MESSENGER", "INSTAGRAM"].includes(conversation.channel)) {
     const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
     const isWhatsApp = conversation.channel === "WHATSAPP";
-    const isInstagram = conversation.channel === "INSTAGRAM";
-    const token = isWhatsApp ? credentials.whatsappAccessToken : isInstagram ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
-    const resource = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
+    const token = isWhatsApp ? credentials.whatsappAccessToken : credentials.messengerPageAccessToken;
+    const resource = isWhatsApp ? credentials.whatsappPhoneNumberId : credentials.messengerPageId;
     if (!token || !resource || !/^v\d+\.\d+$/.test(version || "")) throw new Error("এই channel-এর reply credentials configure করা নেই।");
     const reply = replyToExternalMessageId ? { reply_to: { mid: replyToExternalMessageId } } : {};
     const payload = isWhatsApp
@@ -40,9 +39,10 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
     }
     return {
       provider: isWhatsApp ? "WHATSAPP" : "META",
-      // Instagram API with Instagram Login uses graph.instagram.com. The
-      // Facebook Graph host rejects the Instagram professional account ID.
-      url: `https://${isInstagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resource}/messages`,
+      // Facebook Login uses the linked Page ID and Page Access Token for both
+      // Messenger and Instagram Messaging. The Instagram account ID is not a
+      // send endpoint in this flow.
+      url: `https://graph.facebook.com/${version}/${resource}/messages`,
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: payload,
     };
@@ -203,11 +203,10 @@ export async function sendChatChannelImageMessage(conversation, caption, imageUr
   if (["WHATSAPP", "MESSENGER", "INSTAGRAM"].includes(conversation.channel)) {
     const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
     const isWhatsApp = conversation.channel === "WHATSAPP";
-    const isInstagram = conversation.channel === "INSTAGRAM";
-    const token = isWhatsApp ? credentials.whatsappAccessToken : isInstagram ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
-    const resource = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
+    const token = isWhatsApp ? credentials.whatsappAccessToken : credentials.messengerPageAccessToken;
+    const resource = isWhatsApp ? credentials.whatsappPhoneNumberId : credentials.messengerPageId;
     if (!token || !resource || !/^v\d+\.\d+$/.test(version || "")) throw new Error("এই channel-এর reply credentials configure করা নেই।");
-    const endpoint = `https://${isInstagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resource}/messages`;
+    const endpoint = `https://graph.facebook.com/${version}/${resource}/messages`;
     if (isWhatsApp) {
       if (credentials.whatsappWindowClosed && credentials.whatsappImageTemplateName) {
         const delivered = await sendWhatsAppApprovedTemplate(conversation, credentials.whatsappImageTemplateName, credentials.whatsappTemplateLanguage, caption || "পণ্যের ছবি", credentials, imageUrl);

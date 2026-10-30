@@ -95,13 +95,12 @@ export default function ChatSettingsForm({ settings, canUpdate, webhookUrl, tikt
 
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]">
       <div className="space-y-5">
-        <ProviderCredentialsCard provider="META" title="Meta · Facebook, WhatsApp & Instagram" description="Meta App credentials এবং connected channel token এখানে রাখুন। Credential encrypted থাকবে; কোনো field ফাঁকা রেখে save করলে আগের value থাকবে।" fields={[
+        <ProviderCredentialsCard provider="META" title="Meta · Facebook, WhatsApp & Instagram" description="Instagram DM ও Messenger linked Facebook Page-এর একই Page ID এবং Page Access Token ব্যবহার করে। Meta app-এ Instagram API → API setup with Facebook Login বেছে নিন। Instagram Professional Account ID আলাদা; Instagram Login token এখানে লাগবে না। Credentials encrypted থাকবে; field ফাঁকা রেখে save করলে আগের value থাকবে।" fields={[
           { name: "whatsappPhoneNumberId", label: "WhatsApp Phone Number ID", hint: "WhatsApp Cloud API Setup" , secret: false },
           { name: "whatsappAccessToken", label: "WhatsApp Access Token", hint: "System User বা approved access token" },
           { name: "messengerPageId", label: "Facebook Page ID", hint: "Messenger ও Page comments-এর Page ID", secret: false },
-          { name: "messengerPageAccessToken", label: "Page Access Token", hint: "এই Page-এর token" },
-          { name: "instagramAccountId", label: "Instagram Professional Account ID", hint: "Connected Instagram account", secret: false },
-          { name: "instagramAccessToken", label: "Instagram Access Token", hint: "Instagram Messaging permission-সহ token" },
+          { name: "messengerPageAccessToken", label: "Page Access Token", hint: "Linked Facebook Page token; Messenger ও Instagram দুটোতেই ব্যবহৃত হবে" },
+          { name: "instagramAccountId", label: "Instagram Professional Account ID", hint: "Facebook Page-এর সঙ্গে linked Instagram account ID", secret: false },
           { name: "metaAppSecret", label: "Meta App Secret", hint: "Meta App Settings → Basic" },
           { name: "webhookVerifyToken", label: "Webhook Verify Token", hint: "নিজের secret phrase; Meta dashboard-এ একই token দিন" },
           { name: "graphApiVersion", label: "Graph API Version", hint: "যেমন v26.0", secret: false },

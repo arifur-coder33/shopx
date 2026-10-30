@@ -2322,10 +2322,7 @@ async function getCustomerImage(conversation, attachment, credentials) {
     )
   )
     throw new Error("Customer photo host is not trusted.");
-  const token =
-    conversation.channel === "INSTAGRAM"
-      ? credentials.instagramAccessToken
-      : credentials.messengerPageAccessToken;
+  const token = credentials.messengerPageAccessToken;
   return readImageResponse(
     await fetch(url, {
       ...(token && { headers: { Authorization: `Bearer ${token}` } }),

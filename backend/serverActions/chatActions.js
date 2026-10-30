@@ -24,7 +24,7 @@ import jwt from "jsonwebtoken";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
 
 const SETTING_ID = "primary";
-const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "instagramAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion", "tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret", "openaiApiKey", "googleAiStudioApiKey"];
+const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "metaAppSecret", "webhookVerifyToken", "graphApiVersion", "tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret", "openaiApiKey", "googleAiStudioApiKey"];
 const trim = (value) => String(value ?? "").trim();
 
 export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
@@ -243,6 +243,7 @@ export async function saveChatSettingsAction(formData) {
     const userId = await requireProcurementPermission("chat", "update");
     const existing = await getSetting();
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
+    delete credentials.instagramAccessToken;
     for (const key of SECRET_KEYS) {
       if (formData.get(`clear_${key}`) === "true") delete credentials[key];
       else if (trim(formData.get(key))) credentials[key] = trim(formData.get(key));
@@ -292,8 +293,8 @@ export async function saveChatSettingsAction(formData) {
     if (facebookCommentAutoReplyEnabled && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
       throw new Error("Facebook comment auto-reply চালু করতে Page ID, Page Access Token, App Secret ও Webhook Verify Token দিন।");
     }
-    if (instagramEnabled && (!credentials.instagramAccountId || !credentials.instagramAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
-      throw new Error("Instagram inbox চালু করতে Instagram Professional Account ID, access token, Meta App Secret ও Webhook Verify Token দিন।");
+    if (instagramEnabled && (!credentials.instagramAccountId || !credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) {
+      throw new Error("Instagram inbox চালু করতে linked Facebook Page ID ও Page Access Token, Instagram Professional Account ID, Meta App Secret ও Webhook Verify Token দিন।");
     }
     if (tiktokEnabled && (!credentials.tiktokBusinessId || !credentials.tiktokAccessToken || !credentials.tiktokClientKey || !credentials.tiktokClientSecret)) {
       throw new Error("TikTok inbox চালু করতে Business ID, access token, Client Key ও Client Secret দিন। TikTok Business Messaging API access অনুমোদিত থাকতে হবে।");
@@ -316,7 +317,7 @@ export async function saveChatSettingsAction(formData) {
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");
     const requiredMetaFields = [
-      ...(messengerEnabled ? ["messages", "messaging_postbacks"] : []),
+      ...(messengerEnabled || instagramEnabled ? ["messages", "messaging_postbacks"] : []),
       ...(facebookCommentAutoReplyEnabled ? ["feed"] : []),
     ];
     const subscription = requiredMetaFields.length ? await ensureMessengerPostbacks(credentials, { force: true, requiredFields: requiredMetaFields }) : null;
@@ -329,7 +330,7 @@ export async function saveChatSettingsAction(formData) {
 const PROVIDER_CREDENTIAL_FIELDS = {
   OPENAI: ["openaiApiKey"],
   GOOGLE_AI_STUDIO: ["googleAiStudioApiKey"],
-  META: ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "instagramAccessToken", "metaAppSecret", "webhookVerifyToken", "graphApiVersion"],
+  META: ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "metaAppSecret", "webhookVerifyToken", "graphApiVersion"],
   TIKTOK: ["tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret"],
 };
 
@@ -340,6 +341,7 @@ export async function saveProviderCredentialsAction(provider, formData) {
     if (!fields) throw new Error("Provider নির্বাচনটি সঠিক নয়।");
     const existing = await getSetting();
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
+    if (String(provider || "").toUpperCase() === "META") delete credentials.instagramAccessToken;
     for (const key of fields) {
       if (formData.get(`clear_${key}`) === "true") delete credentials[key];
       else if (trim(formData.get(key))) credentials[key] = trim(formData.get(key));
@@ -415,7 +417,7 @@ export async function saveChatChannelSectionAction(formData) {
     const chatOrderCreationEnabled = formData.get("chatOrderCreationEnabled") === "on";
     if (whatsappEnabled && (!credentials.whatsappPhoneNumberId || !credentials.whatsappAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("WhatsApp চালুর আগে Chat Settings-এর Meta credentials card পূরণ করে save করুন।");
     if (messengerEnabled && (!credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Messenger চালুর আগে Meta credentials card পূরণ করে save করুন।");
-    if (instagramEnabled && (!credentials.instagramAccountId || !credentials.instagramAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Instagram চালুর আগে Meta credentials card পূরণ করে save করুন।");
+    if (instagramEnabled && (!credentials.instagramAccountId || !credentials.messengerPageId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Instagram চালু করতে linked Facebook Page ID ও Page Access Token এবং Instagram Professional Account ID-সহ Meta credentials save করুন।");
     if (tiktokEnabled && (!credentials.tiktokBusinessId || !credentials.tiktokAccessToken || !credentials.tiktokClientKey || !credentials.tiktokClientSecret)) throw new Error("TikTok চালুর আগে TikTok credentials card পূরণ করে save করুন।");
     const quickReplies = String(formData.get("quickReplies") || "").split(/\r?\n/).map((line) => {
       const separator = line.indexOf("=");
@@ -438,7 +440,7 @@ export async function saveChatChannelSectionAction(formData) {
     revalidatePath("/admin/chat");
     revalidatePath("/admin/chat/settings");
     const requiredMetaFields = [
-      ...(messengerEnabled ? ["messages", "messaging_postbacks"] : []),
+      ...(messengerEnabled || instagramEnabled ? ["messages", "messaging_postbacks"] : []),
     ];
     const subscription = requiredMetaFields.length ? await ensureMessengerPostbacks(credentials, { force: true, requiredFields: requiredMetaFields }) : null;
     return { success: true, message: subscription?.warning ? `Chat settings save হয়েছে। ${subscription.warning}` : "Chat settings save হয়েছে." };
@@ -640,12 +642,11 @@ async function sendMetaMessage(conversation, content, { product = null, imageUrl
   const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
   if (!version || !/^v\d+\.\d+$/.test(version)) throw new Error("Chat Settings-এ valid Meta Graph API version configure করুন।");
   const isWhatsApp = conversation.channel === "WHATSAPP";
-  const isInstagram = conversation.channel === "INSTAGRAM";
-  const accessToken = isWhatsApp ? credentials.whatsappAccessToken : isInstagram ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
-  const resourceId = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
+  const accessToken = isWhatsApp ? credentials.whatsappAccessToken : credentials.messengerPageAccessToken;
+  const resourceId = isWhatsApp ? credentials.whatsappPhoneNumberId : credentials.messengerPageId;
   if (!accessToken || !resourceId) throw new Error("এই channel-এর Meta credentials configure করা হয়নি।");
   if (!imageUrl && !product) return sendChatChannelTextMessage(conversation, content, credentials, replyToMessageId);
-  const url = `https://${isInstagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resourceId}/messages`;
+  const url = `https://graph.facebook.com/${version}/${resourceId}/messages`;
   const quoted = replyToMessageId ? { message_id: replyToMessageId } : undefined;
   const messengerReply = replyToMessageId ? { reply_to: { mid: replyToMessageId } } : {};
   const payload = isWhatsApp
