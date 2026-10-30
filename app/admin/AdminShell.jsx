@@ -3,7 +3,6 @@
 import AdminNavBar from "@/components/nav/AdminNav";
 import AdminSideNav from "@/components/nav/AdminSideNav";
 import { usePathname } from "next/navigation";
-import { SessionProvider } from "next-auth/react";
 import { Suspense, useEffect, useState } from "react";
 import { SWRConfig } from "swr";
 
@@ -42,31 +41,29 @@ export default function AdminShell({ children, siteSetting }) {
 
   return (
     <SWRConfig value={{ revalidateOnFocus: false }}>
-      <SessionProvider>
-        <AdminNavBar toggleSidebar={toggleSidebar} siteSetting={siteSetting} />
-        <div className="mx-auto w-full max-w-[100rem]">
-          <div className="relative flex">
-            <AdminSideNav
-              isMobile={isMobile}
-              isOpen={isMobile ? isSidebarOpen : !isSidebarCollapsed}
-              setIsOpen={setIsSidebarOpen}
-              isCollapsed={isSidebarCollapsed}
-            />
-            <main
-              className={cn(
-                isChatInbox
-                  ? "h-[calc(100dvh-4rem)] min-h-0 min-w-0 flex-1 overflow-hidden p-2 transition-all duration-300 ease-in-out sm:p-4"
-                  : "min-h-screen min-w-0 flex-1 overflow-x-clip p-2 transition-all duration-300 ease-in-out sm:p-4",
-                isMobile ? "w-full" : isSidebarCollapsed ? "sm:ml-20" : "sm:ml-64",
-              )}
-            >
-              <Suspense fallback={<div className="card">Loading…</div>}>
-                {children}
-              </Suspense>
-            </main>
-          </div>
+      <AdminNavBar toggleSidebar={toggleSidebar} siteSetting={siteSetting} />
+      <div className="mx-auto w-full max-w-[100rem]">
+        <div className="relative flex">
+          <AdminSideNav
+            isMobile={isMobile}
+            isOpen={isMobile ? isSidebarOpen : !isSidebarCollapsed}
+            setIsOpen={setIsSidebarOpen}
+            isCollapsed={isSidebarCollapsed}
+          />
+          <main
+            className={cn(
+              isChatInbox
+                ? "h-[calc(100dvh-4rem)] min-h-0 min-w-0 flex-1 overflow-hidden p-2 transition-all duration-300 ease-in-out sm:p-4"
+                : "min-h-screen min-w-0 flex-1 overflow-x-clip p-2 transition-all duration-300 ease-in-out sm:p-4",
+              isMobile ? "w-full" : isSidebarCollapsed ? "sm:ml-20" : "sm:ml-64",
+            )}
+          >
+            <Suspense fallback={<div className="card">Loading…</div>}>
+              {children}
+            </Suspense>
+          </main>
         </div>
-      </SessionProvider>
+      </div>
     </SWRConfig>
   );
 }

@@ -157,7 +157,6 @@ export default function AdminChatInbox({
   const actionBusyRef = useRef(false);
   const actionsMenuRef = useRef(null);
   const attachmentsMenuRef = useRef(null);
-  const knownInboxRef = useRef(null);
   const photoInputRef = useRef(null);
   const photoPreviewRef = useRef("");
   const photoPreviewUrlsRef = useRef(new Set());
@@ -350,7 +349,6 @@ export default function AdminChatInbox({
     let stopped = false;
     let socket = null;
     let reconnectTimer = null;
-    let fallbackTimer = null;
     let reconnectDelay = 1000;
     let refreshTimer = null;
 
@@ -389,7 +387,36 @@ export default function AdminChatInbox({
           reconnectDelay = 1000;
           refreshRealtimeData();
         }
-        if (data.event === "chat.message") refreshRealtimeData();
+        if (data.event === "chat.message") {
+          const message = data.payload || {};
+          refreshRealtimeData();
+          const activeConversationId = selectedIdRef.current;
+          if (activeConversationId === message.conversationId) {
+            getChatCustomerOrdersAction(activeConversationId).then((result) => {
+              if (result.success) setOrderSummary(result.data);
+            });
+          }
+          if (
+            message.direction === "INBOUND" &&
+            message.conversationId !== activeConversationId &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            const notification = new Notification(
+              message.customerName || message.customerPhone || `${channelLabels[message.channel] || "চ্যাট"} · নতুন message`,
+              {
+                body: message.content || "নতুন customer message এসেছে।",
+                icon: "/favicon.ico",
+                tag: `admin-chat-${message.conversationId}`,
+              },
+            );
+            notification.onclick = () => {
+              window.focus();
+              setSelectedId(message.conversationId);
+              notification.close();
+            };
+          }
+        }
       });
       socket.addEventListener("close", () => {
         if (stopped) return;
@@ -400,18 +427,10 @@ export default function AdminChatInbox({
     };
 
     connect();
-    fallbackTimer = window.setInterval(() => {
-      if (
-        document.visibilityState === "visible" &&
-        socket?.readyState !== WebSocket.OPEN
-      )
-        refreshRealtimeData();
-    }, 15000);
     return () => {
       stopped = true;
       clearTimeout(reconnectTimer);
       clearTimeout(refreshTimer);
-      clearInterval(fallbackTimer);
       socket?.close();
     };
   }, [loadInbox, loadConversation]);
@@ -435,10 +454,7 @@ export default function AdminChatInbox({
         if (result.success) setOrderSummary(result.data);
       });
     refreshOrders();
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") refreshOrders();
-    }, 15000);
-    return () => window.clearInterval(timer);
+    return undefined;
   }, [selectedId]);
   useEffect(() => {
     if (!productPanel || productQuery.trim().length < 2) {
@@ -457,15 +473,6 @@ export default function AdminChatInbox({
     }, 250);
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [productPanel, productQuery]);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        loadInbox();
-        loadConversation();
-      }
-    }, 15000);
-    return () => window.clearInterval(timer);
-  }, [loadInbox, loadConversation]);
   useEffect(() => {
     if (
       !("Notification" in window) ||
@@ -504,69 +511,8 @@ export default function AdminChatInbox({
       }
     };
     restoreSubscription();
-    const checkInbox = async () => {
-      const result = await getChatInboxAction({
-        channel: "ALL",
-        status: "ALL",
-      });
-      if (!active || !result.success) return;
-      const current = new Map(
-        result.data.map((item) => {
-          const latest = item.messages?.[0];
-          const latestAt = latest?.createdAt || item.lastMessageAt;
-          return [
-            item.id,
-            {
-              createdAt: latestAt ? new Date(latestAt).getTime() : 0,
-              direction: latest?.direction,
-              content: latest?.content,
-              customerName: item.customerName,
-              customerPhone: item.customerPhone,
-              channel: item.channel,
-            },
-          ];
-        }),
-      );
-      const previous = knownInboxRef.current;
-      if (
-        previous &&
-        Notification.permission === "granted" &&
-        document.hasFocus()
-      ) {
-        for (const [conversationId, latest] of current) {
-          const old = previous.get(conversationId);
-          if (
-            latest.direction !== "INBOUND" ||
-            (old &&
-              latest.createdAt === old.createdAt &&
-              latest.content === old.content) ||
-            selectedIdRef.current === conversationId
-          )
-            continue;
-          const notification = new Notification(
-            latest.customerName ||
-              latest.customerPhone ||
-              `${channelLabels[latest.channel]} · নতুন message`,
-            {
-              body: latest.content || "নতুন customer message এসেছে।",
-              icon: "/favicon.ico",
-              tag: `admin-chat-${conversationId}`,
-            },
-          );
-          notification.onclick = () => {
-            window.focus();
-            setSelectedId(conversationId);
-            notification.close();
-          };
-        }
-      }
-      knownInboxRef.current = current;
-    };
-    checkInbox();
-    const timer = window.setInterval(checkInbox, 4000);
     return () => {
       active = false;
-      window.clearInterval(timer);
     };
   }, []);
 

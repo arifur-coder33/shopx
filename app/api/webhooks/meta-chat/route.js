@@ -221,6 +221,17 @@ export async function POST(request) {
   let payload;
   try { payload = JSON.parse(rawBody); } catch { return new Response("Invalid JSON", { status: 400 }); }
   const isInstagramPayload = payload.object === "instagram";
+  if (isInstagramPayload) {
+    const entries = payload.entry || [];
+    const commentChanges = entries.flatMap((entry) => (entry.changes || []).filter((change) => change.field === "comments").map(() => entry));
+    console.info("Instagram webhook delivery received:", {
+      entries: entries.length,
+      fields: [...new Set(entries.flatMap((entry) => (entry.changes || []).map((change) => change.field)))],
+      commentChanges: commentChanges.length,
+      configuredAccountMatched: commentChanges.some((entry) => String(entry.id || "") === String(credentials.instagramAccountId || "")),
+      messagingEvents: entries.reduce((count, entry) => count + (entry.messaging || []).length, 0),
+    });
+  }
   try {
     for (const entry of payload.entry || []) {
       for (const change of entry.changes || []) {
@@ -362,8 +373,12 @@ export async function POST(request) {
             }
           }
         }
-        if (isInstagramPayload && (credentials.instagramEnabled || credentials.instagramCommentAutoReplyEnabled)
-          && String(entry.id || "") === String(credentials.instagramAccountId || "") && change.field === "comments") {
+        if (isInstagramPayload && change.field === "comments"
+          && String(entry.id || "") !== String(credentials.instagramAccountId || "")) {
+          console.warn("Instagram comments webhook account ID did not match Chat Settings.");
+        }
+        if (isInstagramPayload && change.field === "comments"
+          && String(entry.id || "") === String(credentials.instagramAccountId || "")) {
           const commentId = String(value.id || value.comment_id || "");
           const authorId = String(value.from?.id || "");
           const commentText = String(value.text || value.message || "").trim();
@@ -381,9 +396,9 @@ export async function POST(request) {
               commentText,
               commentCreatedAt: commentCreatedAt && !Number.isNaN(commentCreatedAt.getTime()) ? commentCreatedAt : null,
             };
-            if (await saveFacebookPageComment(comment) && credentials.instagramCommentAutoReplyEnabled) {
-              after(async () => processFacebookPageComment({ ...comment, credentials }));
-            }
+            const saved = await saveFacebookPageComment(comment);
+            console.info("Instagram comment webhook processed:", { saved, autoReplyEnabled: credentials.instagramCommentAutoReplyEnabled, hasCommentText: Boolean(commentText) });
+            if (saved && credentials.instagramCommentAutoReplyEnabled) after(async () => processFacebookPageComment({ ...comment, credentials }));
           }
         }
       }

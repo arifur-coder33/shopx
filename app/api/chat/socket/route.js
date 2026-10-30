@@ -59,7 +59,16 @@ export async function GET(request) {
           },
           orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
           take: 100,
-          select: { id: true, conversationId: true, direction: true, updatedAt: true },
+          select: {
+            id: true,
+            conversationId: true,
+            direction: true,
+            content: true,
+            updatedAt: true,
+            conversation: {
+              select: { customerName: true, customerPhone: true, channel: true },
+            },
+          },
         });
         for (const message of messages) {
           const eventKey = `${message.id}:${message.updatedAt.getTime()}`;
@@ -69,6 +78,12 @@ export async function GET(request) {
             id: message.id,
             conversationId: message.conversationId,
             direction: message.direction,
+            ...(message.direction === "INBOUND" && {
+              content: message.content,
+              customerName: message.conversation.customerName,
+              customerPhone: message.conversation.customerPhone,
+              channel: message.conversation.channel,
+            }),
             updatedAt: message.updatedAt.toISOString(),
           });
           cursorAt = message.updatedAt;

@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { whatsAppImageContent, whatsAppUrlButtonContent } from "@/backend/utils/chatProductSelection.mjs";
 import { sendMessengerProductCard as sendMessengerCard, sendMessengerProductCarousel as sendMessengerCarousel } from "@/backend/services/chat/channelCards/messengerProductCards";
 
-export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null) {
+export function buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null, imageUrl = null) {
   const text = String(content || "").slice(0, conversation.channel === "WHATSAPP" ? 4096 : 2000);
   if (conversation.channel === "WEBSITE") return null;
   if (["WHATSAPP", "MESSENGER", "INSTAGRAM"].includes(conversation.channel)) {
@@ -35,6 +35,24 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
           if (target.protocol !== "https:") throw new Error("URL buttons require HTTPS.");
           return { type: "web_url", title: String(button.title).slice(0, 20), url: target.href };
         }),
+      } } };
+    }
+    if (conversation.channel === "INSTAGRAM" && urlButton && imageUrl) {
+      const buttons = (Array.isArray(urlButton) ? urlButton : [urlButton]).slice(0, 3);
+      const [title = "অর্ডার নিশ্চিত হয়েছে 🎉", ...rest] = text.split(/\n+/u);
+      const subtitle = rest.join(" · ").slice(0, 80) || "অর্ডারের বিস্তারিত নিচের বাটনে দেখুন।";
+      payload.message = { attachment: { type: "template", payload: {
+        template_type: "generic",
+        elements: [{
+          title: title.slice(0, 80),
+          image_url: imageUrl,
+          subtitle,
+          buttons: buttons.map((button) => {
+            const target = new URL(button.url);
+            if (target.protocol !== "https:") throw new Error("Instagram URL buttons require HTTPS.");
+            return { type: "web_url", title: String(button.title).slice(0, 20), url: target.href };
+          }),
+        }],
       } } };
     }
     return {
@@ -90,8 +108,8 @@ async function sendWhatsAppApprovedTemplate(conversation, templateName, language
   return { id: result?.messages?.[0]?.id || null, secondaryIds: [], warning: null };
 }
 
-export async function sendChatChannelTextMessage(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null) {
-  const request = buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId, quickReplies, urlButton);
+export async function sendChatChannelTextMessage(conversation, content, credentials, replyToExternalMessageId = null, quickReplies = [], urlButton = null, imageUrl = null) {
+  const request = buildChatTextRequest(conversation, content, credentials, replyToExternalMessageId, quickReplies, urlButton, imageUrl);
   if (!request) return { id: null, secondaryIds: [], warning: null };
   const response = await fetch(request.url, {
     method: "POST",

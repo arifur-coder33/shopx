@@ -22,7 +22,7 @@ const checkoutInterruption = /(?:[?？]|\b(?:what|why|when|where|which|who|how|p
 const prompts = {
   name: "আপনার নাম লিখুন।", phone: "আপনার মোবাইল নম্বরটি দিন (যেমন 01712345678)।",
   address: "একটি পূর্ণ ডেলিভারি ঠিকানা লিখুন—বাসা/রোড/এলাকা, থানা ও জেলা একসাথে। যেমন: House 34, Road 11, Sector 11, Uttara, Dhaka।",
-  customerDetails: "অর্ডার করতে আপনার নাম, ফোন নম্বর ও পূর্ণ ঠিকানা (বাসা/এলাকা, থানা, জেলা) এক মেসেজে লিখুন।",
+  customerDetails: "অর্ডার করতে আপনার নাম, ফোন নম্বর ও সম্পূর্ণ ঠিকানা (বাসা/রোড, এলাকা, থানা, জেলা)—সব একসঙ্গে এক মেসেজে পাঠান।\nউদাহরণ: নাম: Rahim, ফোন: 01712345678, ঠিকানা: House 12, Road 3, Uttara, Dhaka।",
   area: "ঠিকানাটি কি ঢাকা সিটির মধ্যে? ভিতরে বা বাইরে বেছে নিন।",
 };
 const label = (variant) => variant.combinations.map((part) => `${part.variationName?.name}: ${part.variationValue?.value}`).join(" / ") || "সাধারণ";
@@ -250,8 +250,13 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
           customerName: known.customerName, phoneNumber: known.phoneNumber,
           ...(address?.valid ? { deliveryAddress: address.deliveryAddress, district: address.district, thana: address.thana, addressVerified: true } : known.deliveryAddress ? { deliveryAddress: known.deliveryAddress } : {}),
         };
-        const missing = !validField("name", next.customerName) ? prompts.name : !validField("phone", String(next.phoneNumber || "").replace(/\D/gu, "")) ? prompts.phone : !next.addressVerified ? prompts.address : "";
-        if (missing) reply = missing;
+        const detailsComplete = validField("name", next.customerName)
+          && validField("phone", String(next.phoneNumber || "").replace(/\D/gu, ""))
+          && next.addressVerified;
+        if (!detailsComplete) {
+          next.step = canCreateOrder ? "customer_details" : "lead_details";
+          reply = prompts.customerDetails;
+        }
         else if (!canCreateOrder) reply = prompts.customerDetails;
         else {
           next.deliveryArea = isDhaka(next.district) ? null : "outside-dhaka";
@@ -305,9 +310,10 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
           Object.assign(next, { customerName: known.customerName, phoneNumber: known.phoneNumber });
           if (address?.valid) Object.assign(next, { deliveryAddress: address.deliveryAddress, district: address.district, thana: address.thana, addressVerified: true });
           else if (known.deliveryAddress) next.deliveryAddress = known.deliveryAddress;
-          if (!validField("name", next.customerName)) reply = prompts.name;
-          else if (!validField("phone", String(next.phoneNumber || "").replace(/\D/gu, ""))) reply = prompts.phone;
-          else if (!next.addressVerified) reply = address?.error || prompts.address;
+          if (!validField("name", next.customerName) || !validField("phone", String(next.phoneNumber || "").replace(/\D/gu, "")) || !next.addressVerified) {
+            next.step = flow.leadOnly ? "lead_details" : "customer_details";
+            reply = prompts.customerDetails;
+          }
           else {
             next.deliveryArea = isDhaka(next.district) ? null : "outside-dhaka";
             next.step = isDhaka(next.district) ? "area" : "confirm";
@@ -503,6 +509,8 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
   const orderLinks = orderNo ? [{ title: "View invoice", url: invoiceUrl }, { title: "Track order", url: trackingUrl }] : [];
   if (orderNo && conversation.channel === "MESSENGER") urlButton = orderLinks;
   if (orderNo && conversation.channel === "WHATSAPP") urlButton = orderLinks[0];
+  if (orderNo && conversation.channel === "INSTAGRAM") urlButton = orderLinks;
+  let deliveredMessage = null;
   const sendImage = async () => {
     if (humanTookOver || (!imageUrl && !orderNo) || conversation.channel === "WEBSITE") return;
     let temporaryCloudinaryPublicId = null;
@@ -521,7 +529,14 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
       }
       const sourceUrl = imageUrl || (orderNo ? null : new URL("/api/chat/order-card", await getSiteUrl()).href);
       if (!sourceUrl && conversation.channel === "INSTAGRAM") throw new Error("Instagram order card-এর public image URL তৈরি হয়নি।");
-      imageDelivered = await sendChatChannelImageMessage(conversation, orderNo ? "" : "পণ্যের ছবি", sourceUrl || new URL("/api/chat/order-card", await getSiteUrl()).href, credentials, null, null, bytes);
+      if (orderNo && conversation.channel === "INSTAGRAM") {
+        // Instagram generic template keeps the receipt photo, congratulations text,
+        // and invoice/tracking actions together as one message.
+        deliveredMessage = await sendChatChannelTextMessage(conversation, text, credentials, null, [], urlButton, sourceUrl);
+        imageDelivered = deliveredMessage;
+      } else {
+        imageDelivered = await sendChatChannelImageMessage(conversation, orderNo ? "" : "পণ্যের ছবি", sourceUrl || new URL("/api/chat/order-card", await getSiteUrl()).href, credentials, null, null, bytes);
+      }
     } catch (error) {
       imageWarning = String(error?.message || "Image delivery failed").slice(0, 200);
       console.error("Chat order image delivery failed:", { orderNo, channel: conversation.channel, message: imageWarning });
@@ -535,11 +550,11 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
       }
     }
   };
-  // Messenger quick replies disappear when another message arrives. Send the
-  // product photo first so the checkout buttons remain on the latest message.
-  if (conversation.channel === "MESSENGER" || orderNo) await sendImage();
+  // On Meta channels the checkout options must remain on the latest message.
+  // Instagram's order receipt is a single image template with its action links.
+  if (["MESSENGER", "INSTAGRAM"].includes(conversation.channel) && (imageUrl || orderNo)) await sendImage();
   const separateUrlButton = conversation.channel === "WHATSAPP" && quickReplies.length > 0 && urlButton;
-  const delivered = humanTookOver ? { id: null } : await sendChatChannelTextMessage(conversation, text, credentials, null, quickReplies, separateUrlButton ? null : urlButton);
+  const delivered = humanTookOver ? { id: null } : deliveredMessage || await sendChatChannelTextMessage(conversation, text, credentials, null, quickReplies, separateUrlButton ? null : urlButton);
   let urlButtonMessage = null;
   if ((separateUrlButton || (orderNo && conversation.channel === "WHATSAPP")) && !humanTookOver) {
     const buttonText = orderNo ? "অর্ডারের অবস্থা দেখুন।" : "ওয়েবসাইটে অর্ডার করতে নিচের বাটন ব্যবহার করুন।";
@@ -551,7 +566,7 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
       console.warn("WhatsApp purchase URL button delivery failed:", { code: error?.code || "url_button_failed" });
     }
   }
-  if (conversation.channel !== "MESSENGER" && !orderNo) {
+  if (! ["MESSENGER", "INSTAGRAM"].includes(conversation.channel) && !orderNo) {
     await sendImage();
   }
   const data = {
