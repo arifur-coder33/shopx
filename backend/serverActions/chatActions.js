@@ -645,7 +645,7 @@ async function sendMetaMessage(conversation, content, { product = null, imageUrl
   const resourceId = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
   if (!accessToken || !resourceId) throw new Error("এই channel-এর Meta credentials configure করা হয়নি।");
   if (!imageUrl && !product) return sendChatChannelTextMessage(conversation, content, credentials, replyToMessageId);
-  const url = `https://graph.facebook.com/${version}/${resourceId}/messages`;
+  const url = `https://${isInstagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resourceId}/messages`;
   const quoted = replyToMessageId ? { message_id: replyToMessageId } : undefined;
   const messengerReply = replyToMessageId ? { reply_to: { mid: replyToMessageId } } : {};
   const payload = isWhatsApp

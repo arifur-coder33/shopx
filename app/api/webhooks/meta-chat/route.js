@@ -43,7 +43,8 @@ async function getMessengerCustomerProfile(senderId, credentials, channel = "MES
   if (!senderId || !accessToken || !/^v\d+\.\d+$/.test(version || "")) return null;
   try {
     const fields = channel === "INSTAGRAM" ? "name,username,profile_pic" : "first_name,middle_name,last_name,profile_pic";
-    const url = `https://graph.facebook.com/${version}/${encodeURIComponent(senderId)}?fields=${fields}`;
+    const host = channel === "INSTAGRAM" ? "graph.instagram.com" : "graph.facebook.com";
+    const url = `https://${host}/${version}/${encodeURIComponent(senderId)}?fields=${fields}`;
     let response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",

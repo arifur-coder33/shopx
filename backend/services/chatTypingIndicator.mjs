@@ -11,7 +11,7 @@ export function buildChatTypingRequest(conversation, inbound, credentials, activ
   // typing_off request. Its read/typing receipt requires an inbound message ID.
   if (whatsapp && (!active || !inbound.externalMessageId)) return null;
   return {
-    url: `https://graph.facebook.com/${version}/${resource}/messages`,
+    url: `https://${instagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resource}/messages`,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: whatsapp
       ? { messaging_product: "whatsapp", status: "read", message_id: inbound.externalMessageId, typing_indicator: { type: "text" } }

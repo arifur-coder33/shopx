@@ -40,7 +40,9 @@ export function buildChatTextRequest(conversation, content, credentials, replyTo
     }
     return {
       provider: isWhatsApp ? "WHATSAPP" : "META",
-      url: `https://graph.facebook.com/${version}/${resource}/messages`,
+      // Instagram API with Instagram Login uses graph.instagram.com. The
+      // Facebook Graph host rejects the Instagram professional account ID.
+      url: `https://${isInstagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resource}/messages`,
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: payload,
     };
@@ -205,7 +207,7 @@ export async function sendChatChannelImageMessage(conversation, caption, imageUr
     const token = isWhatsApp ? credentials.whatsappAccessToken : isInstagram ? credentials.instagramAccessToken : credentials.messengerPageAccessToken;
     const resource = isWhatsApp ? credentials.whatsappPhoneNumberId : isInstagram ? credentials.instagramAccountId : credentials.messengerPageId;
     if (!token || !resource || !/^v\d+\.\d+$/.test(version || "")) throw new Error("এই channel-এর reply credentials configure করা নেই।");
-    const endpoint = `https://graph.facebook.com/${version}/${resource}/messages`;
+    const endpoint = `https://${isInstagram ? "graph.instagram.com" : "graph.facebook.com"}/${version}/${resource}/messages`;
     if (isWhatsApp) {
       if (credentials.whatsappWindowClosed && credentials.whatsappImageTemplateName) {
         const delivered = await sendWhatsAppApprovedTemplate(conversation, credentials.whatsappImageTemplateName, credentials.whatsappTemplateLanguage, caption || "পণ্যের ছবি", credentials, imageUrl);
