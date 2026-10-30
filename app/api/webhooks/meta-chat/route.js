@@ -354,13 +354,12 @@ export async function POST(request) {
         });
       }
       for (const change of entry.changes || []) {
+        const value = change.value || {};
         if (credentials.messengerEnabled && change.field === "message_reactions") {
-          const value = change.value || {};
           await applyMessengerReaction({ ...value, reaction: value.reaction || value }, entry.id);
         }
         if (!isInstagramPayload && payload.object === "page" && credentials.facebookCommentAutoReplyEnabled
           && String(entry.id || "") === String(credentials.messengerPageId || "") && change.field === "feed") {
-          const value = change.value || {};
           const authorId = String(value.from?.id || "");
           const commentId = String(value.comment_id || "");
           const commentText = String(value.message || "").trim();
