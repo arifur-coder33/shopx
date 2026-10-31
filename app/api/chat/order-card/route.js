@@ -4,6 +4,7 @@ import { loadChatOrderCard, renderChatOrderCard } from "@/backend/services/chatO
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const signingSecret = () => process.env.CHAT_ORDER_CARD_SECRET || process.env.AUTH_SECRET || process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY || "";
 

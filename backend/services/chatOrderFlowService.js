@@ -9,7 +9,6 @@ import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 import { saveAbandonedCheckoutLead } from "@/backend/services/abandonedCheckoutService";
 import { newerInboundWhere } from "./chatReplyBatchCore.mjs";
 import { signedChatOrderCardUrl } from "@/backend/utils/chatOrderCard.mjs";
-import { loadChatOrderCard, publishChatOrderCard, removeTemporaryChatOrderCard, renderChatOrderCard } from "@/backend/services/chatOrderCardService";
 
 const digits = (text) => String(text || "").replace(/[০-৯]/gu, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
 const yes = /^(?:হ্যাঁ|হ্যা|জি|জী|ha|hya|ji|yes|ok|okay|ঠিক\s*আছে|আচ্ছা|thik\s+ache|accha|confirm)[.!\s]*$/iu;
@@ -513,41 +512,20 @@ async function persistReply({ conversation, inbound, credentials, text, flow, op
   let deliveredMessage = null;
   const sendImage = async () => {
     if (humanTookOver || (!imageUrl && !orderNo) || conversation.channel === "WEBSITE") return;
-    let temporaryCloudinaryPublicId = null;
     try {
-      const card = orderNo ? await loadChatOrderCard(orderNo) : null;
-      const bytes = card ? await renderChatOrderCard(card, await getSiteUrl()) : null;
-      if (orderNo && conversation.channel === "INSTAGRAM" && bytes) {
-        try {
-          const temporaryAsset = await publishChatOrderCard(bytes, orderNo);
-          if (temporaryAsset) {
-            imageUrl = temporaryAsset.url;
-            temporaryCloudinaryPublicId = temporaryAsset.publicId;
-          }
-        } catch (error) { console.warn("Instagram order card hosting failed:", error?.message || "cloudinary_upload_failed"); }
-        if (!imageUrl) throw new Error("Instagram order card-এর জন্য একটি publicly accessible image URL পাওয়া যায়নি। Cloudinary configuration দেখুন।");
-      }
-      const sourceUrl = imageUrl || (orderNo ? null : new URL("/api/chat/order-card", await getSiteUrl()).href);
-      if (!sourceUrl && conversation.channel === "INSTAGRAM") throw new Error("Instagram order card-এর public image URL তৈরি হয়নি।");
+      const sourceUrl = imageUrl || (!orderNo ? new URL("/api/chat/order-card", await getSiteUrl()).href : null);
+      if (!sourceUrl) throw new Error("Order card-এর signed image URL তৈরি হয়নি।");
       if (orderNo && conversation.channel === "INSTAGRAM") {
         // Instagram generic template keeps the receipt photo, congratulations text,
         // and invoice/tracking actions together as one message.
         deliveredMessage = await sendChatChannelTextMessage(conversation, text, credentials, null, [], urlButton, sourceUrl);
         imageDelivered = deliveredMessage;
       } else {
-        imageDelivered = await sendChatChannelImageMessage(conversation, orderNo ? "" : "পণ্যের ছবি", sourceUrl || new URL("/api/chat/order-card", await getSiteUrl()).href, credentials, null, null, bytes);
+        imageDelivered = await sendChatChannelImageMessage(conversation, orderNo ? "" : "পণ্যের ছবি", sourceUrl, credentials);
       }
     } catch (error) {
       imageWarning = String(error?.message || "Image delivery failed").slice(0, 200);
       console.error("Chat order image delivery failed:", { orderNo, channel: conversation.channel, message: imageWarning });
-    } finally {
-      // Meta fetches the public URL during Send API delivery. Remove the temporary
-      // CDN copy immediately after the request and retain only our signed app URL.
-      if (temporaryCloudinaryPublicId) {
-        try { await removeTemporaryChatOrderCard(temporaryCloudinaryPublicId); }
-        catch (error) { console.error("Temporary Instagram order card cleanup failed:", { orderNo, message: error?.message || "cloudinary_delete_failed" }); }
-        imageUrl = orderCardImageUrl || null;
-      }
     }
   };
   // On Meta channels the checkout options must remain on the latest message.

@@ -1,26 +1,5 @@
 import { getInvoiceTemplate } from "@/backend/lib/pdf/InvoiceTemplate";
-import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
-
-// ব্রাউজার সেটআপ ফাংশন (এটা বাইরে রাখলে ভালো)
-const getBrowser = async () => {
-  if (process.env.NODE_ENV === "production") {
-    // Vercel / Production environment
-    return await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: true,
-      ignoreHTTPSErrors: true,
-    });
-  } else {
-    // Local development
-    const { default: puppeteerLocal } = await import("puppeteer");
-    return await puppeteerLocal.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-  }
-};
+import { launchChatBrowser } from "@/backend/services/chatBrowser";
 
 export async function getInvoicePDF(orderData) {
   if (!orderData) {
@@ -32,7 +11,7 @@ export async function getInvoicePDF(orderData) {
     const htmlContent = await getInvoiceTemplate(orderData);
 
     // ১. ব্রাউজার লঞ্চ
-    browser = await getBrowser();
+    browser = await launchChatBrowser();
     const page = await browser.newPage();
 
     // ২. ফাস্ট রেন্ডারিং (যেহেতু সব ইনলাইন, তাই domcontentloaded যথেষ্ট)

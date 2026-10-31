@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import prisma from "@/lib/prisma";
-import cloudinary from "@/lib/cloudinary";
+import { launchChatBrowser } from "@/backend/services/chatBrowser";
 
 const escapeXml = (value) => String(value ?? "").replace(/[&<>"']/gu, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[char]);
 const money = (value) => `৳${Number(value || 0).toLocaleString("en-BD", { maximumFractionDigits: 0 })}`;
@@ -63,13 +63,7 @@ export async function renderChatOrderCard(order, siteUrl) {
   let browser = null;
   let image;
   try {
-    const chromium = (await import("@sparticuz/chromium")).default;
-    const puppeteer = process.env.NODE_ENV === "production"
-      ? (await import("puppeteer-core")).default
-      : (await import("puppeteer")).default;
-    browser = await puppeteer.launch(process.env.NODE_ENV === "production"
-      ? { args: chromium.args, executablePath: await chromium.executablePath(), headless: true, ignoreHTTPSErrors: true }
-      : { headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    browser = await launchChatBrowser();
     const page = await browser.newPage();
     await page.setViewport({ width: 900, height, deviceScaleFactor: 1 });
     await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>@page{margin:0}html,body{margin:0;padding:0;width:900px;height:${height}px;overflow:hidden}body{font-family:OrderCardBangla,sans-serif}</style></head><body>${svg}</body></html>`, { waitUntil: "domcontentloaded" });
@@ -86,25 +80,4 @@ export async function renderChatOrderCard(order, siteUrl) {
   }));
   if (photos.some(Boolean)) image = await sharp(image).composite(photos.filter(Boolean)).png().toBuffer();
   return image;
-}
-
-export async function publishChatOrderCard(image, orderNo) {
-  if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET || !process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME) return null;
-  const publicId = `chat-order-card-${String(orderNo).replace(/[^a-z0-9_-]/giu, "")}-${Date.now()}`;
-  const uploaded = await cloudinary.uploader.upload(`data:image/png;base64,${Buffer.from(image).toString("base64")}`, {
-    folder: process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER || "chat-order-cards",
-    public_id: publicId,
-    resource_type: "image",
-    format: "jpg",
-    transformation: [{ fetch_format: "jpg", quality: "auto:good" }],
-  });
-  return uploaded.secure_url ? { url: uploaded.secure_url, publicId: uploaded.public_id } : null;
-}
-
-export async function removeTemporaryChatOrderCard(publicId) {
-  if (!publicId) return;
-  const result = await cloudinary.uploader.destroy(publicId, { resource_type: "image", invalidate: true });
-  if (result?.result !== "ok" && result?.result !== "not found") {
-    throw new Error("temporary_order_card_cleanup_failed");
-  }
 }
