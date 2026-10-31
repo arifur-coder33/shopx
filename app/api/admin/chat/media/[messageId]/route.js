@@ -44,7 +44,7 @@ async function returnAudio(response, fallbackMimeType = "audio/mpeg") {
 
 export async function GET(request, { params }) {
   const session = await auth();
-  if (!hasUIPermission(session?.user?.permissions, "chat", "view")) {
+  if (!hasUIPermission(session?.user?.permissions, "chatInbox", "view")) {
     return new Response("Forbidden", { status: 403 });
   }
 

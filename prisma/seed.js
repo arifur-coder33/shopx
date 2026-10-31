@@ -218,6 +218,7 @@ async function seedContentPages() {
 
 async function main() {
   console.log("🌱 Running MASTER RBAC seed...");
+  const { RESOURCE_KEYS, ACTION_KEYS } = await import("../backend/config/resourceRegistry.mjs");
 
   /* ======================
      1️⃣ ROLES
@@ -231,48 +232,16 @@ async function main() {
   /* ======================
      2️⃣ RESOURCES
   ====================== */
-  const resources = [
-    "user",
-    "category",
-    "product",
-    "variation",
-    "specification",
-    "sellReport",
-    "order",
-    "pos",
-    "role",
-    "media",
-    "resource",
-    "rolePermission",
-    "supplier",
-    "purchase",
-    "goodsReceipt",
-    "inventory",
-    "warehouse",
-    "supplierPayment",
-    "expense",
-    "delivery",
-    "accounting",
-    "provider",
-    "socialTracking",
-    "siteSetting",
-    "contentPage",
-    "campaign",
-    "chat",
-  ];
-
   await prisma.resource.createMany({
-    data: resources.map((key) => ({ key })),
+    data: RESOURCE_KEYS.map((key) => ({ key })),
     skipDuplicates: true,
   });
 
   /* ======================
      3️⃣ ACTIONS
   ====================== */
-  const actions = ["create", "view", "update", "delete"];
-
   await prisma.action.createMany({
-    data: actions.map((key) => ({ key })),
+    data: ACTION_KEYS.map((key) => ({ key })),
     skipDuplicates: true,
   });
 

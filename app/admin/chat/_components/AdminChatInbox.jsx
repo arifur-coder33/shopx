@@ -440,7 +440,7 @@ export default function AdminChatInbox({
     });
   }, []);
   useEffect(() => {
-    getChatSettingsAction().then((result) => {
+    getChatSettingsAction("chatInbox").then((result) => {
       if (result.success) setQuickReplies(result.data.quickReplies || []);
     });
   }, []);

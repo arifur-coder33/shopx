@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function TeachAiRoute() {
   const session = await auth();
   const permissions = session?.user?.permissions || [];
-  if (!hasUIPermission(permissions, "chat", "view")) return <div className="card p-5">Unauthorized</div>;
+  if (!hasUIPermission(permissions, "aiTeach", "view")) return <div className="card p-5">Unauthorized</div>;
   const result = await getChatAiTeachingsAction();
-  return <AiTeachPage initialTeachings={result.success ? result.data : []} initialError={result.success ? "" : result.message} canUpdate={hasUIPermission(permissions, "chat", "update")} />;
+  return <AiTeachPage initialTeachings={result.success ? result.data : []} initialError={result.success ? "" : result.message} canUpdate={hasUIPermission(permissions, "aiTeach", "update")} />;
 }

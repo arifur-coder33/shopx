@@ -12,7 +12,7 @@ export async function sendChatPushNotification({ conversationId, channel, custom
     const chatViewers = await prisma.user.findMany({
       where: { OR: [
         { role: { name: "SUPER_ADMIN" } },
-        { role: { permissions: { some: { allowed: true, resource: { key: "chat" }, action: { key: "view" } } } } },
+        { role: { permissions: { some: { allowed: true, resource: { key: "chatInbox" }, action: { key: "view" } } } } },
       ] },
       select: { id: true },
     });

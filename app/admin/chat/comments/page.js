@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 export default async function FacebookPageCommentsRoute() {
   const session = await auth();
   const permissions = session?.user?.permissions || [];
-  const canView = hasUIPermission(permissions, "chat", "view");
+  const canView = hasUIPermission(permissions, "chatComments", "view");
   if (!canView) return <div className="card p-5">Unauthorized</div>;
   const result = await getFacebookPageCommentsAction({ limit: 100 });
-  return <FacebookCommentsPage initialComments={result.success ? result.data : []} initialError={result.success ? "" : result.message} canUpdate={hasUIPermission(permissions, "chat", "update")} />;
+  return <FacebookCommentsPage initialComments={result.success ? result.data : []} initialError={result.success ? "" : result.message} canUpdate={hasUIPermission(permissions, "chatComments", "update")} />;
 }

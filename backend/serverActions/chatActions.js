@@ -30,7 +30,7 @@ const trim = (value) => String(value ?? "").trim();
 
 export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatComments", "view");
     const rows = await prisma.facebookPageCommentReply.findMany({
       orderBy: { createdAt: "desc" },
       take: Math.min(Math.max(Number(limit) || 100, 1), 250),
@@ -47,7 +47,7 @@ export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
 
 export async function sendFacebookPageCommentPrivateReplyAction(id, message) {
   try {
-    const userId = await requireProcurementPermission("chat", "update");
+    const userId = await requireProcurementPermission("chatComments", "update");
     const safeId = trim(id);
     const safeMessage = trim(message);
     if (!safeId || !safeMessage || safeMessage.length > 1000) throw new Error("Inbox message 1–1000 অক্ষরের মধ্যে লিখুন।");
@@ -62,7 +62,7 @@ export async function sendFacebookPageCommentPrivateReplyAction(id, message) {
 
 export async function getChatAiTeachingsAction() {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("aiTeach", "view");
     const setting = await prisma.chatSetting.findUnique({ where: { id: SETTING_ID }, select: { aiReplyExamples: true } });
     const teachings = Array.isArray(setting?.aiReplyExamples) ? setting.aiReplyExamples.filter((item) => item?.question && item?.answer).map((item) => ({ question: String(item.question), answer: String(item.answer) })) : [];
     return { success: true, data: teachings };
@@ -71,7 +71,7 @@ export async function getChatAiTeachingsAction() {
 
 export async function saveChatAiTeachingsAction(teachings) {
   try {
-    const userId = await requireProcurementPermission("chat", "update");
+    const userId = await requireProcurementPermission("aiTeach", "update");
     if (!Array.isArray(teachings) || teachings.length > 40) throw new Error("সর্বোচ্চ ৪০টি teaching example রাখা যাবে।");
     const cleanTeachings = teachings.map((item) => ({
       question: String(item?.question || "").trim().replace(/[<>]/g, "").slice(0, 300),
@@ -91,14 +91,14 @@ export async function saveChatAiTeachingsAction(teachings) {
 
 export async function getChatPushConfigAction() {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatInbox", "view");
     return { success: true, publicKey: await getOrderPushPublicKey() };
   } catch (error) { return actionError(error, "Chat push configuration could not be loaded."); }
 }
 
 export async function saveChatPushSubscriptionAction(subscription) {
   try {
-    const userId = await requireProcurementPermission("chat", "view");
+    const userId = await requireProcurementPermission("chatInbox", "view");
     await saveOrderPushSubscription(userId, subscription);
     return { success: true };
   } catch (error) { return actionError(error, "Chat push subscription could not be saved."); }
@@ -106,7 +106,7 @@ export async function saveChatPushSubscriptionAction(subscription) {
 
 export async function removeChatPushSubscriptionAction(endpoint) {
   try {
-    const userId = await requireProcurementPermission("chat", "view");
+    const userId = await requireProcurementPermission("chatInbox", "view");
     await removeOrderPushSubscription(userId, endpoint);
     return { success: true };
   } catch (error) { return actionError(error, "Chat push subscription could not be removed."); }
@@ -114,7 +114,7 @@ export async function removeChatPushSubscriptionAction(endpoint) {
 
 export async function sendChatPushTestAction(endpoint) {
   try {
-    const userId = await requireProcurementPermission("chat", "view");
+    const userId = await requireProcurementPermission("chatInbox", "view");
     const result = await sendChatPushTestNotification(userId, endpoint);
     return { success: true, ...result };
   } catch (error) { return actionError(error, "Test chat push could not be sent."); }
@@ -122,7 +122,7 @@ export async function sendChatPushTestAction(endpoint) {
 
 export async function getChatRealtimeTokenAction() {
   try {
-    const userId = await requireProcurementPermission("chat", "view");
+    const userId = await requireProcurementPermission("chatInbox", "view");
     const secret = process.env.AUTH_SECRET;
     if (!secret) throw new Error("Realtime authentication is not configured.");
     return {
@@ -143,7 +143,7 @@ async function getSetting() {
 
 export async function setChatMessageReactionAction(messageId, emoji) {
   try {
-    await requireProcurementPermission("chat", "update");
+    await requireProcurementPermission("chatInbox", "update");
     const message = await prisma.chatMessage.findUnique({ where: { id: String(messageId) }, include: { conversation: true } });
     if (!message || message.channel !== "MESSENGER" || !message.externalMessageId) throw new Error("এই Messenger message-এ reaction দেওয়া যাচ্ছে না।");
     const reaction = messengerReaction(emoji);
@@ -175,14 +175,14 @@ export async function setChatMessageReactionAction(messageId, emoji) {
   } catch (error) { return actionError(error, "Messenger reaction পাঠানো যায়নি।"); }
 }
 
-export async function getChatSettingsAction() {
+export async function getChatSettingsAction(scope = "chatInbox") {
   try {
-    await requireProcurementPermission("chat", "view");
+    const permissionResource = scope;
+    if (!["aiSettings", "chatInbox", "chatSettings"].includes(scope)) throw new Error("Invalid settings scope.");
+    await requireProcurementPermission(permissionResource, "view");
     const setting = await getSetting();
     const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
-    return {
-      success: true,
-      data: {
+    const data = {
         websiteChatEnabled: setting?.websiteChatEnabled ?? true,
         chatOrderCreationEnabled: isChatOrderCreationEnabled(setting),
         whatsappEnabled: setting?.whatsappEnabled ?? false,
@@ -222,6 +222,50 @@ export async function getChatSettingsAction() {
           graphApiVersion: credentials.graphApiVersion || "",
         },
         configured: Object.fromEntries(SECRET_KEYS.map((key) => [key, Boolean(credentials[key])])),
+    };
+    if (scope === "chatInbox") return { success: true, data: { quickReplies: data.quickReplies } };
+    if (scope === "chatSettings") {
+      const chatCredentialKeys = SECRET_KEYS.filter((key) => !["openaiApiKey", "googleAiStudioApiKey"].includes(key));
+      return {
+        success: true,
+        data: {
+          websiteChatEnabled: data.websiteChatEnabled,
+          chatOrderCreationEnabled: data.chatOrderCreationEnabled,
+          whatsappEnabled: data.whatsappEnabled,
+          messengerEnabled: data.messengerEnabled,
+          instagramEnabled: data.instagramEnabled,
+          tiktokEnabled: data.tiktokEnabled,
+          whatsappTextTemplateName: data.whatsappTextTemplateName,
+          whatsappImageTemplateName: data.whatsappImageTemplateName,
+          whatsappTemplateLanguage: data.whatsappTemplateLanguage,
+          welcomeMessage: data.welcomeMessage,
+          quickReplies: data.quickReplies,
+          publicCredentials: data.publicCredentials,
+          configured: Object.fromEntries(chatCredentialKeys.map((key) => [key, Boolean(credentials[key])])),
+        },
+      };
+    }
+    return {
+      success: true,
+      data: {
+        aiAutoReplyEnabled: data.aiAutoReplyEnabled,
+        aiReplyWebsiteEnabled: data.aiReplyWebsiteEnabled,
+        aiReplyWhatsAppEnabled: data.aiReplyWhatsAppEnabled,
+        aiReplyMessengerEnabled: data.aiReplyMessengerEnabled,
+        aiReplyInstagramEnabled: data.aiReplyInstagramEnabled,
+        aiReplyTikTokEnabled: data.aiReplyTikTokEnabled,
+        facebookCommentAutoReplyEnabled: data.facebookCommentAutoReplyEnabled,
+        instagramCommentAutoReplyEnabled: data.instagramCommentAutoReplyEnabled,
+        aiProvider: data.aiProvider,
+        openaiModel: data.openaiModel,
+        googleAiStudioModel: data.googleAiStudioModel,
+        aiReplyTone: data.aiReplyTone,
+        aiMaleAddressTerm: data.aiMaleAddressTerm,
+        aiFemaleAddressTerm: data.aiFemaleAddressTerm,
+        configured: {
+          openaiApiKey: Boolean(credentials.openaiApiKey),
+          googleAiStudioApiKey: Boolean(credentials.googleAiStudioApiKey),
+        },
       },
     };
   } catch (error) {
@@ -229,9 +273,13 @@ export async function getChatSettingsAction() {
   }
 }
 
-export async function revealChatCredentialAction(key) {
+export async function revealChatCredentialAction(key, provider) {
   try {
-    await requireProcurementPermission("chat", "update");
+    const providerKey = String(provider || "").toUpperCase();
+    const fields = PROVIDER_CREDENTIAL_FIELDS[providerKey];
+    if (!fields?.includes(key)) throw new Error("Invalid credential provider or field.");
+    const permissionResource = ["OPENAI", "GOOGLE_AI_STUDIO"].includes(providerKey) ? "aiSettings" : "chatSettings";
+    await requireProcurementPermission(permissionResource, "update");
     if (!SECRET_KEYS.includes(key)) throw new Error("Invalid credential field.");
     const setting = await getSetting();
     const credentials = setting?.encryptedCredentials ? decryptProviderCredentials(setting.encryptedCredentials) : {};
@@ -242,7 +290,9 @@ export async function revealChatCredentialAction(key) {
 
 export async function saveChatSettingsAction(formData) {
   try {
-    const userId = await requireProcurementPermission("chat", "update");
+    const userId = await requireProcurementPermission("chatSettings", "update");
+    await requireProcurementPermission("aiSettings", "update");
+    await requireProcurementPermission("aiTeach", "update");
     const existing = await getSetting();
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
     delete credentials.instagramAccessToken;
@@ -344,12 +394,14 @@ const PROVIDER_CREDENTIAL_FIELDS = {
 
 export async function saveProviderCredentialsAction(provider, formData) {
   try {
-    const userId = await requireProcurementPermission("chat", "update");
-    const fields = PROVIDER_CREDENTIAL_FIELDS[String(provider || "").toUpperCase()];
+    const providerKey = String(provider || "").toUpperCase();
+    const permissionResource = ["OPENAI", "GOOGLE_AI_STUDIO"].includes(providerKey) ? "aiSettings" : "chatSettings";
+    const userId = await requireProcurementPermission(permissionResource, "update");
+    const fields = PROVIDER_CREDENTIAL_FIELDS[providerKey];
     if (!fields) throw new Error("Provider নির্বাচনটি সঠিক নয়।");
     const existing = await getSetting();
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
-    if (String(provider || "").toUpperCase() === "META") delete credentials.instagramAccessToken;
+    if (providerKey === "META") delete credentials.instagramAccessToken;
     for (const key of fields) {
       if (formData.get(`clear_${key}`) === "true") delete credentials[key];
       else if (trim(formData.get(key))) credentials[key] = trim(formData.get(key));
@@ -372,7 +424,7 @@ export async function saveProviderCredentialsAction(provider, formData) {
 
 export async function saveAiSettingsSectionAction(formData) {
   try {
-    const userId = await requireProcurementPermission("chat", "update");
+    const userId = await requireProcurementPermission("aiSettings", "update");
     const existing = await getSetting();
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
     const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
@@ -419,7 +471,7 @@ export async function saveAiSettingsSectionAction(formData) {
 
 export async function saveChatChannelSectionAction(formData) {
   try {
-    const userId = await requireProcurementPermission("chat", "update");
+    const userId = await requireProcurementPermission("chatSettings", "update");
     const existing = await getSetting();
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
     const websiteChatEnabled = formData.get("websiteChatEnabled") === "on";
@@ -464,7 +516,7 @@ export async function saveChatChannelSectionAction(formData) {
 
 export async function getChatCustomerOrdersAction(conversationId) {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatInbox", "view");
     const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { customerPhone: true } });
     const digits = String(conversation?.customerPhone || "").replace(/\D/g, "");
     if (digits.length < 7) return { success: true, data: { total: 0, running: 0, complete: 0, orders: [] } };
@@ -483,7 +535,7 @@ export async function getChatCustomerOrdersAction(conversationId) {
 
 export async function searchChatProductsAction(rawQuery) {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatInbox", "view");
     const query = trim(rawQuery).slice(0, 80);
     if (query.length < 2) return { success: true, data: [] };
     const products = await prisma.product.findMany({
@@ -505,7 +557,7 @@ export async function searchChatProductsAction(rawQuery) {
 
 export async function getChatMediaLibraryAction() {
   try {
-    await requireProcurementPermission("chat", "update");
+    await requireProcurementPermission("chatInbox", "update");
     await syncLegacyChatMedia();
     const media = await prisma.media.findMany({
       where: {
@@ -522,7 +574,7 @@ export async function getChatMediaLibraryAction() {
 
 export async function getChatInboxAction({ channel = "ALL", status = "OPEN", search = "" } = {}) {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatInbox", "view");
     if (!["ALL", "OPEN", "PENDING", "CLOSED", "NEEDS_HUMAN"].includes(status)) throw new Error("Invalid conversation filter.");
     const conversations = await prisma.chatConversation.findMany({
       where: {
@@ -551,7 +603,7 @@ export async function getChatInboxAction({ channel = "ALL", status = "OPEN", sea
 
 export async function getChatConversationAction(conversationId) {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatInbox", "view");
     const selected = await prisma.chatConversation.findUnique({ where: { id: conversationId } });
     if (!selected) return { success: false, message: "Conversation not found." };
     const linked = selected.normalizedPhone && ["WHATSAPP", "MESSENGER"].includes(selected.channel)
@@ -581,7 +633,7 @@ export async function getChatConversationAction(conversationId) {
 
 export async function setMessengerCustomerPhoneAction(conversationId, rawPhone) {
   try {
-    await requireProcurementPermission("chat", "update");
+    await requireProcurementPermission("chatInbox", "update");
     const normalizedPhone = normalizeChatPhone(rawPhone);
     if (!normalizedPhone) throw new Error("Country code-সহ সঠিক phone number দিন।");
     const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId }, select: { channel: true } });
@@ -593,7 +645,7 @@ export async function setMessengerCustomerPhoneAction(conversationId, rawPhone) 
 
 export async function getMessengerCustomerProfileAction(conversationId) {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatInbox", "view");
     const conversation = await prisma.chatConversation.findUnique({
       where: { id: conversationId },
       select: { channel: true, externalUserId: true, customerName: true, profilePicUrl: true },
@@ -638,7 +690,7 @@ export async function getMessengerCustomerProfileAction(conversationId) {
 
 export async function getChatAssignableUsersAction() {
   try {
-    await requireProcurementPermission("chat", "view");
+    await requireProcurementPermission("chatInbox", "view");
     const users = await prisma.user.findMany({
       where: { role: { name: { not: "USER" } } },
       select: { id: true, name: true, email: true },
@@ -755,7 +807,7 @@ async function sendTikTokImageMessage(conversation, imageUrl, caption = "", refe
 export async function sendChatReplyAction(conversationId, rawContent, retryMessageId = null, product = null, timelineOrderId = null, replyToMessageId = null) {
   try {
     const session = await auth();
-    if (!hasUIPermission(session?.user?.permissions, "chat", "update")) throw new Error("Unauthorized");
+    if (!hasUIPermission(session?.user?.permissions, "chatInbox", "update")) throw new Error("Unauthorized");
     const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId } });
     if (!conversation) throw new Error("Conversation not found.");
     if (conversation.status === "CLOSED") throw new Error("আগে conversation আবার খুলুন, তারপর reply দিন।");
@@ -834,7 +886,7 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
 export async function sendChatImageAction(conversationId, formData, replyToMessageId = null) {
   try {
     const session = await auth();
-    if (!hasUIPermission(session?.user?.permissions, "chat", "update")) throw new Error("Unauthorized");
+    if (!hasUIPermission(session?.user?.permissions, "chatInbox", "update")) throw new Error("Unauthorized");
     const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId } });
     if (!conversation) throw new Error("Conversation not found.");
     if (conversation.status === "CLOSED") throw new Error("আগে conversation আবার খুলুন, তারপর photo পাঠান।");
@@ -948,7 +1000,7 @@ export async function sendChatImageAction(conversationId, formData, replyToMessa
 
 export async function retryChatImageAction(messageId) {
   try {
-    await requireProcurementPermission("chat", "update");
+    await requireProcurementPermission("chatInbox", "update");
     const message = await prisma.chatMessage.findUnique({
       where: { id: messageId },
       include: { conversation: true },
@@ -975,7 +1027,7 @@ export async function retryChatImageAction(messageId) {
 
 export async function deleteChatConversationAction(conversationId) {
   try {
-    await requireProcurementPermission("chat", "update");
+    await requireProcurementPermission("chatInbox", "update");
     const conversation = await prisma.chatConversation.findUnique({
       where: { id: conversationId },
       select: { id: true, normalizedPhone: true, channel: true },
@@ -1023,7 +1075,7 @@ export async function deleteChatConversationAction(conversationId) {
 
 export async function updateChatConversationAction(conversationId, { status, assignedToId, aiModeEnabled, needsHumanAssistant } = {}) {
   try {
-    await requireProcurementPermission("chat", "update");
+    await requireProcurementPermission("chatInbox", "update");
     if (status && !["OPEN", "PENDING", "CLOSED"].includes(status)) throw new Error("Invalid conversation status.");
     if (aiModeEnabled !== undefined && typeof aiModeEnabled !== "boolean") throw new Error("Invalid AI mode setting.");
     if (needsHumanAssistant !== undefined && typeof needsHumanAssistant !== "boolean") throw new Error("Invalid assistance setting.");

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
 import { hasPermission } from "../utils/hasPermission";
+import { ACTION_KEYS, RESOURCE_KEYS, RESOURCE_REGISTRY } from "../config/resourceRegistry.mjs";
 export async function getAllRoleList() {
   try {
     await hasPermission("role", "view");
@@ -93,11 +94,23 @@ export async function deleteRoleById(id) {
 
 export async function getRolePermissionData(roleId) {
   await hasPermission("rolePermission", "view");
+  // Keep the foreign-key rows in sync with the code-owned resource registry.
+  // Admins can change role grants, but cannot create or delete resources here.
+  await prisma.resource.createMany({
+    data: RESOURCE_KEYS.map((key) => ({ key })),
+    skipDuplicates: true,
+  });
+  await prisma.action.createMany({
+    data: ACTION_KEYS.map((key) => ({ key })),
+    skipDuplicates: true,
+  });
   const [resources, actions, permissions] = await Promise.all([
     prisma.resource.findMany({
+      where: { key: { in: RESOURCE_KEYS } },
       orderBy: { key: "asc" },
     }),
     prisma.action.findMany({
+      where: { key: { in: ACTION_KEYS } },
       orderBy: { key: "asc" },
     }),
     prisma.rolePermission.findMany({
@@ -105,7 +118,12 @@ export async function getRolePermissionData(roleId) {
     }),
   ]);
 
-  return { resources, actions, permissions };
+  const definitionByKey = new Map(RESOURCE_REGISTRY.map((item) => [item.key, item]));
+  return {
+    resources: resources.map((resource) => ({ ...resource, ...definitionByKey.get(resource.key) })),
+    actions,
+    permissions,
+  };
 }
 export async function saveRolePermissions(roleId, matrix) {
   await hasPermission("rolePermission", "update");
@@ -118,10 +136,29 @@ export async function saveRolePermissions(roleId, matrix) {
     }
   */
 
+  if (!roleId || !matrix || typeof matrix !== "object" || Array.isArray(matrix)) {
+    throw new Error("Invalid role permission data.");
+  }
+
+  const role = await prisma.role.findUnique({ where: { id: roleId }, select: { id: true } });
+  if (!role) throw new Error("Role not found.");
+
+  const [resources, actions] = await Promise.all([
+    prisma.resource.findMany({ where: { key: { in: RESOURCE_KEYS } }, select: { id: true } }),
+    prisma.action.findMany({ where: { key: { in: ACTION_KEYS } }, select: { id: true } }),
+  ]);
+  const validResourceIds = new Set(resources.map(({ id }) => id));
+  const validActionIds = new Set(actions.map(({ id }) => id));
   const operations = [];
 
   for (const [resourceId, actions] of Object.entries(matrix)) {
+    if (!validResourceIds.has(resourceId) || !actions || typeof actions !== "object" || Array.isArray(actions)) {
+      throw new Error("Unknown resource in permission matrix.");
+    }
     for (const [actionId, allowed] of Object.entries(actions)) {
+      if (!validActionIds.has(actionId) || typeof allowed !== "boolean") {
+        throw new Error("Invalid action permission.");
+      }
       operations.push(
         prisma.rolePermission.upsert({
           where: {
@@ -145,7 +182,7 @@ export async function saveRolePermissions(roleId, matrix) {
     }
   }
 
-  await prisma.$transaction(operations);
+  if (operations.length) await prisma.$transaction(operations);
   invalidateRolePermissionCache(roleId);
   await prisma.user.updateMany({
     where: { roleId },

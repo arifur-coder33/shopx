@@ -121,7 +121,7 @@ export async function GET(request) {
           if (claims.scope !== "chat:realtime" || !claims.sub) throw new Error("Unauthorized");
           const user = await prisma.user.findUnique({ where: { id: claims.sub }, select: { id: true, role: { select: { name: true, permissions: { where: { allowed: true }, select: { resource: { select: { key: true } }, action: { select: { key: true } } } } } } } });
           const permissions = user?.role?.name === "SUPER_ADMIN" ? ["*"] : user?.role?.permissions?.map((item) => `${item.resource.key}:${item.action.key}`) || [];
-          if (!user || !hasUIPermission(permissions, "chat", "view")) throw new Error("Unauthorized");
+          if (!user || !hasUIPermission(permissions, "chatInbox", "view")) throw new Error("Unauthorized");
         }
         authenticated = true;
         clearTimeout(authTimer);

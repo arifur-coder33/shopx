@@ -1,6 +1,8 @@
 "use client";
 
 import { saveRolePermissions } from "@/backend/serverActions/roleAction";
+import { DEPARTMENTS } from "@/backend/config/resourceRegistry.mjs";
+import { Fragment } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 
@@ -23,6 +25,17 @@ export default function PermissionMatrixClient({
   }, [permissions]);
 
   const [matrix, setMatrix] = useState(initialState);
+  const groupedResources = useMemo(() => {
+    const groups = new Map();
+    for (const resource of resources) {
+      const department = resource.department || "Other";
+      if (!groups.has(department)) groups.set(department, []);
+      groups.get(department).push(resource);
+    }
+    return DEPARTMENTS
+      .map((department) => [department, groups.get(department) || []])
+      .filter(([, departmentResources]) => departmentResources.length > 0);
+  }, [resources]);
 
   const toggle = (resourceId, actionId) => {
     setMatrix((prev) => ({
@@ -62,21 +75,30 @@ export default function PermissionMatrixClient({
           </thead>
 
           <tbody>
-            {resources.map((resource) => (
-              <tr key={resource.id}>
-                <td className="border p-2 font-medium">{resource.key}</td>
-
-                {actions.map((action) => (
-                  <td key={action.id} className="border p-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={!!matrix?.[resource.id]?.[action.id]}
-                      onChange={() => toggle(resource.id, action.id)}
-                      className="w-4 h-4"
-                    />
+            {groupedResources.map(([department, departmentResources]) => (
+              <Fragment key={department}>
+                <tr className="bg-slate-100">
+                  <td className="border px-3 py-2 font-semibold" colSpan={actions.length + 1}>
+                    {department}
                   </td>
+                </tr>
+                {departmentResources.map((resource) => (
+                  <tr key={resource.id}>
+                    <td className="border p-2 font-medium">{resource.label || resource.key}</td>
+                    {actions.map((action) => (
+                      <td key={action.id} className="border p-2 text-center">
+                        <input
+                          type="checkbox"
+                          aria-label={`${department}: ${resource.key} ${action.key}`}
+                          checked={!!matrix?.[resource.id]?.[action.id]}
+                          onChange={() => toggle(resource.id, action.id)}
+                          className="w-4 h-4"
+                        />
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>

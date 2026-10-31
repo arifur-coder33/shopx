@@ -16,7 +16,7 @@ export default function ProviderCredentialsCard({ provider, title, description, 
   const reveal = async (name) => {
     if (visible[name]) return setVisible((current) => ({ ...current, [name]: false }));
     if (settings.configured?.[name] && values[name] === undefined) {
-      const result = await revealChatCredentialAction(name);
+      const result = await revealChatCredentialAction(name, provider);
       if (!result.success) return setNotice(result.message || "Credential দেখানো যায়নি।");
       setValues((current) => ({ ...current, [name]: result.data.value }));
     }

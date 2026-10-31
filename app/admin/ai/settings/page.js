@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 export default async function AiSettingsPage() {
   const session = await auth();
   const permissions = session?.user?.permissions || [];
-  if (!hasUIPermission(permissions, "chat", "view")) return <div className="card p-5">Unauthorized</div>;
-  const result = await getChatSettingsAction();
+  if (!hasUIPermission(permissions, "aiSettings", "view")) return <div className="card p-5">Unauthorized</div>;
+  const result = await getChatSettingsAction("aiSettings");
   if (!result.success) return <div className="card p-5">{result.message}</div>;
-  return <AiSettingsForm settings={result.data} canUpdate={hasUIPermission(permissions, "chat", "update")} />;
+  return <AiSettingsForm settings={result.data} canUpdate={hasUIPermission(permissions, "aiSettings", "update")} />;
 }
