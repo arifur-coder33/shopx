@@ -42,6 +42,8 @@ export async function getContentPagesForAdmin() {
     const siteSetting = await prisma.siteSetting.findFirst({
       select: {
         fbLink: true,
+        instagramLink: true,
+        tiktokLink: true,
         messengerLink: true,
         whatsappNumber: true,
         phoneNumber1: true,
@@ -76,14 +78,10 @@ export async function updateContentPage(formData) {
 
     const title = clean(values.title);
     const content = sanitizeContentPageHtml(values.content);
-    const metaTitle = clean(values.metaTitle);
-    const metaDescription = clean(values.metaDescription);
     const footerLogoId = slug === "footer" ? clean(values.footerLogo).split(",")[0] || null : null;
     if ((slug !== "footer" && !title) || title.length > 120) throw new Error("Title must be between 1 and 120 characters.");
     if (slug !== "footer" && !content) throw new Error("Page content is required.");
     if (content.length > 200000) throw new Error("Page content is too large.");
-    if (metaTitle.length > 160) throw new Error("SEO title cannot exceed 160 characters.");
-    if (metaDescription.length > 320) throw new Error("SEO description cannot exceed 320 characters.");
     if (slug === "footer" && footerLogoId && !(await prisma.media.findUnique({ where: { id: footerLogoId }, select: { id: true } }))) {
       throw new Error("Selected footer logo was not found in the media library.");
     }
@@ -91,8 +89,6 @@ export async function updateContentPage(formData) {
     const pageData = {
       title,
       content,
-      metaTitle: metaTitle || null,
-      metaDescription: metaDescription || null,
       isPublished: values.isPublished === "true",
       updatedBy: userId,
       ...(slug === "footer" && { footerLogoId }),
@@ -100,6 +96,8 @@ export async function updateContentPage(formData) {
     const contactData = slug === "contact"
       ? {
           fbLink: optionalUrl(values.facebookPage, "Facebook page"),
+          instagramLink: optionalUrl(values.instagram, "Instagram profile"),
+          tiktokLink: optionalUrl(values.tiktok, "TikTok profile"),
           messengerLink: optionalUrl(values.messenger, "Messenger link"),
           whatsappNumber: optionalContactText(values.whatsappNumber, "WhatsApp number"),
           phoneNumber1: optionalContactText(values.phoneNumber, "Phone number"),

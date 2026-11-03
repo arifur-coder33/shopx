@@ -181,24 +181,24 @@ model Product {
   canonicalUrl    String?
 
   thumbnailId             String?
-  thumbnail               Media?             @relation(fields: [thumbnailId], references: [id])
+  thumbnail               Media?                  @relation(fields: [thumbnailId], references: [id])
   videoUrl                String? // Optional video URL for the product
   videos                  ProductVideo[]
   gallery                 ProductGallery[]
   seoKeyWord              String?
   seoDescription          String?
-  isFeatured              Boolean?           @default(false) // Indicates if the product is featured
-  isActive                Boolean?           @default(true) // Marks if the product is active
-  viewCount               Int                @default(0)
-  allowOutOfStockOrder    Boolean            @default(false)
-  codAvailable            Boolean?           @default(true)
-  advancePaymentType      String?            @default("NONE")
-  advancePaymentValueType String?            @default("FIXED")
+  isFeatured              Boolean?                @default(false) // Indicates if the product is featured
+  isActive                Boolean?                @default(true) // Marks if the product is active
+  viewCount               Int                     @default(0)
+  allowOutOfStockOrder    Boolean                 @default(false)
+  codAvailable            Boolean?                @default(true)
+  advancePaymentType      String?                 @default("NONE")
+  advancePaymentValueType String?                 @default("FIXED")
   advancePaymentValue     Float?
-  deliveryMinDays         Int?               @default(2)
-  deliveryMaxDays         Int?               @default(5)
-  status                  ProductStatus?     @default(ACTIVE) // Product status enumeration
-  hasVariations           Boolean?           @default(false)
+  deliveryMinDays         Int?                    @default(2)
+  deliveryMaxDays         Int?                    @default(5)
+  status                  ProductStatus?          @default(ACTIVE) // Product status enumeration
+  hasVariations           Boolean?                @default(false)
   google_Category_id      String?
   gender                  String?
   ageGroup                String?
@@ -208,8 +208,8 @@ model Product {
   questionsAnswers        ProductQuestionAnswer[]
   searchText              String?
   Purchase                PurchaseItem[]
-  createdAt               DateTime           @default(now()) // Timestamp for product creation
-  updatedAt               DateTime           @updatedAt // Auto-updated timestamp
+  createdAt               DateTime                @default(now()) // Timestamp for product creation
+  updatedAt               DateTime                @updatedAt // Auto-updated timestamp
 
   @@index([searchText])
 }
@@ -803,6 +803,8 @@ model SiteSetting {
   slogan                String?
   seoTitle              String?
   seoDescription        String?
+  seoKeywords           String?  @db.VarChar(500)
+  googleSiteVerification String? @db.VarChar(200)
   logo                  String?
   favicon               String?
   phoneNumber1          String?
@@ -812,6 +814,8 @@ model SiteSetting {
   googleMap             String?
   email                 String?
   fbLink                String?
+  instagramLink         String?
+  tiktokLink            String?
   messengerLink         String?
   whatsappNumber        String?
   youTubeLink           String?
@@ -826,6 +830,8 @@ model SiteSetting {
   darkText              String?
   baseFontSize          Int?
   borderRadius          Int?
+  navbarHeight          Int?
+  footerImageHeight     Int?
   orderReconfirmEnabled Boolean  @default(true)
   orderReconfirmMessage String?  @db.VarChar(500)
   createdAt             DateTime @default(now()) // Timestamp for order placement
@@ -1375,9 +1381,12 @@ model Expense {
   moneyAccount      MoneyAccount?      @relation(fields: [moneyAccountId], references: [id])
   moneyTransactions MoneyTransaction[]
 
-  createdAt DateTime @default(now())
-  createdBy String?
-  updatedBy String?
+  createdAt  DateTime  @default(now())
+  createdBy  String?
+  updatedBy  String?
+  voidedAt   DateTime?
+  voidedBy   String?
+  voidReason String?
 
   @@index([categoryId, expenseDate])
   @@index([moneyAccountId, expenseDate])
@@ -1407,9 +1416,12 @@ model SupplierPayment {
 
   paidAt DateTime
 
-  createdAt DateTime @default(now())
-  createdBy String?
-  updatedBy String?
+  createdAt  DateTime  @default(now())
+  createdBy  String?
+  updatedBy  String?
+  voidedAt   DateTime?
+  voidedBy   String?
+  voidReason String?
 
   @@index([supplierId, paidAt])
   @@index([purchaseOrderId])
@@ -1461,30 +1473,38 @@ enum MoneyAccountType {
 }
 
 model MoneyTransaction {
-  id                String               @id @default(cuid())
-  transactionNo     String               @unique
+  id                String                 @id @default(cuid())
+  transactionNo     String                 @unique
   type              MoneyTransactionType
+  status            MoneyTransactionStatus @default(POSTED)
   amount            Float
   fromAccountId     String?
-  fromAccount       MoneyAccount?        @relation("MoneyTransactionFrom", fields: [fromAccountId], references: [id])
+  fromAccount       MoneyAccount?          @relation("MoneyTransactionFrom", fields: [fromAccountId], references: [id])
   toAccountId       String?
-  toAccount         MoneyAccount?        @relation("MoneyTransactionTo", fields: [toAccountId], references: [id])
+  toAccount         MoneyAccount?          @relation("MoneyTransactionTo", fields: [toAccountId], references: [id])
   shareholderId     String?
-  shareholder       Shareholder?         @relation(fields: [shareholderId], references: [id])
+  shareholder       Shareholder?           @relation(fields: [shareholderId], references: [id])
   supplierPaymentId String?
-  supplierPayment   SupplierPayment?     @relation(fields: [supplierPaymentId], references: [id])
+  supplierPayment   SupplierPayment?       @relation(fields: [supplierPaymentId], references: [id])
   expenseId         String?
-  expense           Expense?             @relation(fields: [expenseId], references: [id])
+  expense           Expense?               @relation(fields: [expenseId], references: [id])
   paymentId         String?
-  payment           Payment?             @relation(fields: [paymentId], references: [id])
+  payment           Payment?               @relation(fields: [paymentId], references: [id])
   refundId          String?
-  refund            Refund?              @relation(fields: [refundId], references: [id])
+  refund            Refund?                @relation(fields: [refundId], references: [id])
   idempotencyKey    String?
   reference         String?
   note              String?
-  transactionDate   DateTime             @default(now())
-  createdAt         DateTime             @default(now())
+  transactionDate   DateTime               @default(now())
+  createdAt         DateTime               @default(now())
   createdBy         String?
+  deletedAt         DateTime?
+  deletedBy         String?
+  deleteReason      String?
+  isReversal        Boolean                @default(false)
+  reversalOfId      String?                @unique
+  reversalOf        MoneyTransaction?      @relation("MoneyTransactionReversal", fields: [reversalOfId], references: [id])
+  reversal          MoneyTransaction?      @relation("MoneyTransactionReversal")
 
   @@index([fromAccountId, transactionDate])
   @@index([toAccountId, transactionDate])
@@ -1522,6 +1542,12 @@ enum MoneyTransactionType {
   EXPENSE
   REFUND
   PROVIDER_FEE
+  REVERSAL
+}
+
+enum MoneyTransactionStatus {
+  POSTED
+  DELETED
 }
 
 model FinancialYear {
@@ -1713,31 +1739,31 @@ enum ChatMessageAuthorType {
 }
 
 model ChatConversation {
-  id               String                 @id @default(cuid())
-  channel          ChatChannel
-  externalUserId   String
-  customerName     String?
-  customerPhone    String?
-  customerUserId   String?
-  customerUser     User?                  @relation("ChatCustomer", fields: [customerUserId], references: [id], onDelete: SetNull)
-  preferredAddress String?
-  normalizedPhone  String?
-  profilePicUrl    String?
-  status           ChatConversationStatus @default(OPEN)
-  assignedToId     String?
-  assignedTo       User?                  @relation("ChatAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-  lastMessageAt    DateTime               @default(now())
-  unreadCount      Int                    @default(0)
-  aiModeEnabled    Boolean                @default(true)
-  consecutiveAiFailures Int               @default(0)
-  aiReplyLeaseToken String?
-  aiReplyLeaseUntil DateTime?
-  needsHumanAssistant Boolean            @default(false)
-  humanAssistantReason String?
-  awaitingHumanPhone Boolean             @default(false)
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  messages         ChatMessage[]
+  id                    String                 @id @default(cuid())
+  channel               ChatChannel
+  externalUserId        String
+  customerName          String?
+  customerPhone         String?
+  customerUserId        String?
+  customerUser          User?                  @relation("ChatCustomer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  preferredAddress      String?
+  normalizedPhone       String?
+  profilePicUrl         String?
+  status                ChatConversationStatus @default(OPEN)
+  assignedToId          String?
+  assignedTo            User?                  @relation("ChatAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  lastMessageAt         DateTime               @default(now())
+  unreadCount           Int                    @default(0)
+  aiModeEnabled         Boolean                @default(true)
+  consecutiveAiFailures Int                    @default(0)
+  aiReplyLeaseToken     String?
+  aiReplyLeaseUntil     DateTime?
+  needsHumanAssistant   Boolean                @default(false)
+  humanAssistantReason  String?
+  awaitingHumanPhone    Boolean                @default(false)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  messages              ChatMessage[]
 
   @@unique([channel, externalUserId])
   @@index([status, lastMessageAt])
@@ -1772,61 +1798,61 @@ model ChatMessage {
 }
 
 model ChatSetting {
-  id                   String   @id
-  websiteChatEnabled   Boolean  @default(true)
-  whatsappEnabled      Boolean  @default(false)
-  messengerEnabled     Boolean  @default(false)
-  instagramEnabled     Boolean  @default(false)
-  tiktokEnabled        Boolean  @default(false)
-  facebookCommentAutoReplyEnabled Boolean @default(false)
-  instagramCommentAutoReplyEnabled Boolean @default(false)
-  aiAutoReplyEnabled   Boolean  @default(false)
-  aiReplyWebsiteEnabled Boolean @default(true)
-  aiReplyWhatsAppEnabled Boolean @default(true)
-  aiReplyMessengerEnabled Boolean @default(true)
-  aiReplyInstagramEnabled Boolean @default(true)
-  aiReplyTikTokEnabled Boolean @default(true)
-  aiProvider           String   @default("OPENAI")
-  openaiModel          String   @default("gpt-6-luna")
-  googleAiStudioModel  String   @default("gemini-3.8-flash")
-  whatsappTextTemplateName  String?
-  whatsappImageTemplateName String?
-  whatsappTemplateLanguage  String   @default("bn")
-  aiReplyTone          String   @default("বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো")
-  aiMaleAddressTerm    String   @default("ভাইয়া")
-  aiFemaleAddressTerm  String   @default("আপু")
-  aiReplyExamples      Json     @default("[]")
-  welcomeMessage       String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
-  quickReplies         Json     @default("[]")
-  encryptedCredentials String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  createdBy            String?
-  updatedBy            String?
+  id                               String   @id
+  websiteChatEnabled               Boolean  @default(true)
+  whatsappEnabled                  Boolean  @default(false)
+  messengerEnabled                 Boolean  @default(false)
+  instagramEnabled                 Boolean  @default(false)
+  tiktokEnabled                    Boolean  @default(false)
+  facebookCommentAutoReplyEnabled  Boolean  @default(false)
+  instagramCommentAutoReplyEnabled Boolean  @default(false)
+  aiAutoReplyEnabled               Boolean  @default(false)
+  aiReplyWebsiteEnabled            Boolean  @default(true)
+  aiReplyWhatsAppEnabled           Boolean  @default(true)
+  aiReplyMessengerEnabled          Boolean  @default(true)
+  aiReplyInstagramEnabled          Boolean  @default(true)
+  aiReplyTikTokEnabled             Boolean  @default(true)
+  aiProvider                       String   @default("OPENAI")
+  openaiModel                      String   @default("gpt-6-luna")
+  googleAiStudioModel              String   @default("gemini-3.8-flash")
+  whatsappTextTemplateName         String?
+  whatsappImageTemplateName        String?
+  whatsappTemplateLanguage         String   @default("bn")
+  aiReplyTone                      String   @default("বন্ধুসুলভ, স্বাভাবিক, সংক্ষিপ্ত এবং একজন local shop owner-এর মতো")
+  aiMaleAddressTerm                String   @default("ভাইয়া")
+  aiFemaleAddressTerm              String   @default("আপু")
+  aiReplyExamples                  Json     @default("[]")
+  welcomeMessage                   String   @default("আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?")
+  quickReplies                     Json     @default("[]")
+  encryptedCredentials             String?
+  createdAt                        DateTime @default(now())
+  updatedAt                        DateTime @updatedAt
+  createdBy                        String?
+  updatedBy                        String?
 }
 
 model FacebookPageCommentReply {
-  id              String   @id @default(cuid())
-  platform         String   @default("FACEBOOK")
-  commentId       String
-  pageId          String
-  postId          String?
-  authorId        String?
-  authorName      String?
-  commentText     String   @db.Text
-  commentCreatedAt DateTime?
-  replyText       String?  @db.Text
-  replyCommentId  String?
-  privateReplyText String? @db.Text
-  privateReplyMessageId String?
-  privateReplyAt  DateTime?
-  privateReplyStatus String?
-  privateReplyError String?
-  privateReplyInboxSaved Boolean @default(false)
-  status          String   @default("PENDING")
-  errorCode       String?
-  createdAt       DateTime @default(now())
-  repliedAt       DateTime?
+  id                     String    @id @default(cuid())
+  platform               String    @default("FACEBOOK")
+  commentId              String
+  pageId                 String
+  postId                 String?
+  authorId               String?
+  authorName             String?
+  commentText            String    @db.Text
+  commentCreatedAt       DateTime?
+  replyText              String?   @db.Text
+  replyCommentId         String?
+  privateReplyText       String?   @db.Text
+  privateReplyMessageId  String?
+  privateReplyAt         DateTime?
+  privateReplyStatus     String?
+  privateReplyError      String?
+  privateReplyInboxSaved Boolean   @default(false)
+  status                 String    @default("PENDING")
+  errorCode              String?
+  createdAt              DateTime  @default(now())
+  repliedAt              DateTime?
 
   @@unique([platform, commentId])
   @@index([platform, pageId, createdAt])

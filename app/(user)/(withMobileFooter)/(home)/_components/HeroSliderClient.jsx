@@ -94,10 +94,10 @@ export default function HeroSliderClient({ slides }) {
 
       {slides.length > 1 && (
         <>
-          <button type="button" onClick={() => changeSlide(-1)} aria-label="Previous slide" className="absolute left-2 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white opacity-90 transition hover:bg-black/65 sm:opacity-0 sm:group-hover:opacity-100"><ChevronLeft className="h-5 w-5" /></button>
-          <button type="button" onClick={() => changeSlide(1)} aria-label="Next slide" className="absolute right-2 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white opacity-90 transition hover:bg-black/65 sm:opacity-0 sm:group-hover:opacity-100"><ChevronRight className="h-5 w-5" /></button>
-          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/35 px-2 py-1.5">
-            {slides.map((slide, index) => <button key={slide.id} type="button" onClick={() => changeToSlide(index, slide, setHasChanged, setActiveIndex)} aria-label={"Show slide " + (index + 1)} aria-current={index === activeIndex ? "true" : undefined} className="grid h-12 w-12 shrink-0 place-items-center rounded-full"><span aria-hidden="true" style={{ width: index === activeIndex ? 20 : 10, height: 10, borderRadius: 999, backgroundColor: index === activeIndex ? "#fff" : "rgba(255,255,255,.55)" }} /></button>)}
+          <button type="button" onClick={() => changeSlide(-1)} aria-label="Previous slide" className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white opacity-90 transition hover:bg-black/65 sm:h-12 sm:w-12 sm:opacity-0 sm:group-hover:opacity-100"><ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" /></button>
+          <button type="button" onClick={() => changeSlide(1)} aria-label="Next slide" className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white opacity-90 transition hover:bg-black/65 sm:h-12 sm:w-12 sm:opacity-0 sm:group-hover:opacity-100"><ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" /></button>
+          <div className="absolute bottom-2 left-1/2 flex max-w-[80%] -translate-x-1/2 gap-0.5 rounded-full bg-black/30 px-1 py-0.5 sm:gap-1.5 sm:px-2 sm:py-1">
+            {slides.map((slide, index) => <button key={slide.id} type="button" onClick={() => changeToSlide(index, slide, setHasChanged, setActiveIndex)} aria-label={"Show slide " + (index + 1)} aria-current={index === activeIndex ? "true" : undefined} className="grid h-7 w-7 shrink-0 place-items-center rounded-full sm:h-10 sm:w-10"><span aria-hidden="true" style={{ width: index === activeIndex ? 15 : 6, height: 6, borderRadius: 999, backgroundColor: index === activeIndex ? "#fff" : "rgba(255,255,255,.65)" }} /></button>)}
           </div>
         </>
       )}

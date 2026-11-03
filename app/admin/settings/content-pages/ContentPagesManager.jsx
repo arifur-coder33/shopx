@@ -41,13 +41,13 @@ export default function ContentPagesManager({ initialPages }) {
                 ...page,
                 title: String(formData.get("title") || ""),
                 content: String(formData.get("content") || ""),
-                metaTitle: String(formData.get("metaTitle") || ""),
-                metaDescription: String(formData.get("metaDescription") || ""),
                 isPublished: formData.get("isPublished") === "true",
                 ...(activeSlug === "footer" && { footerLogo: response.data?.footerLogo || null }),
                 ...(activeSlug === "contact" && {
                   contactDetails: {
                     facebookPage: String(formData.get("facebookPage") || ""),
+                    instagram: String(formData.get("instagram") || ""),
+                    tiktok: String(formData.get("tiktok") || ""),
                     messenger: String(formData.get("messenger") || ""),
                     whatsappNumber: String(formData.get("whatsappNumber") || ""),
                     phoneNumber: String(formData.get("phoneNumber") || ""),
@@ -144,6 +144,14 @@ export default function ContentPagesManager({ initialPages }) {
                 <input type="url" name="facebookPage" defaultValue={activePage.contactDetails?.facebookPage || ""} placeholder="https://facebook.com/your-page" disabled={disabled} className={inputClass} />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold">
+                Instagram profile URL
+                <input type="url" name="instagram" defaultValue={activePage.contactDetails?.instagram || ""} placeholder="https://instagram.com/your-shop" disabled={disabled} className={inputClass} />
+              </label>
+              <label className="grid gap-1.5 text-sm font-semibold">
+                TikTok profile URL
+                <input type="url" name="tiktok" defaultValue={activePage.contactDetails?.tiktok || ""} placeholder="https://tiktok.com/@your-shop" disabled={disabled} className={inputClass} />
+              </label>
+              <label className="grid gap-1.5 text-sm font-semibold">
                 Messenger URL
                 <input type="url" name="messenger" defaultValue={activePage.contactDetails?.messenger || ""} placeholder="https://m.me/your-page" disabled={disabled} className={inputClass} />
               </label>
@@ -162,21 +170,6 @@ export default function ContentPagesManager({ initialPages }) {
             </div>
           </section>
         )}
-
-        {activeSlug !== "footer" && <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-          <h2 className="text-lg font-bold">Search engine information</h2>
-          <p className="mb-4 text-sm text-text-muted">Optional. The page title is used when the SEO title is empty.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm font-semibold">
-              SEO title
-              <input name="metaTitle" defaultValue={activePage.metaTitle} maxLength={160} disabled={disabled} className={inputClass} />
-            </label>
-            <label className="grid gap-1.5 text-sm font-semibold">
-              SEO description
-              <textarea name="metaDescription" defaultValue={activePage.metaDescription} maxLength={320} rows={3} disabled={disabled} className={inputClass} />
-            </label>
-          </div>
-        </section>}
 
         <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface/95 p-3 shadow-xl backdrop-blur">
           <p className="hidden text-sm text-text-muted sm:block">Published changes appear immediately.</p>

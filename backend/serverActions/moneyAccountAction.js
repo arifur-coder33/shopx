@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { ACCOUNT_CODES, moneyAccountCode, postJournal } from "../utils/accounting";
 import { generateCode } from "../utils/generateCode";
@@ -8,7 +9,7 @@ import { actionError, requireProcurementPermission, toDate, toNumber } from "../
 import { postMoneyTransaction } from "../services/moneyTransactionService";
 
 const ACCOUNT_TYPES = ["CASH", "BANK", "MOBILE_FINANCIAL", "PAYMENT_GATEWAY", "COURIER"];
-const MOVEMENT_TYPES = ["FUND_ADD", "CUSTOMER_PAYMENT", "TRANSFER", "WITHDRAWAL", "SUPPLIER_PAYMENT", "EXPENSE", "REFUND", "PROVIDER_FEE"];
+const MOVEMENT_TYPES = ["FUND_ADD", "CUSTOMER_PAYMENT", "TRANSFER", "WITHDRAWAL", "SUPPLIER_PAYMENT", "EXPENSE", "REFUND", "PROVIDER_FEE", "REVERSAL"];
 const refresh = () => {
   revalidatePath("/admin/accounts");
   revalidatePath("/admin/accounts/ledger");
@@ -32,7 +33,7 @@ function getWeightedUnitCostByStock(receiptItems) {
       return sum + Math.max(0, item.unitCost - discountPerUnit) * item.quantity;
     }, 0) / matchingQuantity;
     const landedFreightPerUnit =
-      (purchaseOrder.shippingCost + purchaseOrder.expenses.reduce((sum, expense) => sum + expense.amount, 0)) /
+      (purchaseOrder.shippingCost + purchaseOrder.expenses.filter((expense) => !expense.voidedAt).reduce((sum, expense) => sum + expense.amount, 0)) /
       orderedQuantity;
     const unitCost = itemCost + landedFreightPerUnit;
     const key = `${receipt.warehouseId}:${receiptItem.variationId}`;
@@ -67,6 +68,7 @@ function calculateInventoryAsset(stocks, weightedUnitCosts) {
 
 export async function getMoneyManagement(params = {}) {
   try {
+    const session = await auth();
     await requireProcurementPermission("accounting", "view");
     const accountPage = Math.max(1, Number(params.accountPage) || 1), transactionPage = Math.max(1, Number(params.transactionPage) || 1), limit = Math.min(50, Math.max(5, Number(params.limit) || 12));
     const accountWhere = {
@@ -79,17 +81,19 @@ export async function getMoneyManagement(params = {}) {
       ...(params.transactionNo && { transactionNo: { contains: String(params.transactionNo), mode: "insensitive" } }),
       ...(params.reference && { reference: { contains: String(params.reference), mode: "insensitive" } }),
       ...(MOVEMENT_TYPES.includes(params.transactionType) && { type: params.transactionType }),
+      ...(params.transactionStatus === "POSTED" && { status: "POSTED" }),
+      ...(params.transactionStatus === "DELETED" && { status: "DELETED" }),
     };
     const [accounts, accountCount, allAccounts, transactions, transactionCount, shareholders, financialAccounts, balances, periodTransactions, stocks, salesOutflows, receiptItems] = await Promise.all([
       prisma.moneyAccount.findMany({ where: accountWhere, skip: (accountPage - 1) * limit, take: limit, orderBy: [{ isActive: "desc" }, { name: "asc" }], include: { _count: { select: { incomingTransactions: true, outgoingTransactions: true, supplierPayments: true, expenses: true, paymentGateways: true, courierProviders: true, payments: true, refunds: true } } } }),
       prisma.moneyAccount.count({ where: accountWhere }),
       prisma.moneyAccount.findMany({ orderBy: [{ type: "asc" }, { name: "asc" }] }),
-      prisma.moneyTransaction.findMany({ where: transactionWhere, skip: (transactionPage - 1) * limit, take: limit, orderBy: { transactionDate: "desc" }, include: { fromAccount: true, toAccount: true, shareholder: true } }),
+      prisma.moneyTransaction.findMany({ where: transactionWhere, skip: (transactionPage - 1) * limit, take: limit, orderBy: { transactionDate: "desc" }, include: { fromAccount: true, toAccount: true, shareholder: true, reversal: { select: { id: true, transactionNo: true } }, reversalOf: { select: { id: true, transactionNo: true } } } }),
       prisma.moneyTransaction.count({ where: transactionWhere }),
       prisma.shareholder.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
       prisma.financialAccount.findMany({ where: { isActive: true } }),
       prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED" } }, _sum: { debit: true, credit: true } }),
-      prisma.moneyTransaction.groupBy({ by: ["type"], _sum: { amount: true } }),
+      prisma.moneyTransaction.groupBy({ by: ["type"], where: { status: "POSTED", isReversal: false }, _sum: { amount: true } }),
       prisma.stock.findMany({ select: { variationId: true, warehouseId: true, quantity: true } }),
       prisma.inventoryTransaction.groupBy({ by: ["variationId", "warehouseId"], where: { type: "OUT", referenceType: "SALE" }, _sum: { quantity: true } }),
       prisma.goodsReceiptItem.findMany({
@@ -104,7 +108,7 @@ export async function getMoneyManagement(params = {}) {
                 select: {
                   shippingCost: true,
                   items: { select: { variationId: true, quantity: true, unitCost: true, discount: true } },
-                  expenses: { select: { amount: true } },
+                  expenses: { where: { voidedAt: null }, select: { amount: true } },
                 },
               },
             },
@@ -130,7 +134,7 @@ export async function getMoneyManagement(params = {}) {
     const inventoryAsset = calculateInventoryAsset(stocks, weightedUnitCosts);
     const totalAssets = totals.assets - ledgerInventoryAsset + inventoryAsset;
     const report = { ...totals, assets: totalAssets, costOfGoodsSold, grossProfit: totals.income - costOfGoodsSold, inventoryAsset, inventoryQuantity: stocks.reduce((sum, stock) => sum + stock.quantity, 0), liquidFunds: allAccounts.reduce((sum, account) => sum + account.balance, 0), activeAccounts: allAccounts.filter((account) => account.isActive).length, deposits: (movementTotals.FUND_ADD || 0) + (movementTotals.CUSTOMER_PAYMENT || 0), withdrawals: movementTotals.WITHDRAWAL || 0, supplierPayments: movementTotals.SUPPLIER_PAYMENT || 0, netProfit: totals.income - costOfGoodsSold - totals.expenses, byType: Object.entries(typeBalances).map(([type, balance]) => ({ type, balance })) };
-    return { success: true, data: { accounts, allAccounts, transactions, shareholders, report, pagination: { accounts: { page: accountPage, totalPages: Math.max(1, Math.ceil(accountCount / limit)), total: accountCount }, transactions: { page: transactionPage, totalPages: Math.max(1, Math.ceil(transactionCount / limit)), total: transactionCount }, limit } }, filters: params };
+    return { success: true, data: { accounts, allAccounts, transactions, shareholders, report, isSuperAdmin: session?.user?.role === "SUPER_ADMIN", pagination: { accounts: { page: accountPage, totalPages: Math.max(1, Math.ceil(accountCount / limit)), total: accountCount }, transactions: { page: transactionPage, totalPages: Math.max(1, Math.ceil(transactionCount / limit)), total: transactionCount }, limit } }, filters: params };
   } catch (error) { return actionError(error, "Failed to load money accounts."); }
 }
 
@@ -196,7 +200,7 @@ export async function getShareholders(params = {}) {
       ...(status === "INACTIVE" && { isActive: false }),
     };
     const page = Math.max(1, Number(params.page) || 1), limit = Math.min(50, Math.max(5, Number(params.limit) || 10));
-    const [data, total] = await Promise.all([prisma.shareholder.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: [{ isActive: "desc" }, { name: "asc" }], include: { transactions: { where: { type: { in: ["FUND_ADD", "WITHDRAWAL"] } }, orderBy: { transactionDate: "desc" }, include: { fromAccount: { select: { name: true, type: true } }, toAccount: { select: { name: true, type: true } } } } } }), prisma.shareholder.count({ where })]);
+    const [data, total] = await Promise.all([prisma.shareholder.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: [{ isActive: "desc" }, { name: "asc" }], include: { transactions: { where: { status: "POSTED", isReversal: false, type: { in: ["FUND_ADD", "WITHDRAWAL"] } }, orderBy: { transactionDate: "desc" }, include: { fromAccount: { select: { name: true, type: true } }, toAccount: { select: { name: true, type: true } } } } } }), prisma.shareholder.count({ where })]);
     return { success: true, data, filters: params, pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) } };
   } catch (error) { return actionError(error, "Failed to load shareholders."); }
 }
@@ -261,4 +265,193 @@ export async function deleteShareholder(id) {
     refresh();
     return { success: true, message: "Shareholder deleted." };
   } catch (error) { return actionError(error, "Failed to delete shareholder."); }
+}
+
+async function refreshOrderPaymentTotals(tx, orderId) {
+  const order = await tx.order.findUnique({ where: { id: orderId } });
+  if (!order) return;
+  const [paid, refunded] = await Promise.all([
+    tx.payment.aggregate({
+      where: { orderId, status: { in: ["PAID", "PARTIALLY_REFUNDED", "REFUNDED"] } },
+      _sum: { amount: true },
+    }),
+    tx.refund.aggregate({ where: { orderId, status: "COMPLETED" }, _sum: { amount: true } }),
+  ]);
+  const grossPaid = Number(paid._sum.amount || 0);
+  const refundedAmount = Number(refunded._sum.amount || 0);
+  const total = Number(order.orderPrice) + Number(order.deliveryCharge) + Number(order.taxAmount || 0) - Number(order.adminDiscount || 0);
+  const dueAmount = Math.max(0, Math.round((total - grossPaid) * 100) / 100);
+  const netPaid = Math.max(0, Math.round((grossPaid - refundedAmount) * 100) / 100);
+  await tx.order.update({
+    where: { id: orderId },
+    data: {
+      paidAmount: netPaid,
+      dueAmount,
+      paymentStatus: refundedAmount >= grossPaid && grossPaid > 0
+        ? "REFUNDED"
+        : refundedAmount > 0
+          ? "PARTIALLY_REFUNDED"
+          : dueAmount <= 0
+            ? "PAID"
+            : grossPaid > 0
+              ? "PARTIALLY_PAID"
+              : "UNPAID",
+    },
+  });
+}
+
+/** Soft-delete a posted money transaction and atomically post its financial reversal. */
+export async function deleteMoneyTransaction(formData) {
+  try {
+    const session = await auth();
+    if (session?.user?.role !== "SUPER_ADMIN") {
+      throw new Error("Only a Super Admin can reverse money transactions.");
+    }
+    const userId = session.user.id;
+    const transactionId = String(formData.get("transactionId") || "").trim();
+    const reason = String(formData.get("reason") || "").trim().slice(0, 1000);
+    if (!transactionId) throw new Error("Transaction ID is required.");
+    if (reason.length < 5) throw new Error("Please enter a clear reason (at least 5 characters).");
+
+    const result = await prisma.$transaction(async (tx) => {
+      const transaction = await tx.moneyTransaction.findUnique({
+        where: { id: transactionId },
+        include: {
+          reversal: { select: { id: true } },
+          expense: true,
+          supplierPayment: { include: { purchaseOrder: true } },
+          payment: { include: { order: true } },
+          refund: { include: { payment: { include: { order: true } }, order: true } },
+        },
+      });
+      if (!transaction) throw new Error("Money transaction not found.");
+      if (transaction.status !== "POSTED") throw new Error("This transaction has already been deleted or reversed.");
+      if (transaction.isReversal || transaction.type === "REVERSAL") throw new Error("A reversal record cannot be deleted.");
+      if (transaction.reversal) throw new Error("A reversal already exists for this transaction.");
+
+      const now = new Date();
+      const amount = Number(transaction.amount);
+      let affectedOrderId = null;
+
+      if (["EXPENSE", "PROVIDER_FEE"].includes(transaction.type) && transaction.expense && !transaction.expense.voidedAt) {
+        await tx.expense.update({ where: { id: transaction.expense.id }, data: { voidedAt: now, voidedBy: userId, voidReason: reason, updatedBy: userId } });
+      }
+
+      if (transaction.type === "SUPPLIER_PAYMENT" && transaction.supplierPayment && !transaction.supplierPayment.voidedAt) {
+        const payment = transaction.supplierPayment;
+        const purchaseOrder = payment.purchaseOrder;
+        if (purchaseOrder) {
+          if (Number(purchaseOrder.paidAmount) + 0.001 < amount) throw new Error("The purchase order paid balance no longer matches this payment; review it before reversing.");
+          await tx.purchaseOrder.update({
+            where: { id: purchaseOrder.id },
+            data: { paidAmount: { decrement: amount }, dueAmount: { increment: amount }, updatedBy: userId },
+          });
+        }
+        await tx.supplierPayment.update({ where: { id: payment.id }, data: { voidedAt: now, voidedBy: userId, voidReason: reason, updatedBy: userId } });
+      }
+
+      if (transaction.type === "CUSTOMER_PAYMENT" && transaction.payment) {
+        const payment = transaction.payment;
+        if (["PAID", "PARTIALLY_REFUNDED", "REFUNDED"].includes(payment.status)) {
+          const completedRefunds = await tx.refund.count({ where: { paymentId: payment.id, status: "COMPLETED" } });
+          if (completedRefunds) throw new Error("Reverse completed refunds for this payment first, then reverse the payment.");
+          await tx.payment.update({ where: { id: payment.id }, data: { status: "CANCELLED" } });
+          await tx.ledger.create({ data: { orderId: payment.orderId, paymentId: payment.id, amount, type: "ADJUSTMENT", direction: "DEBIT", description: `Payment reversed: ${reason}`, reference: transaction.transactionNo, createdBy: userId } });
+          affectedOrderId = payment.orderId;
+        }
+      }
+
+      if (transaction.type === "REFUND" && transaction.refund) {
+        const refund = transaction.refund;
+        if (refund.status !== "COMPLETED") throw new Error("Only a completed refund with a posted transaction can be reversed.");
+        await tx.refund.update({ where: { id: refund.id }, data: { status: "CANCELLED", adminNote: [refund.adminNote, `Voided by Super Admin: ${reason}`].filter(Boolean).join("\n") } });
+        if (refund.paymentId && refund.payment) {
+          const remainingRefunds = await tx.refund.aggregate({ where: { paymentId: refund.paymentId, status: "COMPLETED" }, _sum: { amount: true } });
+          const refundedAmount = Number(remainingRefunds._sum.amount || 0);
+          const paymentAmount = Number(refund.payment.amount);
+          await tx.payment.update({
+            where: { id: refund.paymentId },
+            data: { status: refundedAmount >= paymentAmount ? "REFUNDED" : refundedAmount > 0 ? "PARTIALLY_REFUNDED" : "PAID" },
+          });
+        }
+        affectedOrderId = refund.orderId;
+        await tx.ledger.create({ data: { orderId: refund.orderId, paymentId: refund.paymentId, amount, type: "ADJUSTMENT", direction: "CREDIT", description: `Refund reversal: ${reason}`, reference: transaction.transactionNo, createdBy: userId } });
+      }
+
+      if (affectedOrderId) await refreshOrderPaymentTotals(tx, affectedOrderId);
+
+      const referenceIds = transaction.type === "REFUND"
+        ? [transaction.refundId]
+        : transaction.type === "CUSTOMER_PAYMENT"
+          ? [transaction.paymentId || transaction.id]
+          : transaction.type === "SUPPLIER_PAYMENT"
+            ? [transaction.supplierPaymentId || transaction.id]
+            : [transaction.expenseId || transaction.id];
+      const journals = await tx.journalEntry.findMany({
+        where: { status: "POSTED", referenceId: { in: referenceIds.filter(Boolean) } },
+        include: { lines: { include: { account: true } } },
+      });
+      const reversalLines = journals.flatMap((entry) => entry.lines.map((line) => ({
+        accountCode: line.account.code,
+        accountName: line.account.name,
+        accountType: line.account.type,
+        debit: Number(line.credit),
+        credit: Number(line.debit),
+        memo: `Reversal of ${entry.entryNo}`,
+      })));
+      if (reversalLines.length) {
+        await postJournal(tx, {
+          entryDate: now,
+          description: `Reversal of ${transaction.transactionNo}: ${reason}`,
+          referenceType: "ADJUSTMENT",
+          referenceId: transaction.id,
+          createdBy: userId,
+          lines: reversalLines,
+        });
+      }
+
+      // Undo the original account effects. Reversals may take a balance below zero
+      // when the original funds have since been spent; that shortfall remains visible.
+      if (transaction.toAccountId) {
+        await tx.moneyAccount.update({ where: { id: transaction.toAccountId }, data: { balance: { decrement: amount }, updatedBy: userId } });
+      }
+      if (transaction.fromAccountId) {
+        await tx.moneyAccount.update({ where: { id: transaction.fromAccountId }, data: { balance: { increment: amount }, updatedBy: userId } });
+      }
+
+      const reversalNo = await generateCode(tx, { name: "MONEY_TRANSACTION", prefix: "MT-", padding: 8 });
+      await tx.moneyTransaction.create({
+        data: {
+          transactionNo: reversalNo,
+          type: "REVERSAL",
+          amount,
+          fromAccountId: transaction.toAccountId,
+          toAccountId: transaction.fromAccountId,
+          reference: transaction.transactionNo,
+          note: `Reversal of ${transaction.transactionNo}: ${reason}`,
+          transactionDate: now,
+          createdBy: userId,
+          isReversal: true,
+          reversalOfId: transaction.id,
+        },
+      });
+      const updated = await tx.moneyTransaction.updateMany({
+        where: { id: transaction.id, status: "POSTED" },
+        data: { status: "DELETED", deletedAt: now, deletedBy: userId, deleteReason: reason },
+      });
+      if (updated.count !== 1) throw new Error("Another admin already changed this transaction. Refresh and try again.");
+      return { transactionNo: transaction.transactionNo, reversalNo };
+    });
+
+    refresh();
+    revalidatePath("/admin/procurement/expenses");
+    revalidatePath("/admin/procurement/payments");
+    revalidatePath("/admin/procurement/purchases");
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/refunds");
+    return { success: true, message: `${result.transactionNo} soft-deleted; reversal ${result.reversalNo} posted.` };
+  } catch (error) {
+    if (error?.code === "P2002") return { success: false, message: "A reversal already exists for this transaction. Refresh the page to see its updated status." };
+    return actionError(error, "Failed to reverse money transaction.");
+  }
 }

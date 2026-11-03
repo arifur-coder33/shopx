@@ -27,10 +27,8 @@ export default async function NavBar() {
       <Notice data={noticeData} />
 
       <header className="sticky top-0 z-30 w-full border-b border-border bg-surface/95 text-text shadow-sm backdrop-blur supports-[backdrop-filter]:bg-surface/85">
-        <div className="site-container flex min-h-16 items-center gap-2 py-2 sm:gap-4">
-          <div
-            className="flex shrink-0 items-center gap-1 text-2xl font-bold text-brand md:text-4xl"
-          >
+        <div style={{ minHeight: "var(--brand-navbar-height)" }} className="site-container grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 py-2 md:flex md:gap-4">
+          <div className="flex min-w-0 shrink-0 items-center gap-1 text-2xl font-bold text-brand md:text-4xl">
             <div className="hidden md:block">
               <CategoryDrawer initialData={categoryData}></CategoryDrawer>
             </div>
@@ -40,8 +38,8 @@ export default async function NavBar() {
               <Logo data={siteSettingData} />
             </Link>
           </div>
-          <div className="min-w-0 flex-1"><SearchBoxWrapper /></div>
-          <div className="shrink-0"><NavActions /></div>
+          <div className="relative z-40 min-w-0 md:order-2 md:flex-1"><SearchBoxWrapper /></div>
+          <div className="shrink-0 md:order-3"><NavActions /></div>
         </div>
       </header>
     </>

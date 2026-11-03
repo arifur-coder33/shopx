@@ -1,10 +1,12 @@
 import { getPublicContactDetails } from "@/backend/services/contactDetailsService";
 import { getPublicContentPage } from "@/backend/services/contentPageService";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
-import Image from "next/image";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { Mail, MessageCircleMore, PhoneCall, Send } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import SocialBrandIcon from "@/components/content/SocialBrandIcon";
+import prisma from "@/lib/prisma";
 
 export default async function Footer() {
   const [contact, identity, footerContent] = await Promise.all([
@@ -14,23 +16,32 @@ export default async function Footer() {
   ]);
   const whatsappDigits = contact.whatsappNumber.replace(/\D/g, "");
   const footerLogo = footerContent?.footerLogo?.name || identity.logo;
+  const fallbackLogoDimensions = footerLogo && !footerContent?.footerLogo
+    ? await prisma.media.findFirst({ where: { name: footerLogo }, select: { width: true, height: true } })
+    : null;
+  const logoWidth = footerContent?.footerLogo?.width || fallbackLogoDimensions?.width || 600;
+  const logoHeight = footerContent?.footerLogo?.height || fallbackLogoDimensions?.height || 120;
 
   return (
     <footer className="bg-slate-950 text-slate-300 mt-10 border-t border-slate-800">
       {/* Top Section */}
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Brand */}
-        <div>
-          {footerLogo && <Image
-            src={cloudinaryMainImage(footerLogo, 160)}
-            width={80}
-            height={80}
-            alt={`${identity.name} logo`}
-            unoptimized
-            className="mb-3 h-16 w-16 rounded-brand object-contain"
-          />}
+        <div className="min-w-0 w-full">
+          {footerLogo && (
+            <Image
+              src={cloudinaryMainImage(footerLogo, 480)}
+              width={logoWidth}
+              height={logoHeight}
+              alt={`${identity.name} logo`}
+              unoptimized
+              sizes="(max-width: 767px) 100vw, 33vw"
+              style={{ height: `${identity.footerImageHeight}px`, width: "auto", maxWidth: "100%" }}
+              className="mb-3 block object-contain"
+            />
+          )}
           <h2 className="text-2xl font-semibold text-white mb-3">
-            {footerContent?.title?.trim() || identity.name}
+            {!footerLogo && identity.name}
           </h2>
           <p className="whitespace-pre-line text-sm leading-relaxed">
             {footerContent?.content || ""}
@@ -75,8 +86,17 @@ export default async function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 transition hover:text-white"
               >
-                {" "}
-                Facebook
+                <SocialBrandIcon brand="facebook" size={16} /> Facebook
+              </a>
+            )}
+            {contact.instagram && (
+              <a href={contact.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white">
+                <SocialBrandIcon brand="instagram" size={16} /> Instagram
+              </a>
+            )}
+            {contact.tiktok && (
+              <a href={contact.tiktok} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition hover:text-white">
+                <SocialBrandIcon brand="tiktok" size={16} /> TikTok
               </a>
             )}
             {contact.messenger && (

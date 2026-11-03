@@ -50,7 +50,7 @@ export default function HeroSliderManager({ result }) {
   return (
     <main className="space-y-5 p-3 sm:p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-2xl font-bold">Home Slider</h1><p className="text-sm text-text-muted">Add responsive slider images and optional destination links. Lower order appears first.</p></div>
+        <div><h1 className="text-2xl font-bold">Home Slider</h1><p className="text-sm text-text-muted">Add slider images and optional destination links. Use a sharp 1920 × 750 px image; keep important text and subjects near the center so they stay clear on mobile. Lower order appears first.</p></div>
         <button type="button" disabled={!canCreate} onClick={() => setEditing({ isActive: true, sortOrder: result.data.length, motion: "FADE" })} className="button disabled:opacity-40"><Plus className="h-4 w-4" /> Add slide</button>
       </header>
 
@@ -72,7 +72,7 @@ export default function HeroSliderManager({ result }) {
           <form onSubmit={submit} className="my-auto w-full max-w-2xl space-y-4 rounded-2xl bg-surface p-4 shadow-2xl sm:p-6">
             <div className="flex items-center justify-between"><h2 className="text-xl font-bold">{editing.id ? "Edit slide" : "Add slide"}</h2><button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-border px-3 py-2">Close</button></div>
             {editing.id && <input type="hidden" name="id" value={editing.id} />}
-            <FileInput name="image" label="Slider image" recommendedSize="1920 × 750 px recommended" defaultValue={editing.image} w={320} h={125} />
+            <FileInput name="image" label="Slider image" recommendedSize="1920 × 750 px recommended; WebP or JPEG" defaultValue={editing.image} w={320} h={125} />
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1 text-sm font-semibold">Title<input name="title" defaultValue={editing.title || ""} className={inputClass} placeholder="Optional image description" /></label>
               <label className="grid gap-1 text-sm font-semibold">Link<input name="link" defaultValue={editing.link || ""} className={inputClass} placeholder="/product/example or https://..." /></label>

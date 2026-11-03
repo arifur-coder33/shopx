@@ -6,6 +6,8 @@ const clean = (value) => String(value || "").trim();
 export function normalizeContactDetails(setting) {
   return {
     facebookPage: clean(setting?.fbLink),
+    instagram: clean(setting?.instagramLink),
+    tiktok: clean(setting?.tiktokLink),
     messenger: clean(setting?.messengerLink),
     whatsappNumber: clean(setting?.whatsappNumber),
     phoneNumber: clean(setting?.phoneNumber1),
@@ -17,6 +19,8 @@ async function queryContactDetails() {
   const setting = await prisma.siteSetting.findFirst({
     select: {
       fbLink: true,
+      instagramLink: true,
+      tiktokLink: true,
       messengerLink: true,
       whatsappNumber: true,
       phoneNumber1: true,

@@ -31,7 +31,7 @@ export default async function HomeStorefront() {
     (category) => !category.parentCategoryId,
   );
   const topCategories = rootCategories.slice(0, 12);
-  const sameAs = [contact.facebookPage, contact.messenger].filter(Boolean);
+  const sameAs = [contact.facebookPage, contact.instagram, contact.tiktok, contact.messenger].filter(Boolean);
   const categoryItems = (
     topCategories.length ? topCategories : result.categories.slice(0, 12)
   ).map((category, index) => ({

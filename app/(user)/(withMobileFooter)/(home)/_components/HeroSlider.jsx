@@ -11,9 +11,9 @@ export default async function HeroSlider() {
     title: slide.title,
     link: slide.link,
     motion: slide.motion,
-    mobileSrc: cloudinaryResponsiveImage(slide.image.name, 480),
-    tabletSrc: cloudinaryResponsiveImage(slide.image.name, 768),
-    desktopSrc: cloudinaryResponsiveImage(slide.image.name, 1280),
+    mobileSrc: cloudinaryResponsiveImage(slide.image.name, 768, "good"),
+    tabletSrc: cloudinaryResponsiveImage(slide.image.name, 1024, "good"),
+    desktopSrc: cloudinaryResponsiveImage(slide.image.name, 1600, "good"),
   }));
 
   return <HeroSliderClient slides={slides} />;

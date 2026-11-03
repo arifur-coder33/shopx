@@ -3,6 +3,11 @@
 @plugin "tailwind-scrollbar-hide";
 @variant dark (&:where(.dark, .dark *));
 
+@keyframes search-expand {
+  from { opacity: 0; transform: scaleX(0.18); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
 /* Change these brand tokens to rebrand the entire application. */
 @theme {
   --color-primary: var(--brand-primary);

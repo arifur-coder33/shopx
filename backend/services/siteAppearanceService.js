@@ -15,6 +15,8 @@ export const SITE_APPEARANCE_DEFAULTS = Object.freeze({
   darkText: "#e8eef8",
   baseFontSize: 16,
   borderRadius: 12,
+  navbarHeight: 72,
+  footerImageHeight: 120,
 });
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -41,6 +43,8 @@ export function normalizeSiteAppearance(setting) {
     darkText: safeColor(setting?.darkText, defaults.darkText),
     baseFontSize: safeNumber(setting?.baseFontSize, defaults.baseFontSize, 14, 20),
     borderRadius: safeNumber(setting?.borderRadius, defaults.borderRadius, 0, 24),
+    navbarHeight: safeNumber(setting?.navbarHeight, defaults.navbarHeight, 56, 160),
+    footerImageHeight: safeNumber(setting?.footerImageHeight, defaults.footerImageHeight, 40, 240),
   };
 }
 
@@ -50,15 +54,25 @@ export function normalizeSiteIdentity(setting) {
   const seoDescription =
     String(setting?.seoDescription || "").trim() ||
     "ঘরে বসে সহজে আপনার পছন্দের পণ্য অর্ডার করুন।";
+  const seoKeywords = String(setting?.seoKeywords || "").trim();
+  const googleSiteVerification = String(setting?.googleSiteVerification || "").trim();
   return {
     name,
     seoTitle,
     seoDescription,
+    seoKeywords,
+    googleSiteVerification,
     logo: setting?.logo || null,
     logoUrl: setting?.logo
       ? cloudinaryMainImage(setting.logo, 512, 512)
       : null,
     favicon: setting?.favicon || null,
+    footerImageHeight: safeNumber(
+      setting?.footerImageHeight,
+      SITE_APPEARANCE_DEFAULTS.footerImageHeight,
+      40,
+      240,
+    ),
     faviconUrl: setting?.favicon
       ? cloudinaryMainImage(setting.favicon, 64, 64)
       : "/favicon-32x32.png",
@@ -107,6 +121,7 @@ export function createSiteAppearanceCss(appearance) {
       --brand-text-muted: color-mix(in srgb, ${value.lightText} 62%, ${value.lightBackground});
       --brand-border: color-mix(in srgb, ${value.lightText} 15%, ${value.lightSurface});
       --brand-radius: ${value.borderRadius}px;
+      --brand-navbar-height: ${value.navbarHeight}px;
       font-size: ${value.baseFontSize}px;
     }
     html.dark {

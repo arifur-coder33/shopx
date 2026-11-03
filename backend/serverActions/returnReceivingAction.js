@@ -91,7 +91,7 @@ export async function receiveReturnedOrder(formData) {
                         discount: true,
                       },
                     },
-                    expenses: { select: { amount: true } },
+                    expenses: { where: { voidedAt: null }, select: { amount: true } },
                   },
                 },
               },
@@ -177,7 +177,7 @@ export async function receiveReturnedOrder(formData) {
       const customerPaidCharge = values.customerPaidCharge === "true";
       const charge = Math.max(0, Number(order.deliveryCharge) - Number(order.deliveryDiscount || 0));
       if (reasonType === "DELIVERY_FAIL" && Number(order.paidAmount || 0) <= 0 && !customerPaidCharge && charge > 0) {
-        const priorDeliveryExpense = await tx.expense.findFirst({ where: { category: { name: "Delivery Fail" }, returnReceipt: { orderId: order.id } }, select: { id: true } });
+        const priorDeliveryExpense = await tx.expense.findFirst({ where: { category: { name: "Delivery Fail" }, returnReceipt: { orderId: order.id }, voidedAt: null }, select: { id: true } });
         if (priorDeliveryExpense) return;
         const accountId = String(values.moneyAccountId || "");
         const account = accountId ? await tx.moneyAccount.findUnique({ where: { id: accountId } }) : null;

@@ -19,7 +19,7 @@ export async function getProcurementDetail(section, id) {
     if (section === "expenses") data = await prisma.expense.findUnique({ where: { id }, include: { category: true, purchaseOrder: true } });
     if (section === "payments") data = await prisma.supplierPayment.findUnique({ where: { id }, include: { supplier: true, purchaseOrder: true } });
     if (!data) return { success: false, message: "Record not found." };
-    const auditIds = [...new Set([data.createdBy, data.updatedBy].filter(Boolean))];
+    const auditIds = [...new Set([data.createdBy, data.updatedBy, data.voidedBy].filter(Boolean))];
     const users = auditIds.length ? await prisma.user.findMany({ where: { id: { in: auditIds } }, select: { id: true, email: true } }) : [];
     let capabilities = { canEdit: false, canDelete: false, reason: "This record is controlled by its workflow." };
     if (section === "purchases") {

@@ -28,7 +28,7 @@ async function queryPublicContentPage(slug) {
       metaDescription: true,
       updatedAt: true,
       isPublished: true,
-      footerLogo: { select: { name: true } },
+      footerLogo: { select: { name: true, width: true, height: true } },
     },
   });
   if (!page?.isPublished) return null;

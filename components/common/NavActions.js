@@ -40,9 +40,13 @@ export default async function NavActions() {
         <User2Icon className="nav-hover" />
       </UserMenu>
 
+      <Link href="/my-account" aria-label="My account" title="My account" className="grid h-10 w-10 place-items-center rounded-full text-text-muted transition hover:bg-primary-soft hover:text-primary md:hidden">
+        <User2Icon className="h-5 w-5" />
+      </Link>
+
       <WishlistNavLink className="hidden md:flex" />
 
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center md:h-12 md:w-12">
         <Cart>
           <ShoppingCart className="nav-hover" />{" "}
         </Cart>

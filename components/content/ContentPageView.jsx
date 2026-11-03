@@ -1,6 +1,7 @@
 import { getPublicContactDetails } from "@/backend/services/contactDetailsService";
 import { getPublicContentPage } from "@/backend/services/contentPageService";
 import Breadcrumb from "@/components/common/Breadcrumb";
+import SocialBrandIcon from "@/components/content/SocialBrandIcon";
 import { Mail, MessageCircle, Phone, Send } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -46,7 +47,21 @@ export default async function ContentPageView({ slug }) {
             label: "Facebook",
             value: "Facebook পেজ দেখুন",
             href: contact.facebookPage,
-            icon: "fb",
+            brand: "facebook",
+            external: true,
+          },
+          contact?.instagram && {
+            label: "Instagram",
+            value: "Instagram প্রোফাইল দেখুন",
+            href: contact.instagram,
+            brand: "instagram",
+            external: true,
+          },
+          contact?.tiktok && {
+            label: "TikTok",
+            value: "TikTok প্রোফাইল দেখুন",
+            href: contact.tiktok,
+            brand: "tiktok",
             external: true,
           },
           contact?.messenger && {
@@ -74,7 +89,7 @@ export default async function ContentPageView({ slug }) {
         {contactItems.length > 0 && (
           <div className="grid gap-3 border-b border-border p-5 sm:grid-cols-2 sm:p-8 lg:grid-cols-3">
             {contactItems.map(
-              ({ label, value, href, icon: Icon, external }) => (
+              ({ label, value, href, icon: Icon, brand, external }) => (
                 <a
                   key={label}
                   href={href}
@@ -85,7 +100,7 @@ export default async function ContentPageView({ slug }) {
                   className="group flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-surface-muted p-4 transition hover:border-primary hover:bg-primary-soft"
                 >
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-white">
-                    <Icon size={20} />
+                    {brand ? <SocialBrandIcon brand={brand} size={20} /> : <Icon size={20} />}
                   </span>
                   <span className="min-w-0">
                     <strong className="block text-sm text-text-muted">

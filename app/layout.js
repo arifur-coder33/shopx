@@ -1,5 +1,5 @@
 // file: app/layout.js
-import { ThemeScript } from "@/components/common/ThemeScript";
+import Script from "next/script";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import Providers from "@/components/common/Providers";
@@ -16,6 +16,10 @@ import { getSiteUrl } from "@/lib/siteUrl";
 export async function generateMetadata() {
   const identity = await getPublicSiteIdentity();
   const siteUrl = await getSiteUrl();
+  const keywords = identity.seoKeywords
+    .split(/[\n,]/)
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
   return {
     metadataBase: new URL(siteUrl),
     title: {
@@ -23,6 +27,10 @@ export async function generateMetadata() {
       template: `%s | ${identity.name}`,
     },
     description: identity.seoDescription,
+    ...(keywords.length > 0 && { keywords }),
+    ...(identity.googleSiteVerification && {
+      verification: { google: identity.googleSiteVerification },
+    }),
     applicationName: identity.name,
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: identity.name, statusBarStyle: "default" },
@@ -73,7 +81,11 @@ export default async function RootLayout({ children }) {
         />
 
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
-        <ThemeScript />
+        <Script
+          id="initialize-saved-theme"
+          src="/theme-init.js"
+          strategy="beforeInteractive"
+        />
         <style
           id="site-appearance"
           dangerouslySetInnerHTML={{

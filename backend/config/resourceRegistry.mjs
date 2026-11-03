@@ -23,6 +23,7 @@ export const RESOURCE_REGISTRY = Object.freeze([
   { key: "resource", label: "Resource registry", department: "Administration" },
   { key: "rolePermission", label: "Role permissions", department: "Administration" },
   { key: "siteSetting", label: "Site settings", department: "Administration" },
+  { key: "seoSettings", label: "SEO settings", department: "Administration" },
   { key: "provider", label: "Providers", department: "Administration" },
   // Catalog
   { key: "category", label: "Categories", department: "Catalog" },

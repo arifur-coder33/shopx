@@ -27,7 +27,7 @@ export function cloudinaryBlurImage(imageName) {
 
 // Use this for responsive <picture> sources. Each URL has a real pixel width,
 // so a small screen never downloads the desktop banner through dpr_auto.
-export function cloudinaryResponsiveImage(publicId, width) {
+export function cloudinaryResponsiveImage(publicId, width, quality = "eco") {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const folder = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
 
@@ -35,7 +35,8 @@ export function cloudinaryResponsiveImage(publicId, width) {
     return DEFAULT_BLUR_DATA_URL;
   }
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/c_limit,w_${width},f_auto,q_auto:eco/${folder}/${publicId}`;
+  const qualityMode = quality === "good" ? "good" : "eco";
+  return `https://res.cloudinary.com/${cloudName}/image/upload/c_limit,w_${width},f_auto,q_auto:${qualityMode}/${folder}/${publicId}`;
 }
 
 // Product-detail media uses a higher-quality transform than small cards.

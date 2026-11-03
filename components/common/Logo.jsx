@@ -10,16 +10,16 @@ export default function Logo({ data }) {
         // DO NOT USE Imagecustom here. This is the fix.
         src={
           data?.logo
-            ? cloudinaryMainImage(data.logo, 96)
+            ? cloudinaryMainImage(data.logo, 200)
             : "/images/default-64.webp"
         }
-        width={60}
+        width={300}
         height={60}
         alt={`${data?.name || "logo"}`}
         priority={true} // Crucial: tells browser to load this early
         unoptimized
-        sizes="(max-width: 767px) 44px, 60px"
-        className="h-11 w-11 rounded-brand object-contain md:h-15 md:w-15"
+        sizes="40vw"
+        className="block h-8 w-auto max-w-[32vw] object-contain md:h-12 md:max-w-[240px]"
       />
     </div>
   );

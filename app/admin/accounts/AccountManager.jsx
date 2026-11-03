@@ -2,6 +2,7 @@
 
 import {
   createMoneyAccount,
+  deleteMoneyTransaction,
   deleteMoneyAccount,
   recordMoneyMovement,
   updateMoneyAccount,
@@ -22,7 +23,7 @@ const TYPES = [
   "COURIER",
 ];
 const MOVEMENTS = ["FUND_ADD", "CUSTOMER_PAYMENT", "TRANSFER", "WITHDRAWAL"];
-const TRANSACTION_TYPES = [...MOVEMENTS, "SUPPLIER_PAYMENT", "EXPENSE"];
+const TRANSACTION_TYPES = [...MOVEMENTS, "SUPPLIER_PAYMENT", "EXPENSE", "REFUND", "PROVIDER_FEE", "REVERSAL"];
 const field =
   "w-full rounded-brand border border-border bg-surface px-3 py-2 text-text outline-none focus:border-primary";
 const money = (value) =>
@@ -32,7 +33,7 @@ const money = (value) =>
     maximumFractionDigits: 2,
   }).format(value || 0);
 
-function Dialog({ open, close, title, action, successRedirect, children }) {
+function Dialog({ open, close, title, action, successRedirect, submitLabel = "Save", children }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const submit = (event) => {
@@ -55,7 +56,7 @@ function Dialog({ open, close, title, action, successRedirect, children }) {
         <h2 className="text-xl font-bold">{title}</h2>
         {children}
         <button disabled={pending} className="button w-full">
-          {pending ? "Saving…" : "Save"}
+          {pending ? "Saving…" : submitLabel}
         </button>
       </form>
     </Modal>
@@ -77,11 +78,12 @@ export default function AccountManager({ result }) {
     result.success && result.filters?.createAccount === "1" ? "account" : null,
   );
   const [editingAccount, setEditingAccount] = useState(null);
+  const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [movement, setMovement] = useState("FUND_ADD");
   const [deleting, startDelete] = useTransition();
   const router = useRouter();
   if (!result.success) return <div className="card">{result.message}</div>;
-  const { accounts, allAccounts, transactions, shareholders, report, pagination } =
+  const { accounts, allAccounts, transactions, shareholders, report, pagination, isSuperAdmin } =
     result.data;
   const filters = result.filters || {};
   const hasFilters = [
@@ -91,6 +93,7 @@ export default function AccountManager({ result }) {
     "transactionNo",
     "reference",
     "transactionType",
+    "transactionStatus",
   ].some((key) => filters[key] && filters[key] !== "ALL");
   const filterHref = (key, value) => {
     const query = new URLSearchParams();
@@ -280,7 +283,7 @@ export default function AccountManager({ result }) {
       <section className="space-y-3">
         <h2 className="text-xl font-bold">Money transactions</h2>
         <div className="space-y-3 rounded-brand border border-border bg-surface p-3">
-          <form className="grid gap-2 sm:grid-cols-3">
+          <form className="grid gap-2 sm:grid-cols-4">
             <input
               type="hidden"
               name="transactionType"
@@ -298,6 +301,11 @@ export default function AccountManager({ result }) {
               defaultValue={filters.reference || ""}
               placeholder="Reference"
             />
+            <select className={field} name="transactionStatus" defaultValue={filters.transactionStatus || "ALL"}>
+              <option value="ALL">All statuses</option>
+              <option value="POSTED">Posted</option>
+              <option value="DELETED">Deleted / reversed</option>
+            </select>
             <button className="button">Search transactions</button>
           </form>
           <ChipFilters
@@ -320,6 +328,8 @@ export default function AccountManager({ result }) {
                   "Shareholder",
                   "Reference",
                   "Amount",
+                  "Status / reason",
+                  ...(isSuperAdmin ? ["Action"] : []),
                 ].map((head) => (
                   <th className="p-3" key={head}>
                     {head}
@@ -329,7 +339,7 @@ export default function AccountManager({ result }) {
             </thead>
             <tbody>
               {transactions.map((item) => (
-                <tr className="border-t border-border" key={item.id}>
+                <tr className={`border-t border-border ${item.status === "DELETED" ? "opacity-75" : ""}`} key={item.id}>
                   <td className="p-3">
                     {new Date(item.transactionDate).toLocaleDateString("en-BD")}
                   </td>
@@ -342,6 +352,18 @@ export default function AccountManager({ result }) {
                   <td className="p-3">{item.shareholder?.name || "—"}</td>
                   <td className="p-3">{item.reference || "—"}</td>
                   <td className="p-3 font-semibold">{money(item.amount)}</td>
+                  <td className="p-3">
+                    <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.status === "DELETED" ? "bg-danger/10 text-danger" : item.isReversal ? "bg-warning/10 text-warning" : "bg-success/10 text-success"}`}>
+                      {item.status === "DELETED" ? "DELETED" : item.isReversal ? "REVERSAL" : "POSTED"}
+                    </span>
+                    {item.deleteReason && <small className="mt-1 block max-w-64 text-text-muted">Reason: {item.deleteReason}</small>}
+                    {item.deletedAt && <small className="mt-1 block text-text-muted">{new Date(item.deletedAt).toLocaleString("en-BD")} · by {item.deletedBy || "Super Admin"}</small>}
+                    {item.reversalOf && <small className="mt-1 block text-text-muted">Reverses {item.reversalOf.transactionNo}</small>}
+                    {item.reversal && <small className="mt-1 block text-text-muted">Reversal {item.reversal.transactionNo}</small>}
+                  </td>
+                  {isSuperAdmin && <td className="p-3">
+                    {item.status === "POSTED" && !item.isReversal && !item.reversal && <button type="button" onClick={() => setTransactionToDelete(item)} className="inline-flex items-center gap-1 rounded-lg border border-danger/30 px-2.5 py-1.5 text-xs font-semibold text-danger hover:bg-danger/10"><Trash2 className="h-3.5 w-3.5" /> Delete & reverse</button>}
+                  </td>}
                 </tr>
               ))}
             </tbody>
@@ -397,6 +419,20 @@ export default function AccountManager({ result }) {
             <input name="accountNumber" className={field} />
           </Label>
         </div>
+      </Dialog>
+      <Dialog
+        open={Boolean(transactionToDelete)}
+        close={() => setTransactionToDelete(null)}
+        title="Delete and reverse transaction"
+        action={deleteMoneyTransaction}
+        submitLabel="Delete and reverse"
+      >
+        <input type="hidden" name="transactionId" value={transactionToDelete?.id || ""} />
+        <div className="rounded-xl border border-danger/20 bg-danger/5 p-3 text-sm">
+          <p className="font-semibold">{transactionToDelete?.transactionNo} · {transactionToDelete ? money(transactionToDelete.amount) : ""}</p>
+          <p className="mt-1">The original record will stay in history as DELETED. Its account and journal effects will be reversed, and the reason will be saved. This only changes records inside this app; it does not move money in a bank, payment gateway, or courier account, or issue a real-world refund. If the received funds were already spent, the account balance can become negative.</p>
+        </div>
+        <Label>Reason for deletion and reversal<textarea required minLength={5} maxLength={1000} name="reason" className={field} placeholder="For example: entered the wrong amount; correct amount is ৳…" /></Label>
       </Dialog>
       <Dialog
         open={dialog === "editAccount"}

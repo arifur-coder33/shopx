@@ -103,33 +103,22 @@ export default function SiteAppearanceForm({ initialSettings }) {
             <Globe2 className="text-primary" size={21} />
             <div>
               <h2 className="text-lg font-bold">Site identity</h2>
-              <p className="text-sm text-text-muted">The site name appears in browser titles and the footer. Select images through the current Media uploader.</p>
+              <p className="text-sm text-text-muted">Set your storefront name and images. SEO options are managed from Administration → SEO.</p>
             </div>
           </div>
           <label className="mb-5 grid gap-1.5 text-sm font-semibold">
             Site name
             <input name="siteName" value={settings.name} onChange={(event) => updateValue("name", event.target.value)} maxLength={80} required disabled={disabled} className={inputClass} placeholder="Your shop name" />
           </label>
-          <div className="mb-5 grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm font-semibold">
-              SEO title
-              <input name="seoTitle" value={settings.seoTitle || ""} onChange={(event) => updateValue("seoTitle", event.target.value)} maxLength={160} disabled={disabled} className={inputClass} placeholder={settings.name || "Your shop name"} />
-              <span className="text-xs font-normal text-text-muted">Used as the homepage and default browser title. Empty uses the site name.</span>
-            </label>
-            <label className="grid gap-1.5 text-sm font-semibold">
-              SEO description
-              <textarea name="seoDescription" value={settings.seoDescription || ""} onChange={(event) => updateValue("seoDescription", event.target.value)} maxLength={320} rows={3} disabled={disabled} className={inputClass} placeholder="Describe your store for search engines" />
-              <span className="text-xs font-normal text-text-muted">Used by search engines and social sharing previews.</span>
-            </label>
-          </div>
           <h3 className="mb-2 font-bold">Site logo</h3>
+          <p className="mb-3 text-sm text-text-muted">Use a wide, transparent logo (about 5:1). Navbar display height: 32 px on mobile and 48 px on desktop; width follows the image ratio.</p>
           {!initialSettings.logoMedia && initialSettings.logo && (
             <div className="mb-4 flex items-center gap-3 rounded-xl bg-surface-muted p-3">
               <img src={cloudinaryMainImage(initialSettings.logo, 128)} width="64" height="64" alt="Current site logo" className="h-16 w-16 rounded-lg object-contain" />
               <span className="text-sm text-text-muted">Current legacy logo. Selecting a new logo will replace it.</span>
             </div>
           )}
-          <FileInput name="logo" label="Logo image" recommendedSize="500 × 500 px recommended" defaultValue={initialSettings.logoMedia} w={128} h={128} />
+          <FileInput name="logo" label="Logo image" recommendedSize="600 × 120 px recommended" defaultValue={initialSettings.logoMedia} w={240} h={48} />
           {initialSettings.logo && (
             <label className="mt-3 flex items-center gap-2 text-sm text-danger">
               <input type="checkbox" name="removeLogo" value="true" disabled={disabled} /> Remove current logo
@@ -167,6 +156,17 @@ export default function SiteAppearanceForm({ initialSettings }) {
         <section className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
             <div className="mb-5 flex items-center gap-2"><Type className="text-primary" size={21} /><h2 className="text-lg font-bold">Size and shape</h2></div>
+            <label className="mb-6 block">
+              <span className="flex justify-between font-semibold"><span>Navbar minimum height</span><strong className="text-primary">{settings.navbarHeight}px</strong></span>
+              <input type="range" name="navbarHeight" min="56" max="160" step="2" value={settings.navbarHeight} onChange={(event) => updateValue("navbarHeight", event.target.value)} disabled={disabled} className="mt-3 w-full accent-[var(--brand-primary)]" />
+              <span className="mt-1 flex justify-between text-xs text-text-muted"><span>Compact</span><span>Tall</span></span>
+            </label>
+            <label className="mb-6 block">
+              <span className="flex justify-between font-semibold"><span>Footer image height</span><strong className="text-primary">{settings.footerImageHeight}px</strong></span>
+              <input type="range" name="footerImageHeight" min="40" max="240" step="4" value={settings.footerImageHeight} onChange={(event) => updateValue("footerImageHeight", event.target.value)} disabled={disabled} className="mt-3 w-full accent-[var(--brand-primary)]" />
+              <span className="mt-1 flex justify-between text-xs text-text-muted"><span>40px</span><span>240px</span></span>
+              <span className="mt-1 block text-xs font-normal text-text-muted">This adjusts the footer logo height and keeps its image ratio. Footer height follows its content.</span>
+            </label>
             <label className="block">
               <span className="flex justify-between font-semibold"><span>Base font size</span><strong className="text-primary">{settings.baseFontSize}px</strong></span>
               <input type="range" name="baseFontSize" min="14" max="20" step="1" value={settings.baseFontSize} onChange={(event) => updateValue("baseFontSize", event.target.value)} disabled={disabled} className="mt-3 w-full accent-[var(--brand-primary)]" />

@@ -2,7 +2,7 @@
 
 import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
-import { Camera, Search, X } from "lucide-react";
+import { Camera, ChevronUp, Search, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,7 @@ export default function SearchBox() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [imageError, setImageError] = useState("");
   const [open, setOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const rootRef = useRef(null);
   const imageInputRef = useRef(null);
   const imagePreviewRef = useRef("");
@@ -42,7 +43,10 @@ export default function SearchBox() {
 
   useEffect(() => {
     const close = (event) => {
-      if (!rootRef.current?.contains(event.target)) setOpen(false);
+      if (!rootRef.current?.contains(event.target)) {
+        setOpen(false);
+        setMobileExpanded(false);
+      }
     };
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
@@ -144,17 +148,20 @@ export default function SearchBox() {
     if (!searchText && !imageResultIds.length) return;
     if (imageResultIds.length) {
       setOpen(false);
+      setMobileExpanded(false);
       const similarParam = imageSimilarFallback ? "&similar=1" : "";
       router.push(`/search?ids=${encodeURIComponent(imageResultIds.join(","))}&q=${encodeURIComponent(searchText)}${similarParam}`);
       return;
     }
     clearSearch();
+    setMobileExpanded(false);
     router.push(`/search?q=${encodeURIComponent(searchText)}`);
   };
 
   return (
-    <div ref={rootRef} className="relative mx-auto w-full max-w-2xl">
-      <div className="flex h-11 items-center overflow-hidden rounded-brand border border-border bg-background shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 sm:h-12">
+    <div ref={rootRef} className="relative mx-auto w-auto md:w-full md:max-w-2xl" onKeyDown={(event) => event.key === "Escape" && setMobileExpanded(false)}>
+      <button type="button" onClick={() => setMobileExpanded(true)} aria-label="পণ্য খুঁজুন" aria-expanded={mobileExpanded} className={`grid h-9 w-9 place-items-center rounded-full text-text-muted transition hover:bg-primary-soft hover:text-primary md:hidden ${mobileExpanded ? "invisible pointer-events-none" : ""}`}><Search aria-hidden="true" className="h-5 w-5" /></button>
+      <div className={`h-11 items-center overflow-hidden rounded-brand border border-border bg-background shadow-lg transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 sm:h-12 ${mobileExpanded ? "fixed left-2 right-2 top-16 z-50 mt-0 flex w-auto origin-center animate-[search-expand_260ms_ease-out]" : "hidden"} md:static md:left-auto md:right-auto md:top-auto md:mt-0 md:flex md:w-full md:translate-x-0 md:shadow-sm`}>
         <Search aria-hidden="true" className="ml-3 h-5 w-5 shrink-0 text-text-muted" />
         {imageSearchEnabled && <>
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" aria-label="ছবি দিয়ে পণ্য খুঁজুন" onChange={handleImageSelected} />
@@ -163,7 +170,8 @@ export default function SearchBox() {
           </button>
         </>}
         <input
-          type="search"
+          type="text"
+          inputMode="search"
           value={query}
           onChange={(event) => {
             setImageResultIds([]);
@@ -195,6 +203,7 @@ export default function SearchBox() {
             <X className="h-4 w-4" />
           </button>
         )}
+        {mobileExpanded && <button type="button" onClick={() => { setOpen(false); setMobileExpanded(false); }} aria-label="Search বন্ধ করুন" className="flex h-10 w-10 shrink-0 items-center justify-center text-text-muted hover:text-text md:hidden"><ChevronUp className="h-4 w-4" /></button>}
         <button
           type="button"
           onClick={handleSearch}
@@ -209,7 +218,7 @@ export default function SearchBox() {
           id={resultsId}
           role="listbox"
           aria-label="পণ্য খোঁজার ফলাফল"
-          className="absolute left-0 top-full z-50 mt-2 max-h-[min(28rem,70dvh)] w-full overflow-y-auto rounded-brand border border-border bg-surface p-1.5 text-text shadow-2xl"
+          className={`absolute z-50 mt-2 max-h-[min(28rem,70dvh)] overflow-y-auto rounded-brand border border-border bg-surface p-1.5 text-text shadow-2xl ${mobileExpanded ? "fixed left-2 top-[7.25rem] w-[calc(100vw-1rem)] md:absolute md:left-0 md:top-full md:w-full" : "left-0 top-full w-full"}`}
         >
           {loading && (
             <div className="flex items-center gap-3 px-3 py-4 text-sm text-text-muted">

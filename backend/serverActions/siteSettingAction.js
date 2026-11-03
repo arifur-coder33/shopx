@@ -129,14 +129,6 @@ export async function updateSiteAppearance(formData) {
     if (!siteName || siteName.length > 80) {
       throw new Error("Site name must be between 1 and 80 characters.");
     }
-    const seoTitle = clean(values.seoTitle);
-    const seoDescription = clean(values.seoDescription);
-    if (seoTitle.length > 160) {
-      throw new Error("SEO title cannot exceed 160 characters.");
-    }
-    if (seoDescription.length > 320) {
-      throw new Error("SEO description cannot exceed 320 characters.");
-    }
     const logoId = clean(values.logo);
     const faviconId = clean(values.favicon);
     const [logoMedia, faviconMedia] = await Promise.all([
@@ -152,8 +144,6 @@ export async function updateSiteAppearance(formData) {
 
     const data = {
       name: siteName,
-      seoTitle: seoTitle || null,
-      seoDescription: seoDescription || null,
       logo: logoMedia?.name ||
         (values.removeLogo === "true" ? null : existing?.logo || null),
       favicon: faviconMedia?.name ||
@@ -169,6 +159,8 @@ export async function updateSiteAppearance(formData) {
       darkText: color(values.darkText, "Dark text"),
       baseFontSize: boundedInteger(values.baseFontSize, "Base font size", 14, 20),
       borderRadius: boundedInteger(values.borderRadius, "Border radius", 0, 24),
+      navbarHeight: boundedInteger(values.navbarHeight, "Navbar height", 56, 160),
+      footerImageHeight: boundedInteger(values.footerImageHeight, "Footer image height", 40, 240),
       orderReconfirmEnabled: values.orderReconfirmEnabled === "true",
       orderReconfirmMessage: clean(values.orderReconfirmMessage).slice(0, 500) || null,
     };
