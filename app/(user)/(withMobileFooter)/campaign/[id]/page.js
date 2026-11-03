@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ImageCustomServer from "@/components/images/ImageCustomServer";
 import CampaignCountdown from "../CampaignCountdown";
-import { getPublicCampaignProducts, getPublicCampaigns } from "@/backend/services/campaignService";
+import { getPublicCampaignProducts } from "@/backend/services/campaignService";
 import CampaignProductsGrid from "./CampaignProductsGrid";
 
 export const dynamic = "force-static";
@@ -10,8 +10,9 @@ export const dynamicParams = true;
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const campaigns = await getPublicCampaigns();
-  return campaigns.map(({ id }) => ({ id }));
+  // Campaigns live in the production database, which may not be reachable
+  // during Vercel's build. Leave this dynamic route for on-demand ISR.
+  return [];
 }
 
 export default async function CampaignDetailPage({ params }) {
