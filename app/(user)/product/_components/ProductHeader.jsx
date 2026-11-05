@@ -1,25 +1,17 @@
 // NO "use client". This is a Server Component.
 import { getCheckoutProviders } from "@/backend/serverActions/providerConfigurationAction";
-import EMISection from "./EMI/EMISection";
 import ProductClientShell from "./ProductClientShell";
 import WishlistButton from "@/components/wishlist/WishlistButton";
 import WishlistHydrationSync from "@/components/wishlist/WishlistHydrationSync";
-import { Suspense } from "react";
 import ProductInitialImage from "./ProductInitialImage";
 import { CampaignOfferList } from "@/components/campaign/CampaignOfferList";
 import ProductStaticGallery from "./ProductStaticGallery";
 import ProductInfoServer from "./ProductInfoServer";
 import ProductShareButton from "@/components/products/ProductShareButton";
 
-async function ProductEmiAvailability() {
+export default async function ProductHeader({ data, imageProps, campaignOffers = [] }) {
   const providers = await getCheckoutProviders();
-  const sslActive = providers.gateways.some(
-    (provider) => provider.code === "SSLCOMMERZ",
-  );
-  return sslActive ? <EMISection /> : null;
-}
-
-export default function ProductHeader({ data, imageProps, campaignOffers = [] }) {
+  const emi = providers.gateways.find((provider) => provider.adapterKey === "SSLCOMMERZ" && provider.emi?.enabled)?.emi || null;
   const { title } = data;
   const variations = (data.variations || []).map((variation) => ({
     id: variation.id,
@@ -54,6 +46,7 @@ export default function ProductHeader({ data, imageProps, campaignOffers = [] })
   const regularPrice = regularPrices.length ? Math.min(...regularPrices) : 0;
   const discountPrice = salePrices.length ? Math.min(...salePrices) : 0;
   const clientData = {
+    emi,
     id: data.id,
     categoryId: data.categoryId,
     title,
@@ -103,7 +96,7 @@ export default function ProductHeader({ data, imageProps, campaignOffers = [] })
       </div>
     </div>
   );
-  const bottomComponent = <><CampaignOfferList campaigns={campaignOffers} title="এই পণ্যে চলমান অফার" /><Suspense fallback={null}><ProductEmiAvailability /></Suspense></>;
+  const bottomComponent = <CampaignOfferList campaigns={campaignOffers} title="এই পণ্যে চলমান অফার" />;
 
   return (
     <>

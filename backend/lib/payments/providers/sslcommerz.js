@@ -2,6 +2,8 @@
 
 import { getProviderBaseUrl } from "@/backend/config/providerEndpoints";
 import { getPaymentCallbackSiteUrl } from "@/lib/siteUrl";
+import prisma from "@/lib/prisma";
+import { isEmiEligible } from "@/lib/emi.mjs";
 
 /**
  * SSLCommerz hosted payment adapter.
@@ -48,10 +50,15 @@ export async function initiateSSLcommerzPayment({
     value_d: payment.order.id,
   };
   if (payment.paymentMethod === "EMI") {
+    const provider = await prisma.paymentGateway.findUnique({
+      where: { id: payment.paymentGatewayId },
+      select: { isActive: true, adapterKey: true, emiConfiguration: { include: { plans: { where: { isActive: true } } } } },
+    });
+    if (!provider?.isActive || provider.adapterKey !== "SSLCOMMERZ" || !isEmiEligible(provider.emiConfiguration, payment.amount)) throw new Error("EMI is unavailable for this payment amount.");
     // SSLCommerz renders its own eligible issuer/card and tenure chooser.
     // `emi_allow_only` keeps this session inside the hosted EMI card flow.
     data.emi_option = "1";
-    data.emi_max_inst_option = "9";
+    data.emi_max_inst_option = String(Math.max(...provider.emiConfiguration.plans.map((plan) => plan.tenureMonths)));
     data.emi_allow_only = "1";
   }
   const response = await fetch(

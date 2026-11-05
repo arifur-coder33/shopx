@@ -70,12 +70,12 @@ export default function ContentPagesManager({ initialPages }) {
           <span className="rounded-xl bg-primary-soft p-2.5 text-primary"><FileText size={23} /></span>
           <div>
             <h1 className="text-xl font-bold sm:text-2xl">Content pages</h1>
-            <p className="mt-1 text-sm text-text-muted">Edit public contact, return and privacy information without changing code.</p>
+            <p className="mt-1 text-sm text-text-muted">Edit public contact, return, privacy, terms and user data deletion information without changing code.</p>
           </div>
         </div>
       </header>
 
-      <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-surface p-2 sm:grid-cols-4" aria-label="Content page selection">
+      <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-surface p-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="Content page selection">
         {pages.map((page) => (
           <button
             key={page.slug}

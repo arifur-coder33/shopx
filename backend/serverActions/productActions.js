@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { revalidateCatalogPages } from "@/backend/utils/revalidateStorefront";
 import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
@@ -340,6 +341,7 @@ export async function createProductActions(formData) {
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidateTag(`product-${result.slug}`);
     console.log("Product created with variations:", result);
     return { success: true, data: result };
@@ -607,6 +609,7 @@ export async function createProductAction(formData) {
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidateTag(`product-${result.slug}`);
     console.log("Product created successfully:", result);
     return { success: true, data: result };
@@ -1446,6 +1449,7 @@ export async function updateProductActions({ id: productId, formData }) {
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidateTag(`product-${result.slug}`);
 
     return { success: true, data: result };
@@ -1640,6 +1644,7 @@ export async function updateProductActionOld({ id: productId, formData }) {
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidateTag(`product-${result.slug}`);
     console.log("Product updated successfully:", result);
     return { success: true, data: result };
@@ -2015,6 +2020,7 @@ export async function updateProductAction({ id: productId, formData }) {
     revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidateTag(`product-${result.slug}`);
 
     let successMessage = "Product updated successfully.";
@@ -2070,6 +2076,7 @@ export async function deleteProductById(productId) {
     revalidateTag(`product-${deletedProduct.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
 
     return { success: true, message: "Product deleted successfully." };
   } catch (error) {
@@ -2100,7 +2107,8 @@ export const updateProductStatus = async ({ id, value }) => {
     revalidatePath("/admin/product");
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateTag(`product-${id}`);
+    revalidateCatalogPages();
+    revalidateTag(`product-${data.slug}`);
 
     return { success: true, data };
   } catch (error) {

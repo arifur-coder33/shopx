@@ -392,6 +392,7 @@ export async function POST(request) {
               platform: "INSTAGRAM", commentId, pageId: String(entry.id),
               postId: value.media?.id || value.media_id || null,
               authorId, authorName: value.from?.username || value.from?.name || null,
+              authorUsername: value.from?.username || null,
               commentText,
               commentCreatedAt: commentCreatedAt && !Number.isNaN(commentCreatedAt.getTime()) ? commentCreatedAt : null,
             };

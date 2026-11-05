@@ -25,12 +25,16 @@ export default function BuyNowButton({
   let tooltipContent = "";
 
   // Priority 1: A selected variation is out of stock.
-  if (!product?.allowOutOfStockOrder && isVariationSelected && selectedVariation.stock <= 0) {
+  if (!product?.stockPending && !product?.allowOutOfStockOrder && isVariationSelected && selectedVariation.stock <= 0) {
     isDisabled = true;
     tooltipContent = "This variation is out of stock";
   }
   // Priority 2: A simple product (no variations) is out of stock.
-  else if (!product?.allowOutOfStockOrder && !hasVariations && product?.stock <= 0) {
+  else if (!product?.stockPending && !product?.allowOutOfStockOrder && !hasVariations && product?.stock <= 0) {
+    isDisabled = true;
+    tooltipContent = "Stock Out";
+  }
+  else if (!product?.stockPending && !product?.allowOutOfStockOrder && hasVariations && product.variations.every((variation) => variation.stock <= 0)) {
     isDisabled = true;
     tooltipContent = "Stock Out";
   }

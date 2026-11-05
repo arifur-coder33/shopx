@@ -566,6 +566,7 @@ model Shipping {
 }
 
 model PaymentGateway {
+  emiConfiguration     EmiConfiguration?
   id                   String        @id @default(cuid())
   name                 String
   code                 String        @unique
@@ -587,6 +588,30 @@ model PaymentGateway {
 
   @@index([isActive, sortOrder])
   @@index([moneyAccountId])
+}
+
+model EmiConfiguration {
+  id               String @id @default(cuid())
+  paymentGatewayId String @unique
+  paymentGateway   PaymentGateway @relation(fields: [paymentGatewayId], references: [id], onDelete: Cascade)
+  enabled          Boolean @default(false)
+  minimumAmount    Float @default(0)
+  plans            EmiBankPlan[]
+  updatedBy        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model EmiBankPlan {
+  id                 String @id @default(cuid())
+  emiConfigurationId String
+  emiConfiguration   EmiConfiguration @relation(fields: [emiConfigurationId], references: [id], onDelete: Cascade)
+  bankName           String
+  tenureMonths       Int
+  chargePercent      Float
+  isActive           Boolean @default(true)
+
+  @@unique([emiConfigurationId, bankName, tenureMonths])
 }
 
 model CourierProvider {

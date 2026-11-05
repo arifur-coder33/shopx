@@ -44,6 +44,8 @@ const refresh = (path) => {
   revalidatePath(path);
   revalidatePath("/admin/accounts");
   revalidatePath("/checkout");
+  revalidatePath("/buynow/[slug]", "page");
+  revalidatePath("/product/[slug]", "page");
   revalidatePath("/admin/orders");
   revalidateTag("checkout-providers");
 };
@@ -135,7 +137,7 @@ async function queryCheckoutProviders() {
   const gateways = await prisma.paymentGateway.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: { moneyAccount: true },
+    include: { moneyAccount: true, emiConfiguration: { include: { plans: { where: { isActive: true }, orderBy: [{ bankName: "asc" }, { tenureMonths: "asc" }] } } } },
   });
   const readyGateways = gateways.filter(
     (provider) => getProviderRuntimeConfiguration("gateway", provider).ready,
@@ -144,11 +146,16 @@ async function queryCheckoutProviders() {
     codEnabled: readyGateways.some((provider) => provider.adapterKey === "COD"),
     gateways: readyGateways
       .filter((provider) => provider.adapterKey !== "COD")
-      .map(({ id, name, code, adapterKey }) => ({
+      .map(({ id, name, code, adapterKey, emiConfiguration }) => ({
         id,
         name,
         code,
         adapterKey,
+        emi: adapterKey === "SSLCOMMERZ" && emiConfiguration ? {
+          enabled: emiConfiguration.enabled,
+          minimumAmount: emiConfiguration.minimumAmount,
+          plans: emiConfiguration.plans.map(({ bankName, tenureMonths, chargePercent, isActive }) => ({ bankName, tenureMonths, chargePercent, isActive })),
+        } : null,
       })),
   };
 }

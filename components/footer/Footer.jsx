@@ -144,6 +144,11 @@ export default async function Footer() {
                 রিটার্ন পলিসি
               </Link>
             </li>
+            <li>
+              <Link href="/terms-of-service" className="hover:text-white transition">
+                Terms of Service
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

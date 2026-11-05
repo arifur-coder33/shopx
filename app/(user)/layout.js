@@ -6,8 +6,6 @@ import { getPublicSocialTrackingSettings } from "@/backend/services/socialTracki
 import RouteViewTracker from "@/components/common/RouteViewTracker";
 import ChatWidgetLoader from "@/components/chat/ChatWidgetLoader";
 
-export const revalidate = 60;
-
 export default async function UserLayout({ children }) {
   const trackingSettings = await getPublicSocialTrackingSettings();
 

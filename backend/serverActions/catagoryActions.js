@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { revalidateCatalogPages } from "@/backend/utils/revalidateStorefront";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { cache } from "react";
 import { buildCategoryPath } from "../utils/buildCategoryPath";
@@ -82,6 +83,7 @@ export async function createCategoryAction(formData) {
     revalidatePath("/");
     revalidateTag("categories");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidatePath("/category/[...slug]", "page");
     return { success: true, data: { ...category, fullPath } };
   } catch (error) {
@@ -283,6 +285,7 @@ export async function updateCategoryAction({ formData, id }) {
     revalidatePath("/");
     revalidateTag("categories");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidatePath("/category/[...slug]", "page");
     return { success: true, data: { ...updateData, fullPath } };
   } catch (error) {
@@ -329,6 +332,7 @@ export async function deleteCategoryAction(id) {
     revalidatePath("/");
     revalidateTag("categories");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     return { success: true, data: "সফলভাবে delete হয়েছে।" };
   } catch (error) {
     return { success: false, error: error.message };

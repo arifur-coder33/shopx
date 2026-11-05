@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { cloudinaryUpload } from "@/backend/utils/cloudinary";
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const clean = (value, max) => String(value || "").trim().slice(0, max);
 const MAX_REVIEW_PHOTO_BYTES = 5 * 1024 * 1024;
@@ -135,6 +135,9 @@ export async function createCustomerProductReview(formData) {
     uploadedPublicId = null;
     revalidatePath("/my-account/review");
     revalidatePath(`/product/${created.product.slug}`);
+    revalidateTag("home-storefront");
+    revalidatePath("/");
+    revalidatePath("/category/[...slug]", "page");
     return { success: true, message: "Your product review has been submitted.", data: created };
   } catch (error) {
     if (uploadedPublicId) {

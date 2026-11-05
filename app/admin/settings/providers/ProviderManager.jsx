@@ -9,6 +9,7 @@ import {
   saveProviderConfiguration,
 } from "@/backend/serverActions/providerConfigurationAction";
 import Modal from "@/components/modal/Modal";
+import EmiSettingsModal from "./EmiSettingsModal";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { Copy, Eye, EyeOff, Plus, RefreshCw, Settings2, Trash2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -60,6 +61,7 @@ export default function ProviderManager({ kind, result }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [editing, setEditing] = useState(null);
+  const [emiProvider, setEmiProvider] = useState(null);
   const [addingManualCourier, setAddingManualCourier] = useState(false);
   const [visibleCredentials, setVisibleCredentials] = useState({});
   const [credentialValues, setCredentialValues] = useState({});
@@ -270,7 +272,7 @@ export default function ProviderManager({ kind, result }) {
                   <td className="p-3">{kind === "courier" ? (provider.readiness.supportsCod ? "Available" : "Not available") : provider.adapterKey === "COD" ? "Built in" : "—"}</td>
                   <td className="p-3">{provider.moneyAccount ? <>{provider.moneyAccount.name} · {provider.moneyAccount.type}{provider.adapterKey === "MANUAL" && <small className="block text-text-muted">Balance: ৳{Number(provider.moneyAccount.balance || 0).toLocaleString("en-BD")}</small>}</> : provider.readiness.moneyAccountRequired ? <span className="text-text-muted">Created when enabled</span> : <span className="text-text-muted">Not required</span>}</td>
                   <td className="p-3"><span className={provider.isActive ? "text-success" : "text-danger"}>{provider.isActive ? "ENABLED" : "DISABLED"}</span><small className="block text-text-muted">{provider.readiness.ready ? "Ready" : "Not ready"}</small></td>
-                  <td className="p-3"><div className="flex gap-2"><button disabled={!canUpdate} onClick={() => openEditor(provider)} className="button disabled:opacity-40"><Settings2 className="h-4 w-4" /> Configure</button>{kind === "courier" && provider.adapterKey === "MANUAL" && provider.code !== "MANUAL" && canDelete && <button type="button" title="Delete when balance and history are clear" onClick={() => removeManualCourier(provider)} className="button border-danger/30 text-danger"><Trash2 className="h-4 w-4" /></button>}</div></td>
+                  <td className="p-3"><div className="flex gap-2"><button disabled={!canUpdate} onClick={() => openEditor(provider)} className="button disabled:opacity-40"><Settings2 className="h-4 w-4" /> Configure</button>{kind === "gateway" && provider.adapterKey === "SSLCOMMERZ" && <button type="button" disabled={!canUpdate} onClick={() => setEmiProvider(provider)} className="button disabled:opacity-40">EMI settings</button>}{kind === "courier" && provider.adapterKey === "MANUAL" && provider.code !== "MANUAL" && canDelete && <button type="button" title="Delete when balance and history are clear" onClick={() => removeManualCourier(provider)} className="button border-danger/30 text-danger"><Trash2 className="h-4 w-4" /></button>}</div></td>
                 </tr>
               );
             })}
@@ -280,6 +282,7 @@ export default function ProviderManager({ kind, result }) {
       {!providers.length && <div className="card text-center text-text-muted">No registered provider records were found. Run the Prisma seed for this site.</div>}
       <Pagination pagination={result.pagination} path={copy.path} filters={filters} />
 
+      {emiProvider && <EmiSettingsModal provider={emiProvider} onClose={() => setEmiProvider(null)} onSaved={() => router.refresh()} />}
       <Modal isOpen={addingManualCourier} onClose={() => setAddingManualCourier(false)}>
         <form onSubmit={submitManualCourier} className="mx-auto max-w-2xl space-y-4">
           <div><h2 className="text-xl font-bold">Add manual courier</h2><p className="text-sm text-text-muted">This courier will appear by its name when booking an order. No API credentials are needed.</p></div>

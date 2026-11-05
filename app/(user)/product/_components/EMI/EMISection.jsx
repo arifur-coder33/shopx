@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { isEmiEligible } from "@/lib/emi.mjs";
 
 // 🔥 Lazy load modal
 const EMIModal = dynamic(() => import("./EMIModal"), {
@@ -11,8 +12,9 @@ const EMIModal = dynamic(() => import("./EMIModal"), {
   ),
 });
 
-export default function EMISection({ price = 132000 }) {
+export default function EMISection({ price, configuration }) {
   const [open, setOpen] = useState(false);
+  if (!isEmiEligible(configuration, price)) return null;
 
   return (
     <>
@@ -33,7 +35,7 @@ export default function EMISection({ price = 132000 }) {
       </div>
 
       {/* 🔥 Load only on click */}
-      {open && <EMIModal price={price} onClose={() => setOpen(false)} />}
+      {open && <EMIModal price={price} configuration={configuration} onClose={() => setOpen(false)} />}
     </>
   );
 }

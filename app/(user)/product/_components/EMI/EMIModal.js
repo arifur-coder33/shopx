@@ -1,467 +1,54 @@
 "use client";
 
-import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Modal from "@/components/modal/Modal";
+import { isEmiEligible } from "@/lib/emi.mjs";
 
-const emiData = [
-  {
-    name: "Standard Chartered Bank",
-    rates: {
-      3: 3.63,
-      6: 5.82,
-      9: 8.7,
-      12: 11.73,
-      18: 15.61,
-      24: 21.21,
-      36: 29.03,
-    },
-  },
-
-  {
-    name: "City Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      30: 19.76,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Eastern Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      30: 19.76,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "BRAC Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "Dutch Bangla Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Mutual Trust Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Southeast Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      30: 19.76,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Standard Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "NCC Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "NRB Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Meghna Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "Jamuna Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Midland Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "Bank Asia Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-    },
-  },
-
-  {
-    name: "Dhaka Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-    },
-  },
-
-  {
-    name: "SBAC Bank",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "LankaBangla Financial Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "NRB Commercial Bank",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "Shahjalal Islami Bank Limited (SJIBL)",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-    },
-  },
-
-  {
-    name: "United Commercial Bank (UCB)",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "Exim Bank",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "Prime Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-    },
-  },
-
-  {
-    name: "Al-Arafah Islami Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-    },
-  },
-
-  {
-    name: "Community Bank Bangladesh Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "One Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-    },
-  },
-
-  {
-    name: "Trust Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Mercantile Bank Limited",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-      18: 12.99,
-      24: 18.34,
-      30: 19.76,
-      36: 24.22,
-    },
-  },
-
-  {
-    name: "Premier Bank",
-    rates: {
-      3: 3.09,
-      6: 4.71,
-      9: 6.95,
-      12: 9.29,
-    },
-  },
-
-  {
-    name: "AB Bank Limited",
-    rates: {
-      3: 4.16,
-      6: 6.38,
-      9: 7.52,
-      12: 8.69,
-    },
-  },
-];
-
-const sortedEmiData = [...emiData].sort((a, b) => a.name.localeCompare(b.name));
-
-export default function EMIModal({ price, onClose }) {
-  const [selectedBank, setSelectedBank] = useState(emiData[0]);
+export default function EMIModal({ price, configuration, onClose }) {
+  const banks = useMemo(() => {
+    const grouped = new Map();
+    for (const plan of configuration?.plans || []) {
+      if (plan.isActive === false) continue;
+      const key = plan.bankName.toLowerCase();
+      if (!grouped.has(key)) grouped.set(key, { key, name: plan.bankName, plans: [] });
+      grouped.get(key).plans.push(plan);
+    }
+    return [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [configuration]);
+  const [selectedKey, setSelectedKey] = useState(banks[0]?.key);
   const [amount, setAmount] = useState(price);
-
+  const bank = banks.find((item) => item.key === selectedKey) || banks[0];
+  const eligible = isEmiEligible(configuration, amount);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
     };
-  }, []);
-
-  const calculate = (tenure, rate) => {
-    const total = amount + (amount * rate) / 100;
-    const monthly = total / tenure;
-    return { total, monthly };
-  };
-
-  return createPortal((
-    <div className="fixed inset-0 z-50 flex max-w-[100vw] items-center justify-center overflow-y-auto bg-black/40 p-2 sm:p-4">
-      <div className="flex h-[calc(100dvh-1rem)] max-h-[90vh] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-2xl bg-white sm:h-[90vh] sm:max-w-4xl">
-        {/* HEADER */}
-        <div className="flex justify-between items-center px-4 py-3 border-b bg-gray-50">
-          <h2 className="text-lg font-semibold">EMI Options</h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* BODY */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden sm:flex-row">
-          {/* LEFT BANK LIST (SCROLLABLE) */}
-          <div className="flex max-h-32 w-full shrink-0 gap-2 overflow-x-auto overflow-y-hidden border-b bg-gray-50 p-2 sm:max-h-none sm:w-[220px] sm:flex-col sm:space-y-2 sm:overflow-y-auto sm:overflow-x-hidden sm:border-b-0 sm:border-r">
-            {sortedEmiData.map((bank) => (
-              <div
-                key={bank.name}
-                onClick={() => setSelectedBank(bank)}
-                className={`flex min-w-[9rem] shrink-0 items-center gap-2 rounded-lg border p-2 text-left sm:min-w-0 ${
-                  selectedBank.name === bank.name
-                    ? "border-orange-400 bg-orange-50"
-                    : "bg-white hover:bg-gray-100"
-                }`}
-              >
-                {/* <div className="w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white text-xs">
-                  {bank.name[0]}
-                </div> */}
-                <p className="text-xs leading-tight">{bank.name}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* RIGHT SIDE */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {/* AMOUNT INPUT */}
-            <div className="p-3 border-b">
-              <p className="text-xs text-gray-500 mb-1">Enter Amount</p>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-
-            {/* TABLE (SCROLLABLE) */}
-            <div className="min-h-0 flex-1 overflow-auto">
-              <table className="w-full min-w-[30rem] text-xs">
-                <thead className="bg-gray-100 sticky top-0 z-10">
-                  <tr>
-                    <th className="p-2 text-left">Plan (Monthly)</th>
-                    <th className="p-2 text-left">EMI</th>
-                    <th className="p-2 text-left">Charge</th>
-                    <th className="p-2 text-left">Effective Cost</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {Object.entries(selectedBank.rates).map(([month, rate]) => {
-                    const { total, monthly } = calculate(Number(month), rate);
-
-                    return (
-                      <tr key={month} className="border-t hover:bg-gray-50">
-                        <td className="p-2">{month}</td>
-
-                        <td className="p-2">৳ {monthly.toFixed(2)}</td>
-
-                        <td className="p-2">{rate}%</td>
-
-                        <td className="p-2">৳ {total.toFixed(2)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* FOOTER NOTE */}
-            <div className="p-2 text-[11px] text-gray-500 text-center border-t">
-              EMI সুবিধা ক্রেডিট কার্ড কোম্পানির মাধ্যমে পরিচালিত হয়।
-            </div>
-          </div>
-        </div>
+  }, [onClose]);
+  return <Modal isOpen onClose={onClose}>
+    <h2 className="pr-12 text-lg font-bold">EMI plans</h2>
+    <div className="mt-4 flex max-h-[70dvh] min-h-0 flex-col gap-4 overflow-auto sm:flex-row">
+      <nav aria-label="EMI banks" className="flex shrink-0 gap-2 overflow-auto sm:w-48 sm:flex-col">
+        {banks.map((item) => <button type="button" key={item.key} onClick={() => setSelectedKey(item.key)} aria-pressed={item.key === bank?.key} className={`shrink-0 rounded-lg border p-3 text-left text-sm ${item.key === bank?.key ? "border-primary bg-primary-soft" : "border-border"}`}>{item.name}</button>)}
+      </nav>
+      <div className="min-w-0 flex-1 space-y-3">
+        <label className="grid gap-1 text-sm">Amount (৳)
+          <input type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2" />
+        </label>
+        <p className="text-xs text-text-muted">EMI eligible from ৳{Number(configuration.minimumAmount).toLocaleString("en-BD")}</p>
+        {!eligible ? <p className="text-sm text-text-muted">এই amount EMI-এর জন্য প্রযোজ্য নয়।</p> : <div className="overflow-x-auto"><table className="w-full min-w-[400px] text-sm">
+          <thead><tr className="text-left"><th className="p-2">Months</th><th className="p-2">Monthly estimate</th><th className="p-2">Total charge</th><th className="p-2">Estimated total</th></tr></thead>
+          <tbody>{[...(bank?.plans || [])].sort((a, b) => a.tenureMonths - b.tenureMonths).map((plan) => {
+            const total = Number(amount) * (1 + Number(plan.chargePercent) / 100);
+            return <tr key={plan.tenureMonths} className="border-t border-border"><td className="p-2">{plan.tenureMonths}</td><td className="p-2">৳{(total / plan.tenureMonths).toFixed(2)}</td><td className="p-2">{plan.chargePercent}%</td><td className="p-2">৳{total.toFixed(2)}</td></tr>;
+          })}</tbody>
+        </table></div>}
+        <p className="text-xs text-text-muted">এটি আনুমানিক হিসাব। চূড়ান্ত eligibility, charge ও কিস্তি SSLCommerz checkout এবং কার্ড ইস্যুকারী ব্যাংক নির্ধারণ করবে।</p>
       </div>
     </div>
-  ), document.body);
+  </Modal>;
 }

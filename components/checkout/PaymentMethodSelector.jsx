@@ -6,6 +6,7 @@ import CampaignCountdown from "@/app/(user)/(withMobileFooter)/campaign/Campaign
 import { getCampaignRuleText } from "@/components/campaign/campaignRuleText";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 import { useEffect, useState } from "react";
+import { isEmiEligible } from "@/lib/emi.mjs";
 
 const EMPTY_PROVIDERS = { codEnabled: false, gateways: [] };
 
@@ -129,6 +130,14 @@ export default function PaymentMethodSelector({
   ));
   const hasMinimumOption = hasProductPaymentRules && minimumAdvance > 0 && minimumAdvance < estimatedOrderTotal;
   useEffect(() => {
+    if (!selectedKey.endsWith(":EMI")) return;
+    const provider = providers.gateways.find((item) => `${item.id}:EMI` === selectedKey);
+    if (paymentPlan === "MINIMUM" || !isEmiEligible(provider?.emi, estimatedOrderTotal)) {
+      setSelectedKey("");
+      setPaymentSelection(null);
+    }
+  }, [selectedKey, providers.gateways, estimatedOrderTotal, paymentPlan, setPaymentSelection]);
+  useEffect(() => {
     if (hasProductPaymentRules) setMode("ONLINE");
   }, [hasProductPaymentRules]);
 
@@ -245,7 +254,7 @@ export default function PaymentMethodSelector({
                   provider.adapterKey || provider.code || "ONLINE",
                 ).toUpperCase();
                 const regularKey = `${provider.id}:ONLINE`;
-                const supportsEmi = code === "SSLCOMMERZ";
+                const supportsEmi = provider.adapterKey === "SSLCOMMERZ" && isEmiEligible(provider.emi, estimatedOrderTotal);
                 return (
                   <div key={provider.id} className="contents">
                     <PaymentCard

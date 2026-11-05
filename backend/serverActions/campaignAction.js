@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { revalidateCatalogPages } from "@/backend/utils/revalidateStorefront";
 import { hasPermission, getUserId } from "../utils/hasPermission";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
@@ -259,6 +260,7 @@ export async function saveCampaign(formData) {
     revalidatePath("/campaign/[id]", "page");
     revalidateTag("campaigns");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     revalidatePath("/category/[...slug]", "page");
     revalidatePath("/product/[slug]", "page");
     return { success: true, data: saved };
@@ -279,6 +281,7 @@ export async function deleteCampaign(id) {
     revalidatePath("/campaign/[id]", "page");
     revalidateTag("campaigns");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     return { success: true };
   } catch (error) { return resultError(error); }
 }
@@ -296,6 +299,7 @@ export async function setCampaignStatus(id, status) {
     revalidatePath("/campaign/[id]", "page");
     revalidateTag("campaigns");
     revalidateTag("home-storefront");
+    revalidateCatalogPages();
     return { success: true, data: campaign };
   } catch (error) { return resultError(error); }
 }

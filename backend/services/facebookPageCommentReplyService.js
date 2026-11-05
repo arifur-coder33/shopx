@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { generateFacebookCommentReply } from "@/backend/services/chat/aiReplyService";
+import { publicCommentReplyText } from "@/backend/utils/publicCommentMention.mjs";
 
 export async function saveFacebookPageComment({ commentId, pageId, postId, authorId, authorName, commentText, commentCreatedAt, platform = "FACEBOOK" }) {
   if (!commentId || !pageId || !commentText) return false;
@@ -112,7 +113,7 @@ export async function sendFacebookPageCommentPrivateReply({ id, message, credent
   }
 }
 
-export async function processFacebookPageComment({ commentId, pageId, postId, authorName, commentText, credentials, platform = "FACEBOOK" }) {
+export async function processFacebookPageComment({ commentId, pageId, postId, authorId = null, authorName, authorUsername = null, commentText, credentials, platform = "FACEBOOK" }) {
   const safePlatform = platform === "INSTAGRAM" ? "INSTAGRAM" : "FACEBOOK";
   const claimed = await prisma.facebookPageCommentReply.updateMany({
     where: { platform: safePlatform, commentId, status: "PENDING" },
@@ -120,11 +121,12 @@ export async function processFacebookPageComment({ commentId, pageId, postId, au
   });
   if (!claimed.count) return;
   try {
-    const reply = await generateFacebookCommentReply({ commentText, postId, authorName, platform: safePlatform });
-    if (!reply) {
+    const generatedReply = await generateFacebookCommentReply({ commentText, postId, authorName, platform: safePlatform, credentials });
+    if (!generatedReply) {
       await prisma.facebookPageCommentReply.update({ where: { platform_commentId: { platform: safePlatform, commentId } }, data: { status: "SKIPPED" } });
       return;
     }
+    const reply = publicCommentReplyText({ reply: generatedReply, platform: safePlatform, authorId, authorUsername });
     const version = credentials.graphApiVersion || process.env.META_GRAPH_API_VERSION;
     if (!credentials.messengerPageAccessToken || !(safePlatform === "INSTAGRAM" ? credentials.instagramAccountId : credentials.messengerPageId) || !/^v\d+\.\d+$/.test(version || "")) throw new Error("meta_comment_credentials_missing");
     const replyEdge = safePlatform === "INSTAGRAM" ? "replies" : "comments";

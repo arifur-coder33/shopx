@@ -1,4 +1,5 @@
 "use server";
+import { isEmiEligible } from "@/lib/emi.mjs";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
 import { postCodCollection } from "@/backend/services/paymentPostingService";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
@@ -537,6 +538,10 @@ export async function createOrder(formData) {
         throw new Error("এই পণ্যের minimum payment amount সঠিকভাবে সেট করা নেই।");
       }
       const initialPaymentAmount = paymentPlan === "MINIMUM" ? minimumPaymentAmount : totalAmount;
+      if (paymentMethod === "EMI") {
+        const emi = await tx.emiConfiguration.findUnique({ where: { paymentGatewayId: provider.id }, include: { plans: { where: { isActive: true } } } });
+        if (!isEmiEligible(emi, initialPaymentAmount)) throw new Error("EMI is disabled or this payable amount is below the configured EMI minimum.");
+      }
       const riskAssessment = assessOrderRisk({
         paymentMethod,
         orderAmount: totalAmount,
