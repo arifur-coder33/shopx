@@ -1495,6 +1495,33 @@ export async function updateUnconfirmedCustomerOrderAddress({
   }
 }
 
+export async function updateOrderAddressByAdmin({ orderId, deliveryAddress, city, thana }) {
+  try {
+    await hasPermission("order", "update");
+    const userId = await getUserId();
+    const address = String(deliveryAddress || "").trim();
+    const district = String(city || "").trim();
+    const area = String(thana || "").trim();
+    if (!orderId || !address || address.length > 500 || !district || district.length > 100 || !area || area.length > 100) {
+      throw new Error("ঠিকানা, জেলা ও থানা সঠিকভাবে দিন।");
+    }
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: String(orderId) }, include: { shipping: true, deliveries: { select: { id: true }, take: 1 } } });
+      if (!order) throw new Error("অর্ডার পাওয়া যায়নি।");
+      if (["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status) || order.shipping?.cn || order.deliveries.length) {
+        throw new Error("অর্ডার courier-এ পাঠানোর পর ঠিকানা পরিবর্তন করা যাবে না।");
+      }
+      await tx.order.update({ where: { id: order.id }, data: { deliveryAddress: address, city: district, thana: area } });
+      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: order.orderNo, status: order.status, title: "Admin updated delivery address", message: `ঠিকানা: ${address}, ${area}, ${district}`, createdBy: userId || "admin" } });
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath("/tracking");
+    return { success: true, message: "অর্ডারের ঠিকানা আপডেট হয়েছে।" };
+  } catch (error) {
+    return { success: false, message: error?.message || "ঠিকানা আপডেট করা যায়নি।" };
+  }
+}
+
 export async function changeFailedCustomerOrderToCod({ orderId }) {
   try {
     await hasPermission("order", "update");

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, MapPin } from "lucide-react";
+import { formatOrderAddress } from "@/lib/formatOrderAddress";
 import { useState } from "react";
 import CustomerOrderHistoryButton from "./CustomerOrderHistoryButton";
 import SteadfastFraudCheck from "./SteadfastFraudCheck";
@@ -44,7 +45,7 @@ export default function OrderRiskAssessment({ order }) {
   const originMapQuery = origin.latitude && origin.longitude
     ? `${origin.latitude},${origin.longitude}`
     : originName;
-  const deliveryName = [order?.deliveryAddress, order?.thana, order?.city].filter(Boolean).join(", ");
+  const deliveryName = formatOrderAddress(order || {});
   const normalizePlace = (value) => String(value || "").toLocaleLowerCase().replace(/[\s,.-]+/g, "").trim();
   const placeMatches = Boolean(origin.city && order?.city && (normalizePlace(origin.city).includes(normalizePlace(order.city)) || normalizePlace(order.city).includes(normalizePlace(origin.city))));
   const ip = String(order?.ipAddress || "").toLowerCase();

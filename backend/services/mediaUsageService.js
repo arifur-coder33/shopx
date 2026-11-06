@@ -64,7 +64,7 @@ export async function getMediaUsageIndex(media) {
     prisma.banner.findMany({ where: { thumbnailId: { in: ids } }, select: { id: true, name: true, thumbnailId: true } }),
     prisma.heroSlide.findMany({ where: { imageId: { in: ids } }, select: { id: true, title: true, imageId: true } }),
     prisma.supplierDocument.findMany({ where: { mediaId: { in: ids } }, select: { mediaId: true, supplier: { select: { id: true, companyName: true } } } }),
-    prisma.siteSetting.findMany({ where: { OR: [{ logo: { in: names } }, { favicon: { in: names } }] }, select: { id: true, logo: true, favicon: true } }),
+    prisma.siteSetting.findMany({ where: { OR: [{ logo: { in: names } }, { favicon: { in: names } }, { invoicePhoto: { in: names } }] }, select: { id: true, logo: true, favicon: true, invoicePhoto: true } }),
     prisma.campaign.findMany({ where: { bannerUrl: { in: names } }, select: { id: true, name: true, bannerUrl: true } }),
     prisma.contentPage.findMany({ where: { footerLogoId: { in: ids } }, select: { id: true, title: true, footerLogoId: true } }),
     prisma.photoReview.findMany({ where: { imageId: { in: ids } }, select: { id: true, imageId: true, customerName: true, product: { select: { title: true } } } }),
@@ -85,6 +85,7 @@ export async function getMediaUsageIndex(media) {
   for (const row of settings) {
     if (row.logo) addUsage(index, ids[names.indexOf(row.logo)], { section: "Site logo", title: "Site appearance", href: "/admin/settings/site-appearance" });
     if (row.favicon) addUsage(index, ids[names.indexOf(row.favicon)], { section: "Favicon", title: "Site appearance", href: "/admin/settings/site-appearance" });
+    if (row.invoicePhoto) addUsage(index, ids[names.indexOf(row.invoicePhoto)], { section: "Invoice photo", title: "Invoice shop details", href: "/admin/settings/site-appearance" });
   }
   for (const row of campaigns) addUsage(index, ids[names.indexOf(row.bannerUrl)], { section: "Campaign banner", title: row.name, href: `/admin/campaigns/${row.id}/edit` });
   for (const row of footerPages) addUsage(index, row.footerLogoId, { section: "Footer logo", title: row.title || "Footer content", href: "/admin/settings/content-pages" });

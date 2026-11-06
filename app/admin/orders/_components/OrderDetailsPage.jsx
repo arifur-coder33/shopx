@@ -20,6 +20,7 @@ import PaymentSummary from "./components/PaymentSummary";
 import CourierManagement from "./courier/CourierManagement";
 import OrderRiskAssessment from "./OrderRiskAssessment";
 import BanglaQrPaymentReview from "./BanglaQrPaymentReview";
+import AdminOrderAddressEditor from "./AdminOrderAddressEditor";
 
 // Server component ke lazy load kora hocche
 const OrderTimelineServer = dynamic(
@@ -160,6 +161,7 @@ export default function OrderDetailsPage({ order, children, shopName }) {
             <div className="hidden lg:block">
               <CustomerInfo customer={order} />
             </div>
+            <AdminOrderAddressEditor order={order} canUpdate={hasUIPermission(permissions, "order", "update")} />
 
             <AdminActions
               status={status}

@@ -825,6 +825,9 @@ model CourierPickupPoint {
 model SiteSetting {
   id                    String   @id @default(cuid())
   name                  String?
+  invoiceName           String?
+  invoiceAddress        String?
+  invoicePhoto          String?
   slogan                String?
   seoTitle              String?
   seoDescription        String?

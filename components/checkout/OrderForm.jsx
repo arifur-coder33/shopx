@@ -436,7 +436,7 @@ export default function OrderForm({
         if (initiationError) throw initiationError;
         if (initiated?.success && initiated.manualPayment) {
           setLoadingStep("order-complete");
-          window.location.replace(orderTrackingHref);
+          window.location.replace(`/payment/bangla-qr?o=${encodeURIComponent(createdOrder.orderNo)}&p=${encodeURIComponent(createdOrder.phoneNumber)}`);
           return;
         }
         if (!initiated?.success || !initiated.url) {

@@ -13,6 +13,7 @@ function invoiceCombinations(value) {
 }
 
 export async function getInvoiceTemplate(orderData) {
+  const company = orderData.invoiceCompany || {};
   const siteUrl = await getSiteUrl();
   // ১. QR কোড জেনারেট (Data URL)
   const invoiceLink = `${siteUrl}/api/pdf/invoice?o=${encodeURIComponent(orderData.orderNo)}&p=${encodeURIComponent(orderData.phoneNumber)}`;
@@ -36,8 +37,9 @@ export async function getInvoiceTemplate(orderData) {
   }
 
   // ৩. লোগো লোড করে Base64 এ কনভার্ট (নেটওয়ার্ক রিকোয়েস্ট এড়ানোর জন্য)
-  let logoSrc = "";
+  let logoSrc = company.photoDataUrl || "";
   try {
+    if (!logoSrc) {
     const logoPath = path.join(
       process.cwd(),
       "public",
@@ -46,6 +48,7 @@ export async function getInvoiceTemplate(orderData) {
     if (fs.existsSync(logoPath)) {
       const logoBase64 = fs.readFileSync(logoPath).toString("base64");
       logoSrc = `data:image/png;base64,${logoBase64}`;
+    }
     }
   } catch (err) {
     // ফলব্যাক যদি লোকাল লোগো না পাওয়া যায়
@@ -166,10 +169,10 @@ export async function getInvoiceTemplate(orderData) {
                 <div class="company-info">
                     <img src="${logoSrc}" class="logo" />
                     <div class="company-details">
-                        <h1>BD Mart 24</h1>
-                        <p>Uttara Dhaka, Bangladesh</p>
-                        <p>Phone: +880 1XXXXXXXXX</p>
-                        <p>Email: hello@bdmart24.com</p>
+                        <h1>${escapeHtml(company.name || process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop")}</h1>
+                        ${company.address ? `<p>${escapeHtml(company.address)}</p>` : ""}
+                        ${company.phone ? `<p>Phone: ${escapeHtml(company.phone)}</p>` : ""}
+                        ${company.email ? `<p>Email: ${escapeHtml(company.email)}</p>` : ""}
                     </div>
                 </div>
                 <div class="invoice-details">

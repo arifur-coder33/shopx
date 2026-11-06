@@ -2,58 +2,10 @@ import { addSiyamrupaliFont } from "@/app/fonts/Siyamrupali-normal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode"; // ১. QR কোড লাইব্রেরি ইমপোর্ট করুন
-const logoUrl = "/android-chrome-192x192.png"; // আপনার লোগোর পাথ
-const order = {
-  invoiceNumber: "INV-2025-0012",
-  date: "2025-12-12",
-  dueDate: "2026-01-12",
-  company: {
-    name: "BD Mart 24",
-    address: "Uttara Dhaka, Bangladesh",
-    phone: "+880 1XXXXXXXXX",
-    email: "hello@bdmart24.com",
-    website: "www.bdmart24.com",
-  },
-  billTo: {
-    name: "Md. Rahim",
-    address: "Uttara Dhaka, Bangladesh",
-    phone: "+880 17XXXXXXXX",
-    email: "rahim@example.com",
-  },
-  shipTo: {
-    name: "Md. Karim (Ship To)",
-    address: "Office 5B, Gulshan 1, Dhaka",
-    phone: "+880 18XXXXXXXX",
-    email: "karim.office@example.com",
-  },
-  items: [
-    {
-      name: "Paddy Cutter Machine",
-      description: "Model: PDX-100, Color: Red",
-      qty: 1,
-      price: 42000,
-    },
-    {
-      name: "High-Quality Engine Oil (5L)",
-      description: "Synthetic Blend for better performance",
-      qty: 2,
-      price: 1500,
-    },
-    {
-      name: "Delivery Charge",
-      description: "Inside Dhaka",
-      qty: 1,
-      price: 500,
-    },
-  ],
-  taxRate: 0.0,
-  shipping: 0,
-  notes:
-    "Thanks for your business! All products come with a 1-year service warranty.",
-  paymentMethod: "Cash on Delivery",
-};
+import { getInvoiceCompanySettings } from "@/backend/serverActions/siteSettingAction";
 
 export async function generateInvoicePDF({ actionType, orderData }) {
+  const company = await getInvoiceCompanySettings();
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -74,23 +26,29 @@ export async function generateInvoicePDF({ actionType, orderData }) {
   // --- লোগো লোড ফাংশন ---
   const addLogo = async () => {
     try {
-      const response = await fetch(logoUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      return new Promise((resolve) => {
-        reader.onload = function () {
-          doc.addImage(
-            reader.result,
-            "PNG",
-            marginX,
-            startY,
-            logoWidth,
-            logoHeight
-          );
-          resolve();
-        };
-        reader.readAsDataURL(blob);
-      });
+      let imageData = company.photoDataUrl;
+      if (!imageData) {
+        const response = await fetch("/android-chrome-192x192.png");
+        const blob = await response.blob();
+        imageData = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      }
+      let format = imageData.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+      if (!imageData.startsWith("data:image/png") && !imageData.startsWith("data:image/jpeg")) {
+        const image = new Image();
+        image.src = imageData;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        imageData = canvas.toDataURL("image/png");
+        format = "PNG";
+      }
+      doc.addImage(imageData, format, marginX, startY, logoWidth, logoHeight);
     } catch (error) {
       console.error("Error loading logo:", error);
     }
@@ -115,20 +73,17 @@ export async function generateInvoicePDF({ actionType, orderData }) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(primaryColor);
-  doc.text(order.company.name, companyInfoX, headerLeftY);
+  doc.text(company.name || "Shop", companyInfoX, headerLeftY);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(secondaryColor);
 
   headerLeftY += 6;
-  doc.text(order.company.address, companyInfoX, headerLeftY);
-  headerLeftY += 4;
-  doc.text(`Phone: ${order.company.phone}`, companyInfoX, headerLeftY);
-  headerLeftY += 4;
-  doc.text(`Email: ${order.company.email}`, companyInfoX, headerLeftY);
-  headerLeftY += 4;
-  doc.text(`Web: ${order.company.website}`, companyInfoX, headerLeftY);
+  if (company.address) { doc.text(company.address, companyInfoX, headerLeftY); headerLeftY += 4; }
+  if (company.phone) { doc.text(`Phone: ${company.phone}`, companyInfoX, headerLeftY); headerLeftY += 4; }
+  if (company.email) { doc.text(`Email: ${company.email}`, companyInfoX, headerLeftY); headerLeftY += 4; }
+  if (company.website) { doc.text(`Web: ${company.website}`, companyInfoX, headerLeftY); headerLeftY += 4; }
 
   // ইনভয়েস তথ্য (ডানে)
   let headerRightY = startY + 5;
@@ -382,7 +337,7 @@ export async function generateInvoicePDF({ actionType, orderData }) {
   doc.text("Thank you for doing business with us.", pageWidth / 2, footerY, {
     align: "center",
   });
-  doc.text(order.company.website, pageWidth / 2, footerY + 4, {
+  if (company.website) doc.text(company.website, pageWidth / 2, footerY + 4, {
     align: "center",
   });
 

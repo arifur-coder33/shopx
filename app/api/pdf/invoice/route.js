@@ -1,6 +1,7 @@
 import { getInvoiceTemplate } from "@/backend/lib/pdf/InvoiceTemplate";
 import { getInvoicePDF } from "@/backend/lib/pdf/invoiceGenerate";
 import prisma from "@/lib/prisma";
+import { getInvoiceCompanySettings } from "@/backend/serverActions/siteSettingAction";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -26,13 +27,14 @@ export async function GET(request) {
     const savedPhone = String(order?.phoneNumber || "").replace(/\D/gu, "");
     if (!order || savedPhone.length < 7 || savedPhone !== phone) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
+    const invoiceCompany = await getInvoiceCompanySettings();
     let pdf;
     try {
-      pdf = await getInvoicePDF({ ...order, tax: order.taxAmount || 0 });
+      pdf = await getInvoicePDF({ ...order, tax: order.taxAmount || 0, invoiceCompany });
     } catch (error) {
       // Keep the verified invoice readable if the PDF browser cannot start.
       console.error("Invoice PDF unavailable; rendering printable invoice:", error?.message);
-      const html = await getInvoiceTemplate({ ...order, tax: order.taxAmount || 0 });
+      const html = await getInvoiceTemplate({ ...order, tax: order.taxAmount || 0, invoiceCompany });
       const controls = '<style>@media print{.invoice-print{display:none}}.invoice-print{display:block;margin:16px auto;padding:12px 24px;cursor:pointer}</style><button class="invoice-print" onclick="window.print()">Print / Save PDF</button>';
       return new NextResponse(html.replace('</body>', `${controls}</body>`), {
         headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },

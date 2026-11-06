@@ -17,6 +17,7 @@ const logoByCode = {
   BKASH: "/images/payments/bkash.svg",
   NAGAD: "/images/payments/nagad.svg",
   ROCKET: "/images/payments/rocket.svg",
+  BANGLA_QR: "/images/payments/bangla-qr.svg",
   EMI: "/images/payments/emi.svg",
 };
 
@@ -262,7 +263,7 @@ export default function PaymentMethodSelector({
                       title={provider.name}
                       description={
                         provider.adapterKey === "BANGLA_QR"
-                          ? "Bangla QR স্ক্যান করে পেমেন্ট করুন; TrxID admin যাচাই করবেন"
+                          ? "QR scan করে payment করুন, তারপর TrxID দিন"
                           : supportsEmi
                           ? "কার্ড ও অন্যান্য অনলাইন পেমেন্ট"
                           : "নিরাপদ অনলাইন পেমেন্ট"

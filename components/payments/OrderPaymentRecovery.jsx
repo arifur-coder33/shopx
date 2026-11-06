@@ -1,7 +1,7 @@
 "use client";
 
 import { retryCustomerOrderPayment } from "@/backend/serverActions/paymentInitiationAction";
-import { cancelUnpaidCustomerOrder, submitBanglaQrTransaction, updateUnconfirmedCustomerOrderAddress } from "@/backend/serverActions/orderActions";
+import { cancelUnpaidCustomerOrder, updateUnconfirmedCustomerOrderAddress } from "@/backend/serverActions/orderActions";
 import { Ban, CreditCard, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -22,7 +22,6 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [showAddress, setShowAddress] = useState(false);
-  const [banglaQrTransactionId, setBanglaQrTransactionId] = useState("");
   const [addressForm, setAddressForm] = useState({
     deliveryAddress: order?.deliveryAddress || "",
     city: order?.city || "",
@@ -37,8 +36,6 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
 
   if (!localOrder) return null;
 
-  const qrConfiguration = localOrder.selectedPaymentGateway?.adapterKey === "BANGLA_QR" ? localOrder.selectedPaymentGateway.nonSecretConfig : null;
-  const qrPayment = localOrder.selectedPaymentGateway?.adapterKey === "BANGLA_QR" ? localOrder.payments?.find((payment) => payment.paymentGateway?.adapterKey === "BANGLA_QR" || payment.gateway === "BANGLA_QR") : null;
 
   const applyLocalChange = (changes) => {
     const next = { ...localOrder, ...changes };
@@ -66,15 +63,7 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
         return;
       }
       if (result.manualPayment) {
-        applyLocalChange({
-          paymentMethod: paymentSelection.paymentMethod,
-          paymentStatus: "PENDING",
-          selectedPaymentGateway: { adapterKey: "BANGLA_QR", nonSecretConfig: result.banglaQr },
-          payments: [{ id: result.paymentId, gateway: "BANGLA_QR", amount: localOrder.dueAmount, status: "PENDING", transactionId: null, paymentGateway: { adapterKey: "BANGLA_QR", nonSecretConfig: result.banglaQr } }, ...(localOrder.payments || [])],
-        });
-        setShowMethods(false);
-        setPaymentSelection(null);
-        toast.success("Bangla QR পেমেন্টের তথ্য দেখানো হচ্ছে।");
+        window.location.assign(`/payment/bangla-qr?o=${encodeURIComponent(localOrder.orderNo)}&p=${encodeURIComponent(localOrder.phoneNumber)}`);
         return;
       }
       applyLocalChange({ paymentMethod: paymentSelection.paymentMethod, paymentStatus: paymentSelection.paymentMethod === "COD" ? "UNPAID" : "PENDING" });
@@ -109,16 +98,6 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
     if (!result.success) return toast.error(result.message);
     applyLocalChange({ ...result.data, payments: result.data.banglaQrPaymentReset ? (localOrder.payments || []).map((payment) => payment.paymentGateway?.adapterKey === "BANGLA_QR" ? { ...payment, amount: result.data.dueAmount, transactionId: null } : payment) : localOrder.payments });
     setShowAddress(false);
-    toast.success(result.message);
-    router.refresh();
-  });
-
-  const submitQrTrxId = () => startTransition(async () => {
-    const result = await submitBanglaQrTransaction({ orderNo: localOrder.orderNo, phoneNumber: localOrder.phoneNumber, transactionId: banglaQrTransactionId });
-    if (!result.success) return toast.error(result.message);
-    const payments = (localOrder.payments || []).map((payment, index) => index === 0 ? { ...payment, transactionId: banglaQrTransactionId.trim(), status: "PENDING" } : payment);
-    applyLocalChange({ paymentStatus: "PENDING", payments });
-    setBanglaQrTransactionId("");
     toast.success(result.message);
     router.refresh();
   });
@@ -161,15 +140,6 @@ export default function OrderPaymentRecovery({ order, onChanged }) {
         <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
           এই অর্ডারটি বাতিল করা হয়েছে। নতুন পেমেন্ট করা যাবে না।
         </p>
-      )}
-
-      {localOrder.status === "PENDING" && qrConfiguration?.qrImageUrl && qrPayment && (
-        <div className="mt-4 grid gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:grid-cols-[180px_1fr]">
-          <div className="rounded-lg bg-white p-2">{/^https:\/\//u.test(qrConfiguration.qrImageUrl) && <img src={qrConfiguration.qrImageUrl} alt="Merchant Bangla QR" className="mx-auto aspect-square w-full max-w-44 object-contain" />}</div>
-          <div className="space-y-2"><h4 className="font-bold">Bangla QR দিয়ে পেমেন্ট</h4><p className="text-sm">৳{Number(qrPayment.amount || localOrder.dueAmount || 0).toLocaleString("en-BD")} · {qrConfiguration.bankName || "Merchant"} ({qrConfiguration.bankType === "MFS" ? "MFS" : "Bank"}) {qrConfiguration.merchantNumber ? `· ${qrConfiguration.merchantNumber}` : ""}</p><p className="text-sm text-text-muted">{qrConfiguration.instructions}</p>
-            {qrPayment.transactionId && qrPayment.status === "PENDING" ? <p className="rounded-lg bg-white p-3 text-sm">TrxID <strong className="font-mono">{qrPayment.transactionId}</strong> জমা হয়েছে। Admin payment যাচাই করছেন।</p> : <div className="flex flex-wrap gap-2"><input aria-label="Bangla QR transaction ID" maxLength={100} value={banglaQrTransactionId} onChange={(event) => setBanglaQrTransactionId(event.target.value)} placeholder="Payment TrxID" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2" /><button type="button" disabled={pending || banglaQrTransactionId.trim().length < 4} onClick={submitQrTrxId} className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white disabled:opacity-50">TrxID জমা দিন</button></div>}
-          </div>
-        </div>
       )}
 
       {showMethods && (canChangePayment || canPayNow) && (

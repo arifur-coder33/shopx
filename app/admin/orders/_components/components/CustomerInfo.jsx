@@ -1,4 +1,5 @@
 import { CreditCard, MapPin, Phone, User } from "lucide-react";
+import { formatOrderAddress } from "@/lib/formatOrderAddress";
 
 export default function CustomerInfo({ customer }) {
   return (
@@ -26,7 +27,7 @@ export default function CustomerInfo({ customer }) {
           <div>
             <p className="text-sm text-gray-500">Shipping Address</p>
             <p className="font-medium leading-snug">
-              {customer?.deliveryAddress},{customer?.thana} ,{customer?.city}
+              {formatOrderAddress(customer || {})}
             </p>
           </div>
         </div>

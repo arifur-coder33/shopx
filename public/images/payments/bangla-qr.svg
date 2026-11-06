@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 96" role="img" aria-label="Bangla QR">
+  <rect width="160" height="96" rx="14" fill="#fff"/>
+  <path d="M18 17h24v24H18zM23 22v14h14V22zM28 27h4v4h-4zM118 17h24v24h-24zM123 22v14h14V22zM128 27h4v4h-4zM18 55h24v24H18zM23 60v14h14V60zM28 65h4v4h-4z" fill="#087a4b"/>
+  <path d="M52 18h8v8h-8zm12 0h8v8h-8zm12 0h8v8h-8zm-24 12h8v8h-8zm12 0h8v8h-8zm24-6h8v8h-8zm12-6h8v8h-8zm-36 18h8v8h-8zm12 0h8v8h-8zm12 6h8v8h-8zm12-6h8v8h-8zM54 54h8v8h-8zm12 0h8v8h-8zm24 0h8v8h-8zm12 0h8v8h-8zm-36 12h8v8h-8zm12 0h8v8h-8zm24 0h8v8h-8zm12-12h8v8h-8zm0 20h8v8h-8z" fill="#087a4b"/>
+  <text x="80" y="92" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#087a4b">Bangla QR</text>
+</svg>

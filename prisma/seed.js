@@ -1,7 +1,24 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const DEFAULT_AI_REPLY_EXAMPLES = require("./seedData/aiReplyExamples.json");
 
 const prisma = new PrismaClient();
+
+async function seedAiTeachings() {
+  await prisma.chatSetting.upsert({
+    where: { id: "primary" },
+    update: {},
+    create: {
+      id: "primary",
+      aiReplyExamples: DEFAULT_AI_REPLY_EXAMPLES,
+      aiReplyTone: "একজন ভদ্র, বন্ধুসুলভ ও অভিজ্ঞ বাংলাদেশি অনলাইন শপ ওনারের মতো স্বাভাবিকভাবে উত্তর দেবে। কাস্টমার বাংলা বা Banglish-এ লিখলে অবশ্যই বাংলা অক্ষরে উত্তর দেবে, আর সম্পূর্ণ English-এ লিখলে English-এ উত্তর দেবে। উত্তর হবে সংক্ষিপ্ত, আন্তরিক ও প্রফেশনাল। প্রয়োজনমতো ভাইয়া/আপু সম্বোধন ও 😊❤️ ইমোজি ব্যবহার করবে। দাম, স্টক, ডেলিভারি বা অফার সম্পর্কে নিশ্চিত না হলে ভুল তথ্য দেবে না। কাস্টমারকে সুন্দরভাবে সাহায্য করবে এবং অর্ডার করতে উৎসাহিত করবে। উত্তর যেন রোবটের মতো না হয়ে একজন বাস্তব দোকানদারের মতো হয়।",
+      aiMaleAddressTerm: "ভাইয়া,sir,bhai",
+      aiFemaleAddressTerm: "আপু,ma'am,",
+      createdBy: "seed",
+      updatedBy: "seed",
+    },
+  });
+}
 
 async function seedFinanceProviders() {
   const {
@@ -300,6 +317,7 @@ async function main() {
   ====================== */
   await seedFinanceProviders();
   await seedSocialTrackingSettings();
+  await seedAiTeachings();
   await seedContentPages();
 
   console.log("✅ MASTER seed completed successfully");

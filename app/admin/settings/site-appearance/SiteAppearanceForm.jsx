@@ -136,6 +136,23 @@ export default function SiteAppearanceForm({ initialSettings }) {
         </section>
 
         <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+          <h2 className="text-lg font-bold">Invoice shop details</h2>
+          <p className="mb-4 text-sm text-text-muted">These details and the selected photo appear on customer and admin invoices.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-semibold">Invoice shop name
+              <input name="invoiceName" defaultValue={initialSettings.invoiceName} maxLength={100} required disabled={disabled} className={inputClass} placeholder="Shop name on invoice" />
+            </label>
+            <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Invoice address
+              <textarea name="invoiceAddress" defaultValue={initialSettings.invoiceAddress} maxLength={500} rows={3} disabled={disabled} className={inputClass} placeholder="Shop address on invoice" />
+            </label>
+            <div className="sm:col-span-2">
+              <FileInput name="invoicePhoto" label="Invoice photo / logo" recommendedSize="Square or landscape image" defaultValue={initialSettings.invoicePhotoMedia} w={144} h={112} />
+              {initialSettings.invoicePhoto && <p className="mt-2 text-xs text-text-muted">ছবি সরাতে নির্বাচিত ছবির X বাটনে চাপ দিন।</p>}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
           <h2 className="text-lg font-bold">Order success page</h2>
           <p className="mb-4 text-sm text-text-muted">Let customers reconfirm their order. Reconfirmation keeps the order status pending and records the customer response for staff.</p>
           <input type="hidden" name="orderReconfirmEnabled" value="false" />
