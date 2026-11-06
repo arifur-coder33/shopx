@@ -6,27 +6,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ProductPrice from "./ProductPrice";
 import BuyNowSection from "./BuyNowSection";
 import ProductVariationSelector from "./ProductVariationSelector"; // Your existing interactive component
+import { getProductLiveStock } from "@/backend/serverActions/productActions";
 
 export default function ProductInfoClient({ data: staticData, setActiveImageId, initialOptions }) {
   const [stockResult, setStockResult] = useState(null);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
     setStockResult(null);
-    fetch(`/api/products/${encodeURIComponent(staticData.id)}/stock`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Stock unavailable");
-        const result = await response.json();
-        if (!Array.isArray(result.variations)) throw new Error("Invalid stock response");
-        if (!controller.signal.aborted) setStockResult({ ...result, productId: staticData.id });
+    getProductLiveStock(staticData.id)
+      .then((result) => {
+        if (!result?.success || !Array.isArray(result.variations)) throw new Error("Stock unavailable");
+        if (active) setStockResult({ ...result, productId: staticData.id });
       })
       .catch(() => {
         // Stock refresh is silent; checkout still validates current inventory.
       });
-    return () => controller.abort();
+    return () => { active = false; };
   }, [staticData.id]);
 
   const stockReady = stockResult?.productId === staticData.id;

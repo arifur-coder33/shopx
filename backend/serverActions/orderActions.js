@@ -825,8 +825,16 @@ export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
   try {
     let finalOrderId = orderId;
 
-    // orderId না থাকলে orderNo + phoneNumber দিয়ে Order খুঁজবে
-    if (!finalOrderId) {
+    // Public tracking always requires the order's phone number, even when an ID is supplied.
+    if (finalOrderId) {
+      if (!phoneNumber) throw new Error("Order phone number is required");
+      const verifiedOrder = await prisma.order.findFirst({
+        where: { id: String(finalOrderId), phoneNumber: String(phoneNumber) },
+        select: { id: true },
+      });
+      if (!verifiedOrder) return { success: true, data: null };
+      finalOrderId = verifiedOrder.id;
+    } else {
       if (!orderNo || !phoneNumber) {
         throw new Error(
           "Either orderId or both orderNo and phoneNumber are required",

@@ -1,14 +1,11 @@
 import { userregistration } from "@/backend/serverActions/authActions";
-import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
-export async function GET(request) {
-  const allUsers = await prisma.user.findMany();
-
-  return new Response(JSON.stringify(allUsers), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+export async function GET() {
+  return Response.json(
+    { message: "Method not allowed" },
+    { status: 405, headers: { Allow: "POST" } },
+  );
 }
 
 export async function POST(request) {

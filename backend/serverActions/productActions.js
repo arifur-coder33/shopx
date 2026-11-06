@@ -21,6 +21,43 @@ import {
   parseProductVideosInput,
 } from "../utils/productVideos";
 
+export async function searchProductSuggestions(rawQuery) {
+  const query = String(rawQuery || "").trim().slice(0, 120);
+  if (!query) return { products: [], allProductIds: [] };
+  const matches = await findSearchProducts(
+    query,
+    { id: true, title: true, slug: true, thumbnail: { select: { name: true } } },
+    100,
+  );
+  return { products: matches.slice(0, 10), allProductIds: matches.map((product) => product.id) };
+}
+
+export async function getProductLiveStock(productId) {
+  const id = String(productId || "");
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) return { success: false, message: "Invalid product." };
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id },
+      select: {
+        isActive: true,
+        allowOutOfStockOrder: true,
+        variations: { select: { id: true, stocks: { select: { available: true } } } },
+      },
+    });
+    if (!product || product.isActive === false) return { success: false, message: "Product unavailable." };
+    return {
+      success: true,
+      allowOutOfStockOrder: Boolean(product.allowOutOfStockOrder),
+      variations: product.variations.map((variation) => ({
+        id: variation.id,
+        stock: variation.stocks.reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0),
+      })),
+    };
+  } catch {
+    return { success: false, message: "Could not check stock." };
+  }
+}
+
 function parseProductFulfillmentSettings(data) {
   const advancePaymentType = ["DELIVERY_FEE", "PARTIAL"].includes(data.advancePaymentType) ? data.advancePaymentType : "NONE";
   const advancePaymentValueType = data.advancePaymentValueType === "PERCENT" ? "PERCENT" : "FIXED";

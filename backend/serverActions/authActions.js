@@ -120,6 +120,7 @@ export async function userregistration(request) {
         name,
         phone,
       },
+      select: { id: true, email: true, name: true, phone: true },
     });
 
     return new Response(

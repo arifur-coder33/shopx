@@ -1,5 +1,7 @@
 "use server";
 
+import { createHash } from "node:crypto";
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { decryptProviderCredentials, encryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import { actionError, requireProcurementPermission } from "@/backend/utils/procurement";
@@ -23,10 +25,90 @@ import {
 import { getMediaUsageIndex, syncLegacyChatMedia } from "@/backend/services/mediaUsageService";
 import jwt from "jsonwebtoken";
 import { cloudinaryDestroy, cloudinaryUpload } from "@/backend/utils/cloudinary";
+import { sendChatPushNotification } from "@/backend/services/chatPushService";
+import { maybeSendChatAiReply } from "@/backend/services/chatAiReplyService";
 
 const SETTING_ID = "primary";
 const SECRET_KEYS = ["whatsappPhoneNumberId", "whatsappAccessToken", "messengerPageId", "messengerPageAccessToken", "instagramAccountId", "metaAppSecret", "webhookVerifyToken", "graphApiVersion", "tiktokBusinessId", "tiktokAccessToken", "tiktokClientKey", "tiktokClientSecret", "openaiApiKey", "googleAiStudioApiKey"];
 const trim = (value) => String(value ?? "").trim();
+
+const websiteOrderSelect = {
+  id: true, orderNo: true, customerName: true, orderPrice: true, status: true, createdAt: true,
+  orderItems: { select: { productName: true, quantity: true, price: true, thumbnail: true } },
+  timeline: { orderBy: { createdAt: "asc" }, take: 30, select: { status: true, title: true, message: true, location: true, createdAt: true } },
+};
+
+function toWebsitePublicOrder(order) {
+  return {
+    ...order,
+    createdAt: order.createdAt.toISOString(),
+    timeline: order.timeline.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })),
+  };
+}
+
+export async function lookupWebsiteChatOrdersAction({ orderNo, phone } = {}) {
+  const session = await auth();
+  try {
+    if (session?.user?.id) {
+      const orders = await prisma.order.findMany({
+        where: { userId: session.user.id }, orderBy: { createdAt: "desc" }, take: 20,
+        select: websiteOrderSelect,
+      });
+      return { success: true, authenticated: true, orders: orders.map(toWebsitePublicOrder) };
+    }
+    const safeOrderNo = String(orderNo || "").trim().slice(0, 40);
+    const safePhone = String(phone || "").replace(/\D/g, "").slice(0, 20);
+    if (!safeOrderNo || safePhone.length < 7) return { success: false, message: "Order number ও phone number দিন।" };
+    const order = await prisma.order.findUnique({ where: { orderNo: safeOrderNo }, select: { ...websiteOrderSelect, phoneNumber: true } });
+    const savedPhone = String(order?.phoneNumber || "").replace(/\D/g, "");
+    if (!order || savedPhone.length < 7 || savedPhone.slice(-10) !== safePhone.slice(-10)) {
+      return { success: false, message: "Order number বা phone number মেলেনি।" };
+    }
+    const safeOrder = { ...order };
+    delete safeOrder.phoneNumber;
+    return { success: true, authenticated: false, orders: [toWebsitePublicOrder(safeOrder)] };
+  } catch {
+    return { success: false, message: "Order খুঁজে পাওয়া যায়নি। আবার চেষ্টা করুন।" };
+  }
+}
+
+export async function shareWebsiteChatOrderAction({ token, orderId } = {}) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: "Order share করতে sign in করুন।" };
+  const safeToken = String(token || "");
+  const safeOrderId = String(orderId || "");
+  if (!/^[a-f0-9-]{36}$/i.test(safeToken) || !safeOrderId) return { success: false, message: "Order share request invalid." };
+  try {
+    const externalUserId = createHash("sha256").update(safeToken).digest("hex");
+    const [order, user, setting] = await Promise.all([
+      prisma.order.findFirst({ where: { id: safeOrderId, userId: session.user.id }, select: websiteOrderSelect }),
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, name: true, phone: true } }),
+      prisma.chatSetting.findUnique({ where: { id: "primary" }, select: { websiteChatEnabled: true } }),
+    ]);
+    if (setting?.websiteChatEnabled === false) return { success: false, message: "Website chat is currently unavailable." };
+    if (!order) return { success: false, message: "এই order আপনার account-এর নয়।" };
+    const conversation = await prisma.chatConversation.upsert({
+      where: { channel_externalUserId: { channel: "WEBSITE", externalUserId } },
+      create: { channel: "WEBSITE", externalUserId, customerName: user?.name || null, customerPhone: user?.phone || null, customerUserId: user?.id || null, lastMessageAt: new Date() },
+      update: { ...(user?.name && { customerName: user.name }), ...(user?.phone && { customerPhone: user.phone }), ...(user?.id && { customerUserId: user.id }), lastMessageAt: new Date(), status: "OPEN" },
+      select: { id: true },
+    });
+    const card = { id: order.id, orderNo: order.orderNo, status: order.status, orderPrice: order.orderPrice, createdAt: order.createdAt.toISOString(), orderItems: order.orderItems, events: order.timeline.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })) };
+    const [message] = await prisma.$transaction([
+      prisma.chatMessage.create({ data: { conversationId: conversation.id, channel: "WEBSITE", direction: "INBOUND", authorType: "CUSTOMER", content: `Customer shared order ${order.orderNo}`, deliveryStatus: "DELIVERED", metadata: { type: "ORDER_TIMELINE", order: card } } }),
+      prisma.chatConversation.update({ where: { id: conversation.id }, data: { lastMessageAt: new Date(), status: "OPEN", unreadCount: { increment: 1 } } }),
+    ]);
+    after(async () => {
+      await Promise.allSettled([
+        sendChatPushNotification({ conversationId: conversation.id, channel: "WEBSITE", customerName: user?.name, customerPhone: user?.phone, content: message.content, metadata: message.metadata }),
+        maybeSendChatAiReply(conversation.id, message.id),
+      ]);
+    });
+    return { success: true, messageId: message.id };
+  } catch {
+    return { success: false, message: "Order chat-এ পাঠানো যায়নি।" };
+  }
+}
 
 export async function getFacebookPageCommentsAction({ limit = 100 } = {}) {
   try {

@@ -2,6 +2,7 @@
 
 import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
+import { searchProductSuggestions } from "@/backend/serverActions/productActions";
 import { Camera, ChevronUp, Search, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -61,16 +62,12 @@ export default function SearchBox() {
       return;
     }
 
-    const controller = new AbortController();
+    let active = true;
     const delay = setTimeout(async () => {
-      setLoading(true);
+      if (active) setLoading(true);
       try {
-        const response = await fetch(
-          `/api/searchProduct?q=${encodeURIComponent(searchText)}`,
-          { signal: controller.signal },
-        );
-        if (!response.ok) throw new Error("Search request failed");
-        const data = await response.json();
+        const data = await searchProductSuggestions(searchText);
+        if (!active) return;
         setResults(data.products ?? []);
         setImageResultIds(data.allProductIds ?? (data.products || []).map((item) => item.id));
 
@@ -83,16 +80,16 @@ export default function SearchBox() {
           src: `/search?q=${encodeURIComponent(searchText)}`,
           extra: { search_string: searchText },
         });
-      } catch (error) {
-        if (error.name !== "AbortError") setResults([]);
+      } catch {
+        if (active) setResults([]);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (active) setLoading(false);
       }
     }, 180);
 
     return () => {
+      active = false;
       clearTimeout(delay);
-      controller.abort();
     };
   }, [query, imageResultIds.length, session?.user?.email, session?.user?.phone]);
 

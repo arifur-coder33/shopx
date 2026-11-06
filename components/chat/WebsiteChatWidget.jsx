@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, CheckCheck, CircleAlert, ImagePlus, LoaderCircle, MessageCircle, Minus, Plus, RotateCw, Send, X, ShoppingBag } from "lucide-react";
 import { normalizeChatText } from "@/lib/chatText";
+import { lookupWebsiteChatOrdersAction, shareWebsiteChatOrderAction } from "@/backend/serverActions/chatActions";
 
 const TOKEN_KEY = "storefront-chat-visitor";
 const PHONE_KEY = "storefront-chat-phone";
@@ -256,9 +257,8 @@ export default function WebsiteChatWidget() {
     if (ordersBusy) return;
     setOrdersBusy(true); setOrdersError(""); setOrders([]);
     try {
-      const response = await fetch("/api/chat/website/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderNo, phone: orderPhone }) });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.message || "Order পাওয়া যায়নি।");
+      const result = await lookupWebsiteChatOrdersAction({ orderNo, phone: orderPhone });
+      if (!result.success) throw new Error(result.message || "Order পাওয়া যায়নি।");
       setOrders(result.orders || []);
     } catch (lookupError) { setOrdersError(lookupError.message || "Order পাওয়া যায়নি।"); }
     finally { setOrdersBusy(false); }
@@ -280,9 +280,8 @@ export default function WebsiteChatWidget() {
     if (!identity || !token || sharingOrderId) return;
     setSharingOrderId(order.id); setOrderShareNotice(""); setOrdersError("");
     try {
-      const response = await fetch("/api/chat/website/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "share", token, orderId: order.id }) });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.message || "Order chat-এ পাঠানো যায়নি।");
+      const result = await shareWebsiteChatOrderAction({ token, orderId: order.id });
+      if (!result.success) throw new Error(result.message || "Order chat-এ পাঠানো যায়নি।");
       setOrderShareNotice(`${order.orderNo} chat-এ পাঠানো হয়েছে।`);
       await refreshMessages();
     } catch (shareError) { setOrdersError(shareError.message || "Order chat-এ পাঠানো যায়নি।"); }
