@@ -1,9 +1,11 @@
 # Manual Bangla QR payments
 
 The Prisma migration registers an inactive `BANGLA_QR` gateway. After deploying
-the migration, in Settings → Payment Gateways, configure the merchant's
-HTTPS QR image URL, merchant number/name and instructions, map its Money Account,
-then enable it. It becomes available at checkout only when the setup is ready.
+the migration, in Settings → Payment Gateways, upload the merchant's QR image
+from the media picker, enter the bank or MFS name and institution type, plus an
+optional merchant number and customer instructions, then enable the gateway.
+Enabling it creates or links a Payment Gateway money account named after the
+configured bank/MFS. It becomes available at checkout only when setup is ready.
 
 The customer scans the configured static Bangla QR, submits the TrxID from order
 tracking, and waits. An order admin can confirm or reject that submitted TrxID;

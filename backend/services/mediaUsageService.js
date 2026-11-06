@@ -56,7 +56,7 @@ export async function getMediaUsageIndex(media) {
   const index = new Map(ids.map((id) => [id, []]));
   if (!ids.length) return index;
 
-  const [categories, products, galleries, variations, banners, slides, documents, settings, campaigns, footerPages, photoReviews, chatMessages] = await Promise.all([
+  const [categories, products, galleries, variations, banners, slides, documents, settings, campaigns, footerPages, photoReviews, chatMessages, paymentGateways] = await Promise.all([
     prisma.category.findMany({ where: { OR: [{ thumbnailId: { in: ids } }, { bannerId: { in: ids } }] }, select: { id: true, name: true, thumbnailId: true, bannerId: true } }),
     prisma.product.findMany({ where: { thumbnailId: { in: ids } }, select: { id: true, title: true, thumbnailId: true } }),
     prisma.productGallery.findMany({ where: { mediaId: { in: ids } }, select: { mediaId: true, product: { select: { id: true, title: true } } } }),
@@ -69,6 +69,7 @@ export async function getMediaUsageIndex(media) {
     prisma.contentPage.findMany({ where: { footerLogoId: { in: ids } }, select: { id: true, title: true, footerLogoId: true } }),
     prisma.photoReview.findMany({ where: { imageId: { in: ids } }, select: { id: true, imageId: true, customerName: true, product: { select: { title: true } } } }),
     prisma.chatMessage.findMany({ where: { mediaId: { in: ids } }, select: { mediaId: true, conversationId: true, conversation: { select: { customerName: true, channel: true } } } }),
+    prisma.paymentGateway.findMany({ where: { adapterKey: "BANGLA_QR" }, select: { id: true, name: true, nonSecretConfig: true } }),
   ]);
 
   for (const row of categories) {
@@ -89,5 +90,6 @@ export async function getMediaUsageIndex(media) {
   for (const row of footerPages) addUsage(index, row.footerLogoId, { section: "Footer logo", title: row.title || "Footer content", href: "/admin/settings/content-pages" });
   for (const row of photoReviews) addUsage(index, row.imageId, { section: row.product ? "Product review photo" : "Site review photo", title: row.product?.title || row.customerName || "Photo review", href: "/admin/site-reviews" });
   for (const row of chatMessages) addUsage(index, row.mediaId, { section: "Chat message", title: `${row.conversation?.customerName || "Customer"} · ${row.conversation?.channel || "Chat"}`, href: `/admin/chat?conversation=${encodeURIComponent(row.conversationId)}` });
+  for (const row of paymentGateways) addUsage(index, row.nonSecretConfig?.qrImageMediaId, { section: "Bangla QR image", title: row.name, href: "/admin/settings/payment-gateways" });
   return index;
 }

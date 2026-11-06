@@ -80,6 +80,17 @@ async function ensureProviderMoneyAccount(
     const account = await tx.moneyAccount.findUnique({
       where: { id: requestedId },
     });
+    if (account && kind === "gateway" && provider.adapterKey === "BANGLA_QR") {
+      return tx.moneyAccount.update({
+        where: { id: account.id },
+        data: {
+          name: String(provider.nonSecretConfig?.bankName || provider.name),
+          type: "PAYMENT_GATEWAY",
+          isActive: true,
+          updatedBy: userId,
+        },
+      });
+    }
     if (account && !account.isActive) {
       return tx.moneyAccount.update({
         where: { id: account.id },
@@ -90,6 +101,9 @@ async function ensureProviderMoneyAccount(
   }
 
   const accountType = getProviderAccountType(kind, provider.adapterKey);
+  const accountName = kind === "gateway" && provider.adapterKey === "BANGLA_QR"
+    ? String(provider.nonSecretConfig?.bankName || provider.name)
+    : provider.name;
   const stableAccountNumber = `PROVIDER:${kind.toUpperCase()}:${provider.code}`;
   let account = await tx.moneyAccount.findFirst({
     where: { accountNumber: stableAccountNumber },
@@ -98,7 +112,7 @@ async function ensureProviderMoneyAccount(
   if (!account) {
     const exactMatches = await tx.moneyAccount.findMany({
       where: {
-        name: { equals: provider.name, mode: "insensitive" },
+        name: { equals: accountName, mode: "insensitive" },
         type: accountType,
       },
       take: 2,
@@ -111,7 +125,7 @@ async function ensureProviderMoneyAccount(
   if (!account) {
     account = await tx.moneyAccount.create({
       data: {
-        name: provider.name,
+        name: accountName,
         type: accountType,
         accountNumber: stableAccountNumber,
         isActive: true,
@@ -154,8 +168,9 @@ async function queryCheckoutProviders() {
         ...(adapterKey === "BANGLA_QR" && {
           banglaQr: {
             qrImageUrl: String(nonSecretConfig?.qrImageUrl || ""),
+            bankName: String(nonSecretConfig?.bankName || ""),
+            bankType: String(nonSecretConfig?.bankType || "BANK"),
             merchantNumber: String(nonSecretConfig?.merchantNumber || ""),
-            merchantName: String(nonSecretConfig?.merchantName || ""),
             instructions: String(nonSecretConfig?.instructions || "Bangla QR দিয়ে পেমেন্ট করে TrxID জমা দিন। Admin যাচাই করে payment confirm করবেন."),
           },
         }),
@@ -490,6 +505,26 @@ export async function saveProviderConfiguration(kind, formData) {
       adapterKey,
       values,
     );
+    if (adapterKey === "BANGLA_QR") {
+      nonSecretConfig.bankName = String(nonSecretConfig.bankName || "").trim();
+      nonSecretConfig.bankType = String(nonSecretConfig.bankType || "").toUpperCase();
+      if (!['BANK', 'MFS'].includes(nonSecretConfig.bankType)) {
+        return { success: false, message: "Bank type হিসেবে Bank বা MFS নির্বাচন করুন।" };
+      }
+      if (!nonSecretConfig.bankName || nonSecretConfig.bankName.length > 100) {
+        return { success: false, message: "Bank / MFS name দিতে হবে (সর্বোচ্চ ১০০ অক্ষর)।" };
+      }
+      const mediaId = String(nonSecretConfig.qrImageMediaId || "").trim();
+      const media = mediaId ? await prisma.media.findUnique({ where: { id: mediaId }, select: { id: true, url: true } }) : null;
+      if (!media) {
+        if (isActive) return { success: false, message: "Bangla QR gateway active করতে QR image upload করুন।" };
+        nonSecretConfig.qrImageUrl = "";
+        nonSecretConfig.qrImageMediaId = "";
+      } else {
+        nonSecretConfig.qrImageMediaId = media.id;
+        nonSecretConfig.qrImageUrl = media.url;
+      }
+    }
     if (adapterKey === "BANGLA_QR" && nonSecretConfig.qrImageUrl) {
       let qrImageUrl;
       try { qrImageUrl = new URL(String(nonSecretConfig.qrImageUrl).trim()); } catch { qrImageUrl = null; }

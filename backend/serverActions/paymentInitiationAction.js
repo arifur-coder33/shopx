@@ -42,8 +42,9 @@ export async function initiateConfiguredPayment(paymentId) {
         manualPayment: true,
         banglaQr: {
           qrImageUrl: providerConfiguration.config.qrImageUrl,
+          bankName: providerConfiguration.config.bankName,
+          bankType: providerConfiguration.config.bankType,
           merchantNumber: providerConfiguration.config.merchantNumber,
-          merchantName: providerConfiguration.config.merchantName,
           instructions: providerConfiguration.config.instructions,
         },
       };

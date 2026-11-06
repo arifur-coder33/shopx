@@ -49,16 +49,18 @@ const DEFINITIONS = {
       ],
     },
     BANGLA_QR: {
-      label: "Bangla QR (Manual confirmation)",
+      label: "Bangla QR",
       code: "BANGLA_QR",
       integrationAvailable: true,
       accountPolicy: "ALWAYS",
       accountType: "PAYMENT_GATEWAY",
       credentials: [],
       config: [
-        { key: "qrImageUrl", label: "Merchant Bangla QR image URL", type: "text", required: true, defaultValue: "" },
-        { key: "merchantNumber", label: "Merchant account / number", type: "text", required: true, defaultValue: "" },
-        { key: "merchantName", label: "Merchant name", type: "text", defaultValue: "" },
+        { key: "qrImageMediaId", label: "Bangla QR image", type: "media", required: true, defaultValue: "" },
+        { key: "bankName", label: "Bank / MFS name", type: "text", required: true, defaultValue: "" },
+        { key: "bankType", label: "Institution type", type: "select", required: true, defaultValue: "BANK", options: [{ value: "BANK", label: "Bank" }, { value: "MFS", label: "Mobile Financial Service (MFS)" }] },
+        { key: "qrImageUrl", label: "QR image URL", type: "derived", required: true, defaultValue: "" },
+        { key: "merchantNumber", label: "Merchant account / number", type: "text", required: false, defaultValue: "" },
         { key: "instructions", label: "Customer payment instructions", type: "text", defaultValue: "Bangla QR দিয়ে পেমেন্ট করে TrxID জমা দিন। Admin যাচাই করে payment confirm করবেন।" },
       ],
     },
@@ -405,13 +407,14 @@ export function getPublicAdapterDefinitions(kind) {
       secret: secret !== false,
     })),
     configFields: definition.config.map(
-      ({ key: fieldKey, label, type, defaultValue, trueLabel, falseLabel }) => ({
+      ({ key: fieldKey, label, type, defaultValue, trueLabel, falseLabel, options }) => ({
         key: fieldKey,
         label,
         type: type || "text",
         defaultValue: defaultValue || "",
         trueLabel,
         falseLabel,
+        options,
       }),
     ),
   }));

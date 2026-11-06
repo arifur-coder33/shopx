@@ -9,6 +9,7 @@ import {
   saveProviderConfiguration,
 } from "@/backend/serverActions/providerConfigurationAction";
 import Modal from "@/components/modal/Modal";
+import FileInput from "@/components/input/FileInput";
 import EmiSettingsModal from "./EmiSettingsModal";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { Copy, Eye, EyeOff, Plus, RefreshCw, Settings2, Trash2, X } from "lucide-react";
@@ -363,8 +364,12 @@ export default function ProviderManager({ kind, result }) {
               <section className="space-y-3 rounded-brand border border-border p-3">
                 <h3 className="font-bold">Provider configuration</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {selectedDefinition.configFields.map((config) => (
-                    <label key={config.key} className="grid gap-1 text-sm font-semibold">{config.label}{config.type === "boolean" ? <select className={field} name={`config_${config.key}`} defaultValue={String(editing.nonSecretConfig?.[config.key] ?? config.defaultValue)}><option value="true">{config.trueLabel || "Yes"}</option><option value="false">{config.falseLabel || "No"}</option></select> : <input className={field} type={config.type === "number" ? "number" : "text"} min={config.type === "number" ? "0" : undefined} step={config.type === "number" ? "0.01" : undefined} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue} />}</label>
+                  {selectedDefinition.configFields.map((config) => config.type === "derived" ? null : config.type === "media" ? (
+                    <div key={config.key} className="sm:col-span-2">
+                      <FileInput name={`config_${config.key}`} label={config.label} defaultValue={editing.nonSecretConfig?.[config.key] ? [{ id: editing.nonSecretConfig[config.key], name: editing.nonSecretConfig.qrImageUrl, displayName: "Bangla QR" }] : undefined} w={160} h={160} />
+                    </div>
+                  ) : (
+                    <label key={config.key} className="grid gap-1 text-sm font-semibold">{config.label}{config.type === "boolean" ? <select className={field} name={`config_${config.key}`} defaultValue={String(editing.nonSecretConfig?.[config.key] ?? config.defaultValue)}><option value="true">{config.trueLabel || "Yes"}</option><option value="false">{config.falseLabel || "No"}</option></select> : config.type === "select" ? <select className={field} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue}>{(config.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input className={field} type={config.type === "number" ? "number" : "text"} min={config.type === "number" ? "0" : undefined} step={config.type === "number" ? "0.01" : undefined} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue} />}</label>
                   ))}
                 </div>
               </section>
