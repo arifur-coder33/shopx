@@ -1,5 +1,7 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
 import {
   decryptSocialSecrets,
   encryptSocialSecrets,
@@ -52,6 +54,8 @@ export async function getSocialTrackingConfiguration() {
       success: true,
       data: {
         ...settings,
+        productFeedUsername: clean(record?.productFeedUsername),
+        productFeedCredentialsConfigured: Boolean(record?.productFeedUsername && record?.productFeedPasswordHash),
         configuredSecrets: Object.fromEntries(
           SOCIAL_SECRET_FIELDS.map((key) => [key, Boolean(clean(savedSecrets[key]))]),
         ),
@@ -107,6 +111,27 @@ export async function saveSocialTrackingConfiguration(formData) {
       clarityProjectId: validatePublicId(values.clarityProjectId, "Clarity Project ID"),
       tiktokPixelId: validatePublicId(values.tiktokPixelId, "TikTok Pixel ID"),
     };
+    const productFeedUsername = clean(values.productFeedUsername);
+    const productFeedPassword = clean(values.productFeedPassword);
+    let productFeedPasswordHash = existing?.productFeedPasswordHash || null;
+    if (productFeedUsername && !/^[A-Za-z0-9._-]{3,64}$/u.test(productFeedUsername)) {
+      throw new Error("Product feed username 3–64 characters হতে হবে (letters, numbers, ., _, -)।");
+    }
+    if (!productFeedUsername && (productFeedPassword || productFeedPasswordHash)) {
+      throw new Error("Password ব্যবহার করতে product feed username-ও দিতে হবে।");
+    }
+    if (!productFeedUsername && !productFeedPasswordHash) {
+      // Leave feeds closed until credentials are created.
+    } else if (!productFeedUsername) {
+      throw new Error("Product feed username খালি রাখা যাবে না।");
+    }
+    if (productFeedPassword) {
+      if (productFeedPassword.length < 12 || productFeedPassword.length > 128) {
+        throw new Error("Product feed password 12–128 characters হতে হবে।");
+      }
+      productFeedPasswordHash = await bcrypt.hash(productFeedPassword, 12);
+    }
+    if (productFeedUsername && !productFeedPasswordHash) throw new Error("Product feed-এর জন্য password সেট করুন বা generate করুন।");
     const serviceAccountJson = clean(nextSecrets.googleAnalyticsServiceAccountJson);
     if (serviceAccountJson) {
       let serviceAccount;
@@ -131,6 +156,8 @@ export async function saveSocialTrackingConfiguration(formData) {
       where: { id: SOCIAL_TRACKING_SETTING_ID },
       update: {
         ...publicData,
+        productFeedUsername,
+        productFeedPasswordHash,
         encryptedSecrets,
         ...(secretsChanged && { secretsUpdatedAt: new Date() }),
         updatedBy: userId,
@@ -138,6 +165,8 @@ export async function saveSocialTrackingConfiguration(formData) {
       create: {
         id: SOCIAL_TRACKING_SETTING_ID,
         ...publicData,
+        productFeedUsername,
+        productFeedPasswordHash,
         encryptedSecrets,
         ...(encryptedSecrets && { secretsUpdatedAt: new Date() }),
         createdBy: userId,
@@ -151,5 +180,23 @@ export async function saveSocialTrackingConfiguration(formData) {
     return { success: true, message: "Social tracking settings updated." };
   } catch (error) {
     return actionError(error, "Failed to update social tracking settings.");
+  }
+}
+
+export async function generateProductFeedCredentials() {
+  try {
+    const userId = await requireProcurementPermission("socialTracking", "update");
+    const username = `catalog_${randomBytes(6).toString("hex")}`;
+    const password = randomBytes(24).toString("base64url");
+    const productFeedPasswordHash = await bcrypt.hash(password, 12);
+    await prisma.socialTrackingSetting.upsert({
+      where: { id: SOCIAL_TRACKING_SETTING_ID },
+      update: { productFeedUsername: username, productFeedPasswordHash, updatedBy: userId },
+      create: { id: SOCIAL_TRACKING_SETTING_ID, productFeedUsername: username, productFeedPasswordHash, createdBy: userId, updatedBy: userId },
+    });
+    revalidatePath("/admin/settings/social-tracking");
+    return { success: true, message: "নতুন feed login তৈরি হয়েছে। Password এখনই কপি করে রাখুন।", data: { username, password } };
+  } catch (error) {
+    return actionError(error, "Product feed credentials generate করা যায়নি।");
   }
 }

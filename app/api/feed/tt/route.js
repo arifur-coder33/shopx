@@ -1,8 +1,13 @@
 import { getProductsForFeed } from "@/backend/lib/feed/getProductsForFeed";
 import { socialFormatProducts } from "@/backend/lib/feed/socialFormatProducts";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import { authorizeProductFeed, protectedFeedResponse } from "@/backend/services/productFeedAuth";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request) {
+  const authError = await authorizeProductFeed(request);
+  if (authError) return authError;
   const [products, identity] = await Promise.all([
     getProductsForFeed(),
     getPublicSiteIdentity(),
@@ -73,10 +78,10 @@ export async function GET(request) {
 
   const utf8BOM = "\uFEFF";
 
-  return new Response(utf8BOM + csvContent, {
+  return protectedFeedResponse(new Response(utf8BOM + csvContent, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": "attachment; filename=tiktok_product_feed.csv",
     },
-  });
+  }));
 }

@@ -2,9 +2,14 @@ import prisma from "@/lib/prisma";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
 import { htmlToText } from "html-to-text";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import { authorizeProductFeed, protectedFeedResponse } from "@/backend/services/productFeedAuth";
+
+export const dynamic = "force-dynamic";
 
 
 export async function GET(req) {
+  const authError = await authorizeProductFeed(req);
+  if (authError) return authError;
   const [products, identity] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true }, // Only include active products
@@ -56,10 +61,10 @@ export async function GET(req) {
   const csvWithBOM = utf8BOM + csvContent;
 
   // Create a Response object with the CSV content
-  return new Response(csvWithBOM, {
+  return protectedFeedResponse(new Response(csvWithBOM, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": "attachment; filename=google-merchant-feed.csv",
     },
-  });
+  }));
 }

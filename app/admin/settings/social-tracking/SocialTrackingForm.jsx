@@ -1,11 +1,12 @@
 "use client";
 
 import {
+  generateProductFeedCredentials,
   revealSocialTrackingSecret,
   saveSocialTrackingConfiguration,
 } from "@/backend/serverActions/socialTrackingAction";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { Check, Copy, Eye, EyeOff, KeyRound, Save } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, RefreshCw, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -240,6 +241,9 @@ export default function SocialTrackingForm({ initialSettings, sitemapUrl, produc
   const { data: session, status } = useSession();
   const [pending, startTransition] = useTransition();
   const [secretValues, setSecretValues] = useState({});
+  const [feedUsername, setFeedUsername] = useState(initialSettings.productFeedUsername || "");
+  const [feedPassword, setFeedPassword] = useState("");
+  const [generatedFeedCredentials, setGeneratedFeedCredentials] = useState(null);
   const canUpdate = hasUIPermission(
     session?.user?.permissions || [],
     "socialTracking",
@@ -257,6 +261,26 @@ export default function SocialTrackingForm({ initialSettings, sitemapUrl, produc
       setSecretValues({});
       router.refresh();
     });
+  };
+
+  const generateFeedCredentials = () => startTransition(async () => {
+    const result = await generateProductFeedCredentials();
+    if (!result.success) return toast.error(result.message);
+    setFeedUsername(result.data.username);
+    setFeedPassword(result.data.password);
+    setGeneratedFeedCredentials(result.data);
+    toast.success(result.message);
+    router.refresh();
+  });
+
+  const copyFeedCredentials = async () => {
+    if (!generatedFeedCredentials) return;
+    try {
+      await navigator.clipboard.writeText(`Username: ${generatedFeedCredentials.username}\nPassword: ${generatedFeedCredentials.password}`);
+      toast.success("Feed login কপি হয়েছে।");
+    } catch {
+      toast.error("কপি করা যায়নি; credentials manually কপি করুন।");
+    }
   };
 
   return (
@@ -352,6 +376,20 @@ export default function SocialTrackingForm({ initialSettings, sitemapUrl, produc
             </section>
           );
         })}
+
+        <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div><h2 className="text-lg font-bold text-text">Product feed login</h2><p className="mt-1 text-sm text-text-muted">সব product feed URL Basic Auth দিয়ে সুরক্ষিত। Meta Commerce Manager-এর Login details-এ এখানকার username ও password দিন।</p><p className={`mt-2 text-sm font-semibold ${initialSettings.productFeedCredentialsConfigured ? "text-emerald-700" : "text-amber-700"}`}>{initialSettings.productFeedCredentialsConfigured ? "Feed protection active" : "Login এখনো তৈরি হয়নি; feed access 401 দিয়ে বন্ধ থাকবে"}</p></div>
+            <button type="button" onClick={generateFeedCredentials} disabled={disabled} className="inline-flex items-center gap-2 rounded-xl border border-primary px-3 py-2 text-sm font-semibold text-primary disabled:opacity-50"><RefreshCw className="h-4 w-4" /> Generate login</button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-semibold">Username<input name="productFeedUsername" value={feedUsername} onChange={(event) => setFeedUsername(event.target.value)} maxLength={64} autoComplete="off" disabled={disabled} className={inputClass} placeholder="Feed username" /></label>
+            <label className="grid gap-1.5 text-sm font-semibold">Password<input name="productFeedPassword" type="password" value={feedPassword} onChange={(event) => { setFeedPassword(event.target.value); setGeneratedFeedCredentials(null); }} maxLength={128} autoComplete="new-password" disabled={disabled} className={inputClass} placeholder={initialSettings.productFeedCredentialsConfigured ? "Configured — leave blank to keep, or enter a new password" : "Set a password (12+ characters)"} /></label>
+          </div>
+          <p className="mt-2 text-xs text-text-muted">Password database-এ hash আকারে রাখা হয়, আগের password দেখা যাবে না। Generate login করলে পুরোনো credentials তাৎক্ষণিকভাবে বাতিল হবে।</p>
+          {generatedFeedCredentials && <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950"><div className="flex flex-wrap items-center justify-between gap-2"><strong>নতুন login তৈরি হয়েছে — এখনই কপি করুন</strong><button type="button" onClick={copyFeedCredentials} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-700 px-3 py-1.5 text-xs font-semibold"><Copy className="h-3.5 w-3.5" /> Copy credentials</button></div><p className="mt-2 break-all">Username: <code>{generatedFeedCredentials.username}</code></p><p className="break-all">Password: <code>{generatedFeedCredentials.password}</code></p></div>}
+          <div className="mt-4 grid gap-2 text-xs text-text-muted sm:grid-cols-3"><code className="break-all">{productFeedUrls.facebook}</code><code className="break-all">{productFeedUrls.google}</code><code className="break-all">{productFeedUrls.tiktok}</code></div>
+        </section>
 
         <div className="sticky bottom-3 z-10 flex justify-end rounded-2xl border border-border bg-surface/95 p-3 shadow-lg backdrop-blur">
           <button

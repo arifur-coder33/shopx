@@ -652,6 +652,8 @@ model SocialTrackingSetting {
   googleAnalyticsPropertyId String?
   clarityProjectId          String?
   tiktokPixelId             String?
+  productFeedUsername       String?
+  productFeedPasswordHash   String?
   encryptedSecrets          String?
   secretsUpdatedAt          DateTime?
   createdAt                 DateTime  @default(now())

@@ -1,6 +1,9 @@
 import { getProductsForFeed } from "@/backend/lib/feed/getProductsForFeed";
 import { socialFormatProducts } from "@/backend/lib/feed/socialFormatProducts";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import { authorizeProductFeed, protectedFeedResponse } from "@/backend/services/productFeedAuth";
+
+export const dynamic = "force-dynamic";
 
 function escapeXml(str = "") {
   return String(str)
@@ -12,6 +15,8 @@ function escapeXml(str = "") {
 }
 
 export async function GET(request) {
+  const authError = await authorizeProductFeed(request);
+  if (authError) return authError;
   const [products, identity] = await Promise.all([
     getProductsForFeed(),
     getPublicSiteIdentity(),
@@ -75,10 +80,10 @@ export async function GET(request) {
   </channel>
 </rss>`;
 
-  return new Response(xml, {
+  return protectedFeedResponse(new Response(xml, {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
       "Content-Disposition": "attachment; filename=google_product_feed.xml",
     },
-  });
+  }));
 }
