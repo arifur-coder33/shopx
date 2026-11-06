@@ -19,6 +19,7 @@ import OrderTimelineClient from "./components/OrderTimelineClient";
 import PaymentSummary from "./components/PaymentSummary";
 import CourierManagement from "./courier/CourierManagement";
 import OrderRiskAssessment from "./OrderRiskAssessment";
+import BanglaQrPaymentReview from "./BanglaQrPaymentReview";
 
 // Server component ke lazy load kora hocche
 const OrderTimelineServer = dynamic(
@@ -134,6 +135,7 @@ export default function OrderDetailsPage({ order, children, shopName }) {
               paidAmount={order?.paidAmount}
               dueAmount={order?.dueAmount}
             />
+            <BanglaQrPaymentReview order={order} canUpdate={hasUIPermission(permissions, "order", "update")} />
             {status !== "CANCELLED" && (
               <CourierManagement
                 setStatus={setStatus}

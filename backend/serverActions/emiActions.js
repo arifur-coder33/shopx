@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { normalizeEmiSettings } from "@/lib/emi.mjs";
+import { DEFAULT_EMI_MINIMUM_AMOUNT, DEFAULT_EMI_PLANS } from "@/lib/emiDefaults.mjs";
 import { requireProcurementPermission, actionError } from "@/backend/utils/procurement";
 import { revalidatePath, revalidateTag } from "next/cache";
 
@@ -10,7 +11,19 @@ export async function getProviderEmiSettings(providerId) {
     await requireProcurementPermission("provider", "view");
     const provider = await prisma.paymentGateway.findUnique({ where: { id: providerId }, select: { adapterKey: true, emiConfiguration: { include: { plans: { orderBy: [{ bankName: "asc" }, { tenureMonths: "asc" }] } } } } });
     if (provider?.adapterKey !== "SSLCOMMERZ") throw new Error("EMI settings are available only for SSLCommerz.");
-    return { success: true, data: provider.emiConfiguration || { enabled: false, minimumAmount: 0, plans: [] } };
+    if (provider.emiConfiguration) return { success: true, data: provider.emiConfiguration };
+    const data = await prisma.emiConfiguration.upsert({
+      where: { paymentGatewayId: providerId },
+      update: {},
+      create: {
+        paymentGatewayId: providerId,
+        enabled: false,
+        minimumAmount: DEFAULT_EMI_MINIMUM_AMOUNT,
+        plans: { create: DEFAULT_EMI_PLANS },
+      },
+      include: { plans: { orderBy: [{ bankName: "asc" }, { tenureMonths: "asc" }] } },
+    });
+    return { success: true, data };
   } catch (error) { return actionError(error, "Could not load EMI settings."); }
 }
 

@@ -261,7 +261,9 @@ export default function PaymentMethodSelector({
                       id={`gateway-${provider.id}`}
                       title={provider.name}
                       description={
-                        supportsEmi
+                        provider.adapterKey === "BANGLA_QR"
+                          ? "Bangla QR স্ক্যান করে পেমেন্ট করুন; TrxID admin যাচাই করবেন"
+                          : supportsEmi
                           ? "কার্ড ও অন্যান্য অনলাইন পেমেন্ট"
                           : "নিরাপদ অনলাইন পেমেন্ট"
                       }

@@ -40,7 +40,8 @@ async function seedFinanceProviders() {
               adapterKey: definition.adapterKey,
               sortOrder: definition.sortOrder,
               ...(!definition.defaultActive &&
-                !existing.encryptedCredentials && { isActive: false }),
+                !existing.encryptedCredentials &&
+                !(definition.adapterKey === "BANGLA_QR" && existing.nonSecretConfig?.qrImageUrl) && { isActive: false }),
               updatedBy: "seed",
             },
           })

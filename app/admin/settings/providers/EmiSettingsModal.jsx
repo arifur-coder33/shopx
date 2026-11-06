@@ -40,6 +40,7 @@ export default function EmiSettingsModal({ provider, onClose, onSaved }) {
         <fieldset disabled={pending} className="space-y-5 disabled:opacity-60">
           <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={settings.enabled} onChange={(event) => setSettings({ ...settings, enabled: event.target.checked })} /> Enable EMI</label>
           {!provider.isActive && <p className="text-sm text-text-muted">Enable the SSLCommerz payment provider as well to offer EMI to customers.</p>}
+          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Default bank, tenure ও rate আগের EMI list থেকে seed করা হয়েছে। EMI চালু করার আগে আপনার বর্তমান SSLCommerz merchant agreement অনুযায়ী rates যাচাই করে নিন।</p>
           <label className="grid max-w-sm gap-1 text-sm font-semibold">Minimum payable amount (৳, inclusive)
             <input type="number" min={settings.enabled ? "0.01" : "0"} max="1000000000" step="0.01" required value={settings.minimumAmount} onChange={(event) => setSettings({ ...settings, minimumAmount: event.target.value })} className={field} />
           </label>

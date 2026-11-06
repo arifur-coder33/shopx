@@ -433,6 +433,11 @@ export default function OrderForm({
         ]);
         const { result: initiated, initiationError } = initiation;
         if (initiationError) throw initiationError;
+        if (initiated?.success && initiated.manualPayment) {
+          setLoadingStep("order-complete");
+          window.location.replace(successHref);
+          return;
+        }
         if (!initiated?.success || !initiated.url) {
           throw new Error(initiated?.message || "অর্ডার নেওয়া হয়েছে, কিন্তু পেমেন্ট পেজ খোলা যায়নি। আবার অর্ডার করবেন না।");
         }

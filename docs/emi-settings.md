@@ -5,7 +5,11 @@
 Apply `prisma/migrations/20261106000100_provider_emi_configuration/migration.sql`
 with the project's normal migration deployment (`npx prisma migrate deploy`)
 before starting the updated application. Prisma Client must also be generated.
-This change creates no bank-rate seed data and starts EMI disabled until configured.
+The first time an administrator opens EMI settings, the configuration is seeded
+with the previous bank and tenure rate list. EMI remains disabled until an admin
+explicitly enables it. The previous default product amount (৳132,000) is used
+as the initial minimum and can be edited. Verify all bank rates and eligibility
+against the current SSLCommerz merchant agreement before enabling.
 
 ## Administration
 

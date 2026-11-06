@@ -48,6 +48,20 @@ const DEFINITIONS = {
         },
       ],
     },
+    BANGLA_QR: {
+      label: "Bangla QR (Manual confirmation)",
+      code: "BANGLA_QR",
+      integrationAvailable: true,
+      accountPolicy: "ALWAYS",
+      accountType: "PAYMENT_GATEWAY",
+      credentials: [],
+      config: [
+        { key: "qrImageUrl", label: "Merchant Bangla QR image URL", type: "text", required: true, defaultValue: "" },
+        { key: "merchantNumber", label: "Merchant account / number", type: "text", required: true, defaultValue: "" },
+        { key: "merchantName", label: "Merchant name", type: "text", defaultValue: "" },
+        { key: "instructions", label: "Customer payment instructions", type: "text", defaultValue: "Bangla QR দিয়ে পেমেন্ট করে TrxID জমা দিন। Admin যাচাই করে payment confirm করবেন।" },
+      ],
+    },
     BKASH: {
       label: "bKash",
       code: "BKASH",

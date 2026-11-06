@@ -36,6 +36,18 @@ export async function initiateConfiguredPayment(paymentId) {
     };
   }
   try {
+    if (gateway.adapterKey === "BANGLA_QR") {
+      return {
+        success: true,
+        manualPayment: true,
+        banglaQr: {
+          qrImageUrl: providerConfiguration.config.qrImageUrl,
+          merchantNumber: providerConfiguration.config.merchantNumber,
+          merchantName: providerConfiguration.config.merchantName,
+          instructions: providerConfiguration.config.instructions,
+        },
+      };
+    }
     if (gateway.adapterKey === "SSLCOMMERZ") {
       const response = await initiateSSLcommerzPayment({
         payment,
@@ -201,7 +213,7 @@ export async function retryCustomerOrderPayment({
         where: { id: order.id },
         data: {
           paymentMethod: Number(order.paidAmount || 0) > 0 ? "ONLINE" : method,
-          ...(Number(order.paidAmount || 0) <= 0 ? { paymentStatus: "PENDING" } : {}),
+          ...(Number(order.paidAmount || 0) <= 0 ? { paymentStatus: method === "COD" ? "UNPAID" : "PENDING" } : {}),
           selectedPaymentGatewayId: method !== "COD" ? gateway.id : null,
         },
       });
@@ -229,7 +241,7 @@ export async function retryCustomerOrderPayment({
       };
     }
     const initiated = await initiateConfiguredPayment(attempt.paymentId);
-    if (!initiated.success || !initiated.url) {
+    if (!initiated.success || (!initiated.url && !initiated.manualPayment)) {
       await prisma.$transaction([
         prisma.payment.update({
           where: { id: attempt.paymentId },
@@ -242,6 +254,7 @@ export async function retryCustomerOrderPayment({
       ]);
       throw new Error(initiated.message || "Payment could not be initiated.");
     }
+    if (initiated.manualPayment) return { success: true, manualPayment: true, banglaQr: initiated.banglaQr, paymentId: attempt.paymentId };
     return { success: true, url: initiated.url };
   } catch (error) {
     return {

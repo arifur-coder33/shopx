@@ -146,11 +146,19 @@ async function queryCheckoutProviders() {
     codEnabled: readyGateways.some((provider) => provider.adapterKey === "COD"),
     gateways: readyGateways
       .filter((provider) => provider.adapterKey !== "COD")
-      .map(({ id, name, code, adapterKey, emiConfiguration }) => ({
+      .map(({ id, name, code, adapterKey, emiConfiguration, nonSecretConfig }) => ({
         id,
         name,
         code,
         adapterKey,
+        ...(adapterKey === "BANGLA_QR" && {
+          banglaQr: {
+            qrImageUrl: String(nonSecretConfig?.qrImageUrl || ""),
+            merchantNumber: String(nonSecretConfig?.merchantNumber || ""),
+            merchantName: String(nonSecretConfig?.merchantName || ""),
+            instructions: String(nonSecretConfig?.instructions || "Bangla QR দিয়ে পেমেন্ট করে TrxID জমা দিন। Admin যাচাই করে payment confirm করবেন."),
+          },
+        }),
         emi: adapterKey === "SSLCOMMERZ" && emiConfiguration ? {
           enabled: emiConfiguration.enabled,
           minimumAmount: emiConfiguration.minimumAmount,
@@ -482,6 +490,14 @@ export async function saveProviderConfiguration(kind, formData) {
       adapterKey,
       values,
     );
+    if (adapterKey === "BANGLA_QR" && nonSecretConfig.qrImageUrl) {
+      let qrImageUrl;
+      try { qrImageUrl = new URL(String(nonSecretConfig.qrImageUrl).trim()); } catch { qrImageUrl = null; }
+      if (!qrImageUrl || qrImageUrl.protocol !== "https:") {
+        return { success: false, message: "Bangla QR image URL অবশ্যই HTTPS link হতে হবে।" };
+      }
+      nonSecretConfig.qrImageUrl = qrImageUrl.toString();
+    }
     const candidate = {
       ...existing,
       name,

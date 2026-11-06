@@ -1,7 +1,7 @@
 "use server";
 import { isEmiEligible } from "@/lib/emi.mjs";
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
-import { postCodCollection } from "@/backend/services/paymentPostingService";
+import { postCodCollection, postCustomerPaymentInTransaction } from "@/backend/services/paymentPostingService";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
@@ -822,7 +822,6 @@ export async function getOrderCount(params) {
 //   }
 // }
 export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
-  console.log("start load", orderNo, phoneNumber);
   try {
     let finalOrderId = orderId;
 
@@ -861,9 +860,13 @@ export async function getOrderByOrderNo({ orderId, orderNo, phoneNumber }) {
             product: true,
           },
         },
+        selectedPaymentGateway: { select: { id: true, name: true, code: true, adapterKey: true, nonSecretConfig: true } },
+        payments: {
+          orderBy: { createdAt: "desc" },
+          select: { id: true, gateway: true, amount: true, status: true, transactionId: true, createdAt: true, paymentGateway: { select: { adapterKey: true, nonSecretConfig: true } } },
+        },
       },
     });
-    console.log("data", data);
     return { success: true, data }; // Return success with product data
   } catch (error) {
     return { success: false, error: error.message }; // Return structured error
@@ -1009,6 +1012,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
         orderNo: true,
         id: true,
         paymentMethod: true,
+        paymentStatus: true,
         dueAmount: true,
         selectedCourierProviderId: true,
         adminNote: true,
@@ -1022,6 +1026,11 @@ export async function updateOrderStatusAction(orderId, status, note) {
 
     if (!order) {
       throw new Error("Order not found");
+    }
+    if (status === "PROCESSING" && order.paymentMethod && order.paymentMethod !== "COD" && order.paymentStatus !== "PAID" && Number(order.dueAmount || 0) > 0) {
+      throw new Error(order.paymentStatus === "FAILED"
+        ? "Payment failed. Confirm the payment or change it to COD before confirming this order."
+        : "Complete or manually confirm the payment before confirming this order.");
     }
 
     // Courier delivery is the COD collection event. The posting service is
@@ -1369,15 +1378,8 @@ export async function cancelUnpaidCustomerOrder({
       });
       if (!order) throw new Error("Order not found.");
       if (order.status === "CANCELLED") return;
-      const hasPostedPayment = order.payments.some((payment) =>
-        ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED", "REFUNDED"].includes(
-          payment.status,
-        ),
-      );
       if (
         order.status !== "PENDING" ||
-        (order.paidAmount || 0) > 0 ||
-        hasPostedPayment ||
         order.shipping?.cn ||
         order.deliveries.length
       ) {
@@ -1393,7 +1395,7 @@ export async function cancelUnpaidCustomerOrder({
         where: { id: order.id },
         data: {
           status: "CANCELLED",
-          paymentStatus: "CANCELLED",
+          ...((order.paidAmount || 0) <= 0 && { paymentStatus: "CANCELLED" }),
           cancelReasonType: "CUSTOMER_CANCELLED",
           cancelReason: String(
             reason || "Cancelled by customer before confirmation",
@@ -1406,9 +1408,10 @@ export async function cancelUnpaidCustomerOrder({
           orderNo: order.orderNo,
           status: "CANCELLED",
           title: "Order Cancelled",
-          message: String(
-            reason || "Customer cancelled before order confirmation",
-          ).slice(0, 500),
+          message: [
+            String(reason || "Customer cancelled before order confirmation").slice(0, 500),
+            (order.paidAmount || 0) > 0 ? "আগে জমা হওয়া payment-এর refund review প্রয়োজন।" : "",
+          ].filter(Boolean).join(" "),
           createdBy: "customer",
         },
       });
@@ -1421,5 +1424,145 @@ export async function cancelUnpaidCustomerOrder({
       success: false,
       message: error?.message || "Order could not be cancelled.",
     };
+  }
+}
+
+export async function updateUnconfirmedCustomerOrderAddress({
+  orderNo,
+  phoneNumber,
+  deliveryAddress,
+  city,
+  thana,
+  deliveryArea,
+}) {
+  try {
+    if (!orderNo || !phoneNumber) throw new Error("Order information is required.");
+    const address = String(deliveryAddress || "").trim();
+    const district = String(city || "").trim();
+    const area = String(thana || "").trim();
+    const normalizedDeliveryArea = deliveryArea === "inside-dhaka" ? "inside-dhaka" : deliveryArea === "outside-dhaka" ? "outside-dhaka" : "";
+    if (!address || address.length > 500 || !district || district.length > 100 || !area || area.length > 100 || !normalizedDeliveryArea) {
+      throw new Error("ঠিকানা, জেলা, থানা ও delivery area সঠিকভাবে দিন।");
+    }
+    const rates = await getCheckoutDeliveryRates();
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { orderNo: String(orderNo), phoneNumber: String(phoneNumber) },
+        include: { shipping: true, selectedPaymentGateway: true, deliveries: { select: { id: true }, take: 1 } },
+      });
+      if (!order) throw new Error("অর্ডারটি পাওয়া যায়নি।");
+      if (order.status !== "PENDING" || order.shipping?.cn || order.deliveries.length) {
+        throw new Error("অর্ডার কনফার্ম হওয়ার পর ঠিকানা পরিবর্তন করা যাবে না।");
+      }
+      const baseDeliveryCharge = calculateDeliveryCharge(normalizedDeliveryArea, order.orderWeight, rates);
+      const nextDeliveryCharge = Math.max(0, Math.round((baseDeliveryCharge - Number(order.deliveryDiscount || 0)) * 100) / 100);
+      const total = Math.max(0, Number(order.orderPrice) + nextDeliveryCharge + Number(order.taxAmount || 0) - Number(order.adminDiscount || 0));
+      const dueAmount = Math.max(0, Math.round((total - Number(order.paidAmount || 0)) * 100) / 100);
+      let paymentStatus = dueAmount <= 0 ? "PAID" : Number(order.paidAmount || 0) > 0 ? "PARTIALLY_PAID" : order.paymentStatus === "FAILED" ? "FAILED" : order.paymentMethod === "COD" ? "UNPAID" : order.paymentStatus;
+      let banglaQrPaymentReset = false;
+      if (order.paymentMethod !== "COD" && dueAmount > 0) {
+        if (order.selectedPaymentGateway?.adapterKey === "BANGLA_QR") {
+          await tx.payment.updateMany({ where: { orderId: order.id, paymentGatewayId: order.selectedPaymentGatewayId, status: { in: ["PENDING", "FAILED"] } }, data: { amount: dueAmount, transactionId: null } });
+          banglaQrPaymentReset = true;
+        } else {
+          const cancelled = await tx.payment.updateMany({ where: { orderId: order.id, status: "PENDING" }, data: { status: "CANCELLED" } });
+          if (cancelled.count && Number(order.paidAmount || 0) <= 0) paymentStatus = "FAILED";
+        }
+      }
+      const previousArea = order.deliveryArea === "inside-dhaka" ? "ঢাকার ভিতরে" : "ঢাকার বাইরে";
+      const nextArea = normalizedDeliveryArea === "inside-dhaka" ? "ঢাকার ভিতরে" : "ঢাকার বাইরে";
+      await tx.order.update({
+        where: { id: order.id },
+        data: { deliveryAddress: address, city: district, thana: area, deliveryArea: normalizedDeliveryArea, deliveryCharge: nextDeliveryCharge, dueAmount, paymentStatus },
+      });
+      await tx.orderTimeline.create({
+        data: {
+          orderId: order.id,
+          orderNo: order.orderNo,
+          status: order.status,
+          title: "Customer updated delivery address",
+          message: `এলাকা: ${previousArea} → ${nextArea}; ঠিকানা: ${address}, ${area}, ${district}; delivery charge ৳${nextDeliveryCharge}`,
+          createdBy: "customer",
+        },
+      });
+      return { deliveryAddress: address, city: district, thana: area, deliveryArea: normalizedDeliveryArea, deliveryCharge: nextDeliveryCharge, dueAmount, paymentStatus, banglaQrPaymentReset };
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath("/tracking");
+    return { success: true, message: "ডেলিভারি ঠিকানা আপডেট হয়েছে।", data: result };
+  } catch (error) {
+    return { success: false, message: error?.message || "ঠিকানা আপডেট করা যায়নি।" };
+  }
+}
+
+export async function changeFailedCustomerOrderToCod({ orderId }) {
+  try {
+    await hasPermission("order", "update");
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: String(orderId || "") }, include: { payments: { select: { status: true } }, shipping: true, deliveries: { select: { id: true }, take: 1 } } });
+      if (!order) throw new Error("Order not found.");
+      if (order.status !== "PENDING" || order.paymentStatus !== "FAILED" || Number(order.paidAmount || 0) > 0 || order.payments.some((payment) => ["PAID", "PARTIALLY_PAID", "PARTIALLY_REFUNDED", "REFUNDED"].includes(payment.status)) || order.shipping?.cn || order.deliveries.length) {
+        throw new Error("Only an unpaid, failed payment can be changed to COD before confirmation.");
+      }
+      const cod = await tx.paymentGateway.findFirst({ where: { adapterKey: "COD", isActive: true } });
+      if (!getProviderRuntimeConfiguration("gateway", cod).ready) throw new Error("Cash on Delivery is currently unavailable.");
+      await tx.payment.updateMany({ where: { orderId: order.id, status: { in: ["PENDING", "FAILED"] } }, data: { status: "CANCELLED" } });
+      await tx.order.update({ where: { id: order.id }, data: { paymentMethod: "COD", paymentStatus: "UNPAID", selectedPaymentGatewayId: null } });
+      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: order.orderNo, status: order.status, title: "Admin changed payment to COD", message: "Failed online payment was changed to Cash on Delivery by admin before order confirmation.", createdBy: "admin" } });
+      return { paymentMethod: "COD", paymentStatus: "UNPAID" };
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath("/tracking");
+    return { success: true, message: "Payment method COD করা হয়েছে।", data: result };
+  } catch (error) {
+    return { success: false, message: error?.message || "Payment method পরিবর্তন করা যায়নি।" };
+  }
+}
+
+export async function submitBanglaQrTransaction({ orderNo, phoneNumber, transactionId }) {
+  try {
+    const trx = String(transactionId || "").trim();
+    if (!orderNo || !phoneNumber || trx.length < 4 || trx.length > 100) throw new Error("সঠিক TrxID দিন।");
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({ where: { orderNo: String(orderNo), phoneNumber: String(phoneNumber) }, include: { selectedPaymentGateway: true } });
+      if (!order || order.status !== "PENDING" || order.selectedPaymentGateway?.adapterKey !== "BANGLA_QR" || Number(order.dueAmount || 0) <= 0) throw new Error("এই অর্ডারে Bangla QR payment জমা নেওয়া যাচ্ছে না।");
+      const payment = await tx.payment.findFirst({ where: { orderId: order.id, paymentGateway: { adapterKey: "BANGLA_QR" }, status: { in: ["PENDING", "FAILED"] } }, orderBy: { createdAt: "desc" } });
+      if (!payment) throw new Error("Pending Bangla QR payment পাওয়া যায়নি।");
+      const duplicateTrx = await tx.payment.findFirst({ where: { transactionId: trx, id: { not: payment.id }, status: { in: ["PENDING", "PAID"] } }, select: { id: true } });
+      if (duplicateTrx) throw new Error("এই TrxID অন্য payment-এ ব্যবহার হয়েছে।");
+      if (payment.status === "FAILED") await tx.payment.update({ where: { id: payment.id }, data: { status: "PENDING" } });
+      await tx.payment.update({ where: { id: payment.id }, data: { transactionId: trx } });
+      await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "PENDING" } });
+      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: order.orderNo, status: order.status, title: "Bangla QR payment submitted", message: `Customer submitted Bangla QR TrxID ${trx}; admin confirmation is pending.`, createdBy: "customer" } });
+      return { id: payment.id };
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath("/tracking");
+    return { success: true, message: "TrxID জমা হয়েছে। Admin যাচাই করে payment confirm করবেন।", data: result };
+  } catch (error) {
+    return { success: false, message: error?.message || "TrxID জমা করা যায়নি।" };
+  }
+}
+
+export async function reviewBanglaQrPayment({ paymentId, approve }) {
+  try {
+    await hasPermission("order", "update");
+    await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({ where: { id: String(paymentId || "") }, include: { order: true, paymentGateway: { include: { moneyAccount: true } } } });
+      if (!payment || payment.paymentGateway?.adapterKey !== "BANGLA_QR" || payment.status !== "PENDING" || !payment.transactionId) throw new Error("Bangla QR payment বা TrxID পাওয়া যায়নি।");
+      if (payment.order.status !== "PENDING") throw new Error("Order confirmation-এর পরে Bangla QR payment review করা যাবে না।");
+      if (approve) {
+        await postCustomerPaymentInTransaction(tx, { paymentId: payment.id, amount: payment.amount, transactionId: payment.transactionId, createdBy: "admin" });
+      } else {
+        await tx.payment.update({ where: { id: payment.id }, data: { status: "FAILED" } });
+        if (Number(payment.order.paidAmount || 0) <= 0) await tx.order.update({ where: { id: payment.orderId }, data: { paymentStatus: "FAILED" } });
+      }
+      if (!approve) await tx.orderTimeline.create({ data: { orderId: payment.orderId, orderNo: payment.order.orderNo, status: payment.order.status, title: "Bangla QR payment rejected", message: `Admin could not verify Bangla QR payment TrxID ${payment.transactionId}.`, createdBy: "admin" } });
+    });
+    revalidatePath("/admin/orders");
+    revalidatePath("/tracking");
+    return { success: true, message: approve ? "Bangla QR payment confirmed." : "Bangla QR payment rejected." };
+  } catch (error) {
+    return { success: false, message: error?.message || "Bangla QR payment review failed." };
   }
 }
