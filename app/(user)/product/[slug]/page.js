@@ -1,27 +1,33 @@
+import {
+  applyProductCampaign,
+  selectCampaignsByPriority,
+  toCampaignDisplayData,
+} from "@/backend/services/campaignService";
+import { getPublishedProductPhotoReviews } from "@/backend/services/photoReviewService";
 import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService";
+import { getStorefrontActiveCampaigns as getActiveCampaigns } from "@/backend/services/storefrontCampaignService";
 import {
   getStorefrontProductBySlug,
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
 import { buildProductSeo } from "@/backend/utils/productSeo";
-import { applyProductCampaign, selectCampaignsByPriority, toCampaignDisplayData } from "@/backend/services/campaignService";
-import { getStorefrontActiveCampaigns as getActiveCampaigns } from "@/backend/services/storefrontCampaignService";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import JsonLd from "@/components/seo/JsonLd";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { DEFAULT_BLUR_DATA_URL } from "@/utils/cloudinaryUrl";
 import { notFound } from "next/navigation";
-import ProductDataView from "../_components/ProductDataView";
 import { Suspense } from "react";
+import ProductDataView from "../_components/ProductDataView";
 import ProductImageFirstPreview from "../_components/ProductImageFirstPreview";
-import { getPublishedProductPhotoReviews } from "@/backend/services/photoReviewService";
 
-export const revalidate = 60;
+export const revalidate = false;
 export const dynamic = "force-static";
 export const dynamicParams = true;
 
 const compact = (value, length) => {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
   return text.length > length ? `${text.slice(0, length - 1).trim()}…` : text;
 };
 
@@ -54,7 +60,9 @@ export async function generateMetadata({ params }) {
     return {
       title: "পণ্য পাওয়া যায়নি",
       description: "আপনি যে পণ্যটি খুঁজছেন সেটি পাওয়া যায়নি।",
-      alternates: { canonical: `${siteUrl}/product/${encodeURIComponent(slug)}` },
+      alternates: {
+        canonical: `${siteUrl}/product/${encodeURIComponent(slug)}`,
+      },
       robots: { index: false, follow: false },
     };
   }
@@ -64,7 +72,9 @@ export async function generateMetadata({ params }) {
     ? `৳${new Intl.NumberFormat("bn-BD", { maximumFractionDigits: 2 }).format(seo.lowestPrice)}`
     : "";
   const title = compact(
-    [product.title, priceLabel, product.category?.name].filter(Boolean).join(" - "),
+    [product.title, priceLabel, product.category?.name]
+      .filter(Boolean)
+      .join(" - "),
     65,
   );
   const description = compact(seo.description, 160);
@@ -110,7 +120,8 @@ export async function generateMetadata({ params }) {
         url,
         width: 1200,
         height: 1200,
-        alt: index === 0 ? product.title : `${product.title} - ছবি ${index + 1}`,
+        alt:
+          index === 0 ? product.title : `${product.title} - ছবি ${index + 1}`,
       })),
       ...(productVideos.length && {
         videos: productVideos.map((url) => ({ url })),
@@ -130,7 +141,9 @@ export async function generateMetadata({ params }) {
       "product:availability": seo.availability,
       "product:condition": "new",
       "product:retailer_item_id": String(product.productCode || product.id),
-      ...(product.category?.name && { "product:category": product.category.name }),
+      ...(product.category?.name && {
+        "product:category": product.category.name,
+      }),
     },
     publisher: identity.name,
   };
@@ -169,30 +182,57 @@ async function ProductPageContent({ detailsPromise }) {
   const productCampaigns = activeCampaigns.filter((campaign) => {
     const config = campaign.configuration || {};
     const comboProductIds = (config.productPairs || []).flatMap((pair) => [
-      ...(pair.requiredProductIds || (pair.requiredProductId ? [pair.requiredProductId] : [])),
-      ...(pair.rewardProductIds?.length ? pair.rewardProductIds : (pair.rewardProductId ? [pair.rewardProductId] : [])),
+      ...(pair.requiredProductIds ||
+        (pair.requiredProductId ? [pair.requiredProductId] : [])),
+      ...(pair.rewardProductIds?.length
+        ? pair.rewardProductIds
+        : pair.rewardProductId
+          ? [pair.rewardProductId]
+          : []),
     ]);
-    const hasTargets = campaign.products?.length || campaign.categories?.length || comboProductIds.length;
-    return (!hasTargets && campaign.type !== "COUPON") ||
+    const hasTargets =
+      campaign.products?.length ||
+      campaign.categories?.length ||
+      comboProductIds.length;
+    return (
+      (!hasTargets && campaign.type !== "COUPON") ||
       campaign.products?.some((target) => target.productId === data.id) ||
-      campaign.categories?.some((target) => target.categoryId === data.categoryId) ||
-      comboProductIds.includes(data.id);
+      campaign.categories?.some(
+        (target) => target.categoryId === data.categoryId,
+      ) ||
+      comboProductIds.includes(data.id)
+    );
   });
   const campaignOffers = productCampaigns.map(toCampaignDisplayData);
   const variationsWithCampaigns = data.variations.map((variation) => {
     const regular = Number(variation.regularPrice) || 0;
-    const sale = Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < regular
-      ? Number(variation.discountPrice)
-      : regular;
-    const productItem = { productId: data.id, categoryId: data.categoryId, quantity: 1, basePrice: sale, price: sale };
-    const applicableCampaigns = selectCampaignsByPriority({ campaigns: productCampaigns, items: [productItem] });
+    const sale =
+      Number(variation.discountPrice) > 0 &&
+      Number(variation.discountPrice) < regular
+        ? Number(variation.discountPrice)
+        : regular;
+    const productItem = {
+      productId: data.id,
+      categoryId: data.categoryId,
+      quantity: 1,
+      basePrice: sale,
+      price: sale,
+    };
+    const applicableCampaigns = selectCampaignsByPriority({
+      campaigns: productCampaigns,
+      items: [productItem],
+    });
     const pricing = applyProductCampaign({
       campaigns: applicableCampaigns,
       productId: data.id,
       categoryId: data.categoryId,
       basePrice: sale,
     });
-    return { ...variation, campaignPrice: pricing.campaign ? pricing.price : null, campaignName: pricing.campaign?.name || null };
+    return {
+      ...variation,
+      campaignPrice: pricing.campaign ? pricing.price : null,
+      campaignName: pricing.campaign?.name || null,
+    };
   });
   const reviews = await getPublishedProductPhotoReviews(data.id);
 
@@ -202,15 +242,22 @@ async function ProductPageContent({ detailsPromise }) {
       <Breadcrumb
         items={[
           ...(data.category?.name
-            ? [{
-                label: data.category.name,
-                href: `/category/${data.category.fullPath || data.category.slug}`,
-              }]
+            ? [
+                {
+                  label: data.category.name,
+                  href: `/category/${data.category.fullPath || data.category.slug}`,
+                },
+              ]
             : []),
           { label: data.title },
         ]}
       />
-      <ProductDataView data={{ ...data, variations: variationsWithCampaigns }} campaignOffers={campaignOffers} blurDataURL={DEFAULT_BLUR_DATA_URL} reviews={reviews} />
+      <ProductDataView
+        data={{ ...data, variations: variationsWithCampaigns }}
+        campaignOffers={campaignOffers}
+        blurDataURL={DEFAULT_BLUR_DATA_URL}
+        reviews={reviews}
+      />
     </div>
   );
 }

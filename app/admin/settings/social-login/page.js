@@ -1,4 +1,5 @@
 import { getSocialAuthSettings } from "@/backend/serverActions/socialAuthAction";
+import { getSiteUrl } from "@/lib/siteUrl";
 import SocialLoginSettingsForm from "./SocialLoginSettingsForm";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,10 @@ export default async function SocialLoginSettingsPage() {
     <SocialLoginSettingsForm
       initialSettings={result.data}
       encryptionReady={result.encryptionReady}
+      callbackUrls={{
+        google: `${getSiteUrl()}/api/auth/callback/google`,
+        facebook: `${getSiteUrl()}/api/auth/callback/facebook`,
+      }}
     />
   );
 }

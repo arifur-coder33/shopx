@@ -29,30 +29,63 @@ when the page is generated/regenerated, not for every visitor.
   category summaries.
 - Corrected product-status invalidation to use the slug-based product tag.
 
-## Timer removal prerequisites
+## On-demand and scheduled refresh
 
-The layout-level 60-second setting was removed earlier. Page-level 60-second
-settings and timed data caches still exist. This patch does not claim to
-eliminate periodic ISR writes.
+Home, product, Buy Now, checkout, category, campaign, contact, privacy and return
+pages now export `revalidate = false`. Product and catalog routes keep their
+existing `force-static` configuration. Site appearance, contact information,
+navigation categories, content pages, public tracking settings, notices and
+checkout providers also use on-demand data caches with their existing tags.
 
-- Product stock now loads separately after the static page hydrates, from
-  `/api/products/[id]/stock` with no-store on both request and response.
-  Purchase controls render immediately, including the static preview. Stock
-  refresh runs silently in the background; a small availability label appears
-  after success and Buy Now disables for unavailable stock unless out-of-stock
-  ordering is enabled. Selected variations resolve against the fresh stock
-  values. Checkout still validates current
-  stock in orderActions. Static SEO availability remains a generation-time snapshot.
-- Campaign start/end and notice start/end use server time. They change without
-  an admin edit. Keep bounded timed refresh until boundary-triggered invalidation
-  or client display logic is implemented. Notice is in shared navigation, so
-  this affects pages beyond the campaign routes.
-- Shared 300-second data caches and the 60-second checkout-provider cache can
-  also shorten static route freshness. Changing only the page export to false
-  will not make the entire route event-only.
-- Inventory mutations/POS/delivery/returns need either targeted stock-related
-  SEO invalidation or a bounded freshness policy for static availability metadata,
-  even after the interactive stock display fetches live values.
+Admin add/edit/delete actions invalidate the relevant routes and data tags.
+The shared catalog invalidator includes campaign listing and checkout, in
+addition to product/Buy Now/category/campaign detail pages.
+
+### Scheduled campaigns and notices
+
+`storefrontScheduleService.js` reads the published campaign schedule through an
+on-demand cache. It registers a cached marker with a lifetime calculated from
+the nearest future start/end boundary. Notice data registers its own schedule
+marker in the shared navigation. This marker allows Next's Full Route Cache to
+expire at the relevant transition without a fixed one-minute/five-minute poll.
+
+Campaign display caches, including home product batches, include the most
+recent schedule boundary in their cache keys. Once a boundary passes, the next
+generation uses a different key, preventing reuse of the previous campaign
+display result. Coupon-free product pricing and public campaign highlights
+retain their existing selection rules.
+
+No future boundary means `revalidate: false`: only explicit invalidation
+refreshes the output. Admin schedule edits invalidate schedule/data tags and
+routes. Campaign pages, category pages, Buy Now and checkout register their
+schedule dependency directly; home/product also register it through their
+campaign display readers.
+
+This retains normal ISR behavior: after expiry, a request triggers regeneration.
+The first request can receive the stale page while regeneration finishes.
+There is no background scheduler that rebuilds pages without traffic.
+Live order validation remains authoritative for stock, pricing and campaigns.
+
+### Stock and failures
+
+Product stock still loads from the no-store stock API after the static page
+hydrates. Purchase controls render immediately; successful stock results update
+availability. Static SEO stock availability remains a generation-time snapshot;
+it does not become live simply by changing the cache policy.
+
+Database failures are not cached as empty payment options/navigation/home data
+or false product/category 404s. Failed regeneration can retain the last
+successful page rather than permanently saving a failure as on-demand output.
+
+### Scope and checks
+
+The hourly sitemap and six-hour external analytics cache were retained; these
+are separate from storefront page/settings caching.
+
+`node --test lib/storefrontSchedule.test.mjs` checks no-schedule behavior,
+the nearest future start, inclusive end boundaries, cache epoch changes and
+multiple campaigns. Modified source files pass ESLint. Production Vercel ISR
+headers/cache behavior has not been measured in this workspace.
 
 Route invalidation marks output stale; regeneration happens on a subsequent
 request. It does not rebuild every catalog URL immediately.

@@ -51,7 +51,7 @@ async function queryPublicSettings() {
 const readCachedPublicSettings = unstable_cache(
   queryPublicSettings,
   ["social-tracking-public-settings"],
-  { revalidate: 300, tags: ["social-tracking"] },
+  { revalidate: false, tags: ["social-tracking"] },
 );
 
 // Only non-secret IDs are cached and passed to storefront components.

@@ -1,6 +1,6 @@
 import ContentPageView, { contentPageMetadata } from "@/components/content/ContentPageView";
 
-export const revalidate = 300;
+export const revalidate = false;
 export const generateMetadata = () => contentPageMetadata("privacy");
 
 export default function PrivacyPage() {

@@ -5,12 +5,13 @@ import {
 import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
 import { getCheckoutCampaignOffers } from "@/backend/services/campaignService";
 import { getCheckoutProviders } from "@/backend/serverActions/providerConfigurationAction";
+import { registerCampaignSchedule } from "@/backend/services/storefrontScheduleService";
 
 
 import { Suspense } from "react";
 import BuyNowCheckout from "./_components/BuyNowCheckout";
 import Breadcrumb from "@/components/common/Breadcrumb";
-export const revalidate = 60;
+export const revalidate = false;
 export const dynamic = "force-static";
 export const dynamicParams = true;
 
@@ -23,6 +24,7 @@ export async function generateStaticParams() {
 }
 
 export default async function BuyNowPage({ params }) {
+  await registerCampaignSchedule();
   const { slug } = await params;
 
   const [product, deliveryRates, checkoutProviders, campaignOffers] = await Promise.all([

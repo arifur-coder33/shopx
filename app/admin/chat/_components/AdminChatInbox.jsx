@@ -36,6 +36,11 @@ import {
   LoaderCircle,
   Menu,
   MoreVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Maximize2,
+  Minimize2,
+  UserRoundCheck,
   Plus,
   Images,
   MessageCircle,
@@ -132,6 +137,8 @@ export default function AdminChatInbox({
   const [conversationLoading, setConversationLoading] = useState(false);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [error, setError] = useState(initialError);
   const [agents, setAgents] = useState([]);
@@ -190,6 +197,7 @@ export default function AdminChatInbox({
   }, []);
 
   useEffect(() => {
+    if (!selectedId) setFocusMode(false);
     setProfileOpen(false);
     setProfile(null);
     setProfileError("");
@@ -225,6 +233,7 @@ export default function AdminChatInbox({
   }, [actionsOpen, attachmentsOpen]);
 
   const openMessengerProfile = async () => {
+    setFocusMode(false);
     if (profileOpen) { setProfileOpen(false); return; }
     setProfileOpen(true);
     setProfileBusy(true);
@@ -910,46 +919,49 @@ export default function AdminChatInbox({
 
   const actionButton = (key, label, description, Icon, onClick, mobile, disabled = false, danger = false) => (
     <button key={key} type="button" onClick={onClick} disabled={Boolean(pendingAction) || disabled}
-      title={description} aria-busy={pendingAction === key}
-      className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold disabled:opacity-50 ${mobile ? "w-full min-h-12" : "border"} ${danger ? "border-red-200 text-red-700 hover:bg-red-50" : "border-border text-text hover:bg-background"}`}>
+      title={`${label} — ${description}`} aria-label={label} aria-busy={pendingAction === key}
+      className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold disabled:opacity-50 ${mobile ? "w-full min-h-12" : "h-9 w-9 justify-center border !p-0"} ${danger ? "border-red-200 text-red-700 hover:bg-red-50" : "border-border text-text hover:bg-background"}`}>
       {pendingAction === key ? <LoaderCircle size={16} className="shrink-0 animate-spin" /> : <Icon size={16} className="shrink-0" />}
-      <span>{pendingAction === key ? "সেভ হচ্ছে…" : label}{mobile && <span className="mt-0.5 block text-[11px] font-normal text-text-muted">{description}</span>}</span>
+      <span className={mobile ? "" : "sr-only"}>{pendingAction === key ? "সেভ হচ্ছে…" : label}{mobile && <span className="mt-0.5 block text-[11px] font-normal text-text-muted">{description}</span>}</span>
     </button>
   );
 
   const conversationActions = (mobile = false) => (
-    <div className={mobile ? "flex flex-col gap-1" : "flex flex-wrap items-center gap-2"}>
-      <label className={`text-xs text-text-muted ${mobile ? "border-b border-border p-2 pb-3" : "flex items-center gap-2"}`}>
+    <div className={mobile ? "flex flex-col gap-1" : "flex items-center gap-1"}>
+      <details open={mobile || undefined} className="group relative">
+        <summary title="প্রতিনিধি" aria-label="প্রতিনিধি" className={mobile ? "hidden" : "grid h-9 w-9 cursor-pointer list-none place-items-center rounded-lg border border-border hover:bg-background"}><UserRoundCheck size={16} /></summary>
+      <label className={`text-xs text-text-muted ${mobile ? "block border-b border-border p-2 pb-3" : "absolute right-0 top-full z-50 mt-2 block w-64 rounded-xl border border-border bg-white p-3 shadow-xl"}`}>
         <span>{pendingAction === "assign" ? "দায়িত্ব সেভ হচ্ছে…" : "প্রতিনিধি"}</span>
         <select value={conversation.assignedToId || ""} onChange={(event) => assignAgent(event.target.value)} disabled={Boolean(pendingAction)} aria-label="এই চ্যাটের দায়িত্বে প্রতিনিধি বেছে নিন" className={`rounded-lg border border-border bg-background px-2 py-2 text-xs text-text ${mobile ? "mt-1 w-full" : "max-w-36"}`}>
           <option value="">কাউকে দেওয়া হয়নি</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name || agent.email}</option>)}
         </select>
       </label>
+      </details>
       {actionButton("ai", conversation.aiModeEnabled ? "AI বন্ধ করুন" : "AI চালু করুন", conversation.assignedToId ? "AI চালু করতে আগে প্রতিনিধি unassign করুন" : "এই চ্যাটে স্বয়ংক্রিয় উত্তর চালু বা বন্ধ করুন", MessageCircle, toggleConversationAi, mobile, Boolean(conversation.assignedToId))}
       {actionButton("human", conversation.needsHumanAssistant ? "সমাধান হয়েছে" : "প্রতিনিধির সাহায্য নিন", conversation.needsHumanAssistant ? "Need human assistant তালিকা থেকে সরান" : "চ্যাটটি প্রতিনিধির তালিকায় রাখুন এবং AI থামান", UserRound, toggleHumanAssistance, mobile)}
       {actionButton(`status-${conversation.status === "PENDING" ? "OPEN" : "PENDING"}`, conversation.status === "PENDING" ? "অপেক্ষা থেকে ফেরান" : "অপেক্ষায় রাখুন", "চ্যাটটি Pending বা Open তালিকায় রাখুন", Clock3, () => changeStatus(conversation.status === "PENDING" ? "OPEN" : "PENDING"), mobile)}
-      {actionButton(`status-${conversation.status === "CLOSED" ? "OPEN" : "CLOSED"}`, conversation.status === "CLOSED" ? "চ্যাট আবার খুলুন" : "চ্যাট শেষ করুন", conversation.status === "CLOSED" ? "আবার এই চ্যাটে উত্তর দেওয়ার সুযোগ দিন" : "কথা শেষ হলে Closed তালিকায় রাখুন", Check, () => changeStatus(conversation.status === "CLOSED" ? "OPEN" : "CLOSED"), mobile)}
-      {actionButton("delete", "চ্যাট মুছুন", "শুধু অ্যাডমিন ইনবক্সের চ্যাট ও মেসেজ মুছবে", Trash2, () => runInboxAction("delete", deleteConversation), mobile, false, true)}
+      {mobile && actionButton(`status-${conversation.status === "CLOSED" ? "OPEN" : "CLOSED"}`, conversation.status === "CLOSED" ? "চ্যাট আবার খুলুন" : "চ্যাট শেষ করুন", conversation.status === "CLOSED" ? "আবার এই চ্যাটে উত্তর দেওয়ার সুযোগ দিন" : "কথা শেষ হলে Closed তালিকায় রাখুন", Check, () => changeStatus(conversation.status === "CLOSED" ? "OPEN" : "CLOSED"), mobile)}
+      {mobile && actionButton("delete", "চ্যাট মুছুন", "শুধু অ্যাডমিন ইনবক্সের চ্যাট ও মেসেজ মুছবে", Trash2, () => runInboxAction("delete", deleteConversation), mobile, false, true)}
     </div>
   );
 
   return (
-    <main className="fixed inset-0 z-[60] mx-auto flex h-[100dvh] min-h-0 w-full max-w-none flex-col overflow-hidden bg-white [&_button]:cursor-pointer [&_button:disabled]:cursor-not-allowed [&_select]:cursor-pointer [&_button]:focus-visible:ring-2 [&_button]:focus-visible:ring-emerald-600 lg:relative lg:inset-auto lg:z-auto lg:h-[calc(100dvh-6rem)] lg:max-w-7xl">
+    <main className="fixed inset-0 z-[60] flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-white [&_button]:cursor-pointer [&_button:disabled]:cursor-not-allowed [&_select]:cursor-pointer [&_button]:focus-visible:ring-2 [&_button]:focus-visible:ring-emerald-600">
       {error && (
         <p
           role="alert"
-          className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+          className="absolute left-1/2 top-16 z-50 max-w-[90vw] -translate-x-1/2 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700 shadow-lg"
         >
           {error}
         </p>
       )}
-      <section className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden border border-black/5 bg-white shadow-sm lg:grid-cols-[22rem_minmax(0,1fr)] lg:rounded-2xl">
+      <section className="relative flex min-h-0 flex-1 overflow-hidden bg-white">
         <aside
-          className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-b border-border lg:border-b-0 lg:border-r ${selectedId ? "hidden lg:flex" : ""}`}
+          className={`h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-r border-border ${focusMode ? "hidden" : selectedId ? "hidden lg:flex" : "flex"} ${sidebarCollapsed ? "w-full lg:w-[72px]" : "w-full lg:w-80"}`}
         >
-          <header className="flex shrink-0 items-center justify-between gap-2 bg-emerald-800 px-3 py-3 text-white lg:bg-white lg:text-text">
-            <div className="flex items-center gap-2"><button type="button" onClick={() => window.dispatchEvent(new Event("admin:open-navigation"))} aria-label="অ্যাডমিন নেভিগেশন খুলুন" title="Admin menu" className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10 lg:hidden"><Menu size={23} /></button><h1 className="text-lg font-bold">ইনবক্স</h1>{inboxLoading && <LoaderCircle size={17} className="animate-spin" aria-label="ইনবক্স আপডেট হচ্ছে" />}</div>
-            <details className="group relative z-20">
+          <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-emerald-800 px-3 text-white lg:bg-white lg:text-text">
+            <div className="flex items-center gap-2"><button type="button" onClick={() => window.dispatchEvent(new Event("admin:open-navigation"))} aria-label="অ্যাডমিন নেভিগেশন খুলুন" title="Admin menu" className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10 lg:hidden"><Menu size={23} /></button><button type="button" onClick={() => setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!sidebarCollapsed} className="hidden h-10 w-10 shrink-0 place-items-center rounded-lg hover:bg-background lg:grid">{sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}</button><h1 className={`text-lg font-bold ${sidebarCollapsed ? "lg:hidden" : ""}`}>ইনবক্স</h1>{inboxLoading && <LoaderCircle size={17} className="animate-spin" aria-label="ইনবক্স আপডেট হচ্ছে" />}</div>
+            <details className={`group relative z-20 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-text shadow-sm hover:bg-background">
                 <MoreVertical size={20} className="lg:hidden" /><Bell size={16} className="hidden text-primary lg:block" />
                 <span className="sr-only lg:not-sr-only">ইনবক্সের সেটিংস</span>
@@ -1002,6 +1014,7 @@ export default function AdminChatInbox({
                 >
                   Chat Settings
                 </a>
+                <a href="/admin" className="rounded-lg px-3 py-2 text-sm font-semibold text-text hover:bg-background">Admin dashboard</a>
                 <a
                   href="/admin/chat/comments"
                   className="rounded-lg px-3 py-2 text-sm font-semibold text-text hover:bg-background"
@@ -1011,7 +1024,7 @@ export default function AdminChatInbox({
               </div>
             </details>
           </header>
-          <div className="space-y-3 border-b border-border p-3">
+          <div className={`space-y-3 border-b border-border p-3 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
             <label className="relative block">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
               <input
@@ -1061,6 +1074,8 @@ export default function AdminChatInbox({
                   <button
                     type="button"
                     key={item.id}
+                    title={item.customerName || item.customerPhone || channelLabels[item.channel]}
+                    aria-label={item.customerName || item.customerPhone || channelLabels[item.channel]}
                     onClick={() => setSelectedId(item.id)}
                     className={`w-full border-b border-border/70 p-3 text-left transition hover:bg-background ${selectedId === item.id || item.linkedConversations?.some((linked) => linked.id === selectedId) ? "bg-primary-soft" : ""}`}
                   >
@@ -1068,7 +1083,7 @@ export default function AdminChatInbox({
                       <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-background text-primary">
                         {item.profilePicUrl ? <img src={item.profilePicUrl} alt="" className="h-full w-full object-cover" /> : customerInitials(item.customerName) ? <span className="text-xs font-bold">{customerInitials(item.customerName)}</span> : <Icon size={18} />}
                       </span>
-                      <span className="min-w-0 flex-1">
+                      <span className={`min-w-0 flex-1 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
                         <span className="flex items-center justify-between gap-2">
                           <span className="truncate text-sm font-semibold text-text">
                             {item.customerName ||
@@ -1110,11 +1125,11 @@ export default function AdminChatInbox({
           </div>
         </aside>
         <div
-          className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden ${!selectedId ? "hidden lg:flex" : ""}`}
+          className={`relative h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${!selectedId ? "hidden lg:flex" : "flex"} ${profileOpen && messengerContact && !focusMode ? "xl:pr-80" : ""}`}
         >
           {conversation && (conversation.id === selectedId || conversation.linkedConversations?.some((item) => item.id === selectedId)) ? (
             <>
-              <header className="relative z-30 flex shrink-0 items-center justify-between gap-2 border-b border-black/5 bg-[#f0f2f5] px-3 py-2.5 lg:flex-wrap lg:gap-3 lg:bg-white lg:p-4">
+              <header className="relative z-40 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-black/5 bg-white px-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <button
                     type="button"
@@ -1139,10 +1154,11 @@ export default function AdminChatInbox({
                         conversation.customerName || conversation.customerPhone || `${channelLabels[conversation.channel]} · ${conversation.externalUserId.slice(-6)}`
                       )}
                     </h2>
-                    {conversation.needsHumanAssistant && <p className="truncate text-xs font-semibold text-amber-700">Need human assistant{conversation.awaitingHumanPhone ? " · ফোন নম্বরের অপেক্ষায়" : ""}</p>}
+
                     <p className="truncate text-xs text-text-muted">
                       {conversation.channels?.map((channel) => channelLabels[channel]).join(" + ") || channelLabels[conversation.channel]} ·{" "}
                       {statusLabels[conversation.status]}
+                      {conversation.needsHumanAssistant && <span title={conversation.awaitingHumanPhone ? "Need human assistant · ফোন নম্বরের অপেক্ষায়" : "Need human assistant"} className="ml-1 text-amber-700">· <UserRound size={12} className="inline" /></span>}
                       {conversation.customerPhone
                         ? ` · ${conversation.customerPhone}`
                         : ""}
@@ -1150,7 +1166,10 @@ export default function AdminChatInbox({
                     </p>
                   </div>
                 </div>
-                <div ref={actionsMenuRef} className="relative shrink-0 lg:hidden">
+                <div className="flex shrink-0 items-center gap-1">
+                  {canUpdate && <div className="hidden sm:block">{conversationActions()}</div>}
+                  <button type="button" onClick={() => setFocusMode((value) => !value)} aria-label={focusMode ? "Exit Focus Mode" : "Focus Mode"} title={focusMode ? "Exit Focus Mode" : "Focus Mode"} aria-pressed={focusMode} className="grid h-9 w-9 place-items-center rounded-lg border border-border text-text hover:bg-background">{focusMode ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
+                <div ref={actionsMenuRef} className="relative shrink-0">
                   <button type="button" onClick={() => setActionsOpen((open) => !open)} aria-label="চ্যাটের অপশন খুলুন" title="চ্যাটের অপশন" aria-expanded={actionsOpen} aria-controls="chat-actions-menu" className="grid h-11 w-10 place-items-center rounded-full text-slate-700 hover:bg-black/5">{pendingAction ? <LoaderCircle size={20} className="animate-spin" /> : <MoreVertical size={23} />}</button>
                   {actionsOpen && <div id="chat-actions-menu" role="group" aria-label="চ্যাটের অপশন" className="absolute right-0 top-full mt-2 max-h-[70dvh] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-white p-2 shadow-xl">
                     <p className="border-b border-border px-3 py-2 text-sm font-bold text-text">চ্যাটের অপশন</p>
@@ -1161,16 +1180,16 @@ export default function AdminChatInbox({
                     <a href="/admin/chat/settings" className="block rounded-lg px-3 py-3 text-xs font-semibold text-text hover:bg-background">Chat settings খুলুন</a>
                   </div>}
                 </div>
-                {canUpdate && <div className="hidden lg:block">{conversationActions()}</div>}
+                </div>
               </header>
-              {profileOpen && messengerContact && (
-                <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface px-4 py-3">
+              {profileOpen && messengerContact && !focusMode && (
+                <div className="absolute bottom-0 right-0 top-14 z-30 flex w-80 max-w-full flex-col items-start gap-3 overflow-y-auto border-l border-border bg-surface p-4 shadow-xl">
                   {profile?.profilePicUrl || conversation.profilePicUrl ? <img src={profile?.profilePicUrl || conversation.profilePicUrl} alt="" className="h-12 w-12 rounded-full object-cover" /> : <span className="grid h-12 w-12 place-items-center rounded-full bg-background text-primary"><UserRound size={22} /></span>}
                   <div className="min-w-0 flex-1"><p className="font-semibold text-text">{profileBusy ? "Profile লোড হচ্ছে…" : profile?.name || conversation.customerName || `Messenger · ${messengerContact.externalUserId.slice(-6)}`}</p><p className="text-xs text-text-muted">Messenger profile তথ্য · Facebook profile link Meta দেয় না</p>{canUpdate && <form onSubmit={saveMessengerPhone} className="mt-2 flex max-w-sm gap-2"><input value={phoneDraft} onChange={(event) => setPhoneDraft(event.target.value)} placeholder="Customer phone number" aria-label="Messenger customer phone number" className="min-w-0 flex-1 rounded border border-border px-2 py-1 text-xs" /><button type="submit" disabled={phoneBusy || !phoneDraft.trim()} className="rounded bg-primary px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">{phoneBusy ? "Saving…" : "Save & link"}</button></form>}{profileError && <p className="text-xs text-red-600">{profileError}</p>}</div>
                   <button type="button" onClick={() => setProfileOpen(false)} aria-label="Profile বন্ধ করুন" className="rounded p-2 text-text-muted hover:bg-background"><X size={17} /></button>
                 </div>
               )}
-              <div ref={messageListRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#efeae2] p-3 sm:p-5">
+              <div ref={messageListRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[#efeae2] p-4 pb-20">
                 {conversation.messages.map((message) => {
                   const reactions = Array.isArray(message.metadata?.reactions) ? message.metadata.reactions : [];
                   const reactionGroups = reactions.reduce((groups, reaction) => {
@@ -1209,7 +1228,7 @@ export default function AdminChatInbox({
                     className={`group relative flex ${message.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`relative max-w-[85%] rounded-2xl px-3 py-2 transition-shadow duration-300 ${focusedReplyMessageId === message.id ? "ring-4 ring-violet-500 ring-offset-2 ring-offset-[#efeae2]" : ""} ${message.direction === "OUTBOUND" ? "rounded-tr-sm bg-[#d9fdd3] text-slate-900 shadow-sm" : "rounded-tl-sm bg-white text-slate-800 shadow-sm"}`}
+                      className={`relative max-w-[75%] px-3.5 py-2.5 leading-[1.5] transition-shadow duration-300 ${focusedReplyMessageId === message.id ? "ring-4 ring-violet-500 ring-offset-2 ring-offset-[#efeae2]" : ""} ${message.direction === "OUTBOUND" ? "rounded-[18px_18px_4px_18px] bg-[#dcf8c6] text-slate-900 shadow-sm" : "rounded-[18px_18px_18px_4px] bg-white text-slate-800 shadow-sm"}`}
                     >
                       {message.metadata?.needsHumanAssistant && <p className="mb-1 rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">Need human assistant</p>}
                       {canUpdate && (
@@ -1403,7 +1422,7 @@ export default function AdminChatInbox({
                           ))}
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap break-words text-sm">
+                        <p className="whitespace-pre-wrap break-words text-sm leading-[1.5]">
                           {normalizeChatText(message.content)}
                         </p>
                       )
@@ -1491,29 +1510,29 @@ export default function AdminChatInbox({
                   );
                 })}
               </div>
-              <div className="shrink-0 bg-white px-3 lg:border-t lg:border-black/5 lg:px-4 lg:pt-3">
-                <div className="hidden flex-wrap items-center gap-2 rounded-lg bg-background px-2 py-2 lg:flex">
+              <div className={`absolute bottom-[76px] left-3 right-3 z-20 rounded-xl border border-border bg-white/95 p-1 shadow-lg ${profileOpen && messengerContact && !focusMode ? "xl:right-[332px]" : ""}`}>
+                <div className="flex items-center gap-2 rounded-lg bg-background px-2 py-1">
                   <button
                     type="button"
                     onClick={() => setOrdersExpanded((value) => !value)}
                     aria-expanded={ordersExpanded}
-                    className="flex min-h-8 flex-1 flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface"
+                    className="flex min-h-8 min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface"
                   >
                     <ShoppingBag size={15} className="text-primary" />
-                    <span className="font-semibold text-primary">
+                    <span className="whitespace-nowrap font-semibold text-primary">
                       {ordersExpanded ? "Orders লুকান" : "Orders দেখুন"}
                     </span>
                     <span>
                       <b className="text-text">{orderSummary?.total ?? "—"}</b>{" "}
                       মোট
                     </span>
-                    <span>
+                    <span className={ordersExpanded ? "" : "hidden"}>
                       Running{" "}
                       <b className="text-amber-700">
                         {orderSummary?.running ?? "—"}
                       </b>
                     </span>
-                    <span>
+                    <span className={ordersExpanded ? "" : "hidden"}>
                       Complete{" "}
                       <b className="text-emerald-700">
                         {orderSummary?.complete ?? "—"}
@@ -1536,7 +1555,7 @@ export default function AdminChatInbox({
                   </button>
                 </div>
                 {ordersExpanded && (
-                  <div className="mt-2 max-h-44 space-y-2 overflow-y-auto pb-2">
+                  <div className="mt-2 max-h-[40dvh] space-y-2 overflow-y-auto pb-2">
                     {orderSummary?.orders?.length ? (
                       orderSummary.orders.map((order) => (
                         <div
@@ -1583,7 +1602,7 @@ export default function AdminChatInbox({
                 )}
               </div>
               {productPanel && (
-              <div className="shrink-0 border-t border-border bg-surface p-3 sm:px-4">
+              <div className={`absolute bottom-[76px] left-3 right-3 z-30 rounded-xl border border-border bg-surface p-3 shadow-xl ${profileOpen && messengerContact && !focusMode ? "xl:right-[332px]" : ""}`}>
                   <div className="mb-2 flex items-center gap-2">
                     <input
                       autoFocus
@@ -1656,9 +1675,10 @@ export default function AdminChatInbox({
               )}
               <form
                 onSubmit={sendReply}
-                className="relative z-10 mt-auto shrink-0 border-t border-black/5 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4"
+                className="relative z-30 flex h-[68px] shrink-0 flex-col justify-center border-t border-black/5 bg-white px-3"
               >
     <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; releasePhotoPreview(photoPreviewRef.current); const url = URL.createObjectURL(file); photoPreviewRef.current = url; photoPreviewUrlsRef.current.add(url); setPhotoPreviewUrl(url); setPhotoFile(file); setSelectedChatMedia(null); }} />
+                <div className="absolute bottom-full left-3 right-3 z-30 mb-2 max-h-[40dvh] overflow-y-auto rounded-xl bg-white shadow-lg">
                 {replyToMessage && (
                   <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-primary bg-primary-soft px-3 py-2 text-xs">
                     <Reply size={14} className="shrink-0 text-primary" />
@@ -1680,7 +1700,7 @@ export default function AdminChatInbox({
                     <button type="button" onClick={() => setSelectedChatMedia(null)} aria-label="Media photo সরান" className="rounded p-1 hover:bg-white"><X size={14} /></button>
                   </div>
                 )}
-                {conversation.linkedConversations?.length > 1 && <label className="mb-2 hidden items-center gap-2 text-xs font-semibold text-text-muted lg:flex">Reply via <select value={replyTarget?.channel || ""} onChange={(event) => setReplyChannel(event.target.value)} className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-text">{conversation.linkedConversations.map((item) => <option key={item.id} value={item.channel}>{channelLabels[item.channel]}{item.status === "CLOSED" ? " (Closed)" : ""}</option>)}</select></label>}
+                </div>
                 {draft.startsWith("/") && quickReplies.length > 0 && (
                   <div className="absolute bottom-full left-3 right-3 z-10 mb-1 max-h-52 overflow-auto rounded-xl border border-border bg-surface p-1 shadow-xl sm:left-4 sm:right-4">
                     {quickReplies
@@ -1712,7 +1732,7 @@ export default function AdminChatInbox({
                   </div>
                 )}
                 <div className="flex items-end gap-2 ">
-                  <div ref={attachmentsMenuRef} className="relative shrink-0 lg:hidden">
+                  <div ref={attachmentsMenuRef} className="relative shrink-0">
                     <button type="button" onClick={() => setAttachmentsOpen((open) => !open)} disabled={!canUpdate || replyClosed || busy} aria-label="ছবি ও পণ্য পাঠানোর অপশন" title="ছবি বা পণ্য পাঠান" aria-expanded={attachmentsOpen} aria-controls="chat-attachments" className="grid h-11 w-11 place-items-center rounded-full text-emerald-800 hover:bg-emerald-50 disabled:opacity-50"><Plus size={26} className={`transition-transform ${attachmentsOpen ? "rotate-45" : ""}`} /></button>
                     {attachmentsOpen && <div id="chat-attachments" role="group" aria-label="ছবি ও পণ্য পাঠান" className="absolute bottom-full left-0 z-30 mb-3 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-white p-2 shadow-xl">
                       <button type="button" onClick={() => { setAttachmentsOpen(false); photoInputRef.current?.click(); }} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-background"><ImagePlus size={21} className="text-violet-600" /><span>ফোন থেকে ছবি দিন<span className="block text-xs font-normal text-text-muted">নতুন ছবি আপলোড করুন</span></span></button>
@@ -1747,7 +1767,7 @@ export default function AdminChatInbox({
                           ? `${channelLabels[replyTarget?.channel] || "চ্যাট"}-এ বার্তা লিখুন…`
                           : "আপনার chat:update permission নেই"
                     }
-                    className="max-h-32 min-h-11 min-w-0 flex-1 resize-y rounded-2xl border-0 bg-[#f0f2f5] px-4 py-2 text-sm text-slate-800 outline-none ring-1 ring-black/5 focus:ring-emerald-600 disabled:opacity-50"
+                    className="h-11 max-h-11 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border-0 bg-[#f0f2f5] px-4 py-2 text-sm text-slate-800 outline-none ring-1 ring-black/5 focus:ring-emerald-600 disabled:opacity-50"
                   />
                   <button
                     type="submit"
@@ -1764,7 +1784,7 @@ export default function AdminChatInbox({
                     <span className="hidden sm:inline">{busy ? "পাঠাচ্ছি…" : "পাঠান"}</span>
                   </button>
                 </div>
-                <p className="mt-2 hidden text-[11px] text-text-muted lg:block">
+                <p className="sr-only">
                   Website reply visitor-এর chat-এ যাবে; Meta reply সংশ্লিষ্ট
                   WhatsApp, Messenger, Instagram বা TikTok channel-এ পাঠানো হবে।
                 </p>

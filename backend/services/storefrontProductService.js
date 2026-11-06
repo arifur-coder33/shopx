@@ -84,7 +84,8 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
       },
     };
   } catch (error) {
-    return { success: false, error: error.message };
+    // A database outage is not a missing product; do not cache a false 404.
+    throw error;
   }
 });
 

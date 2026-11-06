@@ -1,11 +1,11 @@
-import { unstable_cache } from "next/cache";
+import { readScheduledCampaignData } from "./storefrontScheduleService";
 import { getActiveCampaigns, getPublicCampaigns } from "./campaignService";
 
 // Cache display data only. Checkout continues to evaluate live campaigns.
-const readActiveCampaigns = unstable_cache(
+const readActiveCampaigns = () => readScheduledCampaignData(
   () => getActiveCampaigns(),
   ["storefront-active-campaigns-v1"],
-  { revalidate: 60, tags: ["campaigns", "products", "categories"] },
+  ["campaigns", "products", "categories"],
 );
 
 export async function getStorefrontActiveCampaigns() {
@@ -21,8 +21,8 @@ export async function getStorefrontActiveCampaigns() {
   );
 }
 
-export const getStorefrontCampaignHighlights = unstable_cache(
+export const getStorefrontCampaignHighlights = () => readScheduledCampaignData(
   () => getPublicCampaigns({ take: 3 }),
   ["storefront-campaign-highlights-v1"],
-  { revalidate: 60, tags: ["campaigns", "products", "categories"] },
+  ["campaigns", "products", "categories"],
 );

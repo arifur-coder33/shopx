@@ -38,7 +38,7 @@ async function queryPublicContentPage(slug) {
 const readCachedContentPage = unstable_cache(
   queryPublicContentPage,
   ["public-content-page"],
-  { revalidate: 300, tags: ["content-pages"] },
+  { revalidate: false, tags: ["content-pages"] },
 );
 
 export async function getPublicContentPage(slug) {

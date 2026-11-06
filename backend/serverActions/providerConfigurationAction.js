@@ -163,7 +163,7 @@ async function queryCheckoutProviders() {
 const readCheckoutProviders = unstable_cache(
   queryCheckoutProviders,
   ["checkout-providers"],
-  { revalidate: 60, tags: ["checkout-providers"] },
+  { revalidate: false, tags: ["checkout-providers"] },
 );
 
 export async function getCheckoutProviders() {
@@ -175,8 +175,10 @@ export async function getCheckoutProviders() {
       return await queryCheckoutProviders();
     }
     return await readCheckoutProviders();
-  } catch {
-    return { codEnabled: false, gateways: [] };
+  } catch (error) {
+    // Do not permanently cache a page with missing payment options after a
+    // transient database outage. ISR can retain the last successful page.
+    throw error;
   }
 }
 

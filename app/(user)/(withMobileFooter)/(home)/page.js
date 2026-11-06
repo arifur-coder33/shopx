@@ -5,7 +5,7 @@ import HeroSlider from "./_components/HeroSlider";
 import HomeStorefront from "./_components/HomeStorefront";
 import CampaignHighlights from "./_components/CampaignHighlights";
 
-export const revalidate = 60;
+export const revalidate = false;
 export const dynamic = "force-static";
 export async function generateMetadata() {
   const siteUrl = await getSiteUrl();

@@ -16,6 +16,14 @@ export default async function NavBar() {
     getSiteSetting(),
     getCategoryTree(),
   ]);
+  // With on-demand caching, a temporary failure must not become a permanent
+  // empty navigation/notice snapshot. Failed regeneration keeps the old page.
+  if (process.env.NODE_ENV !== "development") {
+    for (const result of [noticeResult, siteSettingResult, categoryResult]) {
+      if (result.status === "rejected") throw result.reason;
+    }
+    if (!siteSettingResult.value?.success) throw new Error("Site settings are temporarily unavailable.");
+  }
 
   const noticeData = noticeResult.status === "fulfilled" ? noticeResult.value?.data : null;
   const siteSettingData = siteSettingResult.status === "fulfilled" ? siteSettingResult.value?.data : null;

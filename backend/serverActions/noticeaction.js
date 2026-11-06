@@ -1,20 +1,22 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { registerScheduleWindow } from "@/backend/services/storefrontScheduleService";
 
 const readCachedNotice = unstable_cache(
   () => prisma.notice.findFirst(),
   ["storefront-notice-v1"],
-  { revalidate: 300, tags: ["notice"] },
+  { revalidate: false, tags: ["notice"] },
 );
 export async function getNotice() {
   try {
     const data = await (process.env.NODE_ENV === "development"
       ? prisma.notice.findFirst()
       : readCachedNotice());
+    await registerScheduleWindow(data ? [{ startAt: data.start, endAt: data.end }] : [], "storefront-notice-clock-v1", ["notice"]);
     return { success: true, data: data };
   } catch (error) {
-    return { success: false, message: error.message };
+    throw error;
   }
 }
 

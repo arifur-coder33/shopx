@@ -84,7 +84,7 @@ const querySiteSetting = cache(() => prisma.siteSetting.findFirst());
 export const getCachedSiteSettingRecord = unstable_cache(
   querySiteSetting,
   ["site-setting"],
-  { revalidate: 300, tags: ["site-setting"] },
+  { revalidate: false, tags: ["site-setting"] },
 );
 
 export async function getPublicSiteAppearance() {

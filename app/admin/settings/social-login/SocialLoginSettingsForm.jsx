@@ -2,7 +2,7 @@
 
 import { saveSocialAuthProvider } from "@/backend/serverActions/socialAuthAction";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { KeyRound, Save } from "lucide-react";
+import { Check, Copy, KeyRound, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -26,11 +26,13 @@ const inputClass =
 export default function SocialLoginSettingsForm({
   initialSettings,
   encryptionReady,
+  callbackUrls,
 }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [pendingProvider, setPendingProvider] = useState("");
   const [pending, startTransition] = useTransition();
+  const [copiedProvider, setCopiedProvider] = useState("");
   const canUpdate = hasUIPermission(
     session?.user?.permissions || [],
     "siteSetting",
@@ -58,6 +60,16 @@ export default function SocialLoginSettingsForm({
   };
 
   const disabled = pending || status === "loading" || !canUpdate;
+
+  const copyCallbackUrl = async (provider) => {
+    try {
+      await navigator.clipboard.writeText(callbackUrls[provider]);
+      setCopiedProvider(provider);
+      window.setTimeout(() => setCopiedProvider(""), 1800);
+    } catch {
+      toast.error("Could not copy callback URL. Please copy it manually.");
+    }
+  };
   return (
     <main className="mx-auto w-full max-w-5xl space-y-4 pb-10">
       <header className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
@@ -149,6 +161,40 @@ export default function SocialLoginSettingsForm({
                   }
                 />
               </label>
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor={`${provider.key}-callback-url`}
+                className="block text-sm font-semibold text-text"
+              >
+                OAuth Callback URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id={`${provider.key}-callback-url`}
+                  className={`${inputClass} min-w-0`}
+                  value={callbackUrls[provider.key]}
+                  readOnly
+                  onFocus={(event) => event.target.select()}
+                />
+                <button
+                  type="button"
+                  onClick={() => copyCallbackUrl(provider.key)}
+                  className="button flex shrink-0 items-center gap-2"
+                  aria-label={`Copy ${provider.name} callback URL`}
+                  title={`Copy ${provider.name} callback URL`}
+                >
+                  {copiedProvider === provider.key ? (
+                    <Check size={16} />
+                  ) : (
+                    <Copy size={16} />
+                  )}
+                  <span>{copiedProvider === provider.key ? "Copied" : "Copy"}</span>
+                </button>
+              </div>
+              <p className="text-xs text-text-muted">
+                Paste this into {provider.name}&apos;s OAuth redirect URI settings.
+              </p>
             </div>
             {settings.clientSecretConfigured && (
               <label className="flex items-center gap-2 text-sm text-danger">

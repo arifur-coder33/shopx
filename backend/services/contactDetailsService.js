@@ -33,7 +33,7 @@ async function queryContactDetails() {
 const getCachedContactDetails = unstable_cache(
   queryContactDetails,
   ["public-contact-details"],
-  { revalidate: 300, tags: ["contact-details", "site-setting"] },
+  { revalidate: false, tags: ["contact-details", "site-setting"] },
 );
 
 export function getPublicContactDetails() {

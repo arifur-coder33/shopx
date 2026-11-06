@@ -1,10 +1,12 @@
 import CampaignBannerGrid from "./CampaignBannerGrid";
 import { getPublicCampaigns } from "@/backend/services/campaignService";
+import { registerCampaignSchedule } from "@/backend/services/storefrontScheduleService";
 
 export const dynamic = "force-static";
-export const revalidate = 60;
+export const revalidate = false;
 
 export default async function CampaignPage() {
+  await registerCampaignSchedule();
   const campaigns = await getPublicCampaigns();
   return <main className="mx-auto max-w-7xl px-3 py-5 sm:px-5 sm:py-8">
     <CampaignBannerGrid campaigns={campaigns} title="সব ক্যাম্পেইন" />

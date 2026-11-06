@@ -7,7 +7,9 @@ import CampaignProductsGrid from "./CampaignProductsGrid";
 
 export const dynamic = "force-static";
 export const dynamicParams = true;
-export const revalidate = 60;
+import { registerCampaignSchedule } from "@/backend/services/storefrontScheduleService";
+
+export const revalidate = false;
 
 export async function generateStaticParams() {
   // Campaigns live in the production database, which may not be reachable
@@ -16,6 +18,7 @@ export async function generateStaticParams() {
 }
 
 export default async function CampaignDetailPage({ params }) {
+  await registerCampaignSchedule();
   const { id } = await params;
   const result = await getPublicCampaignProducts(id, 1);
   if (!result) notFound();

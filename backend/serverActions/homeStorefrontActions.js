@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { unstable_cache } from "next/cache";
+import { readScheduledCampaignData } from "@/backend/services/storefrontScheduleService";
 import { getProductCardCampaignData } from "@/backend/services/campaignService";
 import { getStorefrontActiveCampaigns as getActiveCampaigns } from "@/backend/services/storefrontCampaignService";
 
@@ -126,7 +126,7 @@ async function loadHomeStorefrontData() {
     return { success: true, categories, featured, regular };
   } catch (error) {
     console.error("Failed to load home storefront:", error);
-    return { success: false, error: error.message };
+    throw error;
   }
 }
 
@@ -141,26 +141,18 @@ async function loadMoreHomeProducts(cursor) {
     return { success: true, ...regular };
   } catch (error) {
     console.error("Failed to load more home products:", error);
-    return { success: false, error: error.message };
+    throw error;
   }
 }
 
-const readCachedHomeStorefrontData = unstable_cache(
-  loadHomeStorefrontData,
-  ["home-storefront-data-v1"],
-  { revalidate: 60, tags: ["home-storefront", "products", "campaigns", "categories"] },
-);
-
-const readCachedMoreHomeProducts = unstable_cache(
-  loadMoreHomeProducts,
-  ["home-more-products-v1"],
-  { revalidate: 60, tags: ["home-storefront", "products", "campaigns", "categories"] },
-);
-
 export async function getHomeStorefrontData() {
-  return readCachedHomeStorefrontData();
+  return readScheduledCampaignData(loadHomeStorefrontData, ["home-storefront-data-v2"], ["home-storefront", "products", "campaigns", "categories"]);
 }
 
 export async function getMoreHomeProducts(cursor) {
-  return readCachedMoreHomeProducts(cursor || null);
+  try {
+    return await readScheduledCampaignData(loadMoreHomeProducts, ["home-more-products-v2"], ["home-storefront", "products", "campaigns", "categories"], [cursor || null]);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }

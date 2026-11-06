@@ -9,7 +9,9 @@ import { getPublicSiteIdentity } from "@/backend/services/siteAppearanceService"
 import { getSiteUrl } from "@/lib/siteUrl";
 import { notFound } from "next/navigation";
 import { cloudinaryDetailImage } from "@/utils/cloudinaryUrl";
-export const revalidate = 60;
+import { registerCampaignSchedule } from "@/backend/services/storefrontScheduleService";
+
+export const revalidate = false;
 export const dynamic = "force-static";
 export const dynamicParams = true;
 export async function generateMetadata({ params }) {
@@ -100,21 +102,13 @@ export async function generateStaticParams() {
   return buildPaths();
 }
 export default async function CategoryWithProductPage({ params }) {
+  await registerCampaignSchedule();
   const getParams = await params;
   const { slug } = getParams;
 
-  // const getData = unstable_cache(
-  //   async () => {
-  //     const data = await getCategoryWithproduct(slug);
-
-  //     return data;
-  //   },
-  //   ["category"],
-  //   { revalidate: 3600, tags: ["category"] }
-  // );
-
   const result = await getCategoryPageData(slug[slug.length - 1]);
-  if (!result?.success) notFound();
+  if (result?.notFound) notFound();
+  if (!result?.success) throw new Error(result?.error || "Category is temporarily unavailable.");
   const data = result?.data || [];
   const siteUrl = await getSiteUrl();
   const absolute = (path) => new URL(path, `${siteUrl}/`).toString();

@@ -731,7 +731,7 @@ const getNavigationCategories = cache(queryNavigationCategoriesWithRetry);
 const getCachedNavigationCategories = unstable_cache(
   queryNavigationCategoriesWithRetry,
   ["navigation-categories-v1"],
-  { revalidate: 300, tags: ["categories"] },
+  { revalidate: false, tags: ["categories"] },
 );
 
 export async function getCategoryTree() {
@@ -743,10 +743,12 @@ export async function getCategoryTree() {
       ? getNavigationCategories()
       : getCachedNavigationCategories());
   } catch (error) {
-    // Category navigation is non-critical. Keep the storefront available when
-    // The database may be temporarily unreachable; let the next request retry.
+    // A production regeneration must fail instead of indefinitely caching an
+    // empty menu after a temporary outage. Development can keep a fallback.
     if (process.env.NODE_ENV === "development") {
       console.error("Category navigation is unavailable:", error.message);
+    } else {
+      throw error;
     }
     return [];
   }
@@ -788,7 +790,7 @@ export async function getCategoryPageData(slug, cursor = null, rawFilters = {}) 
     const targetCategory = categories.find((c) => c.slug === slug);
 
     if (!targetCategory) {
-      return { success: false, error: "Category not found" };
+      return { success: false, notFound: true, error: "Category not found" };
     }
 
     const categoryById = new Map(categories.map((category) => [category.id, category]));
