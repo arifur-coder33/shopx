@@ -413,7 +413,8 @@ export default function OrderForm({
       orderOriginCapabilityRef.current = createdOrder.originCapability || null;
       sendBrowserLocation(browserLocationRef.current, orderOriginCapabilityRef.current);
       setConfirmedOrderNo(createdOrder.orderNo);
-      setSuccessHref("/tracking/?o=" + encodeURIComponent(createdOrder.orderNo) + "&p=" + encodeURIComponent(createdOrder.phoneNumber));
+      const orderTrackingHref = "/tracking/?o=" + encodeURIComponent(createdOrder.orderNo) + "&p=" + encodeURIComponent(createdOrder.phoneNumber);
+      setSuccessHref(orderTrackingHref);
       if (leadSaveTimer.current) window.clearTimeout(leadSaveTimer.current);
       setLeadDraft(null);
       try { window.localStorage.removeItem(CHECKOUT_DRAFT_KEY); } catch { /* Draft cleanup is best effort. */ }
@@ -435,7 +436,7 @@ export default function OrderForm({
         if (initiationError) throw initiationError;
         if (initiated?.success && initiated.manualPayment) {
           setLoadingStep("order-complete");
-          window.location.replace(successHref);
+          window.location.replace(orderTrackingHref);
           return;
         }
         if (!initiated?.success || !initiated.url) {
