@@ -368,6 +368,11 @@ export default function SocialTrackingForm({ initialSettings, sitemapUrl, produc
                 )}
               </div>
               {provider.key === "google" && <>
+                <div>
+                  <label htmlFor="googleSiteVerification" className="mb-1.5 block text-sm font-semibold text-text">Google Search Console verification code</label>
+                  <input id="googleSiteVerification" name="googleSiteVerification" defaultValue={initialSettings.googleSiteVerification || ""} maxLength={200} disabled={disabled} className={inputClass} placeholder="শুধু content-এর ভেতরের code দিন" />
+                  <p className="mt-1.5 text-xs text-text-muted">Search Console → Settings → Ownership verification → HTML tag থেকে শুধু content="..."-এর ভেতরের code কপি করুন; পুরো &lt;meta&gt; tag দেবেন না।</p>
+                </div>
                 <CopyableUrl id="google-sitemap-url" label="Google Search Console sitemap URL" url={sitemapUrl} hint="Submit this URL in Google Search Console → Sitemaps." />
                 <CopyableUrl id="google-product-feed-url" label="Google Merchant Center product feed (XML)" url={productFeedUrls.google} hint="Add this URL as a scheduled fetch data source in Merchant Center." />
               </>}

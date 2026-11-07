@@ -14,6 +14,13 @@ export async function uploadImagesAction(formData) {
     const files = formData.getAll("imageGallery").filter((file) => file && typeof file.size === "number" && file.size > 0 && typeof file.arrayBuffer === "function");
     const displayNames = formData.getAll("imageGalleryName");
     if (!files.length) return { success: false, message: "Choose at least one image." };
+    const supportedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    if (files.some((file) => !supportedTypes.has(file.type))) {
+      return { success: false, message: "JPG, PNG, WebP বা GIF image দিন।" };
+    }
+    if (files.some((file) => file.size > 5 * 1024 * 1024)) {
+      return { success: false, message: "প্রতিটি image 5 MB-এর মধ্যে হতে হবে।" };
+    }
 
     const uploadedMedia = await Promise.all(files.map(async (file, index) => {
       try {

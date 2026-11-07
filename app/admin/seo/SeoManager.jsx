@@ -92,11 +92,6 @@ export default function SeoManager({ initialData, siteUrl }) {
             <textarea name="seoKeywords" value={settings.seoKeywords} onChange={(event) => setSiteValue("seoKeywords", event.target.value)} maxLength={500} rows={2} disabled={disabled} className={inputClass} placeholder="online shop, clothing, fashion" />
             <span className="text-xs font-normal text-text-muted">Google ignores the meta-keywords tag for ranking. Use relevant phrases naturally in your page content.</span>
           </label>
-          <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">
-            Google Search Console verification code
-            <input name="googleSiteVerification" value={settings.googleSiteVerification} onChange={(event) => setSiteValue("googleSiteVerification", event.target.value)} maxLength={200} disabled={disabled} className={inputClass} placeholder="Paste the content value from Google’s HTML verification tag" />
-            <span className="text-xs font-normal text-text-muted">Search Console → Settings → Ownership verification → HTML tag.</span>
-          </label>
         </div>
         <GooglePreview url={`${origin}/`} title={settings.seoTitle.trim() || settings.siteName} description={settings.seoDescription.trim()} />
         <div className="flex justify-end">

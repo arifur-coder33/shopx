@@ -20,7 +20,7 @@ export default function ThirdPartyScripts({ settings = {} }) {
         />
       )}
 
-      {/* 🔵 GTM */}
+      {/* Load GTM after the page has loaded so it does not delay initial rendering. */}
       {gtmId && (
         <Script
           id="gtm"
@@ -41,7 +41,7 @@ export default function ThirdPartyScripts({ settings = {} }) {
       )}
 
       {/* 🟢 GA4 (only if no GTM) */}
-      {gaId && !gtmId && (
+      {gaId && !settings.googleTagId && (
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}

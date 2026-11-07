@@ -20,6 +20,36 @@ async function inspectImage(file) {
 }
 
 const megabytes = (bytes) => `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024;
+
+async function prepareUploadFile(file) {
+  if (file.size <= MAX_UPLOAD_BYTES) return file;
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("ছবিটি প্রস্তুত করা যায়নি।");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    const outputType = file.type === "image/webp" ? "image/webp" : "image/jpeg";
+    for (const quality of [0.9, 0.82, 0.74, 0.66, 0.58]) {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, quality));
+      if (blob && blob.size <= MAX_UPLOAD_BYTES) {
+        const extension = outputType === "image/webp" ? "webp" : "jpg";
+        const name = `${file.name.replace(/\.[^.]+$/u, "")}.${extension}`;
+        return new File([blob], name, { type: outputType, lastModified: file.lastModified });
+      }
+    }
+    throw new Error("ছবিটি 4.5 MB-এর নিচে আনা যায়নি। ছোট ছবি ব্যবহার করুন।");
+  } finally {
+    bitmap.close();
+  }
+}
 
 export default function FileUploader({ multiple = false, onUpload }) {
   const [images, setImages] = useState([]);
@@ -57,23 +87,35 @@ export default function FileUploader({ multiple = false, onUpload }) {
 
   const handleUpload = async () => {
     if (!images.length || uploading) return;
-    const formData = new FormData();
-    images.forEach(({ file, displayName }) => {
-      formData.append("imageGallery", file);
-      formData.append("imageGalleryName", displayName.trim());
-    });
     setUploading(true);
     try {
-      const result = await uploadImagesAction(formData);
-      if (!result.success) {
-        toast.error(result.message || "Image upload failed.");
-        return;
+      const uploaded = [];
+      const failed = [];
+      for (const image of images) {
+        try {
+          const file = await prepareUploadFile(image.file);
+          const formData = new FormData();
+          formData.append("imageGallery", file);
+          formData.append("imageGalleryName", image.displayName.trim());
+          const result = await uploadImagesAction(formData);
+          if (!result.success) throw new Error(result.message || "Image upload failed.");
+          uploaded.push(...(result.data || []));
+        } catch (error) {
+          failed.push({ ...image, error: error?.message || "Image upload failed." });
+        }
       }
-      toast.success(result.message || "Upload successful.");
-      onUpload?.(result.data);
-      images.forEach(({ preview }) => URL.revokeObjectURL(preview));
-      setImages([]);
-      closeModal();
+      if (uploaded.length) onUpload?.(uploaded);
+      if (failed.length) {
+        const failedSet = new Set(failed.map((image) => image.preview));
+        images.filter((image) => !failedSet.has(image.preview)).forEach(({ preview }) => URL.revokeObjectURL(preview));
+        setImages(failed);
+        toast.error(`${uploaded.length}টি upload হয়েছে, ${failed.length}টি হয়নি। ${failed[0].error}`);
+      } else {
+        toast.success(`${uploaded.length}টি image upload হয়েছে।`);
+        images.forEach(({ preview }) => URL.revokeObjectURL(preview));
+        setImages([]);
+        closeModal();
+      }
     } catch (error) {
       toast.error(error?.message || "Upload failed.");
     } finally {
@@ -81,7 +123,7 @@ export default function FileUploader({ multiple = false, onUpload }) {
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { "image/*": [] }, multiple });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { "image/jpeg": [".jpg", ".jpeg"], "image/png": [".png"], "image/webp": [".webp"], "image/gif": [".gif"] }, multiple });
 
   return (
     <div className="mx-auto flex max-h-[78vh] w-full max-w-4xl flex-col gap-4 p-1">

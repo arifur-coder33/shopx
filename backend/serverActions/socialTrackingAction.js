@@ -11,6 +11,7 @@ import {
 } from "@/backend/services/socialTrackingService";
 import { actionError, requireProcurementPermission } from "@/backend/utils/procurement";
 import prisma from "@/lib/prisma";
+import { normalizeGoogleSiteVerification } from "@/backend/services/siteAppearanceService";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 const PUBLIC_FIELDS = [
@@ -43,7 +44,10 @@ const validateGaPropertyId = (value) => {
 export async function getSocialTrackingConfiguration() {
   try {
     await requireProcurementPermission("socialTracking", "view");
-    const record = await getSocialTrackingRecord();
+    const [record, siteSetting] = await Promise.all([
+      getSocialTrackingRecord(),
+      prisma.siteSetting.findFirst({ select: { googleSiteVerification: true } }),
+    ]);
     const settings = Object.fromEntries(
       PUBLIC_FIELDS.map((key) => [key, clean(record?.[key])]),
     );
@@ -54,6 +58,7 @@ export async function getSocialTrackingConfiguration() {
       success: true,
       data: {
         ...settings,
+        googleSiteVerification: normalizeGoogleSiteVerification(siteSetting?.googleSiteVerification),
         productFeedUsername: clean(record?.productFeedUsername),
         productFeedCredentialsConfigured: Boolean(record?.productFeedUsername && record?.productFeedPasswordHash),
         configuredSecrets: Object.fromEntries(
@@ -111,6 +116,8 @@ export async function saveSocialTrackingConfiguration(formData) {
       clarityProjectId: validatePublicId(values.clarityProjectId, "Clarity Project ID"),
       tiktokPixelId: validatePublicId(values.tiktokPixelId, "TikTok Pixel ID"),
     };
+    const googleSiteVerification = normalizeGoogleSiteVerification(values.googleSiteVerification);
+    if (googleSiteVerification.length > 200) throw new Error("Google verification code cannot exceed 200 characters.");
     const productFeedUsername = clean(values.productFeedUsername);
     const productFeedPassword = clean(values.productFeedPassword);
     let productFeedPasswordHash = existing?.productFeedPasswordHash || null;
@@ -174,7 +181,15 @@ export async function saveSocialTrackingConfiguration(formData) {
       },
     });
 
+    const siteSetting = await prisma.siteSetting.findFirst({ select: { id: true } });
+    if (siteSetting) {
+      await prisma.siteSetting.update({ where: { id: siteSetting.id }, data: { googleSiteVerification: googleSiteVerification || null } });
+    } else {
+      await prisma.siteSetting.create({ data: { googleSiteVerification: googleSiteVerification || null } });
+    }
+
     revalidateTag("social-tracking");
+    revalidateTag("site-setting");
     revalidatePath("/", "layout");
     revalidatePath("/admin/settings/social-tracking");
     return { success: true, message: "Social tracking settings updated." };

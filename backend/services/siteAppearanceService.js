@@ -29,6 +29,14 @@ const safeNumber = (value, fallback, min, max) => {
     : fallback;
 };
 
+export function normalizeGoogleSiteVerification(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (!/<meta\b/iu.test(raw)) return raw;
+  const content = raw.match(/\bcontent\s*=\s*(["'])(.*?)\1/iu)?.[2]?.trim();
+  return content || raw;
+}
+
 export function normalizeSiteAppearance(setting) {
   const defaults = SITE_APPEARANCE_DEFAULTS;
   return {
@@ -55,7 +63,7 @@ export function normalizeSiteIdentity(setting) {
     String(setting?.seoDescription || "").trim() ||
     "ঘরে বসে সহজে আপনার পছন্দের পণ্য অর্ডার করুন।";
   const seoKeywords = String(setting?.seoKeywords || "").trim();
-  const googleSiteVerification = String(setting?.googleSiteVerification || "").trim();
+  const googleSiteVerification = normalizeGoogleSiteVerification(setting?.googleSiteVerification);
   return {
     name,
     seoTitle,

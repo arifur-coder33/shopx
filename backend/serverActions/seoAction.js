@@ -3,6 +3,7 @@
 import { requireProcurementPermission } from "@/backend/utils/procurement";
 import { CONTENT_PAGE_DEFINITIONS } from "@/lib/contentPageDefinitions";
 import prisma from "@/lib/prisma";
+import { normalizeGoogleSiteVerification } from "@/backend/services/siteAppearanceService";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 const clean = (value) => String(value || "").trim();
@@ -34,7 +35,7 @@ export async function getSeoSettingsForAdmin() {
         seoTitle: setting?.seoTitle || "",
         seoDescription: setting?.seoDescription || "",
         seoKeywords: setting?.seoKeywords || "",
-        googleSiteVerification: setting?.googleSiteVerification || "",
+          googleSiteVerification: normalizeGoogleSiteVerification(setting?.googleSiteVerification),
         pages: EDITABLE_SEO_PAGES.map((definition) => {
           const page = pageBySlug.get(definition.slug);
           return {
@@ -59,7 +60,8 @@ export async function updateGlobalSeoSettings(formData) {
     const seoTitle = clean(formData.get("seoTitle"));
     const seoDescription = clean(formData.get("seoDescription"));
     const seoKeywords = clean(formData.get("seoKeywords")).split(/[\n,]/).map((word) => word.trim()).filter(Boolean).join(", ");
-    const googleSiteVerification = clean(formData.get("googleSiteVerification"));
+    const hasGoogleSiteVerification = formData.has("googleSiteVerification");
+    const googleSiteVerification = normalizeGoogleSiteVerification(formData.get("googleSiteVerification"));
     if (seoTitle.length > 160) throw new Error("SEO title cannot exceed 160 characters.");
     if (seoDescription.length > 320) throw new Error("SEO description cannot exceed 320 characters.");
     if (seoKeywords.length > 500) throw new Error("SEO keywords cannot exceed 500 characters.");
@@ -70,7 +72,7 @@ export async function updateGlobalSeoSettings(formData) {
       seoTitle: seoTitle || null,
       seoDescription: seoDescription || null,
       seoKeywords: seoKeywords || null,
-      googleSiteVerification: googleSiteVerification || null,
+      ...(hasGoogleSiteVerification && { googleSiteVerification: googleSiteVerification || null }),
     };
     if (setting) await prisma.siteSetting.update({ where: { id: setting.id }, data });
     else await prisma.siteSetting.create({ data });
