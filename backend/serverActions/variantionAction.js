@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getDataSelectFields } from "../utils/getDataSelectFields";
+import { getCategorySizeSettings, sizeVariationFilter } from "../services/sizeChartService";
 
 export async function createVariationAction(formData) {
   const data = Object.fromEntries(formData.entries());
@@ -64,6 +65,9 @@ export async function updateVariationAction({ formData, id }) {
     if (!checkData) {
       throw new Error("Invalide id");
     }
+    if (checkData.name.toLowerCase() === "size" && data.name.toLowerCase() !== "size") {
+      throw new Error("Size is the default variation for size charts.");
+    }
     const saveData = await prisma.variationName.update({
       where: { id },
       data: preparedData,
@@ -80,6 +84,8 @@ export async function updateVariationAction({ formData, id }) {
 
 export async function deleteVariationAction(id) {
   try {
+    const size = await prisma.variationName.findFirst({ where: { id, ...sizeVariationFilter }, select: { id: true } });
+    if (size) throw new Error("The default Size variation cannot be deleted.");
     const deleteItem = await prisma?.variationName?.delete({
       where: { id },
     });
@@ -101,6 +107,21 @@ export async function getVariationByCategoryId(id) {
         }, // Include the related variationName data
       },
     });
+
+    const { chart } = await getCategorySizeSettings(id);
+    if (chart) {
+      const chartValues = await prisma.variationValue.findMany({
+        where: { variation: sizeVariationFilter, value: { in: chart.sizes } },
+        include: { variation: { select: { id: true, name: true } } },
+        orderBy: [{ categoryId: { sort: "asc", nulls: "first" } }, { id: "asc" }],
+      });
+      const seen = new Set(data.filter((item) => item.variation.name.toLowerCase() === "size").map((item) => item.value));
+      for (const item of chartValues) {
+        if (seen.has(item.value)) continue;
+        data.push(item);
+        seen.add(item.value);
+      }
+    }
 
     const grouped = Object.values(
       data.reduce((acc, item) => {

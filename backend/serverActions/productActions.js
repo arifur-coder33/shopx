@@ -1742,6 +1742,9 @@ export async function updateProductAction({ id: productId, formData }) {
         where: { id: productId },
       });
       if (!existingProduct) throw new Error("Product not found for update.");
+      if (existingProduct.hasVariations && typeof data.variations !== "string") {
+        throw new Error("Variations are still loading. Wait for the variation rows and save again.");
+      }
 
       let newSlug = existingProduct.slug;
       if (data.title && data.title !== existingProduct.title) {
@@ -1851,21 +1854,28 @@ export async function updateProductAction({ id: productId, formData }) {
       });
 
       const existingVariationMap = new Map(
-        existingVariations.map((v) => [v.matcherId, v]),
+        existingVariations.map((variant) => [variant.id, variant]),
       );
 
       if (hasSubmittedVariations) {
+        const combinationKey = (items) => JSON.stringify(items.map(({ variationNameId, variationValueId }) =>
+          JSON.stringify([variationNameId, variationValueId]),
+        ).sort());
+        const submittedIds = new Set();
+        for (const row of submittedVariationsData) {
+          if (!row?.id) continue;
+          if (!existingVariationMap.has(row.id) || submittedIds.has(row.id)) {
+            throw new Error("A variation row is duplicated or no longer exists. Refresh and try again.");
+          }
+          submittedIds.add(row.id);
+        }
         for (const variantData of submittedVariationsData) {
           if (
-            !variantData.matcherId ||
+            !variantData?.matcherId ||
             !Array.isArray(variantData.combination) ||
             variantData.combination.length === 0
           ) {
-            console.warn(
-              "Skipping invalid submitted variation data due to missing matcherId or combinations:",
-              variantData,
-            );
-            continue;
+            throw new Error("A variation row is incomplete. Check its options and save again.");
           }
           const dimensions = variantData.dimensions;
 
@@ -1907,35 +1917,34 @@ export async function updateProductAction({ id: productId, formData }) {
             )
             .filter(Boolean);
 
-          if (combinationsToProcess.length === 0) {
-            console.warn(
-              "Skipping variation due to no valid combinations to create/update:",
-              variantData,
-            );
-            continue;
+          if (combinationsToProcess.length !== variantData.combination.length) {
+            throw new Error("A variation row contains an invalid option. Refresh and try again.");
           }
 
-          const existingVariant = existingVariationMap.get(
-            variantData.matcherId,
+          const submittedKey = combinationKey(combinationsToProcess);
+          const matchingRows = variantData.id ? [] : [...existingVariationMap.values()].filter((variant) =>
+            !submittedIds.has(variant.id) && combinationKey(variant.combinations) === submittedKey,
           );
-          console.log("variant dtaa", variantData);
+          if (matchingRows.length > 1) throw new Error("Multiple variations match this row. Refresh and try again.");
+          const existingVariant = variantData.id ? existingVariationMap.get(variantData.id) : matchingRows[0];
           if (existingVariant) {
             await tx.productVariation.update({
               where: { id: existingVariant.id },
               data: {
+                matcherId: variantData.matcherId,
                 sku: variantSku,
                 regularPrice: variantRegularPrice,
                 discountPrice: variantDiscountPrice,
                 weight: variantWeight,
                 dimensions: dimensions,
                 thumbnailId: variantThumbnailId,
-                combinations: {
-                  deleteMany: { productVariationId: existingVariant.id }, // Target specific combinations for deletion
+                ...(combinationKey(existingVariant.combinations) !== submittedKey && { combinations: {
+                  deleteMany: {},
                   create: combinationsToProcess,
-                },
+                } }),
               },
             });
-            existingVariationMap.delete(variantData.matcherId);
+            existingVariationMap.delete(existingVariant.id);
           } else {
             await tx.productVariation.create({
               data: {
@@ -1953,7 +1962,8 @@ export async function updateProductAction({ id: productId, formData }) {
           }
         }
 
-        for (const [matcherId, variantToDelete] of existingVariationMap) {
+        for (const variantToDelete of existingVariationMap.values()) {
+          if (existingProduct.hasVariations && variantToDelete.combinations.length === 0) continue;
           const ordersCount = await tx.orderItem.count({
             where: { variationId: variantToDelete.id },
           });
@@ -2007,7 +2017,7 @@ export async function updateProductAction({ id: productId, formData }) {
               }, // Ensure no combinations
             },
           });
-          existingVariationMap.delete(defaultVariation.matcherId);
+          existingVariationMap.delete(defaultVariation.id);
         } else {
           await tx.productVariation.create({
             data: {
@@ -2024,10 +2034,8 @@ export async function updateProductAction({ id: productId, formData }) {
           });
         }
 
-        for (const [matcherId, variantToDelete] of existingVariationMap) {
-          if (defaultVariation && variantToDelete.id === defaultVariation.id) {
-            continue;
-          }
+        for (const variantToDelete of existingVariationMap.values()) {
+          if (!existingProduct.hasVariations) continue;
 
           const ordersCount = await tx.orderItem.count({
             where: { variationId: variantToDelete.id },

@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "react-toastify";
 import Imagecustom from "../images/ImageCustom";
 import VariationInput from "../input/VariationInput";
+import CategoryUnitInput from "../input/CategoryUnitInput";
 
 // Dynamically imported components
 const Button = dynamic(() => import("@/components/button"));
@@ -227,6 +228,7 @@ export default function DynamicForm({
                     addForm={field.addForm}
                     colSpan={field.colSpan}
                     onSelect={field.onSelect}
+                    onClear={field.onClear}
                     required={field.required}
                     itemId={data?.id}
                   />
@@ -301,6 +303,8 @@ export default function DynamicForm({
               return <CategorySpecificationsInput key={field.name} name={field.name} defaultValue={data?.[field.name]} />;
             case "productSpecifications":
               return <ProductSpecificationsInput key={field.name} name={field.name} categoryId={field.categoryId} initialCategoryId={data?.category?.id} defaultValue={data?.[field.name]} />;
+            case "categoryUnit":
+              return <CategoryUnitInput key={field.name} parentId={field.parentId} categoryId={data?.id} defaultValue={data?.[field.name]} />;
             case "variation":
               return (
                 <VariationInput
@@ -311,6 +315,9 @@ export default function DynamicForm({
                   colSpan={field?.colSpan}
                   labelNote={field.labelNote}
                   required={field.required}
+                  sizeChart={field.sizeChart}
+                  parentId={field.parentId}
+                  defaultSizeChartId={data?.sizeChartId}
                 />
               );
             case "productVariation":

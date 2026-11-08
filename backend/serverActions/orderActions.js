@@ -1503,28 +1503,43 @@ export async function updateUnconfirmedCustomerOrderAddress({
   }
 }
 
-export async function updateOrderAddressByAdmin({ orderId, deliveryAddress, city, thana }) {
+export async function updateOrderAddressByAdmin({ orderId, deliveryAddress, city, thana, deliveryCharge }) {
   try {
     await hasPermission("order", "update");
     const userId = await getUserId();
     const address = String(deliveryAddress || "").trim();
     const district = String(city || "").trim();
     const area = String(thana || "").trim();
-    if (!orderId || !address || address.length > 500 || !district || district.length > 100 || !area || area.length > 100) {
-      throw new Error("ঠিকানা, জেলা ও থানা সঠিকভাবে দিন।");
+    const nextDeliveryCharge = Number(deliveryCharge);
+    if (!orderId || !address || address.length > 500 || !district || district.length > 100 || !area || area.length > 100 || !Number.isFinite(nextDeliveryCharge) || nextDeliveryCharge < 0 || nextDeliveryCharge > 1_000_000_000) {
+      throw new Error("ঠিকানা, জেলা, থানা ও delivery charge সঠিকভাবে দিন।");
     }
     await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: String(orderId) }, include: { shipping: true, deliveries: { select: { id: true }, take: 1 } } });
+      const order = await tx.order.findUnique({ where: { id: String(orderId) }, include: { shipping: true, selectedPaymentGateway: { select: { adapterKey: true } }, deliveries: { select: { id: true }, take: 1 } } });
       if (!order) throw new Error("অর্ডার পাওয়া যায়নি।");
       if (["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status) || order.shipping?.cn || order.deliveries.length) {
         throw new Error("অর্ডার courier-এ পাঠানোর পর ঠিকানা পরিবর্তন করা যাবে না।");
       }
-      await tx.order.update({ where: { id: order.id }, data: { deliveryAddress: address, city: district, thana: area } });
-      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: order.orderNo, status: order.status, title: "Admin updated delivery address", message: `ঠিকানা: ${address}, ${area}, ${district}`, createdBy: userId || "admin" } });
+      const charge = Math.round(nextDeliveryCharge * 100) / 100;
+      const chargeChanged = Math.abs(charge - Number(order.deliveryCharge || 0)) >= 0.01;
+      const total = Math.max(0, Number(order.orderPrice) + charge + Number(order.taxAmount || 0) - Number(order.adminDiscount || 0));
+      const dueAmount = Math.max(0, Math.round((total - Number(order.paidAmount || 0)) * 100) / 100);
+      let paymentStatus = dueAmount <= 0 ? "PAID" : Number(order.paidAmount || 0) > 0 ? "PARTIALLY_PAID" : order.paymentStatus === "FAILED" ? "FAILED" : order.paymentMethod === "COD" ? "UNPAID" : order.paymentStatus;
+      if (chargeChanged && order.paymentMethod !== "COD" && dueAmount > 0) {
+        if (order.selectedPaymentGateway?.adapterKey === "BANGLA_QR") {
+          await tx.payment.updateMany({ where: { orderId: order.id, paymentGateway: { adapterKey: "BANGLA_QR" }, status: { in: ["PENDING", "FAILED"] } }, data: { amount: dueAmount, transactionId: null, status: "PENDING" } });
+          if (Number(order.paidAmount || 0) <= 0) paymentStatus = "PENDING";
+        } else {
+          const cancelled = await tx.payment.updateMany({ where: { orderId: order.id, status: "PENDING" }, data: { status: "CANCELLED" } });
+          if (cancelled.count && Number(order.paidAmount || 0) <= 0) paymentStatus = "FAILED";
+        }
+      }
+      await tx.order.update({ where: { id: order.id }, data: { deliveryAddress: address, city: district, thana: area, deliveryCharge: charge, dueAmount, paymentStatus } });
+      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: order.orderNo, status: order.status, title: "Admin updated delivery details", message: `ঠিকানা: ${address}, ${area}, ${district}; delivery charge ৳${charge}`, createdBy: userId || "admin" } });
     });
     revalidatePath("/admin/orders");
     revalidatePath("/tracking");
-    return { success: true, message: "অর্ডারের ঠিকানা আপডেট হয়েছে।" };
+    return { success: true, message: "অর্ডারের ঠিকানা ও delivery charge আপডেট হয়েছে।" };
   } catch (error) {
     return { success: false, message: error?.message || "ঠিকানা আপডেট করা যায়নি।" };
   }
@@ -1554,21 +1569,25 @@ export async function changeFailedCustomerOrderToCod({ orderId }) {
   }
 }
 
-export async function submitBanglaQrTransaction({ orderNo, phoneNumber, transactionId }) {
+export async function submitBanglaQrTransaction({ orderNo, phoneNumber, transactionId, amount }) {
   try {
     const trx = String(transactionId || "").trim();
-    if (!orderNo || !phoneNumber || trx.length < 4 || trx.length > 100) throw new Error("সঠিক TrxID দিন।");
+    const submittedAmount = Math.round(Number(amount) * 100) / 100;
+    if (!orderNo || !phoneNumber || trx.length < 4 || trx.length > 100 || !Number.isFinite(submittedAmount) || submittedAmount <= 0) throw new Error("সঠিক TrxID ও পেমেন্টের পরিমাণ দিন।");
     const result = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({ where: { orderNo: String(orderNo), phoneNumber: String(phoneNumber) }, include: { selectedPaymentGateway: true } });
       if (!order || order.status !== "PENDING" || order.selectedPaymentGateway?.adapterKey !== "BANGLA_QR" || Number(order.dueAmount || 0) <= 0) throw new Error("এই অর্ডারে Bangla QR payment জমা নেওয়া যাচ্ছে না।");
-      const payment = await tx.payment.findFirst({ where: { orderId: order.id, paymentGateway: { adapterKey: "BANGLA_QR" }, status: { in: ["PENDING", "FAILED"] } }, orderBy: { createdAt: "desc" } });
-      if (!payment) throw new Error("Pending Bangla QR payment পাওয়া যায়নি।");
+      if (submittedAmount > Number(order.dueAmount || 0)) throw new Error("জমা দেওয়া পরিমাণ বকেয়া টাকার বেশি হতে পারবে না।");
+      let payment = await tx.payment.findFirst({ where: { orderId: order.id, paymentGateway: { adapterKey: "BANGLA_QR" }, status: { in: ["PENDING", "FAILED"] } }, orderBy: { createdAt: "desc" } });
+      if (!payment) {
+        payment = await tx.payment.create({ data: { orderId: order.id, gateway: "BANGLA_QR", paymentGatewayId: order.selectedPaymentGatewayId, paymentMethod: order.paymentMethod, amount: Number(order.dueAmount), status: "PENDING" } });
+      }
       const duplicateTrx = await tx.payment.findFirst({ where: { transactionId: trx, id: { not: payment.id }, status: { in: ["PENDING", "PAID"] } }, select: { id: true } });
       if (duplicateTrx) throw new Error("এই TrxID অন্য payment-এ ব্যবহার হয়েছে।");
       if (payment.status === "FAILED") await tx.payment.update({ where: { id: payment.id }, data: { status: "PENDING" } });
-      await tx.payment.update({ where: { id: payment.id }, data: { transactionId: trx } });
+      await tx.payment.update({ where: { id: payment.id }, data: { amount: submittedAmount, transactionId: trx } });
       await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "PENDING" } });
-      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: order.orderNo, status: order.status, title: "Bangla QR payment submitted", message: `Customer submitted Bangla QR TrxID ${trx}; admin confirmation is pending.`, createdBy: "customer" } });
+      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: order.orderNo, status: order.status, title: "Bangla QR payment submitted", message: `Customer submitted ৳${submittedAmount} with Bangla QR TrxID ${trx}; admin confirmation is pending.`, createdBy: "customer" } });
       return { id: payment.id };
     });
     revalidatePath("/admin/orders");
@@ -1579,7 +1598,7 @@ export async function submitBanglaQrTransaction({ orderNo, phoneNumber, transact
   }
 }
 
-export async function reviewBanglaQrPayment({ paymentId, approve }) {
+export async function reviewBanglaQrPayment({ paymentId, approve, amountReceived }) {
   try {
     await hasPermission("order", "update");
     await prisma.$transaction(async (tx) => {
@@ -1587,7 +1606,12 @@ export async function reviewBanglaQrPayment({ paymentId, approve }) {
       if (!payment || payment.paymentGateway?.adapterKey !== "BANGLA_QR" || payment.status !== "PENDING" || !payment.transactionId) throw new Error("Bangla QR payment বা TrxID পাওয়া যায়নি।");
       if (payment.order.status !== "PENDING") throw new Error("Order confirmation-এর পরে Bangla QR payment review করা যাবে না।");
       if (approve) {
-        await postCustomerPaymentInTransaction(tx, { paymentId: payment.id, amount: payment.amount, transactionId: payment.transactionId, createdBy: "admin" });
+        const receivedAmount = Math.round(Number(amountReceived) * 100) / 100;
+        const total = Number(payment.order.orderPrice) + Number(payment.order.deliveryCharge) + Number(payment.order.taxAmount || 0) - Number(payment.order.adminDiscount || 0);
+        const due = Math.max(0, Math.round((total - Number(payment.order.paidAmount || 0)) * 100) / 100);
+        if (!Number.isFinite(receivedAmount) || receivedAmount <= 0 || receivedAmount > due) throw new Error("প্রাপ্ত টাকার পরিমাণ সঠিক হতে হবে এবং বকেয়া টাকার বেশি হতে পারবে না।");
+        await tx.payment.update({ where: { id: payment.id }, data: { amount: receivedAmount } });
+        await postCustomerPaymentInTransaction(tx, { paymentId: payment.id, amount: receivedAmount, transactionId: payment.transactionId, createdBy: "admin" });
       } else {
         await tx.payment.update({ where: { id: payment.id }, data: { status: "FAILED" } });
         if (Number(payment.order.paidAmount || 0) <= 0) await tx.order.update({ where: { id: payment.orderId }, data: { paymentStatus: "FAILED" } });

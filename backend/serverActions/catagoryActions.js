@@ -12,13 +12,18 @@ import { hasPermission } from "../utils/hasPermission";
 import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
 import { buildStorefrontProductFilter } from "@/backend/utils/storefrontProductFilters";
 import { getStorefrontVariationOptions } from "@/backend/utils/getStorefrontVariationOptions";
+import { categorySizeChartInput } from "../services/sizeChartService";
 
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
 
   try {
+    const sizeChart = data.sizeChartId !== undefined
+      ? (await hasPermission("category", "create"), await categorySizeChartInput(data))
+      : undefined;
     const slug = generateSlug(data?.slug || data?.name || "");
     if (!slug) throw new Error("A valid category slug is required.");
+    if (data.unitName !== undefined && data.specifications === undefined) await hasPermission("category", "create");
     let specifications;
     if (data.specifications !== undefined) {
       await hasPermission("category", "create");
@@ -26,6 +31,8 @@ export async function createCategoryAction(formData) {
     }
 
     const preparedData = {
+      sizeChart,
+      ...(data.unitName && { unit: { connect: { name: data.unitName } } }),
       name: data?.name,
       description: data?.description,
       slug: slug,
@@ -80,6 +87,7 @@ export async function createCategoryAction(formData) {
     }
 
     revalidatePath("/admin/categories");
+    revalidatePath("/admin/size-charts");
     revalidatePath("/");
     revalidateTag("categories");
     revalidateTag("home-storefront");
@@ -100,6 +108,8 @@ export async function getCategoryById(id) {
         name: true,
         description: true,
         slug: true,
+        sizeChartId: true,
+        unitName: true,
         specifications: { orderBy: { sortOrder: "asc" }, include: { specification: { include: { parent: true } } } },
 
         thumbnail: {
@@ -155,6 +165,10 @@ export async function updateCategoryAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
 
   try {
+    if (data.unitName !== undefined && data.specifications === undefined) await hasPermission("category", "update");
+    const sizeChart = data.sizeChartId !== undefined
+      ? (await hasPermission("category", "update"), await categorySizeChartInput(data, id))
+      : undefined;
     let specifications;
     if (data.specifications !== undefined) {
       await hasPermission("category", "update");
@@ -176,6 +190,8 @@ export async function updateCategoryAction({ formData, id }) {
     // }
 
     const preparedData = {
+      sizeChart,
+      ...(data.unitName !== undefined && { unit: data.unitName ? { connect: { name: data.unitName } } : { disconnect: true } }),
       name: data?.name,
       description: data?.description,
       slug: slug,
@@ -187,7 +203,7 @@ export async function updateCategoryAction({ formData, id }) {
 
       ...(data?.parentCategory
         ? { parentCategory: { connect: { id: data?.parentCategory } } }
-        : {}), // <-- only connect if parentCategory exists
+        : data.parentCategory === "" ? { parentCategory: { disconnect: true } } : {}),
     };
 
     const updateData = await prisma.category.update({
@@ -282,6 +298,7 @@ export async function updateCategoryAction({ formData, id }) {
     }
     revalidatePath("/admin/product/add");
     revalidatePath("/admin/categories");
+    revalidatePath("/admin/size-charts");
     revalidatePath("/");
     revalidateTag("categories");
     revalidateTag("home-storefront");
@@ -329,6 +346,7 @@ export async function deleteCategoryAction(id) {
     });
 
     revalidatePath("/admin/category");
+    revalidatePath("/admin/size-charts");
     revalidatePath("/");
     revalidateTag("categories");
     revalidateTag("home-storefront");

@@ -11,7 +11,7 @@ export default function ProductStaticGallery({ data, initialImage }) {
   return (
     <div className={styles.galleryContainer}>
       <div className={styles.layoutWrapper}>
-        <div className={styles.mainImageContainer}>{initialImage}</div>
+        <div data-product-gallery-preview className={styles.mainImageContainer}>{initialImage}</div>
         {photos.size + videos.length > 1 && (
           <div className={styles.thumbnailList}>
             {[...photos.values()].map((image, index) => (

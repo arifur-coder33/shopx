@@ -26,7 +26,7 @@ async function prepareUploadFile(file) {
   if (file.size <= MAX_UPLOAD_BYTES) return file;
   const bitmap = await createImageBitmap(file);
   try {
-    const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, 5000 / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));

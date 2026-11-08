@@ -4,6 +4,7 @@ import { deleteMediaAction } from "@/backend/serverActions/fileUploadAction";
 import ModalButton from "@/components/modal/ModalButton";
 import FileUploader from "@/components/input/FileUploader";
 import ImageCustom from "@/components/images/ImageCustom";
+import { cloudinaryOriginalImage } from "@/utils/cloudinaryUrl";
 import { confirmFromUser } from "@/components/modal/confrim/confirm";
 import { useRouter } from "next/navigation";
 import { Copy, Image as ImageIcon, Search, Trash2, UploadCloud } from "lucide-react";
@@ -17,11 +18,12 @@ const formatBytes = (bytes) => {
 
 function MediaDetails({ item, canDelete, onDelete }) {
   const dimensions = item.width && item.height ? `${item.width} × ${item.height} px` : "Dimensions unavailable";
+  const original = item.url || cloudinaryOriginalImage(item.name);
   return (
     <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(15rem,0.8fr)]">
-      <div className="flex min-h-64 items-center justify-center overflow-hidden rounded-xl bg-surface-muted p-3">
-        <ImageCustom src={item.name} alt={item.displayName || item.name} w={720} h={560} className="max-h-[65vh] w-full object-contain" />
-      </div>
+      <a href={original} target="_blank" rel="noopener noreferrer" aria-label="Open full image" className="flex min-h-64 min-w-0 items-center justify-center rounded-xl bg-surface-muted p-3">
+        <img src={original} alt={item.displayName || item.name} decoding="async" className="block h-auto max-h-[65dvh] w-auto max-w-full object-contain" />
+      </a>
       <div className="space-y-4">
         <div>
           <h2 className="break-words text-xl font-bold">{item.displayName || item.name}</h2>

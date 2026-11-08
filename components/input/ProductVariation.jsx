@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FloatingInput from "./FloatingInput";
 
 // --- Dynamically import Components & Icons ---
@@ -86,10 +86,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
 }) {
   // --- ALL HOOKS AT THE TOP ---
   const derivedInitialEnabled = useMemo(
-    () =>
-      initialCombinations &&
-      initialCombinations[0]?.combinations &&
-      initialCombinations[0].combinations?.length > 0,
+    () => initialCombinations?.some((row) => row.combination?.length > 0),
     [initialCombinations],
   );
 
@@ -104,18 +101,28 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
   const [selectedValues, setSelectedValues] = useState({});
   const [rows, setRows] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const lastGeneratedSelection = useRef(null);
+  const removedRowKeys = useRef(new Set());
 
   const variationListMap = useMemo(() => {
     const map = new Map();
     if (variationList && Array.isArray(variationList)) {
       variationList.forEach((variationItem) => {
         if (variationItem?.variation?.name) {
-          map.set(variationItem.variation.name, variationItem);
+          map.set(variationItem.variation.name, { ...variationItem, values: [...(variationItem.values || [])] });
         }
       });
     }
+    for (const row of initialCombinations || []) {
+      for (const { variation, value } of row.combination || []) {
+        if (!variation?.name || !value?.id) continue;
+        if (!map.has(variation.name)) map.set(variation.name, { variation, values: [] });
+        const options = map.get(variation.name).values;
+        if (!options.some((option) => String(option.value) === String(value.value))) options.push(value);
+      }
+    }
     return map;
-  }, [variationList]);
+  }, [variationList, initialCombinations]);
 
   const generateUiKey = useCallback((combination) => {
     if (!combination || !Array.isArray(combination) || combination.length === 0)
@@ -258,6 +265,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     });
 
     setRows(tempInitialRows);
+    lastGeneratedSelection.current = derivedSelected;
     setSelectedValues(derivedSelected);
     setExpandedCategories(derivedExpanded);
     if (!hasVariationsEnabled && tempInitialRows.length > 0)
@@ -278,6 +286,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
   // EFFECT: Clear state when variations are disabled
   useEffect(() => {
     if (!hasVariationsEnabled && isInitialized) {
+      removedRowKeys.current.clear();
       setRows([]);
       setSelectedValues({});
       setExpandedCategories({});
@@ -295,11 +304,13 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
       return;
     }
 
+    if (lastGeneratedSelection.current === selectedValues) return;
+    lastGeneratedSelection.current = selectedValues;
     const hasAnyActualSelection = Object.values(selectedValues).some(
       (arr) => arr && arr.length > 0,
     );
     if (!hasAnyActualSelection) {
-      if (rows.length > 0) setRows([]);
+      setRows([]);
       return;
     }
 
@@ -321,7 +332,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
       .filter(Boolean);
 
     if (processedSelections.length === 0) {
-      if (hasAnyActualSelection && rows.length > 0) setRows([]);
+      setRows([]);
       return;
     }
 
@@ -331,7 +342,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     const newRowsData = generatedCombinationsFromSelection
       .map((combo) => {
         const uiKey = generateUiKey(combo);
-        if (!uiKey) return null;
+        if (!uiKey || removedRowKeys.current.has(uiKey)) return null;
         const variationValues = combo.reduce((acc, c) => {
           acc[c.variation.name] = String(c.value.value);
           return acc;
@@ -366,6 +377,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
           return {
             ...newRowFromUI,
             dbId: existingRowFromPrevState.dbId,
+            combination: existingRowFromPrevState.combination,
+            matcherId: existingRowFromPrevState.matcherId,
             sku: existingRowFromPrevState.sku,
             regularPrice: existingRowFromPrevState.regularPrice, // MODIFIED
             discountPrice: existingRowFromPrevState.discountPrice, // MODIFIED
@@ -385,7 +398,6 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     isInitialized,
     variationListMap,
     generateUiKey,
-    rows.length,
   ]);
 
   // --- UI Handlers (useCallback) ---
@@ -429,37 +441,10 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
     });
   }, []);
 
-  const handleDeleteRow = useCallback(
-    (uiKeyToDelete) => {
-      const remainingRows = rows.filter((row) => row.uiKey !== uiKeyToDelete);
-      setRows(remainingRows);
-      setSelectedValues((prevSelected) => {
-        const nextSelected = {};
-        if (remainingRows.length > 0) {
-          remainingRows.forEach((row) => {
-            if (Array.isArray(row.combination)) {
-              row.combination.forEach(({ variation, value }) => {
-                if (variation?.name && value?.value !== undefined) {
-                  const varName = variation.name;
-                  const valStr = String(value.value);
-                  if (!nextSelected[varName]) nextSelected[varName] = new Set();
-                  nextSelected[varName].add(valStr);
-                }
-              });
-            }
-          });
-          Object.keys(nextSelected).forEach((key) => {
-            nextSelected[key] = Array.from(nextSelected[key]).sort();
-          });
-        }
-        if (JSON.stringify(prevSelected) !== JSON.stringify(nextSelected)) {
-          return nextSelected;
-        }
-        return prevSelected;
-      });
-    },
-    [rows],
-  );
+  const handleDeleteRow = useCallback((uiKeyToDelete) => {
+    removedRowKeys.current.add(uiKeyToDelete);
+    setRows((current) => current.filter((row) => row.uiKey !== uiKeyToDelete));
+  }, []);
 
   const handleImageChange = useCallback((selectedImages, rowUiKey) => {
     const imageFile =
@@ -652,8 +637,8 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
             >
               {/* Variation Selection Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {variationList && variationList.length > 0 ? (
-                  variationList.map((variationItem) => {
+                {variationListMap.size > 0 ? (
+                  [...variationListMap.values()].map((variationItem) => {
                     if (!variationItem?.variation?.name) return null;
                     const variationName = variationItem.variation.name;
                     const isCatExpanded = !!expandedCategories[variationName];
@@ -1003,7 +988,7 @@ const ProductVariationInput = React.memo(function ProductVariationInput({
                         Review your selections or variation definitions.
                       </p>
                     </motion.div>
-                  ) : variationList && variationList.length > 0 ? (
+                  ) : variationListMap.size > 0 ? (
                     <motion.div
                       key="select-options-placeholder"
                       initial={{ opacity: 0 }}

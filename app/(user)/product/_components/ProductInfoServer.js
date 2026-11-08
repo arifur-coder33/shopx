@@ -1,5 +1,6 @@
 import ProductPrice from "./ProductPrice";
 import BuyNowSection from "./BuyNowSection";
+import { SizeGuideButton } from "./SizeGuide";
 
 export default function ProductInfoServer({ product }) {
   const options = new Map();
@@ -23,7 +24,10 @@ export default function ProductInfoServer({ product }) {
         <div className="space-y-4">
           {[...options].map(([name, values]) => (
             <div key={name} className="card my-3 mt-4 flex w-fit flex-col gap-x-4 gap-y-2 rounded-xl border-2 p-2 shadow-sm">
-              <span className="whitespace-nowrap border-b-2 text-base font-bold">{name} <span className="text-sm font-medium">সিলেক্ট করুনঃ</span></span>
+              <span className="whitespace-nowrap border-b-2 text-base font-bold">
+                {name} <span className="text-sm font-medium">সিলেক্ট করুনঃ</span>
+                {product.sizeChart && name.trim().toLowerCase() === "size" && <SizeGuideButton chart={product.sizeChart} />}
+              </span>
               <div className="flex flex-wrap items-center gap-3">
                 {[...values].sort().map((value) => (
                   <button key={value} type="button" data-product-option={name} data-product-value={value} className="relative flex items-center justify-center rounded-md border bg-white px-3 py-2 text-sm font-medium text-gray-900 ring-1 ring-inset ring-gray-300">{value}</button>

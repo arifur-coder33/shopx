@@ -230,7 +230,7 @@ export async function getProviderConfiguration(kind, params = {}) {
       ...(status === "INACTIVE" && { isActive: false }),
     };
     const model = prisma[config.model];
-    const [providers, total] = await Promise.all([
+    const [providers, total, siteSetting] = await Promise.all([
       model.findMany({
         where,
         skip: (page - 1) * limit,
@@ -242,6 +242,7 @@ export async function getProviderConfiguration(kind, params = {}) {
         },
       }),
       model.count({ where }),
+      kind === "courier" ? prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } }) : Promise.resolve(null),
     ]);
     return {
       success: true,
@@ -254,6 +255,7 @@ export async function getProviderConfiguration(kind, params = {}) {
         ),
         ...(kind === "courier" && {
           webhookBaseUrl: getSiteUrl(),
+          manualDeliveryEnabled: siteSetting?.manualDeliveryEnabled ?? false,
         }),
       },
       filters: params,
@@ -266,6 +268,23 @@ export async function getProviderConfiguration(kind, params = {}) {
     };
   } catch (error) {
     return actionError(error, "Failed to load provider configuration.");
+  }
+}
+
+export async function updateManualDeliveryEnabled(enabled) {
+  try {
+    await requireProcurementPermission("provider", "update");
+    if (typeof enabled !== "boolean") throw new Error("Manual delivery setting is invalid.");
+    const existing = await prisma.siteSetting.findFirst({ select: { id: true } });
+    if (existing) {
+      await prisma.siteSetting.update({ where: { id: existing.id }, data: { manualDeliveryEnabled: enabled } });
+    } else {
+      await prisma.siteSetting.create({ data: { manualDeliveryEnabled: enabled } });
+    }
+    refresh(PROVIDER_CONFIG.courier.path);
+    return { success: true, message: enabled ? "Manual delivery enabled." : "Manual delivery disabled." };
+  } catch (error) {
+    return actionError(error, "Failed to update manual delivery setting.");
   }
 }
 

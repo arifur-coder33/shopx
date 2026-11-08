@@ -9,7 +9,7 @@ import ProductStaticGallery from "./ProductStaticGallery";
 import ProductInfoServer from "./ProductInfoServer";
 import ProductShareButton from "@/components/products/ProductShareButton";
 
-export default async function ProductHeader({ data, imageProps, campaignOffers = [] }) {
+export default async function ProductHeader({ data, imageProps, campaignOffers = [], sizeChart }) {
   const providers = await getCheckoutProviders();
   const emi = providers.gateways.find((provider) => provider.adapterKey === "SSLCOMMERZ" && provider.emi?.enabled)?.emi || null;
   const { title } = data;
@@ -46,6 +46,7 @@ export default async function ProductHeader({ data, imageProps, campaignOffers =
   const regularPrice = regularPrices.length ? Math.min(...regularPrices) : 0;
   const discountPrice = salePrices.length ? Math.min(...salePrices) : 0;
   const clientData = {
+    sizeChart,
     emi,
     id: data.id,
     categoryId: data.categoryId,
@@ -88,9 +89,9 @@ export default async function ProductHeader({ data, imageProps, campaignOffers =
 
   const initialImage = <ProductInitialImage imageId={imageProps.initialSrc} alt={imageProps.alt} />;
   const titleComponent = (
-    <div className="flex items-start gap-3 border-b border-border pb-3">
-      <h1 className="min-w-0 flex-1 text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">{title}</h1>
-      <div className="flex shrink-0 items-center gap-2">
+    <div className="border-b border-border pb-3">
+      <h1 className="inline break-words text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">{title}</h1>{" "}
+      <div className="ml-1 inline-flex items-center gap-2 align-middle">
         <WishlistButton product={wishlistProduct} />
         <ProductShareButton title={title} />
       </div>

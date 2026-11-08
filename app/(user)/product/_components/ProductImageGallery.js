@@ -3,7 +3,8 @@
 
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { useSwipe } from "@/hooks/useSwipe";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import { cloudinaryMainImage, cloudinaryOriginalImage } from "@/utils/cloudinaryUrl";
+import { ZoomIn } from "lucide-react";
 import { productImageSources } from "@/utils/productImage";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -25,12 +26,6 @@ const VideoPlayer = dynamic(() => import("./VideoPlayer"), {
     </div>
   ),
 });
-
-const ZoomIcon = () => (
-  <svg className={styles.iconSvg} viewBox="0 0 24 24">
-    <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM10 9h-1V6h2v3h3v2h-3v3H9v-3H6V9h3z" />
-  </svg>
-);
 
 const VideoThumbnailIcon = () => (
   <div className={styles.videoThumbnailOverlay}>
@@ -143,47 +138,19 @@ export default function ProductImageGallery({
   const isMobile = useMediaQuery("(max-width: 768px)");
   const activeMedia = allMedia[activeIndex] || {};
   const isVideoActive = activeMedia.type === "video";
-  const [zoomImageReady, setZoomImageReady] = useState(false);
+  const [zoomPreview, setZoomPreview] = useState("");
+  const [modalPreview, setModalPreview] = useState("");
   const [desktopZoomActive, setDesktopZoomActive] = useState(false);
+  const [readyZoomSource, setReadyZoomSource] = useState("");
+  const zoomSource = activeMedia.name ? cloudinaryOriginalImage(activeMedia.name) : "";
 
   useEffect(() => {
-    setZoomImageReady(false);
-    if (
-      !mainImageLoaded ||
-      !desktopZoomActive ||
-      isMobile ||
-      isVideoActive ||
-      !activeMedia.name
-    ) {
-      return undefined;
-    }
-
-    let cancelled = false;
-    let idleId;
-    let timeoutId;
-    let zoomPreloader;
-
-    const preloadZoomImage = () => {
-      zoomPreloader = new window.Image();
-      zoomPreloader.onload = () => {
-        if (!cancelled) setZoomImageReady(true);
-      };
-      zoomPreloader.src = cloudinaryMainImage(activeMedia.name, 1800, 1800);
-    };
-
-    if ("requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(preloadZoomImage, { timeout: 1200 });
-    } else {
-      timeoutId = window.setTimeout(preloadZoomImage, 350);
-    }
-
-    return () => {
-      cancelled = true;
-      if (idleId !== undefined) window.cancelIdleCallback(idleId);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-      if (zoomPreloader) zoomPreloader.onload = null;
-    };
-  }, [activeMedia.name, isMobile, isVideoActive, mainImageLoaded, desktopZoomActive]);
+    if (!desktopZoomActive || !mainImageLoaded || isMobile || isVideoActive || !zoomSource || readyZoomSource === zoomSource) return;
+    const original = new window.Image();
+    original.onload = () => setReadyZoomSource(zoomSource);
+    original.src = zoomSource;
+    return () => { original.onload = null; };
+  }, [desktopZoomActive, mainImageLoaded, isMobile, isVideoActive, zoomSource, readyZoomSource]);
 
   // const handleThumbnailClick = (index) => {
   //   if (allMedia[index].type === "video") {
@@ -191,19 +158,15 @@ export default function ProductImageGallery({
   //   }
   //   setActiveIndex(index);
   // };
-  const handleThumbnailClick = (index) => selectMedia(index);
+  const handleThumbnailClick = useCallback((index) => selectMedia(index), [selectMedia]);
 
   const openModal = () => {
-    if (isMobile) {
-      setIsModalOpen(true);
-      document.body.style.overflow = "hidden";
-    }
+    if (isVideoActive && !isMobile) return;
+    setModalPreview(galleryRef.current?.querySelector(`.${styles.transitionContainer} img`)?.currentSrc || "");
+    setIsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    document.body.style.overflow = "";
-  };
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
 
   const [desktopZoomPosition, setDesktopZoomPosition] = useState({
     x: 0.5,
@@ -212,6 +175,14 @@ export default function ProductImageGallery({
   const galleryRef = useRef(null);
   const ignoreNextTap = useRef(false);
   const resetTapTimer = useRef(null);
+
+  useEffect(() => {
+    const container = galleryRef.current?.querySelector(`.${styles.mainImageContainer}`);
+    if (!isMobile && !isVideoActive && window.matchMedia("(hover: hover)").matches && container?.matches(":hover")) {
+      setZoomPreview(container.querySelector("img")?.currentSrc || "");
+      setDesktopZoomActive(true);
+    }
+  }, [isMobile, isVideoActive, imageSrc]);
 
   useEffect(() => () => window.clearTimeout(resetTapTimer.current), []);
 
@@ -305,9 +276,11 @@ export default function ProductImageGallery({
       <div className={styles.layoutWrapper}>
         <div
           className={styles.mainImageContainer}
-          onMouseEnter={() =>
-            !isMobile && !isVideoActive && setDesktopZoomActive(true)
-          }
+          onMouseEnter={(event) => {
+            if (isMobile || isVideoActive) return;
+            setZoomPreview(event.currentTarget.querySelector("img")?.currentSrc || "");
+            setDesktopZoomActive(true);
+          }}
           onMouseLeave={() => !isMobile && setDesktopZoomActive(false)}
           onTouchStart={mainImageSwipe.onTouchStart}
           onTouchEnd={mainImageSwipe.onTouchEnd}
@@ -377,9 +350,12 @@ export default function ProductImageGallery({
             )}
           </div>
           {isMobile && !isVideoActive && (
-            <div className={styles.zoomIconWrapper}>
-              <ZoomIcon />
-            </div>
+            <button type="button" className={styles.zoomIconWrapper} aria-label="Open full image gallery" onClick={(event) => {
+              event.stopPropagation();
+              openModal();
+            }}>
+              <ZoomIn size={22} strokeWidth={2} aria-hidden="true" />
+            </button>
           )}
 
           <div
@@ -444,11 +420,9 @@ export default function ProductImageGallery({
       <div
         className={styles.desktopZoomPanel}
         style={{
-          backgroundImage: desktopZoomActive && !isVideoActive ? `url(${cloudinaryMainImage(
-            activeMedia.name,
-            zoomImageReady ? 1800 : 600,
-            zoomImageReady ? 1800 : 600,
-          )})` : undefined,
+          backgroundImage: desktopZoomActive && !isVideoActive
+            ? `url("${readyZoomSource && readyZoomSource === zoomSource ? zoomSource : zoomPreview || cloudinaryMainImage(imageSrc, 640)}")`
+            : undefined,
           backgroundSize: `${ZOOM_LEVEL * 100}%`,
           // --- START: THE FIX ---
           // Use the new, corrected position calculation here.
@@ -459,10 +433,11 @@ export default function ProductImageGallery({
             !isVideoActive && desktopZoomActive ? "visible" : "hidden",
         }}
       />
-      {isMobile && isModalOpen && (
+      {isModalOpen && (
         <MobileModalZoomer
           media={allMedia}
           initialIndex={activeIndex}
+          initialPreview={modalPreview}
           onClose={closeModal}
           onIndexChange={handleThumbnailClick}
           backgroundColor="rgba(0, 0, 0, 0.9)"

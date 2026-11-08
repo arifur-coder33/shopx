@@ -5,7 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 // A reusable Tooltip component built with Floating UI and Tailwind
 
 // The main selector component
+import { SizeGuideButton } from "./SizeGuide";
+
 const ProductVariationSelector = ({
+  sizeChart,
   variations,
   hasVariations,
   allowOutOfStockOrder = false,
@@ -111,6 +114,7 @@ const ProductVariationSelector = ({
           >
             <span className="text-base font-bold whitespace-nowrap border-b-2">
               {name} <span className="text-sm font-medium">সিলেক্ট করুনঃ</span>
+              {sizeChart && name.trim().toLowerCase() === "size" && <SizeGuideButton chart={sizeChart} />}
             </span>
             <div className="flex flex-wrap flex-row items-center gap-3">
               {values.map((value) => {

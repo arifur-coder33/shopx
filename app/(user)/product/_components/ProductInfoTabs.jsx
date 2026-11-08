@@ -3,13 +3,15 @@
 import { useRef, useState } from "react";
 import PhotoReviewCarousel from "@/components/reviews/PhotoReviewCarousel";
 import { Plus } from "lucide-react";
+import { SizeGuide } from "./SizeGuide";
 
-export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos, reviews = [], reviewSubtitle, questionsAnswers = [] }) {
+export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos, reviews = [], reviewSubtitle, questionsAnswers = [], sizeChart }) {
   const [activeTab, setActiveTab] = useState("description");
   const descriptionRef = useRef(null);
   const specificationsRef = useRef(null);
   const videosRef = useRef(null);
   const photosRef = useRef(null);
+  const sizeGuideRef = useRef(null);
   const reviewsRef = useRef(null);
   const questionsAnswersRef = useRef(null);
   const hasReviews = reviews.length > 0;
@@ -22,6 +24,7 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
         specifications: specificationsRef,
         videos: videosRef,
         photos: photosRef,
+        sizeGuide: sizeGuideRef,
         reviews: reviewsRef,
         questionsAnswers: questionsAnswersRef,
       };
@@ -99,6 +102,18 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
             আরও ছবি
           </button>
         )}
+        {sizeChart && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "sizeGuide"}
+            aria-controls="product-size-guide"
+            onClick={() => selectTab("sizeGuide")}
+            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold sm:px-6 sm:text-base ${activeTab === "sizeGuide" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-text"}`}
+          >
+            Size Guide
+          </button>
+        )}
         {hasReviews && (
           <button
             type="button"
@@ -163,6 +178,11 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
               </details>
             ))}
           </div>
+        </section>
+      )}
+      {sizeChart && (
+        <section ref={sizeGuideRef} id="product-size-guide" role="tabpanel" className="my-5 scroll-mt-32 rounded-xl border border-border bg-surface p-4">
+          <SizeGuide chart={sizeChart} />
         </section>
       )}
     </section>

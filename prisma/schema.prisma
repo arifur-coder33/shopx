@@ -80,6 +80,10 @@ model RolePermission {
 
 // Category model for organizing products
 model Category {
+  sizeChartId String?
+  sizeChart   SizeChart? @relation(fields: [sizeChartId], references: [id], onDelete: Restrict)
+  unitName    String?
+  unit        CategoryUnit? @relation(fields: [unitName], references: [name], onDelete: Restrict)
   specifications  CategorySpecification[]
   campaignTargets CampaignCategory[]
   id              String                  @id @default(cuid())
@@ -108,6 +112,23 @@ model Category {
   updatedAt      DateTime         @updatedAt // Auto-updated timestamp
 
   @@index([fullPath])
+  @@index([sizeChartId])
+}
+
+model CategoryUnit {
+  name       String @id
+  categories Category[]
+}
+
+model SizeChart {
+  id         String @id @default(cuid())
+  name       String @unique
+  imageId    String?
+  image      Media? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  unit       String
+  sizes      String[]
+  rows       Json
+  categories Category[]
 }
 
 // Variation Model (Size, Color, etc.)
@@ -143,6 +164,7 @@ model ProductCodeCounter {
 }
 
 model Media {
+  sizeCharts SizeChart[]
   id                        String             @id @default(cuid())
   url                       String
   name                      String
@@ -864,6 +886,7 @@ model SiteSetting {
   footerImageHeight     Int?
   orderReconfirmEnabled Boolean  @default(true)
   orderReconfirmMessage String?  @db.VarChar(500)
+  manualDeliveryEnabled Boolean @default(false)
   createdAt             DateTime @default(now()) // Timestamp for order placement
   updatedAt             DateTime @updatedAt // Auto-updated timestamp
 }

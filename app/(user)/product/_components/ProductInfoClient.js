@@ -73,7 +73,7 @@ export default function ProductInfoClient({ data: staticData, setActiveImageId, 
       <ProductPrice data={data} selectedVariation={selectedVariation} />
 
       <p className={`mt-1 h-4 text-xs ${inStock ? "text-emerald-600" : "text-text-muted"}`} role="status">
-        {stockReady ? (inStock ? "স্টক আছে" : "স্টক নেই") : null}
+        {stockReady ? (inStock ? "স্টক আছে" : data.allowOutOfStockOrder ? null : "স্টক নেই") : null}
       </p>
 
       {/* The interactive variation selector replaces the static one */}
@@ -85,6 +85,7 @@ export default function ProductInfoClient({ data: staticData, setActiveImageId, 
           hasVariations={hasVariations}
           allowOutOfStockOrder={!stockReady || data.allowOutOfStockOrder}
           initialOptions={initialOptions}
+          sizeChart={data.sizeChart}
         />
       )}
 

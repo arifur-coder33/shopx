@@ -18,6 +18,7 @@ export default function CategoryForm({ actionType, updateAction, id }) {
   const [dropdownList, setDropDownList] = useState([]);
   const [loadingtData, setLoadingData] = useState(true);
   const [data, setData] = useState({});
+  const [selectedParentId, setSelectedParentId] = useState(undefined);
   console.log("id in category form", id);
   const loadDropDownLists = async () => {
     const getData = await getCategory();
@@ -54,7 +55,12 @@ export default function CategoryForm({ actionType, updateAction, id }) {
 
     loadInitialData();
   }, [id, actionType]);
-  const fromFields = categoryFormFields({ dropdownList, loadDropDownLists });
+  const fromFields = categoryFormFields({
+    dropdownList,
+    loadDropDownLists,
+    parentId: selectedParentId ?? data.parentCategory?.id,
+    onParentSelect: (item) => setSelectedParentId(item?.id || ""),
+  });
   if (loadingtData && actionType === "edit") {
     return <LoadingSpinner />; // Display loading message for edit mode
   }

@@ -50,6 +50,13 @@ export function cloudinaryDetailImage(publicId, width = 1200) {
   return `https://res.cloudinary.com/${cloudName}/image/upload/c_limit,w_${width},f_auto,q_auto:good/${folder}/${publicId}`;
 }
 
+export function cloudinaryOriginalImage(publicId) {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const folder = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
+  if (!cloudName || !publicId) return DEFAULT_BLUR_DATA_URL;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${folder ? `${folder}/` : ""}${publicId}`;
+}
+
 // export function cloudinaryMainImage(imageName) {
 //   const urlGen =  `https://res.cloudinary.com/bdmart24/image/upload/bdmart24/`+imageName;
 // console.log(urlGen)

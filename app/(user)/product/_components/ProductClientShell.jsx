@@ -58,7 +58,9 @@ export default function ProductClientShell({ initialContent, ...props }) {
   };
   if (InteractiveShell) return <InteractiveShell key={props.data.id} {...props} initialIntent={initialIntent} />;
   return (
-    <div className="contents" onFocusCapture={activate} onClick={handleIntent}>
+    <div className="contents" onPointerOver={(event) => {
+      if (event.pointerType === "mouse" && event.target.closest("[data-product-gallery-preview]")) activate();
+    }} onFocusCapture={activate} onClick={handleIntent}>
       {initialContent}
     </div>
   );

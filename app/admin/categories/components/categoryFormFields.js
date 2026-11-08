@@ -1,4 +1,4 @@
-export const categoryFormFields = ({ dropdownList, loadDropDownLists }) => [
+export const categoryFormFields = ({ dropdownList, loadDropDownLists, parentId, onParentSelect }) => [
   { type: "file", label: "Thumbnail", recommendedSize: "600 × 600 px recommended", name: "thumbnail", colSpan: "4" },
   { type: "text", label: "Category Name", name: "name", colSpan: "2" },
   {
@@ -14,8 +14,11 @@ export const categoryFormFields = ({ dropdownList, loadDropDownLists }) => [
     colSpan: "3",
     loadLists: loadDropDownLists,
     dropDownLists: dropdownList,
+    onSelect: onParentSelect,
+    onClear: onParentSelect,
     addForm: "",
   },
+  { type: "categoryUnit", name: "unitName", parentId },
   { type: "file", label: "Category Banner", recommendedSize: "1600 × 600 px recommended", name: "banner", colSpan: "full" },
   { type: "categorySpecifications", label: "Specifications", name: "specifications", colSpan: "full" },
   // {
@@ -28,6 +31,8 @@ export const categoryFormFields = ({ dropdownList, loadDropDownLists }) => [
     type: "variation",
     label: "Assaign Variation (if any).",
     name: "variations",
+    sizeChart: true,
+    parentId,
     colSpan: "full",
     labelNote:
       "You can add multiple variations. For example, if you have a product with size and color variations, you can add both size and color variations here.",

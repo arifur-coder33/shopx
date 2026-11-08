@@ -43,7 +43,8 @@ export async function getAvailableCourierProvidersForOrder() {
         pickupPoints,
         deliveryFeeConfig: adapterKey === "MANUAL" ? nonSecretConfig || {} : null,
       }));
-    return { success: true, data };
+    const setting = await prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } });
+    return { success: true, data, manualDeliveryEnabled: setting?.manualDeliveryEnabled ?? false };
   } catch (error) {
     return actionError(error, "Failed to load couriers.");
   }
@@ -52,8 +53,10 @@ export async function getAvailableCourierProvidersForOrder() {
 export async function getCourierProvidersForManualEntryAction() {
   try {
     await requireProcurementPermission("order", "view");
+    const setting = await prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } });
+    if (!setting?.manualDeliveryEnabled) throw new Error("Manual delivery is disabled. Enable it from courier settings first.");
     const providers = await prisma.courierProvider.findMany({
-      where: { isActive: true, NOT: { code: "MANUAL" } },
+      where: { NOT: { code: "MANUAL" } },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -117,10 +120,14 @@ export async function createCourierDeliveryAction({ formData }) {
       where: { id: data.courierProviderId },
       include: { moneyAccount: true },
     });
-    if (!provider || !provider.isActive) {
+    const manualEntry = data.manualEntry === "true";
+    if (manualEntry) {
+      const setting = await prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } });
+      if (!setting?.manualDeliveryEnabled) throw new Error("Manual delivery is disabled. Enable it from courier settings first.");
+    }
+    if (!provider || (!manualEntry && !provider.isActive)) {
       throw new Error("Selected courier is unavailable.");
     }
-    const manualEntry = data.manualEntry === "true";
     const providerConfiguration = getProviderRuntimeConfiguration(
       "courier",
       provider,

@@ -7,6 +7,7 @@ import {
   getCourierWebhookSecret,
   revealProviderCredential,
   saveProviderConfiguration,
+  updateManualDeliveryEnabled,
 } from "@/backend/serverActions/providerConfigurationAction";
 import Modal from "@/components/modal/Modal";
 import FileInput from "@/components/input/FileInput";
@@ -70,6 +71,7 @@ export default function ProviderManager({ kind, result }) {
   const [webhookSecret, setWebhookSecret] = useState("");
   const [webhookCustomized, setWebhookCustomized] = useState(false);
   const [webhookBusy, setWebhookBusy] = useState(false);
+  const [manualDeliveryEnabled, setManualDeliveryEnabled] = useState(Boolean(result.data?.manualDeliveryEnabled));
   const [pending, startTransition] = useTransition();
   if (!result.success) {
     return <main className="p-5"><div className="card">{result.message}</div></main>;
@@ -222,6 +224,25 @@ export default function ProviderManager({ kind, result }) {
           <><strong>Courier accounts:</strong> Each manual courier gets its own COURIER Money Account with a zero opening balance. Its delivery fee conditions are saved with the courier. Delete is available only when the account has zero balance and no operational or financial history.</>
         )}
       </section>
+
+      {kind === "courier" && <section className="flex flex-wrap items-center justify-between gap-4 rounded-brand border border-border bg-surface p-4">
+        <span><strong className="block text-sm">Active manual delivery</strong><span className="mt-1 block text-xs text-text-muted">Enable manual courier booking with a consignment number even when Pathao or Steadfast API credentials are not configured. Turn off to hide and block manual entry.</span></span>
+        <input type="checkbox" aria-label="Active manual delivery" checked={manualDeliveryEnabled} disabled={!canUpdate || pending} onChange={(event) => {
+          const next = event.target.checked;
+          const previous = manualDeliveryEnabled;
+          setManualDeliveryEnabled(next);
+          startTransition(async () => {
+            const response = await updateManualDeliveryEnabled(next);
+            if (response.success) {
+              toast.success(response.message);
+              router.refresh();
+            } else {
+              setManualDeliveryEnabled(previous);
+              toast.error(response.message);
+            }
+          });
+        }} className="h-5 w-5 accent-primary disabled:opacity-50" />
+      </section>}
 
       {!credentialEncryptionReady && (
         <section className="rounded-brand border border-danger/30 bg-danger/10 p-3 text-sm text-danger">

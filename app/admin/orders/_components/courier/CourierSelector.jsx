@@ -14,9 +14,13 @@ export default function CourierSelector({ onSelect, activeCourierId }) {
   const [manualError, setManualError] = useState("");
   const [showManualCouriers, setShowManualCouriers] = useState(false);
   const [manualLoading, setManualLoading] = useState(false);
+  const [manualDeliveryEnabled, setManualDeliveryEnabled] = useState(false);
   useEffect(() => {
     getAvailableCourierProvidersForOrder().then((result) => {
-      if (result.success) setCouriers(result.data);
+      if (result.success) {
+        setCouriers(result.data);
+        setManualDeliveryEnabled(Boolean(result.manualDeliveryEnabled));
+      }
       else setError(result.message);
     });
   }, []);
@@ -65,9 +69,10 @@ export default function CourierSelector({ onSelect, activeCourierId }) {
         </button>
       ))}
       {!couriers.length && !error && <p className="text-sm text-slate-500">No active, account-mapped API courier is configured.</p>}
-      <button type="button" onClick={openManualEntry} className="flex w-full items-center justify-between rounded-xl border border-dashed border-slate-400 bg-slate-50 p-4 text-left transition hover:border-indigo-400 hover:bg-indigo-50">
+      {manualDeliveryEnabled && <button type="button" onClick={openManualEntry} className="flex w-full items-center justify-between rounded-xl border border-dashed border-slate-400 bg-slate-50 p-4 text-left transition hover:border-indigo-400 hover:bg-indigo-50">
         <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 text-white"><ClipboardPenLine size={19} /></div><div><span className="block font-semibold text-slate-700">Manual entry</span><small className="text-slate-500">Already booked with the courier? Enter its CN number.</small></div></div><span className="text-slate-400">→</span>
-      </button>
+      </button>}
+      {!manualDeliveryEnabled && <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Manual delivery is disabled. Enable “Active manual delivery” in Courier Settings to allow bookings without the courier API.</p>}
     </div>
   );
 }

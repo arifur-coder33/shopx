@@ -18,6 +18,7 @@ import { DEFAULT_BLUR_DATA_URL } from "@/utils/cloudinaryUrl";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import ProductDataView from "../_components/ProductDataView";
+import { getCategorySizeSettings } from "@/backend/services/sizeChartService";
 import ProductImageFirstPreview from "../_components/ProductImageFirstPreview";
 
 export const revalidate = false;
@@ -234,7 +235,13 @@ async function ProductPageContent({ detailsPromise }) {
       campaignName: pricing.campaign?.name || null,
     };
   });
-  const reviews = await getPublishedProductPhotoReviews(data.id);
+  const hasSize = data.hasVariations && data.variations.some((variant) =>
+    variant.combinations.some((option) => option.variationName?.name?.trim().toLowerCase() === "size"),
+  );
+  const [reviews, sizeSettings] = await Promise.all([
+    getPublishedProductPhotoReviews(data.id),
+    hasSize ? getCategorySizeSettings(data.categoryId) : null,
+  ]);
 
   return (
     <div className="mb-16 pb-20 sm:pb-0">
@@ -257,6 +264,7 @@ async function ProductPageContent({ detailsPromise }) {
         campaignOffers={campaignOffers}
         blurDataURL={DEFAULT_BLUR_DATA_URL}
         reviews={reviews}
+        sizeChart={sizeSettings?.chart}
       />
     </div>
   );

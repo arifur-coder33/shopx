@@ -1,5 +1,6 @@
 "use client";
 import { getVariations } from "@/backend/serverActions/variantionAction";
+import { getSizeChartOptions } from "@/backend/serverActions/sizeChartActions";
 import { useEffect, useState } from "react";
 import FloatingInput from "./FloatingInput";
 import SearchableDropdown from "./SearchableDropdown";
@@ -16,9 +17,28 @@ export default function VariationInput({
   label,
   labelNote,
   name,
+  sizeChart,
+  parentId,
+  defaultSizeChartId,
 }) {
   const [rows, setRows] = useState([{ variation: "", value: "" }]);
   const [variationsList, setVariationsList] = useState([]);
+  const [chartOptions, setChartOptions] = useState(null);
+  const [chartId, setChartId] = useState(defaultSizeChartId || "");
+  const supportsSize = rows.some((row) => row.variation?.name?.trim().toLowerCase() === "size");
+
+  useEffect(() => {
+    if (!sizeChart) return;
+    let active = true;
+    getSizeChartOptions(parentId).then((options) => {
+      if (active) setChartOptions({ ...options, parentId });
+    }).catch(() => {
+      if (active) setChartOptions({ parentId, error: true });
+    });
+    return () => { active = false; };
+  }, [sizeChart, parentId]);
+  const currentOptions = chartOptions?.parentId === parentId ? chartOptions : null;
+  const showChart = supportsSize || currentOptions?.supportsSize;
 
   // useEffect(() => {
   //   async function getVariationsList() {
@@ -149,6 +169,17 @@ export default function VariationInput({
           ),
         )} // Filter out empty variations
       />
+      {sizeChart && currentOptions && !currentOptions.error && (
+        showChart ? <label className="mt-4 grid gap-1 text-sm font-medium">
+          Size chart
+          <select name="sizeChartId" value={chartId} onChange={(event) => setChartId(event.target.value)} className="rounded border border-border bg-surface p-2">
+            <option value="">{currentOptions.inheritedName ? `Inherit: ${currentOptions.inheritedName}` : "No chart assigned"}</option>
+            {currentOptions.charts.map((chart) => <option key={chart.id} value={chart.id}>{chart.name}</option>)}
+          </select>
+        </label> : <input type="hidden" name="sizeChartId" value="" />
+      )}
+      {sizeChart && supportsSize && <input type="hidden" name="sizeVariationId" value={rows.find((row) => row.variation?.name?.trim().toLowerCase() === "size")?.variation.id} />}
+      {sizeChart && currentOptions?.error && <p className="mt-2 text-sm text-danger">Size charts could not be loaded.</p>}
     </div>
   );
 }

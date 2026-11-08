@@ -1,7 +1,8 @@
 "use client";
 
 import { useSwipe } from "@/hooks/useSwipe";
-import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
+import { cloudinaryMainImage, cloudinaryOriginalImage } from "@/utils/cloudinaryUrl";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 import Image from "next/image";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -14,11 +15,6 @@ const clamp = (val, min, max) => Math.max(min, Math.min(val, max));
 const CloseIcon = () => (
   <svg className={styles.iconSvg} viewBox="0 0 24 24">
     <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
-  </svg>
-);
-const SpinnerIcon = () => (
-  <svg className={styles.spinnerSvg} viewBox="0 0 50 50">
-    <circle cx="25" cy="25" r="20" fill="none" strokeWidth="5"></circle>
   </svg>
 );
 const VideoThumbnailIcon = () => (
@@ -36,40 +32,63 @@ const VideoThumbnailIcon = () => (
 export default React.memo(function MobileModalZoomer({
   media,
   initialIndex,
+  initialPreview,
   backgroundColor,
   onClose,
   onIndexChange,
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [openingIndex] = useState(initialIndex);
   const [slideDirection, setSlideDirection] = useState("none");
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [loadedMedia, setLoadedMedia] = useState({ [initialIndex]: true });
+  const [loaded, setLoaded] = useState({});
+  const [failed, setFailed] = useState({});
 
   const imageRef = useRef(null);
+  const mouseDrag = useRef(null);
   const lastTouch = useRef({ dist: 0, x: 0, y: 0 }).current;
   const isInteracting = useRef(false);
 
   const activeMedia = media[currentIndex] || {};
   const isVideoActive = activeMedia.type === "video";
-  const isCurrentMediaLoaded = loadedMedia[currentIndex] || isVideoActive;
+  const original = activeMedia.name ? cloudinaryOriginalImage(activeMedia.name) : null;
+  const originalLoaded = loaded[activeMedia.name];
+  const preview = (currentIndex === openingIndex && initialPreview) || cloudinaryMainImage(activeMedia.name, 640);
+
+  function zoomBounds(scale = 1) {
+    const frame = imageRef.current;
+    if (!frame || !originalLoaded || !frame.clientWidth || !frame.clientHeight) {
+      return { maxScale: 1, x: 0, y: 0 };
+    }
+    const { width, height } = originalLoaded;
+    const fit = Math.min(1, frame.clientWidth / width, frame.clientHeight / height);
+    return {
+      maxScale: 1 / fit,
+      x: Math.max(0, (width * fit * scale - frame.clientWidth) / 2),
+      y: Math.max(0, (height * fit * scale - frame.clientHeight) / 2),
+    };
+  }
+
+  function panTo(x, y) {
+    setTransform((current) => {
+      const bounds = zoomBounds(current.scale);
+      return { ...current, x: clamp(x, -bounds.x, bounds.x), y: clamp(y, -bounds.y, bounds.y) };
+    });
+  }
+
+  function toggleZoom() {
+    setTransform((current) => ({ x: 0, y: 0, scale: current.scale > 1 ? 1 : zoomBounds().maxScale }));
+  }
 
   useEffect(() => {
-    const preload = (index) => {
-      if (index < 0 || index >= media.length || loadedMedia[index]) return;
-      if (media[index]?.type === "image") {
-        const img = new window.Image();
-        img.src = cloudinaryMainImage(media[index].name, 1200, 1200);
-        img.onload = () =>
-          setLoadedMedia((prev) => ({ ...prev, [index]: true }));
-      }
-    };
-    preload(currentIndex + 1);
-    preload(currentIndex - 1);
-  }, [currentIndex, media, loadedMedia]);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
 
   useEffect(() => {
     setTransform({ x: 0, y: 0, scale: 1 });
-    onIndexChange(currentIndex);
+    onIndexChange?.(currentIndex);
   }, [currentIndex, onIndexChange]);
 
   const handleNavigation = useCallback(
@@ -84,6 +103,16 @@ export default React.memo(function MobileModalZoomer({
     },
     [currentIndex, media.length, transform.scale]
   );
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+      if (event.key === "ArrowRight") handleNavigation("next");
+      if (event.key === "ArrowLeft") handleNavigation("prev");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleNavigation, onClose]);
 
   const swipeHandlers = useSwipe({
     onSwipeLeft: () => handleNavigation("next"),
@@ -120,8 +149,14 @@ export default React.memo(function MobileModalZoomer({
         e.touches[0].pageX - e.touches[1].pageX,
         e.touches[0].pageY - e.touches[1].pageY
       );
-      const scale = clamp(transform.scale * (newDist / lastTouch.dist), 1, 5);
-      setTransform((t) => ({ ...t, scale }));
+      if (lastTouch.dist > 0) {
+        const ratio = newDist / lastTouch.dist;
+        setTransform((current) => {
+          const scale = clamp(current.scale * ratio, 1, zoomBounds().maxScale);
+          const bounds = zoomBounds(scale);
+          return { scale, x: clamp(current.x, -bounds.x, bounds.x), y: clamp(current.y, -bounds.y, bounds.y) };
+        });
+      }
       lastTouch.dist = newDist;
     }
   };
@@ -130,14 +165,7 @@ export default React.memo(function MobileModalZoomer({
     swipeHandlers.onTouchEnd(e);
     if (!isInteracting.current) return;
     if (transform.scale > 1 && imageRef.current) {
-      const { width, height } = imageRef.current.getBoundingClientRect();
-      const maxPanX = Math.max(0, (width * transform.scale - width) / 2);
-      const maxPanY = Math.max(0, (height * transform.scale - height) / 2);
-      setTransform((t) => ({
-        ...t,
-        x: clamp(t.x, -maxPanX, maxPanX),
-        y: clamp(t.y, -maxPanY, maxPanY),
-      }));
+      panTo(transform.x, transform.y);
     }
     isInteracting.current = false;
   };
@@ -155,7 +183,7 @@ export default React.memo(function MobileModalZoomer({
       style={{ backgroundColor }}
       onClick={onClose}
     >
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Product image gallery" className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <button
           className={styles.closeButton}
           onClick={onClose}
@@ -169,16 +197,19 @@ export default React.memo(function MobileModalZoomer({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onPointerDown={(event) => {
+            if (event.pointerType !== "mouse" || event.button !== 0 || transform.scale <= 1) return;
+            event.preventDefault();
+            mouseDrag.current = { x: event.clientX - transform.x, y: event.clientY - transform.y };
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (mouseDrag.current) panTo(event.clientX - mouseDrag.current.x, event.clientY - mouseDrag.current.y);
+          }}
+          onLostPointerCapture={() => { mouseDrag.current = null; }}
+          style={{ cursor: transform.scale > 1 ? "grab" : undefined }}
         >
-          {!isCurrentMediaLoaded && !isVideoActive && (
-            <div className={styles.spinnerContainer}>
-              <SpinnerIcon />
-            </div>
-          )}
-          <div
-            className={styles.imageTransitionContainer}
-            style={{ opacity: isCurrentMediaLoaded ? 1 : 0 }}
-          >
+          <div className={styles.imageTransitionContainer}>
             {isVideoActive ? (
               <VideoPlayer
                 url={activeMedia.url}
@@ -194,19 +225,35 @@ export default React.memo(function MobileModalZoomer({
                   transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
                 }}
               >
-                {activeMedia.id && (
-                  <Image
-                    src={cloudinaryMainImage(activeMedia.name, 1200, 1200)}
+                {original && <>
+                  {!originalLoaded && <img src={preview} alt="" className={styles.viewerImage} />}
+                  <img
+                    src={original}
                     alt={activeMedia.alt}
-                    fill={true}
-                    sizes="100vw"
-                    priority={true}
-                    style={{ objectFit: "contain" }}
+                    decoding="async"
+                    fetchPriority="high"
+                    className={styles.viewerImage}
+                    style={{ opacity: originalLoaded ? 1 : 0 }}
+                    draggable={false}
+                    onLoad={({ currentTarget }) => {
+                      const { naturalWidth: width, naturalHeight: height } = currentTarget;
+                      setLoaded((previous) => ({ ...previous, [activeMedia.name]: { width, height } }));
+                    }}
+                    onError={() => setFailed((previous) => ({ ...previous, [activeMedia.name]: true }))}
                   />
-                )}
+                </>}
               </div>
             )}
           </div>
+        </div>
+        <div className={styles.viewerControls}>
+          <button type="button" aria-label="Previous image" onClick={() => handleNavigation("prev")} disabled={media.length < 2 || transform.scale > 1}><ChevronLeft /></button>
+          <span>{currentIndex + 1} / {media.length}</span>
+          {original && <button type="button" aria-label={transform.scale > 1 ? "Fit image to screen" : "Zoom to original size"} disabled={!originalLoaded} onClick={toggleZoom}>
+            {transform.scale > 1 ? <ZoomOut aria-hidden="true" /> : <ZoomIn aria-hidden="true" />}
+          </button>}
+          {failed[activeMedia.name] && <span>Original image unavailable</span>}
+          <button type="button" aria-label="Next image" onClick={() => handleNavigation("next")} disabled={media.length < 2 || transform.scale > 1}><ChevronRight /></button>
         </div>
         <div className={styles.modalThumbnailList}>
           {media.map((item, index) => (

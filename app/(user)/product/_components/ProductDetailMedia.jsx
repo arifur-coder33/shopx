@@ -1,6 +1,6 @@
 import { cloudinaryDetailImage } from "@/utils/cloudinaryUrl";
 import DeferredVideo from "./DeferredVideo";
-import DeferredDetailImage from "./DeferredDetailImage";
+import ProductDetailPhotoGallery from "./ProductDetailPhotoGallery";
 
 function getVideoSource(rawUrl) {
   if (!rawUrl) return null;
@@ -93,27 +93,7 @@ export default function ProductDetailMedia({ title, videoUrl, videos = [], galle
             </p>
             <h2 className="text-xl font-bold sm:text-2xl">পণ্যের ছবিসমূহ</h2>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {photos.map((photo, index) => (
-              <figure
-                key={photo.id || photo.name}
-                className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface-muted"
-              >
-                <DeferredDetailImage
-                  src={cloudinaryDetailImage(photo.name, 640)}
-                  srcSet={[320, 480, 640, 960, 1200].map((width) => `${cloudinaryDetailImage(photo.name, width)} ${width}w`).join(", ")}
-                  alt={photo.seoAlt || `${title} - বিস্তারিত ছবি ${index + 1}`}
-                  width={1200}
-                  height={1200}
-                  sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 50vw, 600px"
-                  className="absolute inset-0 h-full w-full object-contain"
-                  loading="lazy"
-                  decoding="async"
-                  fetchPriority="low"
-                />
-              </figure>
-            ))}
-          </div>
+          <ProductDetailPhotoGallery photos={photos} title={title} />
         </div>
       )}
     </section>
