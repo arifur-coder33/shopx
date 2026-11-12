@@ -204,7 +204,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
+export default function OrderFooter({ orderId, status, setStatus, createdAt, hasCourierBooking }) {
   const [reason, setReason] = useState("");
   const [reasonType, setReasonType] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -383,12 +383,12 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt }) {
 
             {status === "PROCESSING" && (
               <>
-                <Link
+                {hasCourierBooking && <Link
                   href="/admin/procurement/deliveries"
                   className="px-4 py-2 bg-indigo-600 text-white rounded"
                 >
                   Open Delivery Queue
-                </Link>
+                </Link>}
 
                 <button
                   onClick={() => setReasonType("cancel")}

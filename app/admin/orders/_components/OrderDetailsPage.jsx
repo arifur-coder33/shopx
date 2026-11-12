@@ -1,4 +1,5 @@
 "use client";
+import { formatOrderAddress } from "@/lib/formatOrderAddress";
 import InvoiceButton from "@/components/PDF/getInvoice";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { useSession } from "next-auth/react";
@@ -35,6 +36,7 @@ export default function OrderDetailsPage({ order, children, shopName }) {
   const { data: session } = useSession();
   const permissions = session?.user?.permissions;
   const [status, setStatus] = useState(order.status || "DELIVERED");
+  const [shipping, setShipping] = useState(order.shipping);
   const [courier, setCourier] = useState(order.courier || "");
   const [adminDiscount, setAdminDiscount] = useState(order.adminDiscount || 0);
   const [note, setNote] = useState(order.note || "");
@@ -53,23 +55,21 @@ export default function OrderDetailsPage({ order, children, shopName }) {
       console.log("Generate PDF Function called for:", type);
     }
   };
-  const handleDownloadAWB = order.shipping?.cn
+  const handleDownloadAWB = shipping?.cn
     ? () =>
         downloadAWBPDF({
           shopName,
           shopId: process.env.NEXT_PUBLIC_PATHAO_STORE_ID || "",
           invoice: order.orderNo,
-          sfId: order.shipping.cn,
+          sfId: shipping.cn,
           deliveryType: "Home",
           weight: order.orderWeight || 0.5,
           name: order.customerName,
           phone: order.phoneNumber,
-          address: [order.deliveryAddress, order.thana, order.city]
-            .filter(Boolean)
-            .join(", "),
-          cod: order.shipping.cod ?? order.dueAmount ?? 0,
+          address: formatOrderAddress(order),
+          cod: shipping.cod ?? order.dueAmount ?? 0,
           courierName:
-            order.shipping.courierName ||
+            shipping.courierName ||
             order.selectedCourierProvider?.name ||
             "Courier",
         })
@@ -138,7 +138,7 @@ export default function OrderDetailsPage({ order, children, shopName }) {
             />
             <BanglaQrPaymentReview order={order} canUpdate={hasUIPermission(permissions, "order", "update")} />
             {status !== "CANCELLED" && (
-              <CourierManagement
+              <CourierManagement setShipping={setShipping}
                 setStatus={setStatus}
                 status={status}
                 order={order}
@@ -189,7 +189,7 @@ export default function OrderDetailsPage({ order, children, shopName }) {
       </div>
 
       {hasUIPermission(permissions, "order", "update") && (
-        <OrderFooter
+        <OrderFooter hasCourierBooking={Boolean(shipping)}
           status={status}
           setStatus={setStatus}
           courier={courier}

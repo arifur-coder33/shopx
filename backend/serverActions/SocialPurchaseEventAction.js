@@ -83,13 +83,24 @@ export async function firePurchaseServer({ orderNo, orderId, actionSource = "web
     };
 
     const trackingSettings = await getServerSocialTrackingSettings();
-    await Promise.all([
+    const results = await Promise.allSettled([
       fireFacebookCAPI(payload, trackingSettings),
       fireGoogleServer(payload, trackingSettings),
       fireTikTokServer(payload, trackingSettings),
-    ]).catch(console.error);
-
-    return true;
+    ]);
+    const providers = ["Meta", "GA4", "TikTok"];
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value?.success) return;
+      const outcome = result.status === "fulfilled" ? result.value : null;
+      console.warn("Purchase tracking not submitted", {
+        eventId,
+        provider: providers[index],
+        status: outcome?.skipped ? "skipped" : "failed",
+        code: outcome?.data?.error?.code,
+        subcode: outcome?.data?.error?.error_subcode,
+      });
+    });
+    return results.some((result) => result.status === "fulfilled" && result.value?.success);
   } catch (err) {
     console.error("Purchase tracking error:", err);
     return false;

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getProviderRuntimeConfiguration } from "../services/providerCredentialService";
 import {
@@ -92,7 +93,7 @@ export async function createCourierDeliveryAction({ formData }) {
 
     const order = await prisma.order.findUnique({
       where: { orderNo: data.invoice },
-      select: { id: true, status: true, shipping: { select: { id: true } } },
+      select: { id: true, status: true, shipping: true },
     });
 
     if (!order) {
@@ -111,7 +112,11 @@ export async function createCourierDeliveryAction({ formData }) {
       }
     }
     if (order.shipping) {
-      throw new Error("A courier order has already been created for this order.");
+      if (order.status !== "PENDING") throw new Error("A courier order has already been created for this order.");
+      const confirmation = await updateOrderStatusAction(order.id, "PROCESSING");
+      if (!confirmation.success) throw new Error(confirmation.message || "Order confirmation failed.");
+      revalidatePath("/admin/procurement/deliveries");
+      return { success: true, data: { ...order.shipping, orderStatus: "PROCESSING" } };
     }
     if (!['PENDING', 'PROCESSING'].includes(order.status)) {
       throw new Error("Only a pending or processing order can be sent to a courier.");
@@ -333,12 +338,15 @@ export async function createCourierDeliveryAction({ formData }) {
     // Confirming the sale and creating its courier consignment is one action.
     // Packing/stock allocation happens later from the Delivery Queue.
     if (order.status !== "PROCESSING") {
-      await updateOrderStatusAction(order.id, "PROCESSING");
+      const confirmation = await updateOrderStatusAction(order.id, "PROCESSING");
+      if (!confirmation.success) throw new Error(confirmation.message || "Courier booked, but confirmation failed.");
     }
+    revalidatePath("/admin/procurement/deliveries");
     return {
       success: true,
       data: {
-        ...(shippingdata || courierData),
+        ...shippingdata,
+        orderStatus: "PROCESSING",
         isManualEntry: Boolean(orderResponseData.isManualEntry),
         status: orderResponseData.status || "in_review",
         ...(orderResponseData.trackingCode ? { trackingCode: orderResponseData.trackingCode } : {}),
@@ -359,17 +367,23 @@ export async function cancelCourierDeliveryAction(courierId, orderId) {
         "Courier ID and Order ID are required to cancel delivery.",
       );
     }
-    const checkShipping = await prisma.shipping.findUnique({
-      where: { id: courierId },
+    await prisma.$transaction(async (tx) => {
+      const changed = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          status: { in: ["PENDING", "PROCESSING"] },
+          shipping: { is: { id: courierId } },
+          deliveries: { none: {} },
+        },
+        data: { status: "PENDING" },
+      });
+      if (!changed.count) throw new Error("Courier booking missing or delivery already started.");
+      await tx.shipping.delete({ where: { id: courierId } });
     });
-    if (!checkShipping) {
-      throw new Error("No shipping found with the provided courier ID.");
-    }
-    await prisma.shipping.delete({
-      where: { id: courierId },
-    });
-    await updateOrderStatusAction(orderId, "PROCESSING");
-    return { success: true, data: { status: "PROCESSING" } };
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/orders2");
+    revalidatePath("/admin/procurement/deliveries");
+    return { success: true, data: { status: "PENDING" } };
   } catch (error) {
     console.error("Error cancelling courier delivery:", error);
     return { success: false, message: error.message };

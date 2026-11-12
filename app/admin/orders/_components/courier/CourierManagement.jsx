@@ -4,6 +4,7 @@ import {
   createCourierDeliveryAction,
 } from "@/backend/serverActions/courierAction";
 import { confirmFromUser } from "@/components/modal/confrim/confirm";
+import { formatOrderAddress } from "@/lib/formatOrderAddress";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { Undo2 } from "lucide-react";
 import { useState } from "react";
@@ -13,7 +14,7 @@ import CourierSelector from "./CourierSelector";
 import CourierStatus from "./CourierStatus";
 
 import { useSession } from "next-auth/react";
-export default function CourierManagement({ order, status, setStatus, shopName }) {
+export default function CourierManagement({ order, status, setStatus, setShipping, shopName }) {
   const [view, setView] = useState(order?.shipping ? "status" : "list"); // list, form, status
   const [selectedCourier, setSelectedCourier] = useState(null);
   const [manualEntry, setManualEntry] = useState(Boolean(order?.shipping?.isManualEntry));
@@ -26,7 +27,7 @@ export default function CourierManagement({ order, status, setStatus, shopName }
   const [data, setData] = useState({
     name: order?.customerName || "",
     phone: order?.phoneNumber.slice(-11) || "",
-    address: `${order?.deliveryAddress}, ${order?.thana}, ${order?.city}` || "",
+    address: formatOrderAddress(order),
     price: order?.dueAmount,
     weight: order?.orderWeight,
     city: order?.city,
@@ -46,10 +47,11 @@ export default function CourierManagement({ order, status, setStatus, shopName }
       toast.success("Courier order created successfully");
       setLoading(false);
       setCourierDetails(response.data);
+      setShipping(response.data);
       setView("status");
       setError(null);
       setSuccess(true);
-      setStatus("PROCESSING");
+      setStatus(response.data.orderStatus);
     } else {
       toast.error(response.message || "Failed to create courier order");
       setLoading(false);
@@ -79,18 +81,22 @@ export default function CourierManagement({ order, status, setStatus, shopName }
     });
     if (!ok) return;
 
-    setView("form");
+    setLoading(true);
     const response = await cancelCourierDeliveryAction(
-      order?.shipping?.id || courierDetails?.id,
+      courierDetails?.id,
       order?.id || courierDetails?.orderId,
     );
     if (response.success) {
       toast.success("Courier delivery canceled successfully");
-      // setCourierDetails(null);
+      setCourierDetails(null);
+      setShipping(null);
+      setSelectedCourier(null);
+      setView("list");
       setStatus(response.data.status);
       setLoading(false);
     } else {
-      toast.error("Failed to cancel courier delivery");
+      setLoading(false);
+      toast.error(response.message || "Failed to cancel courier delivery");
       return;
     }
   };

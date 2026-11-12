@@ -35,7 +35,7 @@ export async function fireFacebookCAPI(data, configuredSettings) {
         ? hash(String(data.user.userId))
         : undefined,
 
-      country: ["bd"], // optional but useful
+      country: [hash("bd")],
     },
 
     custom_data: {
@@ -90,7 +90,7 @@ export async function fireFacebookCAPI(data, configuredSettings) {
     if (!res.ok) {
       // console.error("FB CAPI Error:", json);
     }
-    return { success: res.ok, data: json };
+    return { success: res.ok && Number(json.events_received) > 0, data: json };
   } catch (err) {
     // console.error("FB CAPI Fetch Failed:", err);
     return { success: false };
