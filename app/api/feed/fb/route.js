@@ -17,6 +17,8 @@ export async function GET(request) {
   const items = socialFormatProducts(products, {
     siteUrl: new URL(request.url).origin,
     brand: identity.name,
+    useBaseTitle: true,
+    useCatalogAvailability: true,
   });
 
   const csvHeaders = [

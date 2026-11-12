@@ -7,7 +7,7 @@ export async function fireGoogleServer(data, configuredSettings) {
   if (!settings.googleAnalyticsId || !settings.googleAnalyticsSecret) {
     return { skipped: true, reason: "Google server tracking is not configured." };
   }
-  const client_id = data.user.gclid || `${Date.now()}.${Math.random()}`;
+  const client_id = (data.event === "user_engagement" && data.extra.clientId) || data.user.gclid || `${Date.now()}.${Math.random()}`;
 
   const payload = {
     client_id,
@@ -20,7 +20,10 @@ export async function fireGoogleServer(data, configuredSettings) {
       {
         name: GOOGLE_MAP[data.event] || data.event,
 
-        params: {
+        params: data.event === "user_engagement" ? {
+          session_id: data.extra.sessionId,
+          engagement_time_msec: data.extra.engagementTimeMsec,
+        } : {
           value: data.value,
           currency: data.currency,
           transaction_id: data.transactionId || data.eventId,

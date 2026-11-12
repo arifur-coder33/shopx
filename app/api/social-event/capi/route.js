@@ -10,6 +10,26 @@ export async function POST(req) {
     const h = await headers();
     const ip = getIP(h);
     const body = await req.json();
+    if (String(body?.event).toLowerCase() === "purchase") {
+      return Response.json({ success: false }, { status: 403 });
+    }
+
+    if (body?.event === "user_engagement") {
+      const origin = req.headers.get("origin");
+      if (!origin || new URL(origin).host !== h.get("host")) {
+        return Response.json({ success: false }, { status: 403 });
+      }
+      const { clientId, sessionId, engagementTimeMsec } = body.extra || {};
+      if (typeof clientId !== "string" || !/^\d{1,20}\.\d{1,20}$/.test(clientId)
+          || !Number.isSafeInteger(sessionId) || sessionId <= 0 || engagementTimeMsec !== 2500) {
+        return Response.json({ success: false }, { status: 400 });
+      }
+      const result = await fireGoogleServer({
+        event: "user_engagement", eventId: body.eventId, user: {}, items: [],
+        extra: { clientId, sessionId, engagementTimeMsec },
+      });
+      return Response.json({ success: true, providers: { ga4: result.success ? "submitted" : result.skipped ? "skipped" : "failed" } });
+    }
 
     const user = body.user || {};
     const items = body.items || [];
@@ -35,7 +55,7 @@ export async function POST(req) {
 
       user: {
         email: user.email,
-        phone: user.phoneNumber,
+        phone: user.phone || user.phoneNumber,
         userId: user.userId,
         fbp: user.fbp,
         fbc: user.fbc,
@@ -48,13 +68,20 @@ export async function POST(req) {
 
     // console.log("route", payload);
     const trackingSettings = await getServerSocialTrackingSettings();
-    await Promise.all([
+    const results = await Promise.allSettled([
       fireFacebookCAPI(payload, trackingSettings),
       fireGoogleServer(payload, trackingSettings),
       fireTikTokServer(payload, trackingSettings),
     ]);
 
-    return Response.json({ success: true });
+    const providers = Object.fromEntries(["meta", "ga4", "tiktok"].map((provider, index) => {
+      const result = results[index];
+      const status = result.status === "fulfilled" && result.value?.skipped ? "skipped"
+        : result.status === "fulfilled" && result.value?.success ? "submitted" : "failed";
+      if (status === "failed") console.warn("Tracking provider failed:", provider, payload.eventId);
+      return [provider, status];
+    }));
+    return Response.json({ success: true, eventId: payload.eventId, providers });
   } catch (error) {
     console.error("CAPI Error:", error);
     return Response.json({ success: false });

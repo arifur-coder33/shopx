@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { notifyOrderCreated } from "@/backend/services/orderRealtimeService";
-import { firePurchaseServer } from "@/backend/serverActions/SocialPurchaseEventAction";
+
 import { generateCode } from "../utils/generateCode";
 import { actionError, requireProcurementPermission } from "../utils/procurement";
 import { findSearchProducts } from "../utils/findSearchProducts";
@@ -497,7 +497,7 @@ export async function createPosSale(formData) {
       if (!booked.success) courierWarning = booked.message;
     }
 
-    after(() => firePurchaseServer({ orderId: sale.order.id, actionSource: "phone_call" }));
+
 
     revalidatePath("/admin/pos");
     revalidatePath("/admin/orders");

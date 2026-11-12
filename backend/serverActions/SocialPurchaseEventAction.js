@@ -1,5 +1,6 @@
-"use server";
+import "server-only";
 import prisma from "@/lib/prisma";
+import { getSiteUrl } from "@/lib/siteUrl";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { fireFacebookCAPI } from "../utils/SocialServerEvent/fireFacebookCAPI";
 import { fireGoogleServer } from "../utils/SocialServerEvent/fireGoogleServer";
@@ -13,6 +14,7 @@ export async function firePurchaseServer({ orderNo, orderId, actionSource = "web
 
       select: {
         id: true,
+        orderNo: true,
         orderPrice: true,
         adminDiscount: true,
         deliveryCharge: true,
@@ -56,7 +58,7 @@ export async function firePurchaseServer({ orderNo, orderId, actionSource = "web
       transactionId: order.orderNo,
       currency: "BDT",
       actionSource,
-      src: "/payment/success",
+      src: await getSiteUrl(),
       items: order.orderItems.map((item) => ({
         id: item.sku,
         quantity: item.quantity,

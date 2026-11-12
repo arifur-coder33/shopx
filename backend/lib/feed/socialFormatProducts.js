@@ -58,7 +58,7 @@ function getCustomLabels(product, variation) {
 }
 
 // ── Main Format Function ──────────────────────────────────────
-export function socialFormatProducts(products, { siteUrl, brand } = {}) {
+export function socialFormatProducts(products, { siteUrl, brand, useCatalogAvailability = false, useBaseTitle = false } = {}) {
   const items = [];
 
   for (const product of products) {
@@ -98,7 +98,7 @@ export function socialFormatProducts(products, { siteUrl, brand } = {}) {
         // ── Core ──────────────────────────────────────────────
         id: v.sku,
         item_group_id: product.productCode,
-        title: attributeLabel
+        title: !useBaseTitle && attributeLabel
           ? `${product.title} (${attributeLabel})`
           : product.title,
         description: htmlToTextCustome(product.description) || "",
@@ -109,7 +109,10 @@ export function socialFormatProducts(products, { siteUrl, brand } = {}) {
         currency: "BDT",
 
         // ── Stock ─────────────────────────────────────────────
-        availability: (v.stock || 0) > 0 ? "in stock" : "out of stock",
+        availability:
+          (v.stock || 0) > 0 || (useCatalogAvailability && product.allowOutOfStockOrder === true)
+            ? "in stock"
+            : "out of stock",
 
         // ── Images ────────────────────────────────────────────
         image,

@@ -478,6 +478,7 @@ model Order {
   note                      String?
   status                    OrderStatus      @default(PENDING) // Order status enumeration
   customerConfirmedAt       DateTime?
+  purchaseTrackingClaimedAt DateTime?
   shipping                  Shipping?
   selectedPaymentGatewayId  String?
   selectedPaymentGateway    PaymentGateway?  @relation("OrderPaymentGateway", fields: [selectedPaymentGatewayId], references: [id])

@@ -1,6 +1,6 @@
 import { validateSSLcommerzPayment } from "@/backend/lib/payments/providers/sslcommerz";
 import { markPaymentSuccess } from "@/backend/serverActions/paymentAction";
-import { firePurchaseServer } from "@/backend/serverActions/SocialPurchaseEventAction";
+
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
@@ -84,7 +84,7 @@ async function handleSSL(req) {
       externalEventId: `${data.val_id || val_id}:${data.tran_id}`,
     });
 
-    firePurchaseServer({ orderNo: payment.order.orderNo }).catch(() => undefined);
+
     const successUrl = new URL(
       "/payment/success",
       siteUrl,

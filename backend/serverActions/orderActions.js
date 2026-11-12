@@ -1075,9 +1075,16 @@ export async function updateOrderStatusAction(orderId, status, note) {
       };
     }
 
-    // ✅ update order status
-    await prisma.$transaction(async (tx) => {
-      await tx.order.update({ where: { id: orderId }, data: { status } });
+    // Claim the Purchase event in the same transaction as the first confirmation.
+    const shouldSendPurchase = status === "PROCESSING" && order.status === "PENDING";
+    const purchaseClaimed = await prisma.$transaction(async (tx) => {
+      const claim = shouldSendPurchase
+        ? await tx.order.updateMany({
+            where: { id: orderId, status: "PENDING", purchaseTrackingClaimedAt: null },
+            data: { status, purchaseTrackingClaimedAt: new Date() },
+          })
+        : null;
+      if (!claim?.count) await tx.order.update({ where: { id: orderId }, data: { status } });
       const reservedPosMatch = order.adminNote?.match(/^POS_WAREHOUSE:([^:]+):RESERVED$/);
       if (status === "CANCELLED" && reservedPosMatch && order.deliveries.length === 0) {
         const warehouseId = reservedPosMatch[1];
@@ -1095,7 +1102,9 @@ export async function updateOrderStatusAction(orderId, status, note) {
           });
         }
       }
+      return Boolean(claim?.count);
     });
+    if (purchaseClaimed) after(() => firePurchaseServer({ orderId }));
 
     // 🧠 dynamic title বানানো
     const titleMap = {
@@ -1125,11 +1134,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
       createdBy: "admin",
     });
     await postDeliveredCod();
-    if (status === "PROCESSING") {
-      firePurchaseServer({ orderId }).catch((err) =>
-        console.error("Tracking failed:", err),
-      );
-    }
+
 
     // 🔄 revalidate
     revalidatePath("/admin/orders");
