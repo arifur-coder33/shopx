@@ -2,7 +2,7 @@ import { FB_MAP } from "@/lib/SocialEventTracking/facebook";
 import { hash } from "@/lib/SocialEventTracking/hash";
 import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
-export async function fireFacebookCAPI(data, configuredSettings) {
+export async function fireFacebookCAPI(data, configuredSettings, { useSavedTestCode = false } = {}) {
   const settings =
     configuredSettings || (await getServerSocialTrackingSettings());
   const pixelId = settings.facebookPixelId;
@@ -76,7 +76,7 @@ export async function fireFacebookCAPI(data, configuredSettings) {
           data: [fbdata],
           access_token: settings.facebookAccessToken,
           test_event_code:
-            process.env.NODE_ENV === "development"
+            (useSavedTestCode || process.env.NODE_ENV === "development")
               ? settings.facebookTestEventCode || undefined
               : undefined,
         }),

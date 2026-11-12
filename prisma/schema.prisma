@@ -494,6 +494,7 @@ model Order {
   fbp                       String?
   gclid                     String?
   ttclid                    String
+  marketingAttribution      Json?
   userAgent                 String?
   ipAddress                 String?
   createdAt                 DateTime         @default(now()) // Timestamp for order placement
@@ -503,6 +504,7 @@ model Order {
   @@index([selectedCourierProviderId])
   @@index([phoneNumber, createdAt])
   @@index([ipAddress, createdAt])
+  @@index([createdAt])
 }
 
 model OrderItem {

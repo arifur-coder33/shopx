@@ -36,7 +36,7 @@ const providers = [
       {
         key: "facebookTestEventCode",
         label: "Test event code",
-        env: "FB_TEST_EVENT_CODE",
+        env: "Saved code enables Meta Test Events for new Purchase events. Remove it after testing.",
         secret: true,
         optional: true,
       },

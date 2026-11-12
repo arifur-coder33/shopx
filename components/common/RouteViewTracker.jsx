@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { captureOrderAttribution } from "@/lib/orderAttribution";
 import { usePathname } from "next/navigation";
 import { fireCAPI } from "@/lib/SocialEventTracking/capi";
 
@@ -49,6 +50,7 @@ export default function RouteViewTracker() {
   }, [pathname]);
 
   useEffect(() => {
+    captureOrderAttribution({ includeReferrer: firstPath.current });
     if (firstPath.current) {
       firstPath.current = false;
       return;

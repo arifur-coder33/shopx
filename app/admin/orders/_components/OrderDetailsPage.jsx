@@ -111,6 +111,15 @@ export default function OrderDetailsPage({ order, children, shopName }) {
           date={order.createdAt || "N/A"}
         />
         <OrderRiskAssessment order={order} />
+        <div className="card p-4 text-sm">
+          <strong>Order source</strong>
+          <p className="mt-1 text-text-muted">{[
+            order.marketingAttribution?.channel || "Unattributed",
+            order.marketingAttribution?.source,
+            order.marketingAttribution?.campaign || order.marketingAttribution?.campaignId,
+            order.marketingAttribution?.ad || order.marketingAttribution?.adId,
+          ].filter(Boolean).join(" / ")}</p>
+        </div>
 
         {/* Timeline Section
         <OrderTimeline status={status} /> */}

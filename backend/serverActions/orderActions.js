@@ -10,7 +10,8 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
 import { notifyOrderCreated } from "@/backend/services/orderRealtimeService";
 import { deleteAbandonedCheckoutLeadByPhone } from "@/backend/services/abandonedCheckoutService";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { ORDER_SOURCE_COOKIE, parseOrderAttribution } from "@/lib/orderAttribution";
 import { getIP } from "../utils/getIp";
 import { assessOrderRisk } from "../utils/orderRisk";
 import { updateRecentOrderRiskScores } from "@/backend/services/orderRiskService";
@@ -32,6 +33,10 @@ function compatibleCampaigns(campaigns, selectedCampaigns) {
 
 const statusMap = CUSTOMER_ORDER_STATUS_GROUPS;
 // export async function createOrder(formData) {
+  const marketingAttribution = parseOrderAttribution((await cookies()).get(ORDER_SOURCE_COOKIE)?.value)
+    || (formData.get("gclid") && formData.get("gclid") !== "null" ? { channel: "Paid Ads", source: "google" }
+      : formData.get("ttclid") && formData.get("ttclid") !== "null" ? { channel: "Paid Ads", source: "tiktok" }
+      : { channel: "Direct / Unknown" });
 //   const h = await headers();
 //   const ip = getIP(h);
 
@@ -250,6 +255,10 @@ const statusMap = CUSTOMER_ORDER_STATUS_GROUPS;
 //   }
 // }
 export async function createOrder(formData) {
+  const marketingAttribution = parseOrderAttribution((await cookies()).get(ORDER_SOURCE_COOKIE)?.value)
+    || (formData.get("gclid") && formData.get("gclid") !== "null" ? { channel: "Paid Ads", source: "google" }
+      : formData.get("ttclid") && formData.get("ttclid") !== "null" ? { channel: "Paid Ads", source: "tiktok" }
+      : { channel: "Direct / Unknown" });
   const [h, userId] = await Promise.all([headers(), getUserId()]);
   const ip = getIP(h);
   const userAgent = h.get("user-agent") || "";
@@ -622,6 +631,7 @@ export async function createOrder(formData) {
           fbp: data?.fbp,
           gclid: data?.gclid,
           ttclid: data?.ttclid || "",
+          marketingAttribution: marketingAttribution ?? undefined,
           userAgent,
           ipAddress: ip,
           orderItems: {

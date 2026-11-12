@@ -84,13 +84,20 @@ export async function firePurchaseServer({ orderNo, orderId, actionSource = "web
 
     const trackingSettings = await getServerSocialTrackingSettings();
     const results = await Promise.allSettled([
-      fireFacebookCAPI(payload, trackingSettings),
+      fireFacebookCAPI(payload, trackingSettings, { useSavedTestCode: true }),
       fireGoogleServer(payload, trackingSettings),
       fireTikTokServer(payload, trackingSettings),
     ]);
     const providers = ["Meta", "GA4", "TikTok"];
     results.forEach((result, index) => {
-      if (result.status === "fulfilled" && result.value?.success) return;
+      if (result.status === "fulfilled" && result.value?.success) {
+        if (index === 0) console.info("Meta accepted Purchase", {
+          eventId,
+          testMode: Boolean(trackingSettings.facebookTestEventCode),
+          eventsReceived: result.value.data?.events_received,
+        });
+        return;
+      }
       const outcome = result.status === "fulfilled" ? result.value : null;
       console.warn("Purchase tracking not submitted", {
         eventId,
