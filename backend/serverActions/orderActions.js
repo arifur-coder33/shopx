@@ -33,10 +33,6 @@ function compatibleCampaigns(campaigns, selectedCampaigns) {
 
 const statusMap = CUSTOMER_ORDER_STATUS_GROUPS;
 // export async function createOrder(formData) {
-  const marketingAttribution = parseOrderAttribution((await cookies()).get(ORDER_SOURCE_COOKIE)?.value)
-    || (formData.get("gclid") && formData.get("gclid") !== "null" ? { channel: "Paid Ads", source: "google" }
-      : formData.get("ttclid") && formData.get("ttclid") !== "null" ? { channel: "Paid Ads", source: "tiktok" }
-      : { channel: "Direct / Unknown" });
 //   const h = await headers();
 //   const ip = getIP(h);
 

@@ -1,3 +1,6 @@
+import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
+import { normalizePhone } from "@/utils/normalize";
 import { getIP } from "@/backend/utils/getIp";
 import { fireFacebookCAPI } from "@/backend/utils/SocialServerEvent/fireFacebookCAPI";
 import { fireGoogleServer } from "@/backend/utils/SocialServerEvent/fireGoogleServer";
@@ -32,6 +35,27 @@ export async function POST(req) {
     }
 
     const user = body.user || {};
+    // Resolve ViewContent identifiers from the signed-in account.
+    if (body.event === "view") {
+      user.email = undefined;
+      user.phone = undefined;
+      user.phoneNumber = undefined;
+      user.userId = undefined;
+      try {
+        const session = await auth();
+        if (session?.user?.id) {
+          user.userId = session.user.id;
+          user.email = session.user.email;
+          const account = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { phone: true },
+          });
+          user.phone = normalizePhone(account?.phone);
+        }
+      } catch (error) {
+        console.warn("ViewContent account lookup failed", body.eventId);
+      }
+    }
     const items = body.items || [];
     const extra = body.extra || {};
 

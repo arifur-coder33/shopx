@@ -3,16 +3,19 @@
 import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function ViewProductEvent({ product }) {
-  const { data: session } = useSession();
+  const { status } = useSession();
+  const lastTrackedProduct = useRef(null);
   const variation = product?.variations?.[0];
   const price =
     variation?.discountPrice ||
     variation?.regularPrice ||
     0;
   useEffect(() => {
+    if (status === "loading" || !product?.id || lastTrackedProduct.current === product.id) return;
+    lastTrackedProduct.current = product.id;
     trackEvent({
       event: EVENTS.VIEW,
       value: price,
@@ -26,12 +29,8 @@ export default function ViewProductEvent({ product }) {
           category: product.category?.name || "Uncategorized",
         },
       ],
-      user: {
-        email: session?.user?.email,
-        phone: session?.user?.phone,
-      },
     });
-  }, [product, session, price]);
+  }, [product, status, price]);
 
   useEffect(() => {
     if (!product?.id) return;

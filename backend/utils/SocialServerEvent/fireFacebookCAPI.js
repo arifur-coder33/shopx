@@ -28,7 +28,9 @@ export async function fireFacebookCAPI(data, configuredSettings, { useSavedTestC
       client_user_agent: data.user.agent,
       em: data.user.email ? [hash(normalizeEmail(data.user.email))] : undefined,
       ph: data.user.phone ? [hash(data.user.phone)] : undefined,
-      fbc: data.user.fbc || undefined,
+      fbc: /^fb\.\d+\.\d{13}\.[A-Za-z0-9_-]{1,512}$/.test(data.user.fbc || "")
+        ? data.user.fbc
+        : undefined,
       fbp: data.user.fbp || undefined,
 
       external_id: data.user.userId
