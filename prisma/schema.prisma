@@ -941,11 +941,25 @@ model SupportEmailMessage {
   htmlBody          String?                   @db.Text
   resendEmailId     String?                   @unique
   internetMessageId String?
+  attachmentsJson   String?                   @db.Text
   isRead            Boolean                   @default(false)
   createdAt         DateTime                  @default(now())
 
   @@index([conversationId, createdAt])
   @@index([direction, isRead, createdAt])
+}
+
+model SupportEmailDraft {
+  id                String   @id @default(cuid())
+  conversationId    String?
+  toEmail           String?
+  subject           String?
+  textBody          String   @default("") @db.Text
+  attachmentsJson   String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([updatedAt])
 }
 
 model SocialAuthConfiguration {

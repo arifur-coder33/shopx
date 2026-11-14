@@ -25,9 +25,12 @@ export async function GET(request) {
     let authenticated = false;
     let conversationId = null;
     let closed = false;
+    let adminInbox = false;
     let pollTimer = null;
     let cursorAt = new Date(Date.now() - 2000);
     let cursorId = "";
+    let emailCursorAt = new Date(Date.now() - 2000);
+    let emailCursorId = "";
     const seenIds = new Set();
     const authTimer = setTimeout(() => {
       if (!authenticated && ws.readyState === 1) ws.close(1008, "Authentication required");
@@ -89,6 +92,35 @@ export async function GET(request) {
           cursorAt = message.updatedAt;
           cursorId = message.id;
         }
+        if (adminInbox) {
+          const emails = await prisma.supportEmailMessage.findMany({
+            where: {
+              direction: "INBOUND",
+              createdAt: { gte: emailCursorAt },
+              OR: [
+                { createdAt: { gt: emailCursorAt } },
+                { createdAt: emailCursorAt, id: { gt: emailCursorId } },
+              ],
+            },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            take: 100,
+            select: { id: true, resendEmailId: true, conversationId: true, fromEmail: true, subject: true, createdAt: true },
+          });
+          for (const email of emails) {
+            const eventKey = `email:${email.id}:${email.createdAt.getTime()}`;
+            if (seenIds.has(eventKey)) continue;
+            seenIds.add(eventKey);
+            send(ws, "email.received", {
+              emailId: email.resendEmailId || email.id,
+              conversationId: email.conversationId,
+              customerEmail: email.fromEmail,
+              subject: email.subject,
+              createdAt: email.createdAt.toISOString(),
+            });
+            emailCursorAt = email.createdAt;
+            emailCursorId = email.id;
+          }
+        }
         while (seenIds.size > 500) seenIds.delete(seenIds.values().next().value);
       } catch (error) {
         console.warn("Chat realtime polling failed:", error?.message || error);
@@ -122,6 +154,7 @@ export async function GET(request) {
           const user = await prisma.user.findUnique({ where: { id: claims.sub }, select: { id: true, role: { select: { name: true, permissions: { where: { allowed: true }, select: { resource: { select: { key: true } }, action: { select: { key: true } } } } } } } });
           const permissions = user?.role?.name === "SUPER_ADMIN" ? ["*"] : user?.role?.permissions?.map((item) => `${item.resource.key}:${item.action.key}`) || [];
           if (!user || !hasUIPermission(permissions, "chatInbox", "view")) throw new Error("Unauthorized");
+          adminInbox = true;
         }
         authenticated = true;
         clearTimeout(authTimer);

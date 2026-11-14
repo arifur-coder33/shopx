@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { decryptProviderCredentials, encryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import prisma from "@/lib/prisma";
 
@@ -78,7 +79,7 @@ const categoryEnabled = (settings, category) => ({
   deliverySuccess: settings.deliverySuccessEnabled,
 }[category] ?? true);
 
-export async function sendConfiguredEmail({ to, subject, html, text, category, headers }) {
+export async function sendConfiguredEmail({ to, subject, html, text, category, headers, attachments = [] }) {
   const settings = await getEmailConfiguration();
   if (category && !categoryEnabled(settings, category)) return { success: true, skipped: true };
   const apiKey = settings.resendApiKey;
@@ -88,12 +89,63 @@ export async function sendConfiguredEmail({ to, subject, html, text, category, h
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: Array.isArray(to) ? to : [to], subject, html, ...(text ? { text } : {}), ...(headers ? { headers } : {}) }),
+    body: JSON.stringify({
+      from,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      ...(text ? { text } : {}),
+      ...(headers ? { headers } : {}),
+      ...(attachments.length ? { attachments: attachments.map((attachment) => ({ filename: attachment.filename, content: attachment.contentBase64, content_type: attachment.mimeType })) } : {}),
+    }),
     signal: AbortSignal.timeout(15000),
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result?.message || result?.name || "Resend could not send the email.");
   return { success: true, id: result.id };
+}
+
+const safeFilename = (value) => clean(value).replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 180) || "attachment";
+
+export function parseEmailAttachments(value, { includeContent = false } = {}) {
+  try {
+    const rows = Array.isArray(value) ? value : JSON.parse(value || "[]");
+    if (!Array.isArray(rows)) return [];
+    return rows.map((item) => ({
+      id: clean(item.id),
+      filename: safeFilename(item.filename),
+      mimeType: clean(item.mimeType || item.content_type) || "application/octet-stream",
+      size: Number(item.size || 0),
+      ...(item.resendAttachmentId && { resendAttachmentId: clean(item.resendAttachmentId) }),
+      ...(includeContent && item.contentBase64 && { contentBase64: item.contentBase64 }),
+    })).filter((item) => item.id && item.filename);
+  } catch { return []; }
+}
+
+export async function readEmailAttachmentFiles(formData, existingAttachments = []) {
+  const keepRaw = clean(formData.get("keepAttachmentIds"));
+  let keepIds = existingAttachments.map((item) => item.id);
+  if (keepRaw) {
+    try { keepIds = JSON.parse(keepRaw); } catch { throw new Error("Attachment selection is invalid."); }
+  }
+  if (!Array.isArray(keepIds) || keepIds.some((id) => typeof id !== "string")) throw new Error("Attachment selection is invalid.");
+  const attachments = existingAttachments.filter((item) => keepIds.includes(item.id));
+  let totalSize = attachments.reduce((sum, item) => sum + Number(item.size || 0), 0);
+  const files = formData.getAll("files").filter((value) => value && typeof value.arrayBuffer === "function" && Number(value.size) > 0);
+  if (attachments.length + files.length > 8) throw new Error("একটি email-এ সর্বোচ্চ ৮টি file দিতে পারবেন।");
+  for (const file of files) {
+    totalSize += file.size;
+    if (totalSize > 4 * 1024 * 1024) throw new Error("সব attachment মিলিয়ে ৪ MB-এর মধ্যে রাখুন।");
+    attachments.push({
+      id: randomUUID(),
+      filename: safeFilename(file.name),
+      mimeType: clean(file.type) || "application/octet-stream",
+      size: file.size,
+      contentBase64: Buffer.from(await file.arrayBuffer()).toString("base64"),
+    });
+  }
+  if (totalSize > 4 * 1024 * 1024) throw new Error("সব attachment মিলিয়ে ৪ MB-এর মধ্যে রাখুন।");
+  return attachments;
 }
 
 export function normalizeEmailSubject(subject = "") {
@@ -109,7 +161,15 @@ export async function storeReceivedEmail(data, content) {
   const toEmail = (Array.isArray(data.to) ? data.to : [data.to]).map(clean).find(Boolean) || "";
   const subject = clean(data.subject) || "(No subject)";
   const normalizedSubject = normalizeEmailSubject(subject);
-  const happenedAt = new Date(data.created_at || Date.now());
+  const rawAttachments = Array.isArray(content.attachments) && content.attachments.length ? content.attachments : Array.isArray(data.attachments) ? data.attachments : [];
+  const attachments = rawAttachments.map((item) => ({
+    id: clean(item.id),
+    resendAttachmentId: clean(item.id),
+    filename: safeFilename(item.filename),
+    mimeType: clean(item.content_type || item.contentType) || "application/octet-stream",
+    size: Number(item.size || 0),
+  })).filter((item) => item.id && item.filename);
+  const happenedAt = new Date();
   const existing = await prisma.supportEmailConversation.findFirst({
     where: { customerEmail: fromEmail.toLowerCase(), normalizedSubject },
     orderBy: { lastMessageAt: "desc" },
@@ -129,6 +189,7 @@ export async function storeReceivedEmail(data, content) {
       htmlBody: content.html ? String(content.html).slice(0, 200000) : null,
       resendEmailId: emailId,
       internetMessageId: clean(data.message_id) || null,
+      attachmentsJson: attachments.length ? JSON.stringify(attachments) : null,
       isRead: false,
       createdAt: Number.isNaN(happenedAt.getTime()) ? new Date() : happenedAt,
     },
