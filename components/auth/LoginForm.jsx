@@ -113,7 +113,7 @@ export default function LoginForm({ googleEnabled = false, facebookEnabled = fal
 
   const [error, setError] = useState(
     searchParams.get("error") === "OAuthAccountNotLinked"
-      ? "এই ইমেইলে আগে থেকেই account আছে। আগে email/password দিয়ে login করে Profile থেকে Google বা Facebook connect করুন।"
+      ? "এই ইমেইলে আগে থেকেই account আছে। আপনার account-এর সাথে মিলে এমন Google/Facebook account দিয়ে চেষ্টা করুন, অথবা আগের login পদ্ধতি ব্যবহার করুন।"
       : "",
   );
   const [loading, setLoading] = useState(false);

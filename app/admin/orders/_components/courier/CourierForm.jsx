@@ -13,7 +13,7 @@ export default function CourierForm({ data, onSubmit, loading, provider, manualE
   const location = `${city} ${address}`.toLowerCase();
   const insideDhaka = location.includes("dhaka") || location.includes("ঢাকা");
   const feeConfig = provider?.deliveryFeeConfig || {};
-  const manualFee = isManual
+  const manualFee = manualEntry || isManual
     ? Number((insideDhaka ? feeConfig.insideDhakaCharge : feeConfig.outsideDhakaCharge) || 0) +
       Math.max(0, Math.ceil((Number(weight) || 0) - 1)) * Number(feeConfig.additionalKgCharge || 0)
     : null;
@@ -53,7 +53,7 @@ export default function CourierForm({ data, onSubmit, loading, provider, manualE
         <label className="space-y-1 text-[11px] font-bold uppercase text-slate-500">Weight<input type="number" min="0" step="0.01" className="w-full rounded-xl border border-slate-200 p-3 text-sm font-normal" name="weight" value={weight} onChange={(event) => setWeight(event.target.value)} /></label>
         <label className="col-span-2 space-y-1 text-[11px] font-bold uppercase text-slate-500 md:col-span-1">City<input className="w-full rounded-xl border border-slate-200 p-3 text-sm font-normal normal-case" name="city" value={city} onChange={(event) => setCity(event.target.value)} /></label>
       </div>
-      {isManual && <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">Configured courier fee estimate: <strong>৳{Number(manualFee || 0).toLocaleString("en-BD")}</strong></p>}
+      {(manualEntry || isManual) && <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">Configured courier fee estimate: <strong>৳{Number(manualFee || 0).toLocaleString("en-BD")}</strong></p>}
       <button disabled={loading || cannotBook} className="w-full rounded-xl bg-indigo-600 py-4 font-bold text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
         {loading
           ? "Creating order…"

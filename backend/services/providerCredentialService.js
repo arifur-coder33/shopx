@@ -7,9 +7,9 @@ import {
 import { getProviderEndpointConfiguration } from "../config/providerEndpoints.js";
 
 const COURIER_RATE_CONFIG = [
-  { key: "insideDhakaCharge", label: "Inside Dhaka charge", type: "number", defaultValue: "100" },
-  { key: "outsideDhakaCharge", label: "Outside Dhaka charge", type: "number", defaultValue: "120" },
-  { key: "additionalKgCharge", label: "Charge per additional kg", type: "number", defaultValue: "20" },
+  { key: "insideDhakaCharge", label: "Inside Dhaka charge", type: "number", defaultValue: "" },
+  { key: "outsideDhakaCharge", label: "Outside Dhaka charge", type: "number", defaultValue: "" },
+  { key: "additionalKgCharge", label: "Charge per additional kg", type: "number", defaultValue: "" },
 ];
 
 const DEFINITIONS = {

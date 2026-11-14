@@ -23,6 +23,10 @@ model User {
   emailVerificationOtpExpiresAt DateTime?
   emailVerificationOtpSentAt    DateTime?
   emailVerificationOtpAttempts  Int       @default(0)
+  passwordResetOtpHash          String?
+  passwordResetOtpExpiresAt     DateTime?
+  passwordResetOtpSentAt        DateTime?
+  passwordResetOtpAttempts      Int       @default(0)
 
   password                  String
   accounts                  Account[]
@@ -646,6 +650,7 @@ model CourierProvider {
   code                  String               @unique
   adapterKey            String               @default("MANUAL")
   isActive              Boolean              @default(false)
+  manualBookingEnabled  Boolean              @default(false)
   sortOrder             Int                  @default(0)
   moneyAccountId        String?
   moneyAccount          MoneyAccount?        @relation(fields: [moneyAccountId], references: [id])
@@ -894,6 +899,53 @@ model SiteSetting {
   manualDeliveryEnabled Boolean @default(false)
   createdAt             DateTime @default(now()) // Timestamp for order placement
   updatedAt             DateTime @updatedAt // Auto-updated timestamp
+}
+
+model EmailConfiguration {
+  id                         String   @id @default("EMAIL")
+  encryptedCredentials      String?
+  fromEmail                 String?
+  fromName                  String?
+  supportInboxEmail          String?
+  emailVerificationEnabled  Boolean  @default(true)
+  passwordResetEnabled      Boolean  @default(true)
+  orderConfirmationEnabled  Boolean  @default(true)
+  orderStatusEnabled        Boolean  @default(true)
+  deliverySuccessEnabled    Boolean  @default(true)
+  updatedAt                 DateTime @updatedAt
+}
+
+model SupportEmailConversation {
+  id             String               @id @default(cuid())
+  customerEmail  String
+  subject        String
+  normalizedSubject String
+  lastMessageAt  DateTime             @default(now())
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  messages       SupportEmailMessage[]
+
+  @@index([lastMessageAt])
+  @@index([customerEmail, normalizedSubject])
+}
+
+model SupportEmailMessage {
+  id                String                    @id @default(cuid())
+  conversationId    String
+  conversation      SupportEmailConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction         String
+  fromEmail         String
+  toEmail           String
+  subject           String
+  textBody          String                    @db.Text
+  htmlBody          String?                   @db.Text
+  resendEmailId     String?                   @unique
+  internetMessageId String?
+  isRead            Boolean                   @default(false)
+  createdAt         DateTime                  @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([direction, isRead, createdAt])
 }
 
 model SocialAuthConfiguration {

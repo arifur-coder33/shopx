@@ -16,7 +16,7 @@ export async function getAvailableCourierProvidersForOrder() {
   try {
     await requireProcurementPermission("order", "view");
     const providers = await prisma.courierProvider.findMany({
-      where: { isActive: true, NOT: { code: "MANUAL" } },
+      where: { isActive: true, adapterKey: { not: "MANUAL" } },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -44,8 +44,11 @@ export async function getAvailableCourierProvidersForOrder() {
         pickupPoints,
         deliveryFeeConfig: adapterKey === "MANUAL" ? nonSecretConfig || {} : null,
       }));
-    const setting = await prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } });
-    return { success: true, data, manualDeliveryEnabled: setting?.manualDeliveryEnabled ?? false };
+    const manualProvider = await prisma.courierProvider.findFirst({
+      where: { OR: [{ adapterKey: "MANUAL", isActive: true }, { manualBookingEnabled: true }] },
+      select: { id: true },
+    });
+    return { success: true, data, manualBookingAvailable: Boolean(manualProvider) };
   } catch (error) {
     return actionError(error, "Failed to load couriers.");
   }
@@ -54,10 +57,8 @@ export async function getAvailableCourierProvidersForOrder() {
 export async function getCourierProvidersForManualEntryAction() {
   try {
     await requireProcurementPermission("order", "view");
-    const setting = await prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } });
-    if (!setting?.manualDeliveryEnabled) throw new Error("Manual delivery is disabled. Enable it from courier settings first.");
     const providers = await prisma.courierProvider.findMany({
-      where: { NOT: { code: "MANUAL" } },
+      where: { OR: [{ adapterKey: "MANUAL", isActive: true }, { manualBookingEnabled: true }] },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -65,13 +66,19 @@ export async function getCourierProvidersForManualEntryAction() {
         code: true,
         adapterKey: true,
         nonSecretConfig: true,
+        moneyAccount: { select: { id: true, isActive: true } },
       },
     });
     return {
       success: true,
-      data: providers.map(({ nonSecretConfig, ...provider }) => ({
+      data: providers.filter((provider) => {
+        const config = provider.nonSecretConfig || {};
+        const validCharges = [config.insideDhakaCharge, config.outsideDhakaCharge].every((value) => value !== undefined && value !== null && String(value).trim() !== "" && Number.isFinite(Number(value)) && Number(value) >= 0);
+        const supportsCod = config.supportsCod === true || String(config.supportsCod) === "true";
+        return validCharges && (!supportsCod || Boolean(provider.moneyAccount?.id && provider.moneyAccount.isActive));
+      }).map(({ nonSecretConfig, moneyAccount, ...provider }) => ({
         ...provider,
-        deliveryFeeConfig: provider.adapterKey === "MANUAL" ? nonSecretConfig || {} : null,
+        deliveryFeeConfig: nonSecretConfig || {},
       })),
     };
   } catch (error) {
@@ -93,7 +100,7 @@ export async function createCourierDeliveryAction({ formData }) {
 
     const order = await prisma.order.findUnique({
       where: { orderNo: data.invoice },
-      select: { id: true, status: true, shipping: true },
+      select: { id: true, status: true, shipping: true, paymentMethod: true },
     });
 
     if (!order) {
@@ -126,12 +133,11 @@ export async function createCourierDeliveryAction({ formData }) {
       include: { moneyAccount: true },
     });
     const manualEntry = data.manualEntry === "true";
-    if (manualEntry) {
-      const setting = await prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } });
-      if (!setting?.manualDeliveryEnabled) throw new Error("Manual delivery is disabled. Enable it from courier settings first.");
-    }
     if (!provider || (!manualEntry && !provider.isActive)) {
       throw new Error("Selected courier is unavailable.");
+    }
+    if (manualEntry && !(provider.adapterKey === "MANUAL" ? provider.isActive : provider.manualBookingEnabled)) {
+      throw new Error("Manual booking is disabled for this courier. Activate it in Courier Configuration.");
     }
     const providerConfiguration = getProviderRuntimeConfiguration(
       "courier",
@@ -139,6 +145,13 @@ export async function createCourierDeliveryAction({ formData }) {
     );
     if (!manualEntry && !providerConfiguration.ready) {
       throw new Error("Selected courier is unavailable or not fully configured.");
+    }
+    if (manualEntry) {
+      const config = providerConfiguration.config;
+      const ratesReady = [config.insideDhakaCharge, config.outsideDhakaCharge].every((value) => value !== undefined && value !== null && String(value).trim() !== "" && Number.isFinite(Number(value)) && Number(value) >= 0);
+      if (!ratesReady) throw new Error("Configure the courier delivery charges before manual booking.");
+      if (order.paymentMethod === "COD" && !providerConfiguration.supportsCod) throw new Error("This courier is not configured to collect COD.");
+      if (providerConfiguration.supportsCod && !provider.moneyAccount?.isActive) throw new Error("Activate the courier's COD money account first.");
     }
     const courierName = provider.adapterKey;
     const pickupPoint = data.pickupPointId
@@ -171,14 +184,12 @@ export async function createCourierDeliveryAction({ formData }) {
       const cn = String(data.cn || "").trim();
       if (!cn) throw new Error("Enter the consignment number from the courier.");
       let deliveryFee;
-      if (courierName === "MANUAL") {
-        const config = providerConfiguration.config;
-        const location = `${data.city || ""} ${data.address || ""}`.toLowerCase();
-        const insideDhaka = location.includes("dhaka") || location.includes("ঢাকা");
-        const baseFee = Number(insideDhaka ? config.insideDhakaCharge : config.outsideDhakaCharge) || 0;
-        const weight = Math.max(0, Number(data.weight) || 0);
-        deliveryFee = baseFee + Math.max(0, Math.ceil(weight - 1)) * (Number(config.additionalKgCharge) || 0);
-      }
+      const config = providerConfiguration.config;
+      const location = `${data.city || ""} ${data.address || ""}`.toLowerCase();
+      const insideDhaka = location.includes("dhaka") || location.includes("ঢাকা");
+      const baseFee = Number(insideDhaka ? config.insideDhakaCharge : config.outsideDhakaCharge);
+      const weight = Math.max(0, Number(data.weight) || 0);
+      deliveryFee = baseFee + Math.max(0, Math.ceil(weight - 1)) * (Number(config.additionalKgCharge) || 0);
       orderResponseData = {
         cn,
         status: "MANUALLY_BOOKED",

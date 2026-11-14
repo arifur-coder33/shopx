@@ -2,9 +2,20 @@
 
 import { saveRolePermissions } from "@/backend/serverActions/roleAction";
 import { DEPARTMENTS } from "@/backend/config/resourceRegistry.mjs";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "react-toastify";
+
+function BulkPermissionCheckbox({ checked, indeterminate, onChange, label }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
+    <input ref={ref} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4" aria-label={label} />
+    {label}
+  </label>;
+}
 
 export default function PermissionMatrixClient({
   roleId,
@@ -37,6 +48,25 @@ export default function PermissionMatrixClient({
       .filter(([, departmentResources]) => departmentResources.length > 0);
   }, [resources]);
 
+  const allPermissionCount = resources.length * actions.length;
+  const selectedPermissionCount = resources.reduce((total, resource) =>
+    total + actions.filter((action) => Boolean(matrix?.[resource.id]?.[action.id])).length, 0);
+  const allSelected = allPermissionCount > 0 && selectedPermissionCount === allPermissionCount;
+  const someSelected = selectedPermissionCount > 0 && !allSelected;
+
+  const setResourcesPermissions = (resourceIds, checked) => {
+    setMatrix((previous) => {
+      const next = { ...previous };
+      for (const resourceId of resourceIds) {
+        next[resourceId] = { ...next[resourceId] };
+        for (const action of actions) next[resourceId][action.id] = checked;
+      }
+      return next;
+    });
+  };
+
+  const toggleAll = (checked) => setResourcesPermissions(resources.map((resource) => resource.id), checked);
+
   const toggle = (resourceId, actionId) => {
     setMatrix((prev) => ({
       ...prev,
@@ -61,9 +91,14 @@ export default function PermissionMatrixClient({
     <div className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">Role Permissions</h1>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface-muted px-3 py-2">
+        <BulkPermissionCheckbox checked={allSelected} indeterminate={someSelected} onChange={toggleAll} label={allSelected ? "সব permission untick করুন" : "সব permission tick করুন"} />
+        <span className="text-xs text-text-muted">{selectedPermissionCount} / {allPermissionCount} selected</span>
+      </div>
+
       <div className="overflow-x-auto border rounded">
         <table className="w-full border-collapse">
-          <thead className="bg-gray-100">
+          <thead className="sticky top-0 z-20 bg-gray-100">
             <tr>
               <th className="border p-2 text-left">Resource</th>
               {actions.map((action) => (
@@ -78,8 +113,17 @@ export default function PermissionMatrixClient({
             {groupedResources.map(([department, departmentResources]) => (
               <Fragment key={department}>
                 <tr className="bg-slate-100">
-                  <td className="border px-3 py-2 font-semibold" colSpan={actions.length + 1}>
-                    {department}
+                  <td className="border px-3 py-2" colSpan={actions.length + 1}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <strong>{department}</strong>
+                      {(() => {
+                        const ids = departmentResources.map((resource) => resource.id);
+                        const total = ids.length * actions.length;
+                        const selected = ids.reduce((count, id) => count + actions.filter((action) => Boolean(matrix?.[id]?.[action.id])).length, 0);
+                        const checked = total > 0 && selected === total;
+                        return <BulkPermissionCheckbox checked={checked} indeterminate={selected > 0 && !checked} onChange={(value) => setResourcesPermissions(ids, value)} label={checked ? "এই বিভাগের সব untick করুন" : "এই বিভাগের সব tick করুন"} />;
+                      })()}
+                    </div>
                   </td>
                 </tr>
                 {departmentResources.map((resource) => (

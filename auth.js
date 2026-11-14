@@ -16,8 +16,8 @@ const baseAdapter = PrismaAdapter(prisma);
 async function getSocialProviders() {
   const configured = await getEnabledSocialAuthProviders();
   return [
-    ...(configured.google ? [Google(configured.google)] : []),
-    ...(configured.facebook ? [Facebook(configured.facebook)] : []),
+    ...(configured.google ? [Google({ ...configured.google, allowDangerousEmailAccountLinking: true })] : []),
+    ...(configured.facebook ? [Facebook({ ...configured.facebook, allowDangerousEmailAccountLinking: true })] : []),
   ];
 }
 const authAdapter = {

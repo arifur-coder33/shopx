@@ -4,7 +4,7 @@ import { getServerSocialTrackingSettings } from "@/backend/services/socialTracki
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const API_BASE = "https://analyticsdata.googleapis.com/v1beta";
 const GA_SCOPE = "https://www.googleapis.com/auth/analytics.readonly";
-const reportRanges = new Set(["7daysAgo", "28daysAgo", "90daysAgo"]);
+const reportRanges = new Set(["today", "7daysAgo", "28daysAgo", "90daysAgo"]);
 
 async function getAccessToken(serviceAccountJson) {
   let account;
@@ -83,8 +83,9 @@ export async function loadGa4TrafficReport(range = "7daysAgo") {
   if (!reportRanges.has(range)) range = "7daysAgo";
 
   const accessToken = await getAccessToken(settings.googleAnalyticsServiceAccountJson);
-  const dateRanges = [{ startDate: range, endDate: "today" }];
-  const [summary, pages, channels, funnel, trend, realtime] = await Promise.all([
+  const dateRanges = [{ startDate: range === "today" ? "today" : range, endDate: "today" }];
+  const optionalReport = (body) => runReport(accessToken, settings.googleAnalyticsPropertyId, body).catch(() => ({ rows: [] }));
+  const [summary, pages, channels, funnel, trend, realtime, countries, cities, ages, genders] = await Promise.all([
     runReport(accessToken, settings.googleAnalyticsPropertyId, {
       dateRanges,
       metrics: ["totalUsers", "sessions", "screenPageViews", "keyEvents"].map((name) => ({ name })),
@@ -131,6 +132,34 @@ export async function loadGa4TrafficReport(range = "7daysAgo") {
       if (!response.ok) throw new Error("GA4 realtime report could not be loaded.");
       return payload;
     }),
+    optionalReport({
+      dateRanges,
+      dimensions: [{ name: "country" }],
+      metrics: [{ name: "totalUsers" }],
+      orderBys: [{ metric: { metricName: "totalUsers" }, desc: true }],
+      limit: 10,
+    }),
+    optionalReport({
+      dateRanges,
+      dimensions: [{ name: "city" }],
+      metrics: [{ name: "totalUsers" }],
+      orderBys: [{ metric: { metricName: "totalUsers" }, desc: true }],
+      limit: 10,
+    }),
+    optionalReport({
+      dateRanges,
+      dimensions: [{ name: "userAgeBracket" }],
+      metrics: [{ name: "totalUsers" }],
+      orderBys: [{ metric: { metricName: "totalUsers" }, desc: true }],
+      limit: 10,
+    }),
+    optionalReport({
+      dateRanges,
+      dimensions: [{ name: "userGender" }],
+      metrics: [{ name: "totalUsers" }],
+      orderBys: [{ metric: { metricName: "totalUsers" }, desc: true }],
+      limit: 10,
+    }),
   ]);
 
   const totals = summary.rows?.[0]?.metricValues || [];
@@ -144,6 +173,10 @@ export async function loadGa4TrafficReport(range = "7daysAgo") {
     pages: (pages.rows || []).map((row) => ({ path: dimensionAt(row), views: numberAt(row), users: numberAt(row, 1) })),
     channels: (channels.rows || []).map((row) => ({ channel: dimensionAt(row), source: dimensionAt(row, 1), sessions: numberAt(row), users: numberAt(row, 1) })),
     trend: (trend.rows || []).map((row) => ({ date: dimensionAt(row), views: numberAt(row), users: numberAt(row, 1) })),
+    countries: (countries.rows || []).map((row) => ({ country: dimensionAt(row), users: numberAt(row) })),
+    cities: (cities.rows || []).map((row) => ({ city: dimensionAt(row), users: numberAt(row) })),
+    ages: (ages.rows || []).map((row) => ({ age: dimensionAt(row), users: numberAt(row) })),
+    genders: (genders.rows || []).map((row) => ({ gender: dimensionAt(row), users: numberAt(row) })),
     funnel: [
       { name: "Product views", event: "view_item", count: funnelCounts.view_item || 0 },
       { name: "Add to cart", event: "add_to_cart", count: funnelCounts.add_to_cart || 0 },

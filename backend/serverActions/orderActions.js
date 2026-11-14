@@ -24,6 +24,7 @@ import { addOrderTimeline } from "./orderTimelineActin";
 import { firePurchaseServer } from "./SocialPurchaseEventAction";
 import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyPaymentDeliveryCampaign, applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority } from "@/backend/services/campaignService";
 import { CUSTOMER_ORDER_STATUS_GROUPS } from "@/lib/customerOrderStatus";
+import { sendOrderEmail } from "@/backend/services/emailService";
 function compatibleCampaigns(campaigns, selectedCampaigns) {
   if (!selectedCampaigns.length) return campaigns;
   const selectedIds = new Set(selectedCampaigns.map((campaign) => campaign.id));
@@ -694,6 +695,7 @@ export async function createOrder(formData) {
       await Promise.all([
         notifyOrderCreated(result.id),
         deleteAbandonedCheckoutLeadByPhone(data.phoneNumber),
+        sendOrderEmail(result.id, "orderConfirmation").catch((error) => console.error("Order confirmation email failed:", error?.message)),
       ]);
     });
     return {
@@ -1131,14 +1133,18 @@ export async function updateOrderStatusAction(orderId, status, note) {
     };
 
     // ✅ timeline add
+    const timelineTitle = titleMap[status] || "Status Updated";
+    const timelineMessage = note || `Order status changed to ${status}`;
     await addOrderTimeline({
       orderId: order.id,
       orderNo: order.orderNo,
       status,
-      title: titleMap[status] || "Status Updated",
-      message: note || `Order status changed to ${status}`,
+      title: timelineTitle,
+      message: timelineMessage,
       createdBy: "admin",
     });
+    const orderEmailCategory = status === "DELIVERED" ? "deliverySuccess" : "orderStatus";
+    after(() => sendOrderEmail(orderId, orderEmailCategory, status, { title: timelineTitle, message: timelineMessage }).catch((error) => console.error("Order timeline email failed:", error?.message)));
     await postDeliveredCod();
 
 

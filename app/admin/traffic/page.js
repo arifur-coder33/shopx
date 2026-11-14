@@ -6,6 +6,7 @@ import { getTrafficReport } from "@/backend/serverActions/trafficReportAction";
 export const dynamic = "force-dynamic";
 
 const ranges = [
+  ["today", "Today"],
   ["7daysAgo", "7 days"],
   ["28daysAgo", "28 days"],
   ["90daysAgo", "90 days"],
@@ -32,6 +33,15 @@ function DataTable({ headers, rows, empty }) {
       </table>
     </div>
   );
+}
+
+function BreakdownBars({ rows, empty }) {
+  if (!rows.length) return <p className="py-4 text-center text-sm text-text-muted">{empty}</p>;
+  const max = Math.max(...rows.map((row) => row.users), 1);
+  return <ul className="space-y-3">{rows.map((row) => <li key={row.label}>
+    <div className="flex items-center justify-between gap-3 text-sm"><span className="truncate text-text">{row.label}</span><span className="shrink-0 text-text-muted">{number(row.users)}</span></div>
+    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-border"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(row.users ? 3 : 0, Math.round((row.users / max) * 100))}%` }} /></div>
+  </li>)}</ul>;
 }
 
 export default async function TrafficPage({ searchParams }) {
@@ -122,6 +132,25 @@ export default async function TrafficPage({ searchParams }) {
               <h2 className="text-lg font-semibold text-text">Traffic sources</h2>
               <p className="mt-1 text-xs text-text-muted">Channel and source/medium that brought sessions.</p>
               <DataTable headers={["Channel", "Source / medium", "Sessions"]} rows={report.data.channels.map((item) => [item.channel, item.source, number(item.sessions)])} empty="No acquisition data for this period." />
+            </article>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-2">
+            <article className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
+              <h2 className="text-lg font-semibold text-text">Visitors by location</h2>
+              <p className="mt-1 text-xs text-text-muted">Top countries and district/city estimates based on GA4 location data.</p>
+              <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                <div className="space-y-3"><h3 className="text-sm font-semibold text-text">Countries</h3><BreakdownBars rows={report.data.countries.map((item) => ({ label: item.country, users: item.users }))} empty="No country data for this period." /></div>
+                <div className="space-y-3"><h3 className="text-sm font-semibold text-text">District / city</h3><BreakdownBars rows={report.data.cities.map((item) => ({ label: item.city, users: item.users }))} empty="No district/city data for this period." /></div>
+              </div>
+            </article>
+            <article className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
+              <h2 className="text-lg font-semibold text-text">Audience demographics</h2>
+              <p className="mt-1 text-xs text-text-muted">Age and gender estimates from GA4. Google may hide data when there are too few users.</p>
+              <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                <div className="space-y-3"><h3 className="text-sm font-semibold text-text">Age groups</h3><BreakdownBars rows={report.data.ages.map((item) => ({ label: item.age, users: item.users }))} empty="No age data available for this period." /></div>
+                <div className="space-y-3"><h3 className="text-sm font-semibold text-text">Gender</h3><BreakdownBars rows={report.data.genders.map((item) => ({ label: item.gender, users: item.users }))} empty="No gender data available for this period." /></div>
+              </div>
             </article>
           </section>
 

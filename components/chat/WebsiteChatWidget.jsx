@@ -7,6 +7,8 @@ import { lookupWebsiteChatOrdersAction, shareWebsiteChatOrderAction } from "@/ba
 
 const TOKEN_KEY = "storefront-chat-visitor";
 const PHONE_KEY = "storefront-chat-phone";
+const GREETING_KEY = "storefront-chat-greeting-dismissed";
+const VISITOR_ID_TTL = 30 * 24 * 60 * 60 * 1000;
 
 function renderMessageText(content) {
   return normalizeChatText(content).split(/(https?:\/\/[^\s]+)/giu).map((part, index) =>
@@ -17,38 +19,30 @@ function renderMessageText(content) {
 }
 
 function getToken() {
+  const now = Date.now();
   try {
-    let token = sessionStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      token = crypto.randomUUID();
-      sessionStorage.setItem(TOKEN_KEY, token);
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (saved) {
+      let record;
+      try { record = JSON.parse(saved); } catch { record = { token: saved, expiresAt: 0 }; }
+      if (/^[a-f0-9-]{36}$/i.test(record?.token || "") && Number(record.expiresAt) > now) {
+        localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: record.token, expiresAt: now + VISITOR_ID_TTL }));
+        return record.token;
+      }
     }
+    let token = "";
+    try { token = sessionStorage.getItem(TOKEN_KEY) || ""; } catch {}
+    if (!/^[a-f0-9-]{36}$/i.test(token)) token = crypto.randomUUID();
+    localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, expiresAt: now + VISITOR_ID_TTL }));
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
     return token;
   } catch {
-    return crypto.randomUUID();
+    try {
+      let token = sessionStorage.getItem(TOKEN_KEY) || "";
+      if (!/^[a-f0-9-]{36}$/i.test(token)) { token = crypto.randomUUID(); sessionStorage.setItem(TOKEN_KEY, token); }
+      return token;
+    } catch { return crypto.randomUUID(); }
   }
-}
-
-function playGreetingTone() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return false;
-  const context = new AudioContextClass();
-  if (context.state !== "running") {
-    context.close().catch(() => {});
-    return false;
-  }
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(880, context.currentTime);
-  oscillator.frequency.setValueAtTime(1174, context.currentTime + 0.09);
-  gain.gain.setValueAtTime(0.0001, context.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.11, context.currentTime + 0.025);
-  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
-  oscillator.connect(gain); gain.connect(context.destination);
-  oscillator.start(); oscillator.stop(context.currentTime + 0.23);
-  oscillator.onended = () => context.close().catch(() => {});
-  return true;
 }
 
 export default function WebsiteChatWidget() {
@@ -82,6 +76,7 @@ export default function WebsiteChatWidget() {
   const endRef = useRef(null);
   const photoUrlsRef = useRef(new Set());
   const refreshInFlightRef = useRef(false);
+  const greetingHideTimerRef = useRef(null);
 
   useEffect(() => () => {
     photoUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -105,21 +100,20 @@ export default function WebsiteChatWidget() {
 
   useEffect(() => {
     if (!enabled) return;
-    try { if (sessionStorage.getItem("storefront-chat-greeting-dismissed")) return; } catch {}
+    try { if (localStorage.getItem(GREETING_KEY)) return; } catch {}
     const timer = window.setTimeout(() => {
+      if (open) return;
       setGreetingVisible(true);
-      let played = false;
-      try { played = playGreetingTone(); } catch { /* Browser autoplay policies may block the greeting sound. */ }
-      if (!played) {
-        const playAfterGesture = () => {
-          try { if (playGreetingTone()) { window.removeEventListener("pointerdown", playAfterGesture); window.removeEventListener("keydown", playAfterGesture); } } catch {}
-        };
-        window.addEventListener("pointerdown", playAfterGesture, { once: true });
-        window.addEventListener("keydown", playAfterGesture, { once: true });
-      }
+      greetingHideTimerRef.current = window.setTimeout(() => {
+        setGreetingVisible(false);
+        try { localStorage.setItem(GREETING_KEY, "1"); } catch {}
+      }, 6000);
     }, 1200);
-    return () => window.clearTimeout(timer);
-  }, [enabled]);
+    return () => {
+      window.clearTimeout(timer);
+      if (greetingHideTimerRef.current) window.clearTimeout(greetingHideTimerRef.current);
+    };
+  }, [enabled, open]);
 
   const refreshMessages = useCallback(async () => {
     if (!token || refreshInFlightRef.current) return;
@@ -273,7 +267,8 @@ export default function WebsiteChatWidget() {
 
   const dismissGreeting = () => {
     setGreetingVisible(false);
-    try { sessionStorage.setItem("storefront-chat-greeting-dismissed", "1"); } catch {}
+    if (greetingHideTimerRef.current) window.clearTimeout(greetingHideTimerRef.current);
+    try { localStorage.setItem(GREETING_KEY, "1"); } catch {}
   };
 
   const shareOrder = async (order) => {

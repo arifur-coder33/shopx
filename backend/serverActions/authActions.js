@@ -13,7 +13,6 @@ import { getListCount } from "../utils/getListCount";
 import { getListData } from "../utils/getListData";
 import { getAuthData } from "../utils/hasPermission";
 import { createOTPToken, verifyOTPToken } from "../utils/otp";
-import { getSiteUrl } from "@/lib/siteUrl";
 export async function GetUserList(params) {
   return getListData({
     prisma,
@@ -292,11 +291,13 @@ export async function sendEmailVerificationOTP() {
   });
 
   try {
-    await sendMail({
+    const delivery = await sendMail({
       to: user.email,
       subject: "Verify your email address",
+      category: "verification",
       html: `<p>Your email verification code is:</p><p style="font-size:24px;font-weight:bold;letter-spacing:6px">${otp}</p><p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p>`,
     });
+    if (delivery.skipped) throw new Error("Email verification emails are disabled in Email Configuration.");
   } catch (error) {
     await prisma.user.updateMany({
       where: { id: user.id, emailVerificationOtpHash: otpHash },
@@ -451,7 +452,7 @@ export async function updatePassword({ formData }) {
 }
 
 export async function sendResetEmail({ formData }) {
-  const email = formData.get("email");
+  const email = String(formData.get("email") || "").trim().toLowerCase();
 
   const user = await prisma.user.findUnique({ where: { email } });
 
@@ -459,26 +460,43 @@ export async function sendResetEmail({ formData }) {
     return { error: "Email not found" };
   }
 
-  // 🔐 Token (no DB needed)
-  const token = jwt.sign({ email }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
-  });
+  if (user.passwordResetOtpSentAt && Date.now() - user.passwordResetOtpSentAt.getTime() < 60_000) return { error: "Please wait before requesting another code." };
+  const otp = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET;
+  if (!secret) return { error: "Password reset is not configured." };
+  const otpHash = createHmac("sha256", secret).update(`${user.id}:${email}:${otp}`).digest("hex");
+  await prisma.user.update({ where: { id: user.id }, data: { passwordResetOtpHash: otpHash, passwordResetOtpExpiresAt: new Date(Date.now() + 10 * 60_000), passwordResetOtpSentAt: new Date(), passwordResetOtpAttempts: 0 } });
+  try {
+    const delivery = await sendMail({ to: email, subject: "Password reset code", category: "passwordReset", html: `<p>Your password reset code is:</p><p style="font-size:24px;font-weight:bold;letter-spacing:6px">${otp}</p><p>This code expires in 10 minutes. If you did not request it, ignore this email.</p>` });
+    if (delivery.skipped) throw new Error("Password reset emails are disabled in Email Configuration.");
+  } catch (error) {
+    await prisma.user.updateMany({ where: { id: user.id, passwordResetOtpHash: otpHash }, data: { passwordResetOtpHash: null, passwordResetOtpExpiresAt: null, passwordResetOtpSentAt: null, passwordResetOtpAttempts: 0 } });
+    return { error: error.message || "Could not send password reset code." };
+  }
+  return { success: "Password reset code sent to your email." };
+}
 
-  const link = `${await getSiteUrl()}/reset-password?token=${encodeURIComponent(token)}`;
-
-  const html = `
-    <h2>Password Reset</h2>
-    <p>Click the link below:</p>
-    <a href="${link}">${link}</a>
-  `;
-
-  await sendMail({
-    to: email,
-    subject: "Reset Password",
-    html,
-  });
-
-  return { success: "Reset link sent to your email. Please check your inbox" };
+export async function resetPasswordByEmailOTP({ email: rawEmail, otp: rawOtp, password }) {
+  const email = String(rawEmail || "").trim().toLowerCase();
+  const otp = String(rawOtp || "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(otp)) return { error: "Email or verification code is invalid." };
+  if (typeof password !== "string" || password.length < 8 || password.length > 128) return { error: "Password must be 8–128 characters." };
+  const user = await prisma.user.findUnique({ where: { email }, select: { id: true, passwordResetOtpHash: true, passwordResetOtpExpiresAt: true, passwordResetOtpAttempts: true } });
+  if (!user?.passwordResetOtpHash || !user.passwordResetOtpExpiresAt) return { error: "Request a password reset code first." };
+  if (user.passwordResetOtpExpiresAt.getTime() < Date.now()) return { error: "This code has expired. Request a new one." };
+  if (user.passwordResetOtpAttempts >= 5) return { error: "Too many attempts. Request a new code." };
+  const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET;
+  if (!secret) return { error: "Password reset is not configured." };
+  const receivedHash = createHmac("sha256", secret).update(`${user.id}:${email}:${otp}`).digest();
+  const storedHash = Buffer.from(user.passwordResetOtpHash, "hex");
+  if (receivedHash.length !== storedHash.length || !timingSafeEqual(receivedHash, storedHash)) {
+    await prisma.user.updateMany({ where: { id: user.id, passwordResetOtpHash: user.passwordResetOtpHash, passwordResetOtpAttempts: { lt: 5 } }, data: { passwordResetOtpAttempts: { increment: 1 } } });
+    return { error: "The verification code is incorrect." };
+  }
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const updated = await prisma.user.updateMany({ where: { id: user.id, passwordResetOtpHash: user.passwordResetOtpHash, passwordResetOtpExpiresAt: { gt: new Date() }, passwordResetOtpAttempts: { lt: 5 } }, data: { password: hashedPassword, passwordResetOtpHash: null, passwordResetOtpExpiresAt: null, passwordResetOtpSentAt: null, passwordResetOtpAttempts: 0, tokenVersion: { increment: 1 } } });
+  if (!updated.count) return { error: "This reset code has expired or was already used. Request a new one." };
+  return { success: "Password updated successfully. You can now log in." };
 }
 
 export async function sendPhoneOTP({ formData }) {

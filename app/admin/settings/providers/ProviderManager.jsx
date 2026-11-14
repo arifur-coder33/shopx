@@ -7,13 +7,12 @@ import {
   getCourierWebhookSecret,
   revealProviderCredential,
   saveProviderConfiguration,
-  updateManualDeliveryEnabled,
 } from "@/backend/serverActions/providerConfigurationAction";
 import Modal from "@/components/modal/Modal";
 import FileInput from "@/components/input/FileInput";
 import EmiSettingsModal from "./EmiSettingsModal";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
-import { Copy, Eye, EyeOff, Plus, RefreshCw, Settings2, Trash2, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Plus, RefreshCw, Settings2, Trash2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -71,7 +70,6 @@ export default function ProviderManager({ kind, result }) {
   const [webhookSecret, setWebhookSecret] = useState("");
   const [webhookCustomized, setWebhookCustomized] = useState(false);
   const [webhookBusy, setWebhookBusy] = useState(false);
-  const [manualDeliveryEnabled, setManualDeliveryEnabled] = useState(Boolean(result.data?.manualDeliveryEnabled));
   const [pending, startTransition] = useTransition();
   if (!result.success) {
     return <main className="p-5"><div className="card">{result.message}</div></main>;
@@ -221,28 +219,9 @@ export default function ProviderManager({ kind, result }) {
         {kind === "gateway" ? (
           <><strong>Gateway accounts:</strong> COD is built in and needs no Money Account. Enabling an online gateway creates or reuses its PAYMENT_GATEWAY account.</>
         ) : (
-          <><strong>Courier accounts:</strong> Each manual courier gets its own COURIER Money Account with a zero opening balance. Its delivery fee conditions are saved with the courier. Delete is available only when the account has zero balance and no operational or financial history.</>
+          <><strong>Courier accounts:</strong> Activating a courier with COD enabled creates a COURIER Money Account under that courier’s name with a zero opening balance. Configure delivery charges before enabling manual booking. Delete is available only when the account has zero balance and no operational or financial history.</>
         )}
       </section>
-
-      {kind === "courier" && <section className="flex flex-wrap items-center justify-between gap-4 rounded-brand border border-border bg-surface p-4">
-        <span><strong className="block text-sm">Active manual delivery</strong><span className="mt-1 block text-xs text-text-muted">Enable manual courier booking with a consignment number even when Pathao or Steadfast API credentials are not configured. Turn off to hide and block manual entry.</span></span>
-        <input type="checkbox" aria-label="Active manual delivery" checked={manualDeliveryEnabled} disabled={!canUpdate || pending} onChange={(event) => {
-          const next = event.target.checked;
-          const previous = manualDeliveryEnabled;
-          setManualDeliveryEnabled(next);
-          startTransition(async () => {
-            const response = await updateManualDeliveryEnabled(next);
-            if (response.success) {
-              toast.success(response.message);
-              router.refresh();
-            } else {
-              setManualDeliveryEnabled(previous);
-              toast.error(response.message);
-            }
-          });
-        }} className="h-5 w-5 accent-primary disabled:opacity-50" />
-      </section>}
 
       {!credentialEncryptionReady && (
         <section className="rounded-brand border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
@@ -274,9 +253,9 @@ export default function ProviderManager({ kind, result }) {
       </section>
 
       <section className="responsive-table rounded-brand border border-border bg-surface">
-        <table className="min-w-[1050px] text-left text-sm">
+        <table className={`${kind === "courier" ? "min-w-[1250px]" : "min-w-[1050px]"} text-left text-sm`}>
           <thead className="bg-surface-muted">
-            <tr>{["Order", "Provider", "Integration", "Credentials", "COD", "Money account", "Status", "Actions"].map((head) => <th className="p-3" key={head}>{head}</th>)}</tr>
+            <tr>{(kind === "courier" ? ["Order", "Provider", "Integration", "Credentials", "COD", "Money account", "Manual Active", "API Active", "Actions"] : ["Order", "Provider", "Integration", "Credentials", "COD", "Money account", "Status", "Actions"]).map((head) => <th className="p-3" key={head}>{head}</th>)}</tr>
           </thead>
           <tbody>
             {providers.map((provider) => {
@@ -293,7 +272,10 @@ export default function ProviderManager({ kind, result }) {
                   <td className="p-3"><span className={provider.readiness.credentialsConfigured ? "text-success" : "text-danger"}>{needsCredentials ? (provider.readiness.credentialsConfigured ? "Configured" : "Not configured") : "Not required"}</span>{needsCredentials && <small className="block text-text-muted">{provider.readiness.credentialSource.replaceAll("_", " ")}</small>}</td>
                   <td className="p-3">{kind === "courier" ? (provider.readiness.supportsCod ? "Available" : "Not available") : provider.adapterKey === "COD" ? "Built in" : "—"}</td>
                   <td className="p-3">{provider.moneyAccount ? <>{provider.moneyAccount.name} · {provider.moneyAccount.type}{provider.adapterKey === "MANUAL" && <small className="block text-text-muted">Balance: ৳{Number(provider.moneyAccount.balance || 0).toLocaleString("en-BD")}</small>}</> : provider.readiness.moneyAccountRequired ? <span className="text-text-muted">Created when enabled</span> : <span className="text-text-muted">Not required</span>}</td>
-                  <td className="p-3"><span className={provider.isActive ? "text-success" : "text-danger"}>{provider.isActive ? "ENABLED" : "DISABLED"}</span><small className="block text-text-muted">{provider.readiness.ready ? "Ready" : "Not ready"}</small></td>
+                  {kind === "courier" ? <>
+                    <td className="p-3">{(provider.adapterKey === "MANUAL" ? provider.isActive : provider.manualBookingEnabled) ? <span className="inline-flex items-center gap-1 font-semibold text-success"><Check size={16} /> Active</span> : <span className="inline-flex items-center gap-1 text-danger"><X size={16} /> Inactive</span>}</td>
+                    <td className="p-3">{provider.adapterKey !== "MANUAL" && provider.isActive ? <span className="inline-flex items-center gap-1 font-semibold text-success"><Check size={16} /> Active</span> : <span className="inline-flex items-center gap-1 text-danger"><X size={16} /> Inactive</span>}</td>
+                  </> : <td className="p-3"><span className={provider.isActive ? "text-success" : "text-danger"}>{provider.isActive ? "ENABLED" : "DISABLED"}</span><small className="block text-text-muted">{provider.readiness.ready ? "Ready" : "Not ready"}</small></td>}
                   <td className="p-3"><div className="flex gap-2"><button disabled={!canUpdate} onClick={() => openEditor(provider)} className="button disabled:opacity-40"><Settings2 className="h-4 w-4" /> Configure</button>{kind === "gateway" && provider.adapterKey === "SSLCOMMERZ" && <button type="button" disabled={!canUpdate} onClick={() => setEmiProvider(provider)} className="button disabled:opacity-40">EMI settings</button>}{kind === "courier" && provider.adapterKey === "MANUAL" && provider.code !== "MANUAL" && canDelete && <button type="button" title="Delete when balance and history are clear" onClick={() => removeManualCourier(provider)} className="button border-danger/30 text-danger"><Trash2 className="h-4 w-4" /></button>}</div></td>
                 </tr>
               );
@@ -311,9 +293,9 @@ export default function ProviderManager({ kind, result }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm font-semibold">Courier name<input required maxLength={100} className={field} name="name" placeholder="e.g. Local Express" /></label>
             <label className="grid gap-1 text-sm font-semibold">Sort order<input className={field} name="sortOrder" type="number" defaultValue="0" /></label>
-            <label className="grid gap-1 text-sm font-semibold">Inside Dhaka fee (৳)<input required className={field} name="insideDhakaCharge" type="number" min="0" step="0.01" defaultValue="100" /></label>
-            <label className="grid gap-1 text-sm font-semibold">Outside Dhaka fee (৳)<input required className={field} name="outsideDhakaCharge" type="number" min="0" step="0.01" defaultValue="120" /></label>
-            <label className="grid gap-1 text-sm font-semibold">Each additional kg (৳)<input required className={field} name="additionalKgCharge" type="number" min="0" step="0.01" defaultValue="20" /></label>
+            <label className="grid gap-1 text-sm font-semibold">Inside Dhaka fee (৳)<input required className={field} name="insideDhakaCharge" type="number" min="0" step="0.01" /></label>
+            <label className="grid gap-1 text-sm font-semibold">Outside Dhaka fee (৳)<input required className={field} name="outsideDhakaCharge" type="number" min="0" step="0.01" /></label>
+            <label className="grid gap-1 text-sm font-semibold">Each additional kg (৳)<input required className={field} name="additionalKgCharge" type="number" min="0" step="0.01" /></label>
             <label className="grid gap-1 text-sm font-semibold">COD collection<select className={field} name="supportsCod" defaultValue="true"><option value="true">Available</option><option value="false">Not available</option></select></label>
           </div>
           <p className="rounded-brand bg-surface-muted p-3 text-sm text-text-muted">Courier fee condition: base fee covers up to 1 kg; each kg above that adds the configured extra charge. The courier account is created with ৳0 balance.</p>
@@ -336,7 +318,8 @@ export default function ProviderManager({ kind, result }) {
               <label className="grid gap-1 text-sm font-semibold">Provider code<input readOnly className={`${field} opacity-70`} value={editing.code} /></label>
               <label className="grid gap-1 text-sm font-semibold">Integration<input readOnly className={`${field} opacity-70`} value={editing.adapterKey} /></label>
               <label className="grid gap-1 text-sm font-semibold">Sort order<input className={field} name="sortOrder" type="number" defaultValue={editing.sortOrder} /></label>
-              <label className="grid gap-1 text-sm font-semibold">Status<select disabled={!selectedDefinition?.integrationAvailable} className={field} name="isActive" defaultValue={String(editing.isActive)}><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+              <label className="grid gap-1 text-sm font-semibold">{kind === "courier" && editing.adapterKey === "MANUAL" ? "Manual active" : kind === "courier" ? "API active" : "Status"}<select disabled={!selectedDefinition?.integrationAvailable && kind !== "courier"} className={field} name="isActive" defaultValue={String(editing.isActive)}><option value="true">Active</option><option value="false">Inactive</option></select></label>
+              {kind === "courier" && editing.adapterKey !== "MANUAL" && <label className="flex items-center gap-2 self-end rounded-xl border border-border p-3 text-sm font-semibold"><input type="hidden" name="manualBookingEnabled" value="false" /><input type="checkbox" name="manualBookingEnabled" value="true" defaultChecked={Boolean(editing.manualBookingEnabled)} /> Manual booking active</label>}
             </div>
 
             {selectedDefinition?.credentialFields.length > 0 && (
@@ -390,7 +373,7 @@ export default function ProviderManager({ kind, result }) {
                       <FileInput name={`config_${config.key}`} label={config.label} defaultValue={editing.nonSecretConfig?.[config.key] ? [{ id: editing.nonSecretConfig[config.key], name: editing.nonSecretConfig.qrImageUrl, displayName: "Bangla QR" }] : undefined} w={160} h={160} />
                     </div>
                   ) : (
-                    <label key={config.key} className="grid gap-1 text-sm font-semibold">{config.label}{config.type === "boolean" ? <select className={field} name={`config_${config.key}`} defaultValue={String(editing.nonSecretConfig?.[config.key] ?? config.defaultValue)}><option value="true">{config.trueLabel || "Yes"}</option><option value="false">{config.falseLabel || "No"}</option></select> : config.type === "select" ? <select className={field} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue}>{(config.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input className={field} type={config.type === "number" ? "number" : "text"} min={config.type === "number" ? "0" : undefined} step={config.type === "number" ? "0.01" : undefined} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue} />}</label>
+                    <label key={config.key} className="grid gap-1 text-sm font-semibold">{config.label}{config.type === "boolean" ? <select className={field} name={`config_${config.key}`} defaultValue={String(editing.nonSecretConfig?.[config.key] ?? config.defaultValue)}><option value="true">{config.trueLabel || "Yes"}</option><option value="false">{config.falseLabel || "No"}</option></select> : config.type === "select" ? <select className={field} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue}>{(config.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input className={field} type={config.type === "number" ? "number" : "text"} min={config.type === "number" ? "0" : undefined} step={config.type === "number" ? "0.01" : undefined} required={kind === "courier" && ["insideDhakaCharge", "outsideDhakaCharge"].includes(config.key)} name={`config_${config.key}`} defaultValue={editing.nonSecretConfig?.[config.key] ?? config.defaultValue} />}</label>
                   ))}
                 </div>
               </section>

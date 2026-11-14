@@ -226,11 +226,11 @@ export async function getProviderConfiguration(kind, params = {}) {
       ...(supportedAdapters.includes(String(params.adapterKey).toUpperCase()) && {
         adapterKey: String(params.adapterKey).toUpperCase(),
       }),
-      ...(status === "ACTIVE" && { isActive: true }),
-      ...(status === "INACTIVE" && { isActive: false }),
+      ...(status === "ACTIVE" && (kind === "courier" ? { OR: [{ isActive: true }, { manualBookingEnabled: true }] } : { isActive: true })),
+      ...(status === "INACTIVE" && (kind === "courier" ? { AND: [{ isActive: false }, { manualBookingEnabled: false }] } : { isActive: false })),
     };
     const model = prisma[config.model];
-    const [providers, total, siteSetting] = await Promise.all([
+    const [providers, total] = await Promise.all([
       model.findMany({
         where,
         skip: (page - 1) * limit,
@@ -242,7 +242,6 @@ export async function getProviderConfiguration(kind, params = {}) {
         },
       }),
       model.count({ where }),
-      kind === "courier" ? prisma.siteSetting.findFirst({ select: { manualDeliveryEnabled: true } }) : Promise.resolve(null),
     ]);
     return {
       success: true,
@@ -253,10 +252,7 @@ export async function getProviderConfiguration(kind, params = {}) {
         credentialEncryptionReady: Boolean(
           process.env.PROVIDER_CREDENTIAL_ENCRYPTION_KEY?.length >= 32,
         ),
-        ...(kind === "courier" && {
-          webhookBaseUrl: getSiteUrl(),
-          manualDeliveryEnabled: siteSetting?.manualDeliveryEnabled ?? false,
-        }),
+        ...(kind === "courier" && { webhookBaseUrl: getSiteUrl() }),
       },
       filters: params,
       pagination: {
@@ -271,26 +267,10 @@ export async function getProviderConfiguration(kind, params = {}) {
   }
 }
 
-export async function updateManualDeliveryEnabled(enabled) {
-  try {
-    await requireProcurementPermission("provider", "update");
-    if (typeof enabled !== "boolean") throw new Error("Manual delivery setting is invalid.");
-    const existing = await prisma.siteSetting.findFirst({ select: { id: true } });
-    if (existing) {
-      await prisma.siteSetting.update({ where: { id: existing.id }, data: { manualDeliveryEnabled: enabled } });
-    } else {
-      await prisma.siteSetting.create({ data: { manualDeliveryEnabled: enabled } });
-    }
-    refresh(PROVIDER_CONFIG.courier.path);
-    return { success: true, message: enabled ? "Manual delivery enabled." : "Manual delivery disabled." };
-  } catch (error) {
-    return actionError(error, "Failed to update manual delivery setting.");
-  }
-}
-
 const manualCourierConfig = (values) => {
-  const charge = (key, fallback) => {
-    const parsed = values[key] === undefined || values[key] === "" ? fallback : Number(values[key]);
+  const charge = (key) => {
+    if (values[key] === undefined || values[key] === "") throw new Error(`Enter ${key.replaceAll(/([A-Z])/g, " $1").toLowerCase()} before activating this courier.`);
+    const parsed = Number(values[key]);
     if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1_000_000_000) {
       throw new Error(`Enter a valid non-negative ${key.replaceAll(/([A-Z])/g, " $1").toLowerCase()}.`);
     }
@@ -298,9 +278,9 @@ const manualCourierConfig = (values) => {
   };
   return {
     supportsCod: values.supportsCod !== "false",
-    insideDhakaCharge: charge("insideDhakaCharge", 100),
-    outsideDhakaCharge: charge("outsideDhakaCharge", 120),
-    additionalKgCharge: charge("additionalKgCharge", 20),
+    insideDhakaCharge: charge("insideDhakaCharge"),
+    outsideDhakaCharge: charge("outsideDhakaCharge"),
+    additionalKgCharge: charge("additionalKgCharge"),
   };
 };
 
@@ -324,24 +304,14 @@ export async function createManualCourierProvider(formData) {
       while (await tx.courierProvider.findUnique({ where: { code: candidate }, select: { id: true } })) {
         candidate = `${codeBase.slice(0, 38)}_${suffix++}`;
       }
-      const account = await tx.moneyAccount.create({
-        data: {
-          name,
-          type: "COURIER",
-          accountNumber: `PROVIDER:COURIER:${candidate}`,
-          isActive: true,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
       await tx.courierProvider.create({
         data: {
           name,
           code: candidate,
           adapterKey: "MANUAL",
-          isActive: true,
+          isActive: false,
+          manualBookingEnabled: false,
           sortOrder: Math.trunc(toNumber(values.sortOrder, 0)),
-          moneyAccountId: account.id,
           nonSecretConfig,
           createdBy: userId,
           updatedBy: userId,
@@ -350,7 +320,7 @@ export async function createManualCourierProvider(formData) {
       return candidate;
     });
     refresh(PROVIDER_CONFIG.courier.path);
-    return { success: true, message: `${name} added with an active courier account.`, data: { code } };
+    return { success: true, message: `${name} added. Configure its delivery charges and activate it to create the courier account.`, data: { code } };
   } catch (error) {
     return actionError(error, "Failed to add manual courier.");
   }
@@ -367,7 +337,7 @@ export async function deleteManualCourierProvider(providerId) {
       return { success: false, message: "Only custom manual couriers can be deleted." };
     }
     const account = provider.moneyAccount;
-    if (!account || Math.abs(Number(account.balance || 0)) > 0.000001) {
+    if (account && Math.abs(Number(account.balance || 0)) > 0.000001) {
       return { success: false, message: "The courier account balance must be 0 before deleting this courier." };
     }
     const [orders, shippings, pickupPoints, providerPayments, transactions, supplierPayments, expenses, payments, refunds] = await Promise.all([
@@ -375,18 +345,18 @@ export async function deleteManualCourierProvider(providerId) {
       prisma.shipping.count({ where: { courierProviderId: provider.id } }),
       prisma.courierPickupPoint.count({ where: { courierProviderId: provider.id } }),
       prisma.payment.count({ where: { courierProviderId: provider.id } }),
-      prisma.moneyTransaction.count({ where: { OR: [{ fromAccountId: account.id }, { toAccountId: account.id }] } }),
-      prisma.supplierPayment.count({ where: { moneyAccountId: account.id } }),
-      prisma.expense.count({ where: { moneyAccountId: account.id } }),
-      prisma.payment.count({ where: { moneyAccountId: account.id } }),
-      prisma.refund.count({ where: { moneyAccountId: account.id } }),
+      account ? prisma.moneyTransaction.count({ where: { OR: [{ fromAccountId: account.id }, { toAccountId: account.id }] } }) : 0,
+      account ? prisma.supplierPayment.count({ where: { moneyAccountId: account.id } }) : 0,
+      account ? prisma.expense.count({ where: { moneyAccountId: account.id } }) : 0,
+      account ? prisma.payment.count({ where: { moneyAccountId: account.id } }) : 0,
+      account ? prisma.refund.count({ where: { moneyAccountId: account.id } }) : 0,
     ]);
     if (orders || shippings || pickupPoints || providerPayments || transactions || supplierPayments || expenses || payments || refunds) {
       return { success: false, message: "This courier has order, pickup, or financial history. Disable it to preserve those records." };
     }
     await prisma.$transaction(async (tx) => {
       await tx.courierProvider.delete({ where: { id: provider.id } });
-      await tx.moneyAccount.delete({ where: { id: account.id } });
+      if (account) await tx.moneyAccount.delete({ where: { id: account.id } });
     });
     refresh(PROVIDER_CONFIG.courier.path);
     return { success: true, message: `${provider.name} and its zero-balance account were deleted.` };
@@ -511,6 +481,7 @@ export async function saveProviderConfiguration(kind, formData) {
     const adapterKey = existing.adapterKey;
     const sortOrder = Math.trunc(toNumber(values.sortOrder, existing.sortOrder));
     const isActive = values.isActive === "true";
+    const manualBookingEnabled = kind === "courier" && adapterKey !== "MANUAL" && values.manualBookingEnabled === "true";
     if (!name) return { success: false, message: "Display name is required." };
     const credentialUpdate = prepareProviderCredentialUpdate({
       kind,
@@ -524,6 +495,14 @@ export async function saveProviderConfiguration(kind, formData) {
       adapterKey,
       values,
     );
+    if (kind === "courier" && ((adapterKey === "MANUAL" && isActive) || manualBookingEnabled)) {
+      for (const key of ["insideDhakaCharge", "outsideDhakaCharge"]) {
+        const raw = values[`config_${key}`];
+        if (raw === undefined || String(raw).trim() === "" || !Number.isFinite(Number(raw)) || Number(raw) < 0) {
+          return { success: false, message: "Manual booking চালু করতে Inside ও Outside Dhaka delivery charge পূরণ করুন।" };
+        }
+      }
+    }
     if (adapterKey === "BANGLA_QR") {
       nonSecretConfig.bankName = String(nonSecretConfig.bankName || "").trim();
       nonSecretConfig.bankType = String(nonSecretConfig.bankType || "").toUpperCase();
@@ -558,6 +537,7 @@ export async function saveProviderConfiguration(kind, formData) {
       code,
       adapterKey,
       isActive,
+      manualBookingEnabled,
       encryptedCredentials: credentialUpdate.encryptedCredentials,
       nonSecretConfig,
     };
@@ -584,6 +564,7 @@ export async function saveProviderConfiguration(kind, formData) {
         adapterKey,
         sortOrder,
         isActive: false,
+        manualBookingEnabled,
         moneyAccountId: existing.moneyAccountId,
         encryptedCredentials: credentialUpdate.encryptedCredentials,
         nonSecretConfig,
@@ -598,7 +579,7 @@ export async function saveProviderConfiguration(kind, formData) {
         data: baseData,
       });
 
-      if (isActive && readiness.moneyAccountRequired) {
+      if ((isActive || manualBookingEnabled) && readiness.moneyAccountRequired) {
         const account = await ensureProviderMoneyAccount(tx, {
           kind,
           provider: saved,
@@ -607,7 +588,7 @@ export async function saveProviderConfiguration(kind, formData) {
         saved = await txModel.update({
           where: { id: saved.id },
           data: {
-            isActive: true,
+            isActive,
             moneyAccountId: account.id,
             updatedBy: userId,
           },
