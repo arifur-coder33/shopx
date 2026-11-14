@@ -31,6 +31,9 @@ export async function generateMetadata() {
     ...(identity.googleSiteVerification && {
       verification: { google: identity.googleSiteVerification },
     }),
+    ...(identity.facebookDomainVerification && {
+      other: { "facebook-domain-verification": identity.facebookDomainVerification },
+    }),
     applicationName: identity.name,
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: identity.name, statusBarStyle: "default" },

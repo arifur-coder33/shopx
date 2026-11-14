@@ -367,6 +367,11 @@ export default function SocialTrackingForm({ initialSettings, sitemapUrl, produc
                   ),
                 )}
               </div>
+              {provider.key === "facebook" && <div>
+                <label htmlFor="facebookDomainVerification" className="mb-1.5 block text-sm font-semibold text-text">Facebook Business domain verification code</label>
+                <input id="facebookDomainVerification" name="facebookDomainVerification" defaultValue={initialSettings.facebookDomainVerification || ""} maxLength={200} disabled={disabled} className={inputClass} placeholder="শুধু content-এর ভেতরের code দিন" />
+                <p className="mt-1.5 text-xs text-text-muted">Meta Business Settings → Brand safety → Domains → Add a meta-tag থেকে শুধু content="..."-এর ভেতরের code কপি করুন; পুরো &lt;meta&gt; tag দেবেন না।</p>
+              </div>}
               {provider.key === "google" && <>
                 <div>
                   <label htmlFor="googleSiteVerification" className="mb-1.5 block text-sm font-semibold text-text">Google Search Console verification code</label>

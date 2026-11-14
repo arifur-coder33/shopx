@@ -37,6 +37,14 @@ export function normalizeGoogleSiteVerification(value) {
   return content || raw;
 }
 
+export function normalizeFacebookDomainVerification(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (!/<meta\b/iu.test(raw)) return raw;
+  const content = raw.match(/\bcontent\s*=\s*(["'])(.*?)\1/iu)?.[2]?.trim();
+  return content || raw;
+}
+
 export function normalizeSiteAppearance(setting) {
   const defaults = SITE_APPEARANCE_DEFAULTS;
   return {
@@ -64,12 +72,14 @@ export function normalizeSiteIdentity(setting) {
     "ঘরে বসে সহজে আপনার পছন্দের পণ্য অর্ডার করুন।";
   const seoKeywords = String(setting?.seoKeywords || "").trim();
   const googleSiteVerification = normalizeGoogleSiteVerification(setting?.googleSiteVerification);
+  const facebookDomainVerification = normalizeFacebookDomainVerification(setting?.facebookDomainVerification);
   return {
     name,
     seoTitle,
     seoDescription,
     seoKeywords,
     googleSiteVerification,
+    facebookDomainVerification,
     logo: setting?.logo || null,
     logoUrl: setting?.logo
       ? cloudinaryMainImage(setting.logo, 512, 512)

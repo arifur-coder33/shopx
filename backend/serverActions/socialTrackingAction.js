@@ -11,7 +11,7 @@ import {
 } from "@/backend/services/socialTrackingService";
 import { actionError, requireProcurementPermission } from "@/backend/utils/procurement";
 import prisma from "@/lib/prisma";
-import { normalizeGoogleSiteVerification } from "@/backend/services/siteAppearanceService";
+import { normalizeFacebookDomainVerification, normalizeGoogleSiteVerification } from "@/backend/services/siteAppearanceService";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 const PUBLIC_FIELDS = [
@@ -46,7 +46,7 @@ export async function getSocialTrackingConfiguration() {
     await requireProcurementPermission("socialTracking", "view");
     const [record, siteSetting] = await Promise.all([
       getSocialTrackingRecord(),
-      prisma.siteSetting.findFirst({ select: { googleSiteVerification: true } }),
+      prisma.siteSetting.findFirst({ select: { googleSiteVerification: true, facebookDomainVerification: true } }),
     ]);
     const settings = Object.fromEntries(
       PUBLIC_FIELDS.map((key) => [key, clean(record?.[key])]),
@@ -59,6 +59,7 @@ export async function getSocialTrackingConfiguration() {
       data: {
         ...settings,
         googleSiteVerification: normalizeGoogleSiteVerification(siteSetting?.googleSiteVerification),
+        facebookDomainVerification: normalizeFacebookDomainVerification(siteSetting?.facebookDomainVerification),
         productFeedUsername: clean(record?.productFeedUsername),
         productFeedCredentialsConfigured: Boolean(record?.productFeedUsername && record?.productFeedPasswordHash),
         configuredSecrets: Object.fromEntries(
@@ -118,6 +119,8 @@ export async function saveSocialTrackingConfiguration(formData) {
     };
     const googleSiteVerification = normalizeGoogleSiteVerification(values.googleSiteVerification);
     if (googleSiteVerification.length > 200) throw new Error("Google verification code cannot exceed 200 characters.");
+    const facebookDomainVerification = normalizeFacebookDomainVerification(values.facebookDomainVerification);
+    if (facebookDomainVerification.length > 200) throw new Error("Facebook domain verification code cannot exceed 200 characters.");
     const productFeedUsername = clean(values.productFeedUsername);
     const productFeedPassword = clean(values.productFeedPassword);
     let productFeedPasswordHash = existing?.productFeedPasswordHash || null;
@@ -183,9 +186,9 @@ export async function saveSocialTrackingConfiguration(formData) {
 
     const siteSetting = await prisma.siteSetting.findFirst({ select: { id: true } });
     if (siteSetting) {
-      await prisma.siteSetting.update({ where: { id: siteSetting.id }, data: { googleSiteVerification: googleSiteVerification || null } });
+      await prisma.siteSetting.update({ where: { id: siteSetting.id }, data: { googleSiteVerification: googleSiteVerification || null, facebookDomainVerification: facebookDomainVerification || null } });
     } else {
-      await prisma.siteSetting.create({ data: { googleSiteVerification: googleSiteVerification || null } });
+      await prisma.siteSetting.create({ data: { googleSiteVerification: googleSiteVerification || null, facebookDomainVerification: facebookDomainVerification || null } });
     }
 
     revalidateTag("social-tracking");

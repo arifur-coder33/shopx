@@ -861,6 +861,7 @@ model SiteSetting {
   seoDescription        String?
   seoKeywords           String?  @db.VarChar(500)
   googleSiteVerification String? @db.VarChar(200)
+  facebookDomainVerification String? @db.VarChar(200)
   logo                  String?
   favicon               String?
   phoneNumber1          String?
