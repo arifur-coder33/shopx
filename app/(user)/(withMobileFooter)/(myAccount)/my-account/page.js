@@ -4,7 +4,6 @@ import { auth } from "@/auth"; // your auth function
 import { fetchSingleData } from "@/backend/serverActions/fetchDataActon";
 import prisma from "@/lib/prisma";
 import Button from "@/components/button";
-import ImageCustomServer from "@/components/images/ImageCustomServer";
 import SocialAccountLinkButton from "@/components/auth/SocialAccountLinkButton";
 import LazyModalButton from "@/components/modal/LazyModalButton";
 import Link from "next/link";
@@ -27,7 +26,7 @@ export default async function ProfilePage() {
       emailVerifiedAt: true,
       phoneVerifiedAt: true,
       // dob: true, // date of birth
-      // avatar: true, // optional avatar URL
+      image: true,
     },
   });
 
@@ -49,13 +48,11 @@ export default async function ProfilePage() {
       <div className="p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6">
         {/* Avatar */}
         <div className="flex flex-col items-center">
-          <ImageCustomServer
-            w={50}
-            h={50}
-            src={user?.avatar}
-            alt="Avatar"
-            className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500"
-          />
+          {user.image && (
+            <img src={user.image} alt="Profile photo" width={96} height={96}
+              referrerPolicy="no-referrer"
+              className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500" />
+          )}
           <p className="mt-2 text-lg font-medium ">{user?.name}</p>
         </div>
 

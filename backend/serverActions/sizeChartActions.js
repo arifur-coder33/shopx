@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { hasPermission } from "@/backend/utils/hasPermission";
 import { getCategorySizeSettings, sizeVariationFilter } from "@/backend/services/sizeChartService";
 import { revalidatePath } from "next/cache";
-import { revalidateCatalogPages } from "@/backend/utils/revalidateStorefront";
+import { revalidateSizeChartProducts } from "@/backend/utils/revalidateCategoryProducts";
 
 export async function getSizeChartOptions(parentId) {
   await hasPermission("category", "view");
@@ -85,7 +85,7 @@ export async function saveSizeChart(id, formData) {
     if (id) await prisma.sizeChart.update({ where: { id }, data });
     else await prisma.sizeChart.create({ data });
     revalidatePath("/admin/size-charts");
-    revalidatePath("/product/[slug]", "page");
+    if (id) await revalidateSizeChartProducts({ chartId: id });
     return { success: true };
   } catch (error) {
     return { error: error.code === "P2002" ? "A chart with this name already exists." : error.message };
@@ -110,7 +110,7 @@ export async function changeSizeChartCategory(chartId, categoryId, assign) {
     }, { isolationLevel: "Serializable" });
     revalidatePath("/admin/size-charts");
     revalidatePath("/admin/categories");
-    revalidateCatalogPages();
+    await revalidateSizeChartProducts({ categoryId });
     return { success: true };
   } catch (error) {
     return { error: error.code === "P2034" ? "This category assignment changed. Refresh and try again." : error.message };

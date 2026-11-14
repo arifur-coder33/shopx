@@ -37,6 +37,7 @@ const authAdapter = {
       data: {
         email,
         name: profile.name || null,
+        image: profile.image || null,
         emailVerifiedAt: profile.email_verified === true ? new Date() : null,
         password,
         roleId: defaultRole.id,
@@ -136,13 +137,30 @@ export const {
       return true;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       if (user?.id) {
+        if (["facebook", "google"].includes(account?.provider)) {
+          const name = typeof profile?.name === "string" ? profile.name.trim() : "";
+          const image = account.provider === "google"
+            ? profile?.picture || user.image
+            : profile?.picture?.data?.url || user.image;
+          if (name) await prisma.user.updateMany({
+            where: { id: user.id, OR: [{ name: null }, { name: "" }] },
+            data: { name },
+          });
+          if (typeof image === "string" && image.startsWith("https://")) {
+            await prisma.user.updateMany({
+              where: { id: user.id, OR: [{ image: null }, { image: "" }] },
+              data: { image },
+            });
+          }
+        }
         const authUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: {
             id: true,
             name: true,
+            image: true,
             email: true,
             roleId: true,
             tokenVersion: true,
@@ -153,6 +171,7 @@ export const {
 
         token.id = authUser.id;
         token.name = authUser.name;
+        token.picture = authUser.image;
         token.email = authUser.email;
         token.role = authUser.role?.name ?? null;
         token.roleId = authUser.roleId;
@@ -231,6 +250,7 @@ export const {
       if (session.user && token?.id) {
         session.user.id = token.id;
         session.user.name = token.name;
+        session.user.image = token.picture ?? null;
         session.user.email = token.email;
         session.user.role = token.role;
         session.user.roleId = token.roleId;

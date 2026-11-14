@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidateCatalogPages } from "@/backend/utils/revalidateStorefront";
+import { revalidateProductChange } from "@/backend/utils/revalidateCategoryProducts";
 import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
 import { getMinMax } from "@/utils/getMinMax";
@@ -375,10 +375,9 @@ export async function createProductActions(formData) {
     // --- Revalidation ---
     revalidatePath("/admin/product");
     revalidatePath("/");
-    revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateCatalogPages();
+    await revalidateProductChange(result, result.previousCategory);
     revalidateTag(`product-${result.slug}`);
     console.log("Product created with variations:", result);
     return { success: true, data: result };
@@ -643,10 +642,9 @@ export async function createProductAction(formData) {
     // --- Revalidation ---
     revalidatePath("/admin/product");
     revalidatePath("/");
-    revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateCatalogPages();
+    await revalidateProductChange(result, result.previousCategory);
     revalidateTag(`product-${result.slug}`);
     console.log("Product created successfully:", result);
     return { success: true, data: result };
@@ -1477,16 +1475,15 @@ export async function updateProductActions({ id: productId, formData }) {
         }
       }
       console.log("Updated product with variations:", updatedProduct);
-      return updatedProduct;
+      return { ...updatedProduct, previousCategory: { categoryId: existingProduct.categoryId, slug: existingProduct.slug } };
     });
 
     // --- Revalidation ---
     revalidatePath("/admin/product");
     revalidatePath("/");
-    revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateCatalogPages();
+    await revalidateProductChange(result, result.previousCategory);
     revalidateTag(`product-${result.slug}`);
 
     return { success: true, data: result };
@@ -1672,16 +1669,15 @@ export async function updateProductActionOld({ id: productId, formData }) {
         });
       }
 
-      return updatedProduct;
+      return { ...updatedProduct, previousCategory: { categoryId: existingProduct.categoryId, slug: existingProduct.slug } };
     });
 
     // --- Revalidation ---
     revalidatePath("/admin/product");
     revalidatePath("/");
-    revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateCatalogPages();
+    await revalidateProductChange(result, result.previousCategory);
     revalidateTag(`product-${result.slug}`);
     console.log("Product updated successfully:", result);
     return { success: true, data: result };
@@ -2057,15 +2053,14 @@ export async function updateProductAction({ id: productId, formData }) {
       }
 
       console.log("Updated product with variations:", updatedProduct);
-      return updatedProduct; // This 'result' is the updated product
+      return { ...updatedProduct, previousCategory: { categoryId: existingProduct.categoryId, slug: existingProduct.slug } }; // This 'result' is the updated product
     }, { maxWait: 10000, timeout: 30000 });
 
     revalidatePath("/admin/products");
     revalidatePath("/");
-    revalidatePath(`/product/${result.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateCatalogPages();
+    await revalidateProductChange(result, result.previousCategory);
     revalidateTag(`product-${result.slug}`);
 
     let successMessage = "Product updated successfully.";
@@ -2117,11 +2112,10 @@ export async function deleteProductById(productId) {
     // --- Revalidation ---
     revalidatePath("/admin/product");
     revalidatePath("/");
-    revalidatePath(`/product/${deletedProduct.slug}`);
     revalidateTag(`product-${deletedProduct.slug}`);
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateCatalogPages();
+    await revalidateProductChange(deletedProduct);
 
     return { success: true, message: "Product deleted successfully." };
   } catch (error) {
@@ -2152,7 +2146,7 @@ export const updateProductStatus = async ({ id, value }) => {
     revalidatePath("/admin/product");
     revalidateTag("products");
     revalidateTag("home-storefront");
-    revalidateCatalogPages();
+    await revalidateProductChange(data);
     revalidateTag(`product-${data.slug}`);
 
     return { success: true, data };

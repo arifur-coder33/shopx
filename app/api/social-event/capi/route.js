@@ -5,7 +5,7 @@ import { getIP } from "@/backend/utils/getIp";
 import { fireFacebookCAPI } from "@/backend/utils/SocialServerEvent/fireFacebookCAPI";
 import { fireGoogleServer } from "@/backend/utils/SocialServerEvent/fireGoogleServer";
 import { fireTikTokServer } from "@/backend/utils/SocialServerEvent/fireTikTokServer";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getServerSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 
 export async function POST(req) {
@@ -36,7 +36,7 @@ export async function POST(req) {
 
     const user = body.user || {};
     // Resolve ViewContent identifiers from the signed-in account.
-    if (body.event === "view") {
+    if (["view", "add_to_cart", "checkout"].includes(body.event)) {
       user.email = undefined;
       user.phone = undefined;
       user.phoneNumber = undefined;
@@ -53,13 +53,14 @@ export async function POST(req) {
           user.phone = normalizePhone(account?.phone);
         }
       } catch (error) {
-        console.warn("ViewContent account lookup failed", body.eventId);
+        console.warn("Commerce event account lookup failed", body.eventId);
       }
     }
     const items = body.items || [];
     const extra = body.extra || {};
 
     const userAgent = h.get("user-agent");
+    const requestCookies = await cookies();
 
     const payload = {
       event: body.event,
@@ -81,8 +82,8 @@ export async function POST(req) {
         email: user.email,
         phone: user.phone || user.phoneNumber,
         userId: user.userId,
-        fbp: user.fbp,
-        fbc: user.fbc,
+        fbp: requestCookies.get("_fbp")?.value || user.fbp,
+        fbc: requestCookies.get("_fbc")?.value || user.fbc,
         gclid: user.gclid,
         ttclid: user.ttclid,
         ip: ip,
