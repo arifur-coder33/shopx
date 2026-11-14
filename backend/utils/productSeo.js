@@ -1,4 +1,4 @@
-import { cloudinaryDetailImage } from "@/utils/cloudinaryUrl";
+import { cloudinaryDetailImage, cloudinaryOriginalImage } from "@/utils/cloudinaryUrl";
 import { htmlToText } from "html-to-text";
 
 const clean = (value) => String(value || "").trim();
@@ -29,6 +29,34 @@ export function productSeoImages(product, siteUrl) {
   const unique = Array.from(new Map(media.map((item) => [item.name, item])).values());
   const images = unique.map((item) => cloudinaryDetailImage(item.name, 1200));
   return images.length ? images : [`${siteUrl}/images/default.png`];
+}
+
+export function productShareImages(product, siteUrl) {
+  const media = [
+    product?.thumbnail,
+    ...(product?.gallery || []),
+    ...(product?.variations || []).map((variation) => variation.thumbnail),
+  ];
+  const images = new Map();
+  for (const item of media) {
+    const source = item?.url || item?.name;
+    if (!source) continue;
+    const original = /^(https?:\/\/|\/)/i.test(source)
+      ? source
+      : cloudinaryOriginalImage(source);
+    let url;
+    try { url = new URL(original, siteUrl); } catch { continue; }
+    if (!["http:", "https:"].includes(url.protocol)) continue;
+    const upload = /^(\/[^/]+\/image\/upload\/)(.+)$/.exec(url.pathname);
+    if (url.hostname === "res.cloudinary.com" && upload) {
+      const asset = upload[2].replace(/^t_og-image\//, "");
+      url.pathname = upload[1] + "t_og-image/" + asset;
+      images.set(url.href, { url: url.href, width: 1280, height: 630 });
+    } else {
+      images.set(url.href, { url: url.href });
+    }
+  }
+  return images.size ? [...images.values()] : [{ url: new URL("/images/default.png", siteUrl).href }];
 }
 
 export function productSeoVariations(product) {

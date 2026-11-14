@@ -29,8 +29,8 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
         updatedAt: true,
         category: { select: { name: true, slug: true, fullPath: true } },
         specifications: { orderBy: { sortOrder: "asc" }, select: { id: true, value: true, specification: { select: { id: true, name: true, parent: { select: { id: true, name: true } } } } } },
-        thumbnail: { select: { name: true, id: true } },
-        gallery: { select: { media: { select: { id: true, name: true } } } },
+        thumbnail: { select: { name: true, id: true, url: true } },
+        gallery: { select: { media: { select: { id: true, name: true, url: true } } } },
         videos: {
           orderBy: { sortOrder: "asc" },
           select: {
@@ -51,7 +51,7 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
             discountPrice: true,
             thumbnailId: true,
             stocks: { select: { available: true } },
-            thumbnail: { select: { name: true, id: true } },
+            thumbnail: { select: { name: true, id: true, url: true } },
             combinations: {
               orderBy: { createdAt: "asc" },
               select: {

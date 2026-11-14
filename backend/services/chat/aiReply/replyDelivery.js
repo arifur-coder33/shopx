@@ -8,6 +8,20 @@ import { sendChatChannelImageMessage, sendChatChannelTextMessage, sendMessengerP
 import { sendInstagramProductCards } from "@/backend/services/chat/channelCards/instagramProductCards";
 import { buildWhatsAppProductCard } from "@/backend/services/chat/channelCards/whatsappProductCard";
 
+function messengerPreviewUrl(source) {
+  try {
+    const url = new URL(source);
+    if (url.protocol !== "https:" || url.hostname !== "res.cloudinary.com") return source;
+    url.pathname = url.pathname.replace(
+      /^(\/[^/]+\/image\/upload\/)(?!t_og-image\/)(?=.+)/,
+      "$1t_og-image/",
+    );
+    return url.href;
+  } catch {
+    return source;
+  }
+}
+
 export async function deliverReply(
   conversation,
   content,
@@ -20,6 +34,15 @@ export async function deliverReply(
 ) {
   if (conversation.channel === "WEBSITE")
     return { id: null, imageWarnings: [], mediaMessages: [] };
+
+  if (conversation.channel === "MESSENGER") {
+    products = products.map((product) => ({
+      ...product,
+      imageUrls: (product.imageUrls || []).map(messengerPreviewUrl),
+    }));
+    if (mediaPhoto?.url) mediaPhoto = { ...mediaPhoto, url: messengerPreviewUrl(mediaPhoto.url) };
+    mediaPhotos = mediaPhotos.map((photo) => ({ ...photo, url: messengerPreviewUrl(photo.url) }));
+  }
 
   const sent = [];
   const mediaMessages = [];

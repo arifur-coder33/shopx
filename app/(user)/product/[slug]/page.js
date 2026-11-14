@@ -10,7 +10,7 @@ import {
   getStorefrontProductBySlug,
   getStorefrontProductSlugs,
 } from "@/backend/services/storefrontProductService";
-import { buildProductSeo } from "@/backend/utils/productSeo";
+import { buildProductSeo, productShareImages } from "@/backend/utils/productSeo";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import JsonLd from "@/components/seo/JsonLd";
 import { getSiteUrl } from "@/lib/siteUrl";
@@ -90,6 +90,7 @@ export async function generateMetadata({ params }) {
         .filter(Boolean),
     ),
   );
+  const shareImages = productShareImages(product, seo.url);
   const productVideos = (product.videos || [])
     .map((video) => String(video.url || "").trim())
     .filter((url) => /^https?:\/\//i.test(url));
@@ -117,10 +118,8 @@ export async function generateMetadata({ params }) {
       siteName: identity.name,
       type: "website",
       locale: "bn_BD",
-      images: seo.images.slice(0, 4).map((url, index) => ({
-        url,
-        width: 1200,
-        height: 1200,
+      images: shareImages.slice(0, 4).map((image, index) => ({
+        ...image,
         alt:
           index === 0 ? product.title : `${product.title} - ছবি ${index + 1}`,
       })),
