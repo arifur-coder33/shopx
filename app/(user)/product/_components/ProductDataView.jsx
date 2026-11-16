@@ -39,6 +39,10 @@ export default function ProductDataView({
     id: data.id,
     slug: data.slug,
     title: data.title,
+    image: data.thumbnail?.name || data.variations?.[0]?.thumbnail?.name || null,
+    hasVariations: Boolean(data.hasVariations),
+    regularPrice: data.variations?.[0]?.regularPrice ?? null,
+    discountPrice: data.variations?.[0]?.discountPrice ?? null,
     category: data.category?.name
       ? { name: data.category.name }
       : data.category || "Uncategorized",

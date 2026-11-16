@@ -1,8 +1,9 @@
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import { Plus, ShoppingCart, Star, Truck } from "lucide-react";
+import { Star, Truck } from "lucide-react";
 import Link from "next/link";
 import ImageCustomServer from "../images/ImageCustomServer";
 import WishlistButton from "../wishlist/WishlistButton";
+import ProductCardActions from "./ProductCardActions";
 export default function ProductCard({ product, priority = false }) {
   if (!product) {
     return <div className="text-red-500">Product not found</div>;
@@ -106,35 +107,7 @@ export default function ProductCard({ product, priority = false }) {
             Select Options
           </Link>
         ) : (
-          <div className="mt-auto grid grid-cols-4 gap-1.5">
-            <button
-              type="button"
-              data-product-card-cart={product.slug}
-              aria-label={`${title} ব্যাগে রাখুন`}
-              className="group flex min-h-11 items-center justify-center rounded-brand border border-primary px-1 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft disabled:cursor-wait disabled:opacity-60 sm:text-base"
-            >
-              <span
-                className="relative group-data-[loading=true]:hidden"
-                aria-hidden="true"
-              >
-                <ShoppingCart className="h-5 w-5" />
-                <Plus
-                  className="absolute -right-1 -top-2 h-3.5 w-3.5 rounded-full bg-primary text-white"
-                  strokeWidth={3}
-                />
-              </span>
-              <span className="hidden group-data-[loading=true]:inline">
-                <ShoppingCart className="h-5 w-5" />
-              </span>
-            </button>
-            <Link
-              className="col-span-3 min-h-11 rounded-brand bg-brand px-1 py-2 text-center text-sm font-semibold sm:text-base"
-              href={`/buynow/${encodeURIComponent(product?.slug)}`}
-              data-checkout-product={checkoutTracking}
-            >
-              Buy Now
-            </Link>
-          </div>
+          <ProductCardActions slug={product.slug} checkoutTracking={checkoutTracking} />
         )}
       </div>
     </article>

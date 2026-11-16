@@ -49,9 +49,12 @@ export function productShareImages(product, siteUrl) {
     if (!["http:", "https:"].includes(url.protocol)) continue;
     const upload = /^(\/[^/]+\/image\/upload\/)(.+)$/.exec(url.pathname);
     if (url.hostname === "res.cloudinary.com" && upload) {
-      const asset = upload[2].replace(/^t_og-image\//, "");
-      url.pathname = upload[1] + "t_og-image/" + asset;
-      images.set(url.href, { url: url.href, width: 1280, height: 630 });
+      // Preserve the full image and generatively extend its background to
+      // Open Graph's 1280x630 landscape canvas instead of cropping it.
+      const ogTransform = "b_gen_fill,c_pad,ar_1280:630,w_1280,h_630,f_jpg,q_auto:good";
+      const assetPath = upload[2].replace(/^t_og-image\//, "");
+      url.pathname = upload[1] + `${ogTransform}/${assetPath}`;
+      images.set(url.href, { url: url.href, width: 1280, height: 630, type: "image/jpeg" });
     } else {
       images.set(url.href, { url: url.href });
     }

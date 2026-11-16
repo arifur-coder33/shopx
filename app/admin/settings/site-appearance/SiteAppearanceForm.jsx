@@ -170,6 +170,17 @@ export default function SiteAppearanceForm({ initialSettings }) {
           </div>
         </section>
 
+        <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+          <h2 className="text-lg font-bold">Product card buttons</h2>
+          <p className="mb-4 text-sm text-text-muted">Choose the labels and background colors shown on product cards.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-semibold">Add to Cart label<input name="cartButtonLabel" value={settings.cartButtonLabel} onChange={(event) => updateValue("cartButtonLabel", event.target.value)} maxLength={40} disabled={disabled} className={inputClass} /></label>
+            <label className="grid gap-1.5 text-sm font-semibold">Buy Now label<input name="buyNowButtonLabel" value={settings.buyNowButtonLabel} onChange={(event) => updateValue("buyNowButtonLabel", event.target.value)} maxLength={40} disabled={disabled} className={inputClass} /></label>
+            <ColorField field={{ key: "cartButtonColor", label: "Add to Cart color", note: "Product card button" }} value={settings.cartButtonColor} onChange={(value) => updateValue("cartButtonColor", value)} disabled={disabled} />
+            <ColorField field={{ key: "buyNowButtonColor", label: "Buy Now color", note: "Product card button" }} value={settings.buyNowButtonColor} onChange={(value) => updateValue("buyNowButtonColor", value)} disabled={disabled} />
+          </div>
+        </section>
+
         <section className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
             <div className="mb-5 flex items-center gap-2"><Type className="text-primary" size={21} /><h2 className="text-lg font-bold">Size and shape</h2></div>
@@ -203,6 +214,10 @@ export default function SiteAppearanceForm({ initialSettings }) {
             <div className="mt-5 flex flex-wrap gap-2">
               <span className="px-4 py-2 font-bold text-white" style={{ background: settings.primaryColor, borderRadius: `${settings.borderRadius}px` }}>Primary button</span>
               <span className="px-4 py-2 font-bold text-white" style={{ background: settings.secondaryColor, borderRadius: `${settings.borderRadius}px` }}>Secondary</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="px-3 py-2 text-sm font-bold text-white" style={{ background: settings.cartButtonColor, borderRadius: `${settings.borderRadius}px` }}>{settings.cartButtonLabel}</span>
+              <span className="px-3 py-2 text-sm font-bold text-white" style={{ background: settings.buyNowButtonColor, borderRadius: `${settings.borderRadius}px` }}>{settings.buyNowButtonLabel}</span>
             </div>
             <div className="mt-4 border p-3" style={{ background: settings.lightSurface, borderRadius: `${settings.borderRadius}px`, borderColor: `${settings.lightText}25` }}>Product card preview</div>
           </div>

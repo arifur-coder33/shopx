@@ -103,7 +103,7 @@ export default async function RootLayout({ children }) {
       */}
       <body className="font-sans antialiased theam">
         <NextTopLoader showSpinner={false} color={appearance.primaryColor} />
-        <Providers>{children}</Providers>
+        <Providers appearance={appearance}>{children}</Providers>
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef } from "react";
+import { recordRecentlyViewedProduct } from "@/utils/recentlyViewedProducts";
 
 export default function ViewProductEvent({ product }) {
   const { status } = useSession();
@@ -13,6 +14,10 @@ export default function ViewProductEvent({ product }) {
     variation?.discountPrice ||
     variation?.regularPrice ||
     0;
+  useEffect(() => {
+    recordRecentlyViewedProduct(product);
+  }, [product]);
+
   useEffect(() => {
     if (status === "loading" || !product?.id || lastTrackedProduct.current === product.id) return;
     lastTrackedProduct.current = product.id;

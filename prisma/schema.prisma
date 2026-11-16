@@ -896,6 +896,10 @@ model SiteSetting {
   footerImageHeight     Int?
   orderReconfirmEnabled Boolean  @default(true)
   orderReconfirmMessage String?  @db.VarChar(500)
+  cartButtonLabel       String?  @default("Add to Cart") @db.VarChar(40)
+  buyNowButtonLabel     String?  @default("Buy Now") @db.VarChar(40)
+  cartButtonColor       String?  @default("#ea580c") @db.VarChar(7)
+  buyNowButtonColor     String?  @default("#0f766e") @db.VarChar(7)
   manualDeliveryEnabled Boolean @default(false)
   createdAt             DateTime @default(now()) // Timestamp for order placement
   updatedAt             DateTime @updatedAt // Auto-updated timestamp

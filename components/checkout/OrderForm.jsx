@@ -45,6 +45,7 @@ export default function OrderForm({
   const { clearCart } = useCart();
   const [paymentSelection, setPaymentSelection] = useState(null);
   const formRef = useRef(null);
+  const errorMessageRef = useRef(null);
   const checkoutDraftLoaded = useRef(false);
   const [leadDraft, setLeadDraft] = useState(null);
   const leadSaveTimer = useRef(null);
@@ -63,6 +64,17 @@ export default function OrderForm({
   const submittingRef = useRef(false);
   const browserLocationRef = useRef(null);
   const orderOriginCapabilityRef = useRef(null);
+  useEffect(() => {
+    if (!error || !errorMessageRef.current) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      errorMessageRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [error]);
+
   const sendBrowserLocation = (location, capability) => {
     if (!location || !capability) return;
     fetch("/api/order-origin", {
@@ -461,7 +473,7 @@ export default function OrderForm({
     <form ref={formRef} onSubmit={handleSubmit} onChange={saveCheckoutDraft} onBlurCapture={(event) => { if (event.target?.name === "phoneNumber") saveCheckoutDraft(undefined, true); }}>
       <div className="w-full mb-2">
         {error && (
-          <div className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">
+          <div ref={errorMessageRef} role="alert" className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">
             {" "}
             {error}{" "}
           </div>

@@ -18,6 +18,7 @@ import { DEFAULT_BLUR_DATA_URL } from "@/utils/cloudinaryUrl";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import ProductDataView from "../_components/ProductDataView";
+import ProductRecommendations from "../_components/ProductRecommendations";
 import { getCategorySizeSettings } from "@/backend/services/sizeChartService";
 import ProductImageFirstPreview from "../_components/ProductImageFirstPreview";
 
@@ -265,6 +266,11 @@ async function ProductPageContent({ detailsPromise }) {
         reviews={reviews}
         sizeChart={sizeSettings?.chart}
       />
+      <ProductRecommendations key={data.id} currentProduct={{
+        id: data.id,
+        slug: data.slug,
+        categoryId: data.categoryId,
+      }} />
     </div>
   );
 }

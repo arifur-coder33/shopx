@@ -177,6 +177,10 @@ export async function updateSiteAppearance(formData) {
       borderRadius: boundedInteger(values.borderRadius, "Border radius", 0, 24),
       navbarHeight: boundedInteger(values.navbarHeight, "Navbar height", 56, 160),
       footerImageHeight: boundedInteger(values.footerImageHeight, "Footer image height", 40, 240),
+      cartButtonLabel: clean(values.cartButtonLabel).slice(0, 40) || "Add to Cart",
+      buyNowButtonLabel: clean(values.buyNowButtonLabel).slice(0, 40) || "Buy Now",
+      cartButtonColor: color(values.cartButtonColor, "Add to Cart button color"),
+      buyNowButtonColor: color(values.buyNowButtonColor, "Buy Now button color"),
       orderReconfirmEnabled: values.orderReconfirmEnabled === "true",
       orderReconfirmMessage: clean(values.orderReconfirmMessage).slice(0, 500) || null,
     };

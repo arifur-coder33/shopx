@@ -17,6 +17,10 @@ export const SITE_APPEARANCE_DEFAULTS = Object.freeze({
   borderRadius: 12,
   navbarHeight: 72,
   footerImageHeight: 120,
+  cartButtonLabel: "Add to Cart",
+  buyNowButtonLabel: "Buy Now",
+  cartButtonColor: "#ea580c",
+  buyNowButtonColor: "#0f766e",
 });
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -61,6 +65,10 @@ export function normalizeSiteAppearance(setting) {
     borderRadius: safeNumber(setting?.borderRadius, defaults.borderRadius, 0, 24),
     navbarHeight: safeNumber(setting?.navbarHeight, defaults.navbarHeight, 56, 160),
     footerImageHeight: safeNumber(setting?.footerImageHeight, defaults.footerImageHeight, 40, 240),
+    cartButtonLabel: String(setting?.cartButtonLabel || "").trim().slice(0, 40) || defaults.cartButtonLabel,
+    buyNowButtonLabel: String(setting?.buyNowButtonLabel || "").trim().slice(0, 40) || defaults.buyNowButtonLabel,
+    cartButtonColor: safeColor(setting?.cartButtonColor, defaults.cartButtonColor),
+    buyNowButtonColor: safeColor(setting?.buyNowButtonColor, defaults.buyNowButtonColor),
   };
 }
 
@@ -140,6 +148,8 @@ export function createSiteAppearanceCss(appearance) {
       --brand-border: color-mix(in srgb, ${value.lightText} 15%, ${value.lightSurface});
       --brand-radius: ${value.borderRadius}px;
       --brand-navbar-height: ${value.navbarHeight}px;
+      --cart-button-color: ${value.cartButtonColor};
+      --buy-now-button-color: ${value.buyNowButtonColor};
       font-size: ${value.baseFontSize}px;
     }
     html.dark {

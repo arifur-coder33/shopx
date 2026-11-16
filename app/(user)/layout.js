@@ -5,6 +5,7 @@ import NavBar from "@/components/NavBar"; // The optimized NavBar from our previ
 import { getPublicSocialTrackingSettings } from "@/backend/services/socialTrackingService";
 import RouteViewTracker from "@/components/common/RouteViewTracker";
 import ChatWidgetLoader from "@/components/chat/ChatWidgetLoader";
+import RecentlyViewedProducts from "@/components/products/RecentlyViewedProducts";
 
 export default async function UserLayout({ children }) {
   const trackingSettings = await getPublicSocialTrackingSettings();
@@ -12,7 +13,10 @@ export default async function UserLayout({ children }) {
   return (
     <>
       <NavBar />
-      <main className="site-container min-h-screen pb-[calc(6rem_+_env(safe-area-inset-bottom))] pt-2 md:pb-4 md:pt-4">{children}</main>
+      <main className="site-container min-h-screen pb-[calc(6rem_+_env(safe-area-inset-bottom))] pt-2 md:pb-4 md:pt-4">
+        {children}
+        <RecentlyViewedProducts />
+      </main>
       <Footer />
 
       {/* All your scripts are now cleanly handled by this component */}
