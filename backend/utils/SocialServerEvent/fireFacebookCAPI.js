@@ -89,8 +89,15 @@ export async function fireFacebookCAPI(data, configuredSettings, { useSavedTestC
 
     // console.log("FB CAPI Response:", json);
 
-    if (!res.ok) {
-      // console.error("FB CAPI Error:", json);
+    if (!res.ok || Number(json.events_received) < 1) {
+      console.warn("Meta CAPI did not accept an event", {
+        eventName: fbdata.event_name,
+        eventId: fbdata.event_id,
+        status: res.status,
+        errorCode: json?.error?.code,
+        errorSubcode: json?.error?.error_subcode,
+        message: String(json?.error?.message || json?.messages?.[0] || "No event accepted").slice(0, 240),
+      });
     }
     return { success: res.ok && Number(json.events_received) > 0, data: json };
   } catch (err) {
