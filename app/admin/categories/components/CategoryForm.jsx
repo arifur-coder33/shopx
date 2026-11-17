@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { categoryFormFields } from "./categoryFormFields";
+import { defaultCategoryDeliveryBenefits } from "@/lib/categoryDeliveryBenefits";
 
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
@@ -17,7 +18,7 @@ const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
 export default function CategoryForm({ actionType, updateAction, id }) {
   const [dropdownList, setDropDownList] = useState([]);
   const [loadingtData, setLoadingData] = useState(true);
-  const [data, setData] = useState({});
+  const [data, setData] = useState(defaultCategoryDeliveryBenefits);
   const [selectedParentId, setSelectedParentId] = useState(undefined);
   console.log("id in category form", id);
   const loadDropDownLists = async () => {
@@ -37,7 +38,13 @@ export default function CategoryForm({ actionType, updateAction, id }) {
           const data = await getCategoryById(id);
 
           if (data.success) {
-            setData(data.data || {});
+            const category = { ...data.data };
+            for (const [field, fallback] of Object.entries(defaultCategoryDeliveryBenefits)) {
+              const value = category[field];
+              category[`${field}Mode`] = value == null ? "inherit" : value === "" ? "off" : "on";
+              category[field] = value || fallback;
+            }
+            setData(category);
           } else {
             toast.error("Failed to load  data");
           }

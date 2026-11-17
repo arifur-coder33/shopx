@@ -6,7 +6,9 @@ import { useSession } from "next-auth/react";
 import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 import { toast } from "react-toastify";
+import { useSiteAppearance } from "@/components/common/Providers";
 export default function AddToCartButton(props) {
+  const appearance = useSiteAppearance() || {};
   const { data: session } = useSession();
   const { addToCart } = useCart();
   const { product, selectedVariation, productQty } = props;
@@ -105,11 +107,12 @@ if (
   };
   return (
     <Button
-      className={`bg-emerald-400 border-b-4 border-b-emerald-700 px-2`}
+      className="border-b-4 px-2"
+      style={{ backgroundColor: appearance.cartButtonColor || "#ea580c" }}
       onClick={handleAddToCart}
       {...props}
     >
-      <KalapanaFont>ব্যাগে রাখুন</KalapanaFont>{" "}
+      <KalapanaFont>{appearance.cartButtonLabel || "Add to Cart"}</KalapanaFont>
     </Button>
   );
 }

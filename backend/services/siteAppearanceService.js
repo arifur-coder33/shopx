@@ -21,6 +21,8 @@ export const SITE_APPEARANCE_DEFAULTS = Object.freeze({
   buyNowButtonLabel: "Buy Now",
   cartButtonColor: "#ea580c",
   buyNowButtonColor: "#0f766e",
+  placeOrderButtonLabel: "Place Order",
+  placeOrderButtonColor: "#ea580c",
 });
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -69,6 +71,8 @@ export function normalizeSiteAppearance(setting) {
     buyNowButtonLabel: String(setting?.buyNowButtonLabel || "").trim().slice(0, 40) || defaults.buyNowButtonLabel,
     cartButtonColor: safeColor(setting?.cartButtonColor, defaults.cartButtonColor),
     buyNowButtonColor: safeColor(setting?.buyNowButtonColor, defaults.buyNowButtonColor),
+    placeOrderButtonLabel: String(setting?.placeOrderButtonLabel || "").trim().slice(0, 40) || defaults.placeOrderButtonLabel,
+    placeOrderButtonColor: safeColor(setting?.placeOrderButtonColor, defaults.placeOrderButtonColor),
   };
 }
 

@@ -7,10 +7,12 @@ export default function Button({
   className,
   disabled,
   type,
+  style,
 }) {
   return (
     <button
       type={type || "button"}
+      style={style}
       disabled={disabled}
       aria-label="button"
       onClick={onClick}

@@ -4,22 +4,22 @@ import { updateSiteAppearance } from "@/backend/serverActions/siteSettingAction"
 import FileInput from "@/components/input/FileInput";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { cloudinaryMainImage } from "@/utils/cloudinaryUrl";
-import { Globe2, Palette, Save, Type } from "lucide-react";
+import { Globe2, Info, Palette, Save, Type } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "react-toastify";
 
 const colorFields = [
-  { key: "primaryColor", label: "Primary", note: "Buttons, links and active states" },
-  { key: "secondaryColor", label: "Secondary", note: "Supporting brand color" },
-  { key: "accentColor", label: "Accent", note: "Highlights and accents" },
-  { key: "lightBackground", label: "Light background", note: "Page background in light mode" },
-  { key: "lightSurface", label: "Light surface", note: "Cards, menus and inputs" },
-  { key: "lightText", label: "Light text", note: "Main text in light mode" },
-  { key: "darkBackground", label: "Dark background", note: "Page background in dark mode" },
-  { key: "darkSurface", label: "Dark surface", note: "Cards, menus and inputs" },
-  { key: "darkText", label: "Dark text", note: "Main text in dark mode" },
+  { key: "primaryColor", label: "Primary", note: "Main buttons, links, selected tabs, icons, active states and form focus rings." },
+  { key: "secondaryColor", label: "Secondary", note: "Supporting brand accents and secondary actions across the storefront." },
+  { key: "accentColor", label: "Accent", note: "Small highlights, labels and decorative emphasis." },
+  { key: "lightBackground", label: "Light background", note: "Main page background when the light theme is active." },
+  { key: "lightSurface", label: "Light surface", note: "Cards, menus, dialogs, inputs and other raised areas in light theme." },
+  { key: "lightText", label: "Light text", note: "Main text and foreground content in light theme." },
+  { key: "darkBackground", label: "Dark background", note: "Main page background when the dark theme is active." },
+  { key: "darkSurface", label: "Dark surface", note: "Cards, menus, dialogs, inputs and raised areas in dark theme." },
+  { key: "darkText", label: "Dark text", note: "Main text and foreground content in dark theme." },
 ];
 
 const inputClass =
@@ -27,7 +27,7 @@ const inputClass =
 
 function ColorField({ field, value, onChange, disabled }) {
   return (
-    <label className="grid min-w-0 grid-cols-[3rem_1fr] gap-x-3 gap-y-1 rounded-xl border border-border p-3">
+    <div className="grid min-w-0 grid-cols-[3rem_1fr] gap-x-3 gap-y-1 rounded-xl border border-border p-3">
       <input
         type="color"
         name={`${field.key}Picker`}
@@ -37,8 +37,17 @@ function ColorField({ field, value, onChange, disabled }) {
         className="row-span-2 h-12 w-12 cursor-pointer rounded-lg border border-border bg-transparent p-1"
         aria-label={`${field.label} color picker`}
       />
-      <span className="font-semibold text-text">{field.label}</span>
-      <span className="text-xs text-text-muted">{field.note}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="font-semibold text-text">{field.label}</span>
+        <span className="group relative inline-flex">
+          <button type="button" aria-label={`${field.label} কোথায় ব্যবহার হয়`} className="grid h-5 w-5 place-items-center rounded-full text-text-muted hover:bg-primary-soft hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <Info size={14} aria-hidden="true" />
+          </button>
+          <span role="tooltip" className="pointer-events-none invisible absolute left-1/2 top-full z-30 mt-2 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-normal leading-relaxed text-white opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+            {field.note}
+          </span>
+        </span>
+      </div>
       <input
         name={field.key}
         value={value}
@@ -49,7 +58,7 @@ function ColorField({ field, value, onChange, disabled }) {
         className={`${inputClass} col-span-2 mt-2 font-mono uppercase`}
         aria-label={`${field.label} hex value`}
       />
-    </label>
+    </div>
   );
 }
 
@@ -176,8 +185,10 @@ export default function SiteAppearanceForm({ initialSettings }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-semibold">Add to Cart label<input name="cartButtonLabel" value={settings.cartButtonLabel} onChange={(event) => updateValue("cartButtonLabel", event.target.value)} maxLength={40} disabled={disabled} className={inputClass} /></label>
             <label className="grid gap-1.5 text-sm font-semibold">Buy Now label<input name="buyNowButtonLabel" value={settings.buyNowButtonLabel} onChange={(event) => updateValue("buyNowButtonLabel", event.target.value)} maxLength={40} disabled={disabled} className={inputClass} /></label>
-            <ColorField field={{ key: "cartButtonColor", label: "Add to Cart color", note: "Product card button" }} value={settings.cartButtonColor} onChange={(value) => updateValue("cartButtonColor", value)} disabled={disabled} />
-            <ColorField field={{ key: "buyNowButtonColor", label: "Buy Now color", note: "Product card button" }} value={settings.buyNowButtonColor} onChange={(value) => updateValue("buyNowButtonColor", value)} disabled={disabled} />
+            <label className="grid gap-1.5 text-sm font-semibold">Place Order label<input name="placeOrderButtonLabel" value={settings.placeOrderButtonLabel} onChange={(event) => updateValue("placeOrderButtonLabel", event.target.value)} maxLength={40} disabled={disabled} className={inputClass} /></label>
+            <ColorField field={{ key: "cartButtonColor", label: "Add to Cart color", note: "Product cards and the Add to Cart button on product pages." }} value={settings.cartButtonColor} onChange={(value) => updateValue("cartButtonColor", value)} disabled={disabled} />
+            <ColorField field={{ key: "buyNowButtonColor", label: "Buy Now color", note: "Product cards and the Buy Now button on product pages." }} value={settings.buyNowButtonColor} onChange={(value) => updateValue("buyNowButtonColor", value)} disabled={disabled} />
+            <ColorField field={{ key: "placeOrderButtonColor", label: "Place Order color", note: "Final order submission button on checkout and Buy Now forms." }} value={settings.placeOrderButtonColor} onChange={(value) => updateValue("placeOrderButtonColor", value)} disabled={disabled} />
           </div>
         </section>
 
@@ -218,6 +229,7 @@ export default function SiteAppearanceForm({ initialSettings }) {
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="px-3 py-2 text-sm font-bold text-white" style={{ background: settings.cartButtonColor, borderRadius: `${settings.borderRadius}px` }}>{settings.cartButtonLabel}</span>
               <span className="px-3 py-2 text-sm font-bold text-white" style={{ background: settings.buyNowButtonColor, borderRadius: `${settings.borderRadius}px` }}>{settings.buyNowButtonLabel}</span>
+              <span className="px-3 py-2 text-sm font-bold text-white" style={{ background: settings.placeOrderButtonColor, borderRadius: `${settings.borderRadius}px` }}>{settings.placeOrderButtonLabel}</span>
             </div>
             <div className="mt-4 border p-3" style={{ background: settings.lightSurface, borderRadius: `${settings.borderRadius}px`, borderColor: `${settings.lightText}25` }}>Product card preview</div>
           </div>

@@ -181,6 +181,8 @@ export async function updateSiteAppearance(formData) {
       buyNowButtonLabel: clean(values.buyNowButtonLabel).slice(0, 40) || "Buy Now",
       cartButtonColor: color(values.cartButtonColor, "Add to Cart button color"),
       buyNowButtonColor: color(values.buyNowButtonColor, "Buy Now button color"),
+      placeOrderButtonLabel: clean(values.placeOrderButtonLabel).slice(0, 40) || "Place Order",
+      placeOrderButtonColor: color(values.placeOrderButtonColor, "Place Order button color"),
       orderReconfirmEnabled: values.orderReconfirmEnabled === "true",
       orderReconfirmMessage: clean(values.orderReconfirmMessage).slice(0, 500) || null,
     };

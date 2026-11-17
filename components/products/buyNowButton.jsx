@@ -6,6 +6,7 @@ import Link from "next/link";
 import Button from "../button";
 import Tooltip from "../common/Tooltip";
 import KalapanaFont from "../KalapanaFont";
+import { useSiteAppearance } from "@/components/common/Providers";
 export default function BuyNowButton({
   children = "এখনি কিনুন",
   product,
@@ -13,6 +14,9 @@ export default function BuyNowButton({
   selectedVariation,
   ...restProps
 }) {
+  const appearance = useSiteAppearance() || {};
+  const buttonLabel = appearance.buyNowButtonLabel || "Buy Now";
+  const buttonColor = appearance.buyNowButtonColor || "#0f766e";
   const { data: session } = useSession();
   const hasVariations = product?.variations[0]?.combinations?.length > 0;
   const isVariationSelected = !!selectedVariation;
@@ -86,10 +90,11 @@ export default function BuyNowButton({
     return (
       <Link href={`/buynow/${product?.slug}`} passHref className="w-full">
         <Button
-          className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
+          className="w-full border-b-4 p-2"
+          style={{ backgroundColor: buttonColor }}
           {...restProps}
         >
-          <KalapanaFont>{children}</KalapanaFont>
+          <KalapanaFont>{buttonLabel}</KalapanaFont>
         </Button>
       </Link>
     );
@@ -99,10 +104,11 @@ export default function BuyNowButton({
     return (
       <Link href={`/product/${product?.slug}`} passHref className="w-full">
         <Button
-          className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
+          className="w-full border-b-4 p-2"
+          style={{ backgroundColor: buttonColor }}
           {...restProps}
         >
-          <KalapanaFont>এখনি কিনুন</KalapanaFont>
+          <KalapanaFont>{buttonLabel}</KalapanaFont>
         </Button>
       </Link>
     );
@@ -120,7 +126,7 @@ export default function BuyNowButton({
           }
           {...restProps}
         >
-          <KalapanaFont>এখনি কিনুন</KalapanaFont>
+          <KalapanaFont>{buttonLabel}</KalapanaFont>
         </Button>
       </Tooltip>
     );
@@ -132,10 +138,11 @@ export default function BuyNowButton({
       <Tooltip content="Please select a variation">
         <Button
           onClick={handleVariationWarning}
-          className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
+          className="w-full border-b-4 p-2"
+          style={{ backgroundColor: buttonColor }}
           {...restProps}
         >
-          <KalapanaFont>এখনি কিনুন</KalapanaFont>
+          <KalapanaFont>{buttonLabel}</KalapanaFont>
         </Button>
       </Tooltip>
     );
@@ -146,10 +153,11 @@ export default function BuyNowButton({
     <Link href={`/buynow/${slug}`} passHref className="w-full">
       <Button
         onClick={handleProceedToCheckout}
-        className={"w-full bg-cyan-500 border-b-4 border-b-cyan-700 p-2"}
+        className="w-full border-b-4 p-2"
+        style={{ backgroundColor: buttonColor }}
         {...restProps}
       >
-        <KalapanaFont>এখনি কিনুন</KalapanaFont>
+        <KalapanaFont>{buttonLabel}</KalapanaFont>
       </Button>
     </Link>
   );

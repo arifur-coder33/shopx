@@ -1,3 +1,5 @@
+import { defaultCategoryDeliveryBenefits } from "@/lib/categoryDeliveryBenefits";
+
 export const categoryFormFields = ({ dropdownList, loadDropDownLists, parentId, onParentSelect }) => [
   { type: "file", label: "Thumbnail", recommendedSize: "600 × 600 px recommended", name: "thumbnail", colSpan: "4" },
   { type: "text", label: "Category Name", name: "name", colSpan: "2" },
@@ -19,6 +21,21 @@ export const categoryFormFields = ({ dropdownList, loadDropDownLists, parentId, 
     addForm: "",
   },
   { type: "categoryUnit", name: "unitName", parentId },
+  ...Object.keys(defaultCategoryDeliveryBenefits).flatMap((name) => {
+    const label = name === "exchangeText" ? "Exchange" : "Return";
+    return [
+      {
+        type: "nativeSelect", name: `${name}Mode`, label: label + " সুবিধা",
+        defaultValue: "inherit",
+        options: [
+          { value: "inherit", label: parentId ? "প্যারেন্টের সেটিং" : "ডিফল্ট (৩ দিন)" },
+          { value: "on", label: "চালু · নিজের লেখা" },
+          { value: "off", label: "বন্ধ" },
+        ],
+      },
+      { type: "text", label: label + " Text (নিজের লেখা বাছলে)", name, colSpan: "4" },
+    ];
+  }),
   { type: "file", label: "Category Banner", recommendedSize: "1600 × 600 px recommended", name: "banner", colSpan: "full" },
   { type: "categorySpecifications", label: "Specifications", name: "specifications", colSpan: "full" },
   // {

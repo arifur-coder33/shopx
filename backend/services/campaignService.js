@@ -358,8 +358,18 @@ export function getProductCardCampaignData({
     ? Math.round((productOffer.discount / basePrice) * 100)
     : 0;
 
+  return {
+    campaignPrice: productOffer.campaign ? productOffer.price : null,
+    campaignDiscountPercent,
+    comboOffers,
+    deliveryCampaignLabel: getFreeDeliveryCampaignLabel(campaigns, productId, categoryId),
+  };
+}
+
+export function getFreeDeliveryCampaignLabel(campaigns, productId, categoryId) {
   const deliveryCampaign = campaigns.find((campaign) => {
     if (!["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type)) return false;
+    if (Number(campaign.maxDiscountAmount) > 0) return false;
     const offerType = campaign.configuration?.offerType;
     const isFreeDelivery = offerType === "FREE" ||
       (campaign.discountType === "PERCENT" && Number(campaign.discountValue) >= 100);
@@ -371,18 +381,21 @@ export function getProductCardCampaignData({
     return matchesTarget;
   });
 
-  return {
-    campaignPrice: productOffer.campaign ? productOffer.price : null,
-    campaignDiscountPercent,
-    comboOffers,
-    deliveryCampaignLabel: deliveryCampaign
-      ? Number(deliveryCampaign.minimumOrderAmount) > 0
-        ? `Free delivery from ৳${Number(deliveryCampaign.minimumOrderAmount).toLocaleString()}`
-        : deliveryCampaign.configuration?.offerType === "ONLINE_PAYMENT"
-          ? "Free delivery on online payment"
-          : "Free delivery"
-      : null,
-  };
+  if (!deliveryCampaign) return null;
+  const minimum = Number(deliveryCampaign.minimumOrderAmount);
+  const config = deliveryCampaign.configuration || {};
+  const methods = deliveryCampaign.paymentMethods?.length
+    ? deliveryCampaign.paymentMethods
+    : [deliveryCampaign.paymentMethod].filter(Boolean);
+  const conditions = [
+    minimum > 0 && `from ৳${minimum.toLocaleString()}`,
+    (config.offerType === "ONLINE_PAYMENT" || config.paymentScope === "ONLINE") && "on online payment",
+    config.paymentScope === "COD" && "on COD",
+    methods.length > 0 && `with ${methods.join("/")}`,
+    deliveryCampaign.deliveryZone && `in ${deliveryCampaign.deliveryZone}`,
+    deliveryCampaign.shippingMethod && `via ${deliveryCampaign.shippingMethod}`,
+  ].filter(Boolean);
+  return ["Free Delivery", ...conditions].join(" ");
 }
 
 export function applyCartCampaign({ campaigns, subtotal, items = [] }) {

@@ -807,7 +807,7 @@ async function sendMetaMessage(conversation, content, { product = null, imageUrl
       : product?.mode === "photo-price"
         ? { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...messengerReply, message: { attachment: { type: "image", payload: { url: product.imageUrl, is_reusable: true } } } }
         : product
-          ? { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...messengerReply, message: { attachment: { type: "template", payload: { template_type: "generic", elements: [{ title: product.title.slice(0, 80), image_url: product.imageUrl || undefined, subtitle: content.slice(0, 80), default_action: { type: "web_url", url: product.mode === "order" ? product.buyNowUrl : product.url }, buttons: [{ type: "web_url", url: product.mode === "order" ? product.buyNowUrl : product.url, title: product.mode === "order" ? "অর্ডার করুন" : "পণ্য দেখুন" }] }] } } } }
+          ? { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...messengerReply, message: { attachment: { type: "template", payload: { template_type: "generic", image_aspect_ratio: "square", elements: [{ title: product.title.slice(0, 80), image_url: product.imageUrl || undefined, subtitle: content.slice(0, 80), default_action: { type: "web_url", url: product.mode === "order" ? product.buyNowUrl : product.url }, buttons: [{ type: "web_url", url: product.mode === "order" ? product.buyNowUrl : product.url, title: product.mode === "order" ? "অর্ডার করুন" : "পণ্য দেখুন" }] }] } } } }
         : { recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", ...messengerReply, message: { text: content } };
   const response = await fetch(url, {
     method: "POST",
@@ -893,6 +893,14 @@ export async function sendChatReplyAction(conversationId, rawContent, retryMessa
     const conversation = await prisma.chatConversation.findUnique({ where: { id: conversationId } });
     if (!conversation) throw new Error("Conversation not found.");
     if (conversation.status === "CLOSED") throw new Error("আগে conversation আবার খুলুন, তারপর reply দিন।");
+    if (!retryMessageId && !product && !timelineOrderId && trim(rawContent) === ".") {
+      const updated = await prisma.chatConversation.update({
+        where: { id: conversationId },
+        data: { aiModeEnabled: false },
+        select: { id: true, aiModeEnabled: true },
+      });
+      return { success: true, aiModeEnabled: updated.aiModeEnabled, command: "AI_DISABLED" };
+    }
     let productCard = null;
     let orderTimelineCard = null;
     if (product?.id) {

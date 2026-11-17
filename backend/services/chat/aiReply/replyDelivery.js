@@ -7,15 +7,18 @@ import { isAiReplyEnabledForChannel, settingId } from "./foundation.js";
 import { sendChatChannelImageMessage, sendChatChannelTextMessage, sendMessengerProductCard, sendMessengerProductCarousel } from "@/backend/services/chatChannelTextAdapter";
 import { sendInstagramProductCards } from "@/backend/services/chat/channelCards/instagramProductCards";
 import { buildWhatsAppProductCard } from "@/backend/services/chat/channelCards/whatsappProductCard";
+import { getSiteUrl } from "@/lib/siteUrl";
 
-function messengerPreviewUrl(source) {
+function messengerPreviewUrl(source, siteUrl) {
   try {
-    const url = new URL(source);
-    if (url.protocol !== "https:" || url.hostname !== "res.cloudinary.com") return source;
-    url.pathname = url.pathname.replace(
-      /^(\/[^/]+\/image\/upload\/)(?!t_og-image\/)(?=.+)/,
-      "$1t_og-image/",
-    );
+    const url = new URL(source, `${siteUrl}/`);
+    if (url.protocol !== "https:") return source;
+    if (url.hostname === "res.cloudinary.com") {
+      url.pathname = url.pathname.replace(
+        /^(\/[^/]+\/image\/upload\/)(?:t_og-image\/)?/,
+        "$1f_jpg,q_auto:good,w_1200,c_limit/",
+      );
+    }
     return url.href;
   } catch {
     return source;
@@ -36,12 +39,13 @@ export async function deliverReply(
     return { id: null, imageWarnings: [], mediaMessages: [] };
 
   if (conversation.channel === "MESSENGER") {
+    const siteUrl = getSiteUrl();
     products = products.map((product) => ({
       ...product,
-      imageUrls: (product.imageUrls || []).map(messengerPreviewUrl),
+      imageUrls: (product.imageUrls || []).map((url) => messengerPreviewUrl(url, siteUrl)),
     }));
-    if (mediaPhoto?.url) mediaPhoto = { ...mediaPhoto, url: messengerPreviewUrl(mediaPhoto.url) };
-    mediaPhotos = mediaPhotos.map((photo) => ({ ...photo, url: messengerPreviewUrl(photo.url) }));
+    if (mediaPhoto?.url) mediaPhoto = { ...mediaPhoto, url: messengerPreviewUrl(mediaPhoto.url, siteUrl) };
+    mediaPhotos = mediaPhotos.map((photo) => ({ ...photo, url: messengerPreviewUrl(photo.url, siteUrl) }));
   }
 
   const sent = [];

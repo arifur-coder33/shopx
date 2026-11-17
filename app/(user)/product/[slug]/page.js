@@ -1,5 +1,6 @@
 import {
   applyProductCampaign,
+  getFreeDeliveryCampaignLabel,
   selectCampaignsByPriority,
   toCampaignDisplayData,
 } from "@/backend/services/campaignService";
@@ -20,6 +21,7 @@ import { Suspense } from "react";
 import ProductDataView from "../_components/ProductDataView";
 import ProductRecommendations from "../_components/ProductRecommendations";
 import { getCategorySizeSettings } from "@/backend/services/sizeChartService";
+import { getCategoryDeliveryBenefits } from "@/backend/services/categoryDeliveryBenefitsService";
 import ProductImageFirstPreview from "../_components/ProductImageFirstPreview";
 
 export const revalidate = false;
@@ -205,6 +207,7 @@ async function ProductPageContent({ detailsPromise }) {
     );
   });
   const campaignOffers = productCampaigns.map(toCampaignDisplayData);
+  const deliveryCampaignLabel = getFreeDeliveryCampaignLabel(productCampaigns, data.id, data.categoryId);
   const variationsWithCampaigns = data.variations.map((variation) => {
     const regular = Number(variation.regularPrice) || 0;
     const sale =
@@ -238,9 +241,10 @@ async function ProductPageContent({ detailsPromise }) {
   const hasSize = data.hasVariations && data.variations.some((variant) =>
     variant.combinations.some((option) => option.variationName?.name?.trim().toLowerCase() === "size"),
   );
-  const [reviews, sizeSettings] = await Promise.all([
+  const [reviews, sizeSettings, deliveryBenefits] = await Promise.all([
     getPublishedProductPhotoReviews(data.id),
     hasSize ? getCategorySizeSettings(data.categoryId) : null,
+    getCategoryDeliveryBenefits(data.category),
   ]);
 
   return (
@@ -262,6 +266,8 @@ async function ProductPageContent({ detailsPromise }) {
       <ProductDataView
         data={{ ...data, variations: variationsWithCampaigns }}
         campaignOffers={campaignOffers}
+        deliveryCampaignLabel={deliveryCampaignLabel}
+        deliveryBenefits={deliveryBenefits}
         blurDataURL={DEFAULT_BLUR_DATA_URL}
         reviews={reviews}
         sizeChart={sizeSettings?.chart}

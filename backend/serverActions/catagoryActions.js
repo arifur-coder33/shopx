@@ -13,6 +13,7 @@ import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/servic
 import { buildStorefrontProductFilter } from "@/backend/utils/storefrontProductFilters";
 import { getStorefrontVariationOptions } from "@/backend/utils/getStorefrontVariationOptions";
 import { categorySizeChartInput } from "../services/sizeChartService";
+import { readCategoryDeliveryBenefitFields } from "@/lib/categoryDeliveryBenefits";
 
 export async function createCategoryAction(formData) {
   const data = Object.fromEntries(formData.entries());
@@ -23,7 +24,7 @@ export async function createCategoryAction(formData) {
       : undefined;
     const slug = generateSlug(data?.slug || data?.name || "");
     if (!slug) throw new Error("A valid category slug is required.");
-    if (data.unitName !== undefined && data.specifications === undefined) await hasPermission("category", "create");
+    if (data.specifications === undefined && (data.unitName !== undefined || data.exchangeTextMode !== undefined || data.returnTextMode !== undefined)) await hasPermission("category", "create");
     let specifications;
     if (data.specifications !== undefined) {
       await hasPermission("category", "create");
@@ -31,6 +32,7 @@ export async function createCategoryAction(formData) {
     }
 
     const preparedData = {
+      ...readCategoryDeliveryBenefitFields(data),
       sizeChart,
       ...(data.unitName && { unit: { connect: { name: data.unitName } } }),
       name: data?.name,
@@ -109,6 +111,8 @@ export async function getCategoryById(id) {
         description: true,
         slug: true,
         sizeChartId: true,
+        exchangeText: true,
+        returnText: true,
         unitName: true,
         specifications: { orderBy: { sortOrder: "asc" }, include: { specification: { include: { parent: true } } } },
 
@@ -165,7 +169,7 @@ export async function updateCategoryAction({ formData, id }) {
   const data = Object.fromEntries(formData.entries());
 
   try {
-    if (data.unitName !== undefined && data.specifications === undefined) await hasPermission("category", "update");
+    if (data.specifications === undefined && (data.unitName !== undefined || data.exchangeTextMode !== undefined || data.returnTextMode !== undefined)) await hasPermission("category", "update");
     const sizeChart = data.sizeChartId !== undefined
       ? (await hasPermission("category", "update"), await categorySizeChartInput(data, id))
       : undefined;
@@ -190,6 +194,7 @@ export async function updateCategoryAction({ formData, id }) {
     // }
 
     const preparedData = {
+      ...readCategoryDeliveryBenefitFields(data),
       sizeChart,
       ...(data.unitName !== undefined && { unit: data.unitName ? { connect: { name: data.unitName } } : { disconnect: true } }),
       name: data?.name,

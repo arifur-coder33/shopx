@@ -1,7 +1,13 @@
 import ProductDescription from "@/components/products/productDescription";
 import ProductSpecifications from "@/components/products/ProductSpecifications";
 import { replaceNumbers } from "@/utils/engToBanNumber";
-import { Truck } from "lucide-react";
+import {
+  Banknote,
+  PackageCheck,
+  Repeat2,
+  RotateCcw,
+  Truck,
+} from "lucide-react";
 import ViewProductEvent from "../[slug]/_components/ViewProductEvent";
 import ProductDetailMedia from "./ProductDetailMedia";
 import ProductHeader from "./ProductHeader";
@@ -10,6 +16,8 @@ import ProductInfoTabs from "./ProductInfoTabs";
 export default function ProductDataView({
   data,
   campaignOffers = [],
+  deliveryCampaignLabel,
+  deliveryBenefits,
   blurDataURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   adminView,
   reviews = [],
@@ -18,6 +26,42 @@ export default function ProductDataView({
   const mainProductImageId = data?.thumbnail?.name || data?.mainImage;
 
   const { title, description } = data;
+  const hasAdvance =
+    data.advancePaymentType && data.advancePaymentType !== "NONE";
+  const deliveryMaxDays = Number(data.deliveryMaxDays ?? 5);
+  const benefits = [
+    {
+      id: "delivery-time",
+      icon: Truck,
+      label: `${deliveryMaxDays < 7 ? "দ্রুত ডেলিভারি" : "ডেলিভারির সময়"}: ${replaceNumbers(String(data.deliveryMinDays ?? 2))}–${replaceNumbers(String(deliveryMaxDays))} দিন`,
+    },
+    {
+      id: "delivery",
+      icon: PackageCheck,
+      label: deliveryCampaignLabel,
+      detail: "ক্যাম্পেইন অনুযায়ী",
+    },
+    {
+      id: "cod",
+      icon: Banknote,
+      label: data.codAvailable === false ? null : "Cash on Delivery",
+      detail: hasAdvance
+        ? "অগ্রিমের পর বাকি টাকা"
+        : "পণ্য হাতে পেয়ে মূল্য পরিশোধ",
+    },
+    {
+      id: "exchange",
+      icon: Repeat2,
+      label: deliveryBenefits?.exchangeText,
+      detail: "সহজ এক্সচেঞ্জ সুবিধা",
+    },
+    {
+      id: "return",
+      icon: RotateCcw,
+      label: deliveryBenefits?.returnText,
+      detail: "শর্তসাপেক্ষে",
+    },
+  ].filter(({ label }) => label);
   const hasSpecifications = (data.specifications || []).some(
     (row) => row?.value?.trim() && row?.specification,
   );
@@ -39,7 +83,8 @@ export default function ProductDataView({
     id: data.id,
     slug: data.slug,
     title: data.title,
-    image: data.thumbnail?.name || data.variations?.[0]?.thumbnail?.name || null,
+    image:
+      data.thumbnail?.name || data.variations?.[0]?.thumbnail?.name || null,
     hasVariations: Boolean(data.hasVariations),
     regularPrice: data.variations?.[0]?.regularPrice ?? null,
     discountPrice: data.variations?.[0]?.discountPrice ?? null,
@@ -62,29 +107,51 @@ export default function ProductDataView({
           sizeChart={sizeChart}
         />
       </section>
-      <section className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-border bg-surface p-3 text-sm text-text-secondary">
-        <span className="inline-flex items-center gap-1.5 font-semibold text-text-primary">
-          <Truck className="h-4 w-4 text-primary" />
-          ডেলিভারি সময়: {replaceNumbers(String(data.deliveryMinDays ?? 2))}–
-          {replaceNumbers(String(data.deliveryMaxDays ?? 5))} দিন
-        </span>
-        <span>
-          {data.codAvailable === false
-            ? "এই পণ্যে COD নেই"
-            : data.advancePaymentType && data.advancePaymentType !== "NONE"
-              ? "অগ্রিমের পর বাকি COD-তে দেওয়া যাবে"
-              : "Cash on Delivery পাওয়া যাবে"}
-        </span>
-        {data.advancePaymentType === "DELIVERY_FEE" && (
-          <span>ডেলিভারি চার্জ অগ্রিম দিতে হবে</span>
+      <section className="mt-3">
+        {benefits.length > 0 && (
+          <ul className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {benefits.map(({ id, icon: Icon, label, detail }) => (
+              <li
+                key={id}
+                className="relative flex h-12 min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-border bg-surface px-2 text-left shadow-sm transition-shadow hover:shadow-brand sm:h-auto sm:min-h-20 sm:flex-col sm:gap-0 sm:rounded-2xl sm:px-3 sm:pb-2 sm:pt-2 sm:text-center"
+              >
+                <span className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-white shadow-md shadow-primary/25 sm:mt-0.5 sm:h-10 sm:w-10 sm:rounded-xl">
+                  <Icon
+                    className="h-4 w-4 sm:h-5 sm:w-5"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </span>
+                <span className="relative z-10 line-clamp-2 min-w-0 text-xs font-bold leading-tight text-text-primary sm:mt-2 sm:text-base sm:leading-snug">
+                  {label}
+                  {detail && (
+                    <small className="mt-1 hidden text-xs font-normal leading-relaxed text-text-muted sm:block">
+                      {detail}
+                    </small>
+                  )}
+                </span>
+                <span
+                  className="pointer-events-none absolute -bottom-7 -right-5 z-0 h-16 w-24 rotate-[-12deg] rounded-[50%] bg-primary-soft/70"
+                  aria-hidden="true"
+                />
+              </li>
+            ))}
+          </ul>
         )}
-        {data.advancePaymentType === "PARTIAL" && (
-          <span>
-            অগ্রিম:{" "}
-            {data.advancePaymentValueType === "PERCENT"
-              ? `${data.advancePaymentValue}%`
-              : `৳${data.advancePaymentValue}`}
-          </span>
+        {(data.advancePaymentType === "DELIVERY_FEE" ||
+          data.advancePaymentType === "PARTIAL") && (
+          <p className="mt-2 text-xs text-text-secondary">
+            {data.advancePaymentType === "DELIVERY_FEE" ? (
+              "ডেলিভারি চার্জ অগ্রিম দিতে হবে"
+            ) : (
+              <>
+                অগ্রিম:{" "}
+                {data.advancePaymentValueType === "PERCENT"
+                  ? `${data.advancePaymentValue}%`
+                  : `৳${data.advancePaymentValue}`}
+              </>
+            )}
+          </p>
         )}
       </section>
 

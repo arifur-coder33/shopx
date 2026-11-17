@@ -2,6 +2,7 @@
 import { resolveComboRewards } from "@/components/campaign/resolveComboRewards";
 import { Truck } from "lucide-react";
 import Button from "../button";
+import { useSiteAppearance } from "@/components/common/Providers";
 import DeliveryAddress from "./DeliveryAddress";
 
 import { getCheckoutCampaignPreview } from "@/backend/serverActions/checkoutCampaignPreviewAction";
@@ -41,6 +42,7 @@ export default function OrderForm({
   checkoutProviders,
   campaignOffers = [],
 }) {
+  const appearance = useSiteAppearance() || {};
   const { data: session } = useSession();
   const { clearCart } = useCart();
   const [paymentSelection, setPaymentSelection] = useState(null);
@@ -566,9 +568,10 @@ export default function OrderForm({
       <Button
         type={"submit"}
         disabled={Boolean(loadingStep || confirmedOrderNo)}
-        className="w-full z-30 bg-brand p-2 sticky bottom-2  left-0 border-b-4  border-slate-600 rounded-lg text-center hover:text-white cursor-pointer  my-1.5 text-slate-200 "
+        style={{ backgroundColor: appearance.placeOrderButtonColor || "#ea580c" }}
+        className="w-full z-30 p-2 sticky bottom-2 left-0 border-b-4 border-slate-600 rounded-lg text-center hover:text-white cursor-pointer my-1.5 text-white"
       >
-        {confirmedOrderNo ? "অর্ডার নেওয়া হয়েছে" : loadingStep ? "অর্ডার তৈরি হচ্ছে…" : "Place Order"}
+        {confirmedOrderNo ? "অর্ডার নেওয়া হয়েছে" : loadingStep ? "অর্ডার তৈরি হচ্ছে…" : appearance.placeOrderButtonLabel || "Place Order"}
       </Button>
       {loadingStep && !error && (
         <CheckoutProgressOverlay

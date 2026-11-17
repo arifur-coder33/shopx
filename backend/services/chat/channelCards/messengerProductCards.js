@@ -22,7 +22,7 @@ async function sendTemplate(conversation, credentials, elements) {
   const response = await fetch(`https://graph.facebook.com/${version}/${credentials.messengerPageId}/messages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${credentials.messengerPageAccessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "template", payload: { template_type: "generic", elements } } } }),
+    body: JSON.stringify({ recipient: { id: conversation.externalUserId }, messaging_type: "RESPONSE", message: { attachment: { type: "template", payload: { template_type: "generic", image_aspect_ratio: "square", elements } } } }),
     cache: "no-store", signal: AbortSignal.timeout(15000),
   });
   const result = await response.json().catch(() => ({}));

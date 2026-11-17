@@ -6,6 +6,7 @@ import { trackEvent } from "@/lib/SocialEventTracking";
 import { EVENTS } from "@/lib/SocialEventTracking/events";
 import { useSiteAppearance } from "@/components/common/Providers";
 import { useSession } from "next-auth/react";
+import { LoaderCircle, Plus, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "react-toastify";
@@ -57,10 +58,12 @@ export default function ProductCardActions({ slug, checkoutTracking }) {
         onClick={handleAddToCart}
         disabled={loading}
         aria-busy={loading}
-        className="min-h-11 min-w-0 truncate rounded-brand px-1.5 py-2 text-center text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60 sm:px-2 sm:text-sm"
+        aria-label={cartLabel}
+        title={cartLabel}
+        className="relative flex min-h-11 min-w-0 items-center justify-center truncate rounded-brand px-1.5 py-2 text-center text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60 sm:px-2 sm:text-sm"
         style={{ backgroundColor: appearance.cartButtonColor || "#ea580c" }}
       >
-        {loading ? "Adding…" : cartLabel}
+        {loading ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" /> : <span className="relative"><ShoppingCart className="h-5 w-5" aria-hidden="true" /><Plus className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-white text-primary" strokeWidth={3} aria-hidden="true" /></span>}
       </button>
       <Link
         className="flex min-h-11 min-w-0 items-center justify-center truncate rounded-brand px-1.5 py-2 text-center text-xs font-semibold text-white transition-opacity hover:opacity-90 sm:px-2 sm:text-sm"

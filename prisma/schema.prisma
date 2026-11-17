@@ -85,6 +85,8 @@ model RolePermission {
 
 // Category model for organizing products
 model Category {
+  exchangeText String?
+  returnText   String?
   sizeChartId String?
   sizeChart   SizeChart? @relation(fields: [sizeChartId], references: [id], onDelete: Restrict)
   unitName    String?
@@ -900,6 +902,8 @@ model SiteSetting {
   buyNowButtonLabel     String?  @default("Buy Now") @db.VarChar(40)
   cartButtonColor       String?  @default("#ea580c") @db.VarChar(7)
   buyNowButtonColor     String?  @default("#0f766e") @db.VarChar(7)
+  placeOrderButtonLabel String?  @default("Place Order") @db.VarChar(40)
+  placeOrderButtonColor String?  @default("#ea580c") @db.VarChar(7)
   manualDeliveryEnabled Boolean @default(false)
   createdAt             DateTime @default(now()) // Timestamp for order placement
   updatedAt             DateTime @updatedAt // Auto-updated timestamp

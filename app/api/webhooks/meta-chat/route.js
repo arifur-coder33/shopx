@@ -114,6 +114,20 @@ async function saveInboundMessage({ channel, externalUserId, customerName, custo
   }
 }
 
+async function saveOutboundEcho({ channel, externalUserId, messageId, content, metadata }) {
+  if (!externalUserId || !messageId || !content) return;
+  const conversation = await prisma.chatConversation.upsert({
+    where: { channel_externalUserId: { channel, externalUserId } },
+    create: { channel, externalUserId, lastMessageAt: new Date() },
+    update: { lastMessageAt: new Date() },
+    select: { id: true },
+  });
+  await prisma.chatMessage.createMany({
+    data: [{ conversationId: conversation.id, channel, direction: "OUTBOUND", authorType: "AGENT", content: content.slice(0, 4000), externalMessageId: messageId, deliveryStatus: "SENT", metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined }],
+    skipDuplicates: true,
+  });
+}
+
 async function applyMetaMessageEdit(channel, edit) {
   const externalMessageId = edit?.message_id || edit?.id;
   const content = typeof edit?.text === "string" ? edit.text : edit?.text?.body;
@@ -236,6 +250,17 @@ export async function POST(request) {
     for (const entry of payload.entry || []) {
       for (const change of entry.changes || []) {
         const value = change.value || {};
+        if (credentials.whatsappEnabled && change.field === "smb_message_echoes") {
+          for (const echo of value.message_echoes || value.messages || []) {
+            await saveOutboundEcho({
+              channel: "WHATSAPP",
+              externalUserId: echo.to || echo.recipient_id,
+              messageId: echo.id || echo.message_id,
+              content: echo.text?.body || echo.text || echo.image?.caption || echo.document?.caption || `[${echo.type || "WhatsApp"} message]`,
+              metadata: { type: echo.type || "TEXT", timestamp: echo.timestamp, source: "WHATSAPP_BUSINESS_APP" },
+            });
+          }
+        }
         if (credentials.whatsappEnabled) {
           for (const status of value.statuses || []) await applyMetaDeliveryStatus("WHATSAPP", status.id, status.status, status.errors || []);
         }
@@ -303,7 +328,17 @@ export async function POST(request) {
           const conversation = await prisma.chatConversation.findUnique({ where: { channel_externalUserId: { channel: "MESSENGER", externalUserId: event.sender.id } }, select: { id: true } });
           if (conversation) await prisma.chatMessage.updateMany({ where: { conversationId: conversation.id, direction: "OUTBOUND", deliveryStatus: "DELIVERED", createdAt: { lte: new Date(Number(event.read.watermark)) } }, data: { deliveryStatus: "READ" } });
         }
-        if (event.message?.is_echo) continue;
+        if (event.message?.is_echo) {
+          const echoText = event.message.text || (event.message.attachments?.length ? `[${event.message.attachments[0].type || "attachment"} message]` : "");
+          await saveOutboundEcho({
+            channel: "MESSENGER",
+            externalUserId: event.recipient?.id,
+            messageId: event.message.mid,
+            content: echoText,
+            metadata: { timestamp: event.timestamp, attachments: event.message.attachments || [], source: "MESSENGER_PAGE_INBOX" },
+          });
+          continue;
+        }
         if (event.message?.edit && await applyMetaMessageEdit("MESSENGER", event.message.edit)) continue;
         const text = event.message?.text || (event.message?.attachments?.some((attachment) => attachment.type === "image") ? "📷 Photo" : event.message?.attachments?.length ? `[${event.message.attachments[0].type || "attachment"} message]` : "");
         const senderId = event.sender?.id;

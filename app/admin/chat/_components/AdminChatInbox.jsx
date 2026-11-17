@@ -570,6 +570,16 @@ export default function AdminChatInbox({
     );
     const result = await sendChatReplyAction(replyTarget.id, content, null, null, null, replyToMessage?.id || null).catch((failure) => ({ success: false, message: failure?.message || "বার্তা পাঠানো যায়নি।" }));
     setBusy(false);
+    if (result.success && result.command === "AI_DISABLED") {
+      setConversation((current) => current ? {
+        ...current,
+        aiModeEnabled: false,
+        messages: current.messages.filter((item) => item.id !== pendingId),
+      } : current);
+      setReplyToMessage(null);
+      loadInbox();
+      return;
+    }
     if (result.success) {
       setConversation((current) =>
         current
@@ -937,7 +947,6 @@ export default function AdminChatInbox({
         </select>
       </label>
       </details>
-      {actionButton("ai", conversation.aiModeEnabled ? "AI বন্ধ করুন" : "AI চালু করুন", conversation.assignedToId ? "AI চালু করতে আগে প্রতিনিধি unassign করুন" : "এই চ্যাটে স্বয়ংক্রিয় উত্তর চালু বা বন্ধ করুন", MessageCircle, toggleConversationAi, mobile, Boolean(conversation.assignedToId))}
       {actionButton("human", conversation.needsHumanAssistant ? "সমাধান হয়েছে" : "প্রতিনিধির সাহায্য নিন", conversation.needsHumanAssistant ? "Need human assistant তালিকা থেকে সরান" : "চ্যাটটি প্রতিনিধির তালিকায় রাখুন এবং AI থামান", UserRound, toggleHumanAssistance, mobile)}
       {actionButton(`status-${conversation.status === "PENDING" ? "OPEN" : "PENDING"}`, conversation.status === "PENDING" ? "অপেক্ষা থেকে ফেরান" : "অপেক্ষায় রাখুন", "চ্যাটটি Pending বা Open তালিকায় রাখুন", Clock3, () => changeStatus(conversation.status === "PENDING" ? "OPEN" : "PENDING"), mobile)}
       {mobile && actionButton(`status-${conversation.status === "CLOSED" ? "OPEN" : "CLOSED"}`, conversation.status === "CLOSED" ? "চ্যাট আবার খুলুন" : "চ্যাট শেষ করুন", conversation.status === "CLOSED" ? "আবার এই চ্যাটে উত্তর দেওয়ার সুযোগ দিন" : "কথা শেষ হলে Closed তালিকায় রাখুন", Check, () => changeStatus(conversation.status === "CLOSED" ? "OPEN" : "CLOSED"), mobile)}
@@ -1167,6 +1176,7 @@ export default function AdminChatInbox({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
+                  {canUpdate && <button type="button" onClick={toggleConversationAi} disabled={Boolean(pendingAction) || Boolean(conversation.assignedToId && !conversation.aiModeEnabled)} aria-label="AI সেটিং" title={conversation.aiModeEnabled ? "AI সেটিং · চালু আছে · বন্ধ করতে চাপুন" : "AI সেটিং · বন্ধ আছে · চালু করতে চাপুন"} aria-pressed={conversation.aiModeEnabled} className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2 text-xs font-semibold ${conversation.aiModeEnabled ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-border bg-background text-text-muted"}`}><span className={`h-2 w-2 rounded-full ${conversation.aiModeEnabled ? "bg-emerald-500" : "bg-slate-400"}`} />AI সেটিং</button>}
                   {canUpdate && <div className="hidden sm:block">{conversationActions()}</div>}
                   <button type="button" onClick={() => setFocusMode((value) => !value)} aria-label={focusMode ? "Exit Focus Mode" : "Focus Mode"} title={focusMode ? "Exit Focus Mode" : "Focus Mode"} aria-pressed={focusMode} className="grid h-9 w-9 place-items-center rounded-lg border border-border text-text hover:bg-background">{focusMode ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
                 <div ref={actionsMenuRef} className="relative shrink-0">
