@@ -1150,7 +1150,7 @@ export async function updateOrderStatusAction(orderId, status, note) {
 
     // 🔄 revalidate
     revalidatePath("/admin/orders");
-    revalidatePath("/admin/procurement/stock");
+    revalidatePath("/admin/inventory/stock");
     revalidateTag("order");
 
     return {

@@ -1,6 +1,7 @@
 "use client";
 
 import { completeQueuedReturnRefund } from "@/backend/serverActions/refundAction";
+import AccountGuide from "../AccountGuide";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -36,7 +37,7 @@ export default function RefundDisbursement({ refunds, moneyAccounts, history }) 
   };
 
   return <main className="mx-auto max-w-6xl space-y-5 pb-10">
-    <header className="card"><h1 className="text-2xl font-black">Refund disbursement · Accounts</h1><p className="mt-1 text-sm text-text-muted">MKT-approved refunds arrive here. Accounts verifies the payout destination, sends the money, and records the business account that is debited.</p></header>
+    <header className="card"><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-black">Refund disbursement · Accounts</h1><AccountGuide feature="refunds"/></div><p className="mt-1 text-sm text-text-muted">MKT-approved refunds arrive here. Accounts verifies the payout destination, sends the money, and records the business account that is debited.</p></header>
     {message && <p role="status" className="card text-sm">{message}</p>}
     {!refunds.length ? <section className="card py-12 text-center text-text-muted">No approved refunds are waiting for payout.</section> : <section className="space-y-4">{refunds.map((refund) => {
       const destinationType = destinationTypes[refund.id] || refund.refundDestinationType || "ORIGINAL_PAYMENT";

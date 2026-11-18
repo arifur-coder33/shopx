@@ -54,7 +54,7 @@ export async function receiveReturnedOrder(formData) {
     let queuedRefundAmount = 0;
     let refundQueueNote = "No refundable paid balance.";
     await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: orderId }, include: { orderItems: { include: { deliveryItems: true, returnItems: true } }, payments: { where: { status: { in: ["PAID", "PARTIALLY_REFUNDED"] } }, include: { refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } }, refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } });
+      const order = await tx.order.findUnique({ where: { id: orderId }, include: { deliveries: { select: { id: true } }, orderItems: { include: { deliveryItems: true, returnItems: true } }, payments: { where: { status: { in: ["PAID", "PARTIALLY_REFUNDED"] } }, include: { refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } }, refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } });
       const allowedStatuses = reasonType === "DELIVERY_FAIL"
         ? ["RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED"]
         : ["DELIVERED", "RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED", "RETURNED", "REFUNDING"];
@@ -151,8 +151,15 @@ export async function receiveReturnedOrder(formData) {
         const source = orderItems.get(item.orderItemId);
         await tx.returnReceiptItem.create({ data: { returnReceiptId: receipt.id, orderItemId: source.id, variationId: source.variationId, warehouseId, quantity: item.quantity, disposition: item.disposition } });
         if (item.disposition === "RESTOCK") {
-          const stock = await tx.stock.upsert({ where: { warehouseId_variationId: { warehouseId, variationId: source.variationId } }, create: { warehouseId, variationId: source.variationId, quantity: item.quantity, available: item.quantity, createdBy: userId, updatedBy: userId }, update: { quantity: { increment: item.quantity }, available: { increment: item.quantity }, updatedBy: userId } });
-          await tx.inventoryTransaction.create({ data: { warehouseId, variationId: source.variationId, type: "RETURN_IN", quantity: item.quantity, balanceAfter: stock.quantity, referenceType: "RETURN", referenceId: receipt.id, remarks: `Restocked from order ${order.orderNo}; ${description}`, createdBy: userId } });
+          const saleMovements = await tx.inventoryTransaction.findMany({ where: { referenceType: "SALE", referenceId: { in: [order.id, ...order.deliveries.map((delivery) => delivery.id)] }, variationId: source.variationId, type: "OUT" }, select: { quantity: true, unitCost: true } });
+          const soldQuantity = saleMovements.reduce((sum, movement) => sum + Math.abs(movement.quantity), 0);
+          const saleCost = saleMovements.reduce((sum, movement) => sum + Math.abs(movement.quantity) * (movement.unitCost || 0), 0);
+          const returnUnitCost = soldQuantity > 0 ? saleCost / soldQuantity : 0;
+          const current = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId, variationId: source.variationId } } });
+          const balanceAfter = (current?.quantity || 0) + item.quantity;
+          const averageUnitCost = balanceAfter > 0 ? (((current?.quantity || 0) * (current?.averageUnitCost || 0)) + item.quantity * returnUnitCost) / balanceAfter : 0;
+          const stock = await tx.stock.upsert({ where: { warehouseId_variationId: { warehouseId, variationId: source.variationId } }, create: { warehouseId, variationId: source.variationId, quantity: item.quantity, available: item.quantity, averageUnitCost: returnUnitCost, createdBy: userId, updatedBy: userId }, update: { quantity: { increment: item.quantity }, available: { increment: item.quantity }, averageUnitCost, updatedBy: userId } });
+          await tx.inventoryTransaction.create({ data: { warehouseId, variationId: source.variationId, type: "RETURN_IN", quantity: item.quantity, balanceAfter: stock.quantity, unitCost: returnUnitCost, referenceType: "RETURN", referenceId: receipt.id, remarks: `Restocked from order ${order.orderNo}; ${description}`, createdBy: userId } });
         }
       }
 
@@ -191,8 +198,8 @@ export async function receiveReturnedOrder(formData) {
     });
     revalidatePath("/admin/returns");
     revalidatePath("/admin/refunds");
-    revalidatePath("/admin/procurement/stock");
-    revalidatePath("/admin/procurement/expenses");
+    revalidatePath("/admin/inventory/stock");
+    revalidatePath("/admin/accounts/expenses");
     revalidatePath("/admin/orders");
     return { success: true, message: `Returned items received; stock and expense records were updated.${queuedRefundAmount > 0 ? ` ৳${queuedRefundAmount.toFixed(2)} refund added to the refund queue for admin decision.` : ` ${refundQueueNote}`}` };
   } catch (error) { return actionError(error, "Could not receive returned items."); }

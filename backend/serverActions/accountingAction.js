@@ -39,10 +39,23 @@ export async function getJournalEntries(params = {}) {
     const page = Math.max(1, Number(params.page) || 1), limit = Math.min(100, Math.max(5, Number(params.limit) || 10));
     const range = dateRange(params.startDate, params.endDate);
     const where = { status: "POSTED", ...((params.startDate || params.endDate) && { entryDate: range }), ...(params.entryNo && { entryNo: { contains: String(params.entryNo), mode: "insensitive" } }), ...(params.description && { description: { contains: String(params.description), mode: "insensitive" } }), ...(params.referenceId && { referenceId: { contains: String(params.referenceId), mode: "insensitive" } }), ...(params.referenceType && params.referenceType !== "ALL" && { referenceType: params.referenceType }) };
-    const [data, total] = await Promise.all([
+    const [data, total, groupedLines] = await Promise.all([
       prisma.journalEntry.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { entryDate: "desc" }, include: { lines: { include: { account: true } } } }),
       prisma.journalEntry.count({ where }),
+      prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: where }, _sum: { debit: true, credit: true } }),
     ]);
-    return { success: true, data, pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }, filters: params };
+    const accountIds = groupedLines.map((line) => line.accountId);
+    const accounts = accountIds.length ? await prisma.financialAccount.findMany({ where: { id: { in: accountIds } }, select: { id: true, code: true, name: true, type: true } }) : [];
+    const accountById = new Map(accounts.map((account) => [account.id, account]));
+    const accountBreakdown = groupedLines.map((line) => {
+      const account = accountById.get(line.accountId);
+      const debit = line._sum.debit || 0;
+      const credit = line._sum.credit || 0;
+      const normalBalance = ["ASSET", "EXPENSE"].includes(account?.type) ? debit - credit : credit - debit;
+      return { accountId: line.accountId, code: account?.code || "—", name: account?.name || "Unknown account", type: account?.type || "UNKNOWN", debit, credit, balance: normalBalance };
+    }).sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+    const totalDebit = accountBreakdown.reduce((sum, account) => sum + account.debit, 0);
+    const totalCredit = accountBreakdown.reduce((sum, account) => sum + account.credit, 0);
+    return { success: true, data, summary: { totalDebit, totalCredit, difference: totalDebit - totalCredit, accountBreakdown }, pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }, filters: params };
   } catch (error) { return actionError(error, "Failed to load account ledger."); }
 }

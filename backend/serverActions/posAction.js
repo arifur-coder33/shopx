@@ -406,7 +406,7 @@ export async function createPosSale(formData) {
           });
           if (debited.count !== 1) throw new Error(`Stock changed while selling ${stock.variation.sku}. Try again.`);
           await tx.inventoryTransaction.create({
-            data: { warehouseId, variationId: stock.variationId, type: "OUT", quantity: -quantity, balanceAfter: stock.quantity - quantity, referenceType: "SALE", referenceId: order.id, remarks: `POS customer pickup ${orderNo}`, createdBy: userId },
+            data: { warehouseId, variationId: stock.variationId, type: "OUT", quantity: -quantity, balanceAfter: stock.quantity - quantity, unitCost: stock.averageUnitCost || 0, referenceType: "SALE", referenceId: order.id, remarks: `POS customer pickup ${orderNo}`, createdBy: userId },
           });
         }
       } else {
@@ -501,8 +501,8 @@ export async function createPosSale(formData) {
 
     revalidatePath("/admin/pos");
     revalidatePath("/admin/orders");
-    revalidatePath("/admin/procurement/stock");
-    revalidatePath("/admin/procurement/deliveries");
+    revalidatePath("/admin/inventory/stock");
+    revalidatePath("/admin/inventory/deliveries");
     revalidatePath("/admin/accounts");
     return {
       success: true,

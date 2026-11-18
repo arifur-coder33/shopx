@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "react-toastify";
 
-export default function EditFormShell({ action, section, className, children }) {
+export default function EditFormShell({ action, section, className, children, basePath = "/admin/procurement" }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const submit = (event) => {
@@ -14,7 +14,7 @@ export default function EditFormShell({ action, section, className, children }) 
       const result = await action(formData);
       if (!result?.success) return toast.error(result?.message || "Update failed.");
       toast.success(result.message || "Record updated successfully.");
-      router.push(`/admin/procurement/${section}`);
+      router.push(`${basePath}/${section}`);
       router.refresh();
     });
   };

@@ -90,16 +90,16 @@ export default function CampaignCountdown({ startAt, endAt, className = "", comp
     return <span title={countdown.label} className={"whitespace-nowrap text-sm font-semibold text-text-muted " + className}>{showCompactLabel ? `${countdown.label}: ` : ""}{time}</span>;
   }
 
-  return <div className={"rounded-xl border border-primary/15 bg-gradient-to-br from-primary-soft/70 via-surface to-primary-soft/40 p-3 shadow-sm sm:p-4 " + className}>
-    <div className="mb-2 flex items-center gap-2 text-sm font-bold text-primary sm:text-base">
+  return <div className={"rounded-xl border border-primary/20 bg-gradient-to-br from-primary-soft/70 via-surface to-primary-soft/40 p-4 shadow-sm sm:p-5 " + className}>
+    <div className="mb-3 flex items-center gap-2 text-base font-bold text-primary sm:text-lg">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
       <span>{countdown.label}</span>
     </div>
-    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2" aria-live="off">
-      {units.map(([value, label]) => <div key={label} className="flex min-w-[3.5rem] flex-col items-center rounded-lg border border-primary/10 bg-surface px-2 py-1.5 shadow-sm sm:min-w-[4.25rem] sm:px-3 sm:py-2">
-        <span className="text-lg font-black leading-none tabular-nums text-primary sm:text-2xl">{replaceNumbers(String(value).padStart(2, "0"))}</span>
-        <span className="mt-1 text-[10px] font-semibold text-text-muted sm:text-xs">{label}</span>
-      </div>)}
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3" aria-live="off">
+      {units.map(([value, label]) => <span key={label} className="campaign-flip-unit campaign-flip-unit-large">
+        <strong key={`${label}-${value}`} className="campaign-flip-digit">{replaceNumbers(String(value).padStart(2, "0"))}</strong>
+        <small>{label}</small>
+      </span>)}
     </div>
   </div>;
 }

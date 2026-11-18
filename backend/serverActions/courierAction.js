@@ -122,7 +122,7 @@ export async function createCourierDeliveryAction({ formData }) {
       if (order.status !== "PENDING") throw new Error("A courier order has already been created for this order.");
       const confirmation = await updateOrderStatusAction(order.id, "PROCESSING");
       if (!confirmation.success) throw new Error(confirmation.message || "Order confirmation failed.");
-      revalidatePath("/admin/procurement/deliveries");
+      revalidatePath("/admin/inventory/deliveries");
       return { success: true, data: { ...order.shipping, orderStatus: "PROCESSING" } };
     }
     if (!['PENDING', 'PROCESSING'].includes(order.status)) {
@@ -352,7 +352,7 @@ export async function createCourierDeliveryAction({ formData }) {
       const confirmation = await updateOrderStatusAction(order.id, "PROCESSING");
       if (!confirmation.success) throw new Error(confirmation.message || "Courier booked, but confirmation failed.");
     }
-    revalidatePath("/admin/procurement/deliveries");
+    revalidatePath("/admin/inventory/deliveries");
     return {
       success: true,
       data: {
@@ -393,7 +393,7 @@ export async function cancelCourierDeliveryAction(courierId, orderId) {
     });
     revalidatePath("/admin/orders");
     revalidatePath("/admin/orders2");
-    revalidatePath("/admin/procurement/deliveries");
+    revalidatePath("/admin/inventory/deliveries");
     return { success: true, data: { status: "PENDING" } };
   } catch (error) {
     console.error("Error cancelling courier delivery:", error);

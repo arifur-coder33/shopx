@@ -158,7 +158,7 @@ export async function recordProviderFee(formData) {
       createdBy: userId,
     });
     revalidatePath("/admin/accounts");
-    revalidatePath("/admin/procurement/expenses");
+    revalidatePath("/admin/accounts/expenses");
     return { success: true, message: "Provider fee recorded as an expense.", data: result };
   } catch (error) {
     return actionError(error, "Failed to record provider fee.");

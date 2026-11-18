@@ -5,7 +5,7 @@ import CampaignCountdown from "./CampaignCountdown";
 import { getCampaignRuleText } from "@/components/campaign/campaignRuleText";
 import { replaceNumbers } from "@/utils/engToBanNumber";
 
-export function CampaignBannerCard({ campaign, single = false }) {
+export function CampaignBannerCard({ campaign, single = false, compact = false }) {
   const currentTime = Date.now();
   const isLive = (!campaign.startAt || new Date(campaign.startAt).getTime() <= currentTime) &&
     (!campaign.endAt || new Date(campaign.endAt).getTime() >= currentTime);
@@ -21,10 +21,10 @@ export function CampaignBannerCard({ campaign, single = false }) {
     .filter((product) => product?.photo).map((product) => [product.id, product])).values()).slice(0, 3);
 
   return <Link href={`/campaign/${campaign.id}`} className="campaign-live-card group block overflow-hidden rounded-[1.35rem] border border-white/70 bg-surface shadow-lg shadow-slate-900/10 ring-1 ring-slate-900/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/15">
-    <div className={`campaign-live-art relative overflow-hidden bg-gradient-to-br from-primary/90 via-primary to-secondary ${campaign.bannerUrl ? `campaign-has-banner ${single ? "h-[76px] sm:h-[160px]" : "aspect-[2.7/1] sm:aspect-[3/1]"}` : (single ? "h-[84px] sm:h-[220px]" : "aspect-[2.4/1] sm:aspect-[2.6/1]")}`}>
+    <div className={`campaign-live-art relative overflow-hidden bg-gradient-to-br from-primary/90 via-primary to-secondary ${campaign.bannerUrl ? `campaign-has-banner aspect-[2.4/1] sm:aspect-[2.6/1]` : (single ? "h-[84px] sm:h-[220px]" : "aspect-[2.4/1] sm:aspect-[2.6/1]")}`}>
       {isLive && <span className="campaign-live-indicator absolute left-2.5 top-2.5 z-20 inline-flex items-center gap-1.5 rounded-full border border-white/35 bg-green-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-lg sm:left-4 sm:top-4 sm:text-xs"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-200 opacity-80" /><span className="relative inline-flex h-2 w-2 rounded-full bg-white" /></span>LIVE</span>}
       {campaign.bannerUrl
-        ? <ImageCustomServer src={campaign.bannerUrl} alt={campaign.name} w={640} h={460} sizes={single ? "100vw" : "50vw"} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
+        ? <ImageCustomServer src={campaign.bannerUrl} alt={campaign.name} w={640} h={460} sizes={single ? "100vw" : "50vw"} className={`h-full w-full ${compact ? "bg-surface object-contain" : "object-cover transition duration-500 group-hover:scale-[1.02]"}`} />
         : <div className="relative flex h-full flex-col justify-center overflow-hidden bg-gradient-to-br from-primary via-primary to-secondary px-3 py-2 text-white sm:px-6 sm:py-4">
           <span aria-hidden="true" className="campaign-burst absolute inset-0" />
           <strong className={`relative z-[1] line-clamp-2 text-xl font-black leading-tight tracking-tight drop-shadow-[0_2px_0_rgba(0,0,0,.35)] sm:text-4xl ${productPhotos.length ? "max-w-[62%] sm:max-w-[72%]" : "max-w-[82%]"}`}>{campaign.name}</strong>
@@ -56,7 +56,7 @@ export default function CampaignBannerGrid({ campaigns, title = "চলমান
       {showAllLink && <Link href="/campaign" className="shrink-0 text-sm font-semibold text-primary hover:underline">সব ক্যাম্পেইন →</Link>}
     </div>}
     <div className={campaigns.length === 1 ? "grid w-full grid-cols-1 gap-2 sm:gap-3" : compact ? "grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4" : "grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3"}>
-      {campaigns.map((campaign) => <CampaignBannerCard key={campaign.id} campaign={campaign} single={campaigns.length === 1} />)}
+      {campaigns.map((campaign) => <CampaignBannerCard key={campaign.id} campaign={campaign} single={campaigns.length === 1} compact={compact} />)}
     </div>
     {compact && showAllLink && <div className="mt-3 flex justify-center">
       <Link href="/campaign" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary-soft/70 px-5 text-sm font-bold text-primary shadow-sm transition hover:-translate-y-0.5 hover:border-primary hover:bg-primary hover:text-white">

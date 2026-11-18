@@ -225,6 +225,7 @@ const colSpanClasses = {
 export default function SearchableDropdown({
   name,
   label,
+  placeholder,
   defaultId,
   addForm,
   dropDownLists = [],
@@ -337,8 +338,8 @@ export default function SearchableDropdown({
       setIsOpen(false);
     };
 
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => document.removeEventListener("pointerdown", handleOutsideClick);
   }, []);
 
   /* ---------------- Select ---------------- */
@@ -383,7 +384,7 @@ export default function SearchableDropdown({
           ref={inputRef}
           type="text"
           value={loading ? "Loading..." : query || selected?.name || ""}
-          placeholder={label ? " " : "Select an option"}
+          placeholder={label ? " " : placeholder || "Select an option"}
           readOnly={searchOff}
           onFocus={openDropdown}
           required={required}

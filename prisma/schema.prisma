@@ -85,12 +85,12 @@ model RolePermission {
 
 // Category model for organizing products
 model Category {
-  exchangeText String?
-  returnText   String?
-  sizeChartId String?
-  sizeChart   SizeChart? @relation(fields: [sizeChartId], references: [id], onDelete: Restrict)
-  unitName    String?
-  unit        CategoryUnit? @relation(fields: [unitName], references: [name], onDelete: Restrict)
+  exchangeText    String?
+  returnText      String?
+  sizeChartId     String?
+  sizeChart       SizeChart?              @relation(fields: [sizeChartId], references: [id], onDelete: Restrict)
+  unitName        String?
+  unit            CategoryUnit?           @relation(fields: [unitName], references: [name], onDelete: Restrict)
   specifications  CategorySpecification[]
   campaignTargets CampaignCategory[]
   id              String                  @id @default(cuid())
@@ -123,15 +123,15 @@ model Category {
 }
 
 model CategoryUnit {
-  name       String @id
+  name       String     @id
   categories Category[]
 }
 
 model SizeChart {
-  id         String @id @default(cuid())
-  name       String @unique
+  id         String     @id @default(cuid())
+  name       String     @unique
   imageId    String?
-  image      Media? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  image      Media?     @relation(fields: [imageId], references: [id], onDelete: SetNull)
   unit       String
   sizes      String[]
   rows       Json
@@ -171,7 +171,7 @@ model ProductCodeCounter {
 }
 
 model Media {
-  sizeCharts SizeChart[]
+  sizeCharts                SizeChart[]
   id                        String             @id @default(cuid())
   url                       String
   name                      String
@@ -341,6 +341,10 @@ model ProductVariation {
   stocks            Stock[]
   deliveryItems     DeliveryItem[]
   returnItems       ReturnReceiptItem[]
+  transferItems     InventoryTransferItem[]
+  countItems        InventoryCountItem[]
+  bomOutputs        InventoryBom[]          @relation("BomOutput")
+  bomComponents     InventoryBomComponent[]
 }
 
 // A campaign is a time-bound, server-evaluated promotion. Prices are never
@@ -599,22 +603,22 @@ model Shipping {
 
 model PaymentGateway {
   emiConfiguration     EmiConfiguration?
-  id                   String        @id @default(cuid())
+  id                   String            @id @default(cuid())
   name                 String
-  code                 String        @unique
-  adapterKey           String        @default("MANUAL")
-  isActive             Boolean       @default(false)
-  sortOrder            Int           @default(0)
+  code                 String            @unique
+  adapterKey           String            @default("MANUAL")
+  isActive             Boolean           @default(false)
+  sortOrder            Int               @default(0)
   moneyAccountId       String?
-  moneyAccount         MoneyAccount? @relation(fields: [moneyAccountId], references: [id])
+  moneyAccount         MoneyAccount?     @relation(fields: [moneyAccountId], references: [id])
   encryptedCredentials String?
-  credentialVersion    Int           @default(1)
+  credentialVersion    Int               @default(1)
   credentialsUpdatedAt DateTime?
   nonSecretConfig      Json?
-  orders               Order[]       @relation("OrderPaymentGateway")
+  orders               Order[]           @relation("OrderPaymentGateway")
   payments             Payment[]
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
   createdBy            String?
   updatedBy            String?
 
@@ -623,25 +627,25 @@ model PaymentGateway {
 }
 
 model EmiConfiguration {
-  id               String @id @default(cuid())
-  paymentGatewayId String @unique
+  id               String         @id @default(cuid())
+  paymentGatewayId String         @unique
   paymentGateway   PaymentGateway @relation(fields: [paymentGatewayId], references: [id], onDelete: Cascade)
-  enabled          Boolean @default(false)
-  minimumAmount    Float @default(0)
+  enabled          Boolean        @default(false)
+  minimumAmount    Float          @default(0)
   plans            EmiBankPlan[]
   updatedBy        String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
 
 model EmiBankPlan {
-  id                 String @id @default(cuid())
+  id                 String           @id @default(cuid())
   emiConfigurationId String
   emiConfiguration   EmiConfiguration @relation(fields: [emiConfigurationId], references: [id], onDelete: Cascade)
   bankName           String
   tenureMonths       Int
   chargePercent      Float
-  isActive           Boolean @default(true)
+  isActive           Boolean          @default(true)
 
   @@unique([emiConfigurationId, bankName, tenureMonths])
 }
@@ -858,114 +862,114 @@ model CourierPickupPoint {
 }
 
 model SiteSetting {
-  id                    String   @id @default(cuid())
-  name                  String?
-  invoiceName           String?
-  invoiceAddress        String?
-  invoicePhoto          String?
-  slogan                String?
-  seoTitle              String?
-  seoDescription        String?
-  seoKeywords           String?  @db.VarChar(500)
-  googleSiteVerification String? @db.VarChar(200)
-  facebookDomainVerification String? @db.VarChar(200)
-  logo                  String?
-  favicon               String?
-  phoneNumber1          String?
-  phoneNumber2          String?
-  adress1               String?
-  adress2               String?
-  googleMap             String?
-  email                 String?
-  fbLink                String?
-  instagramLink         String?
-  tiktokLink            String?
-  messengerLink         String?
-  whatsappNumber        String?
-  youTubeLink           String?
-  primaryColor          String?
-  secondaryColor        String?
-  accentColor           String?
-  lightBackground       String?
-  lightSurface          String?
-  lightText             String?
-  darkBackground        String?
-  darkSurface           String?
-  darkText              String?
-  baseFontSize          Int?
-  borderRadius          Int?
-  navbarHeight          Int?
-  footerImageHeight     Int?
-  orderReconfirmEnabled Boolean  @default(true)
-  orderReconfirmMessage String?  @db.VarChar(500)
-  cartButtonLabel       String?  @default("Add to Cart") @db.VarChar(40)
-  buyNowButtonLabel     String?  @default("Buy Now") @db.VarChar(40)
-  cartButtonColor       String?  @default("#ea580c") @db.VarChar(7)
-  buyNowButtonColor     String?  @default("#0f766e") @db.VarChar(7)
-  placeOrderButtonLabel String?  @default("Place Order") @db.VarChar(40)
-  placeOrderButtonColor String?  @default("#ea580c") @db.VarChar(7)
-  manualDeliveryEnabled Boolean @default(false)
-  createdAt             DateTime @default(now()) // Timestamp for order placement
-  updatedAt             DateTime @updatedAt // Auto-updated timestamp
+  id                         String   @id @default(cuid())
+  name                       String?
+  invoiceName                String?
+  invoiceAddress             String?
+  invoicePhoto               String?
+  slogan                     String?
+  seoTitle                   String?
+  seoDescription             String?
+  seoKeywords                String?  @db.VarChar(500)
+  googleSiteVerification     String?  @db.VarChar(200)
+  facebookDomainVerification String?  @db.VarChar(200)
+  logo                       String?
+  favicon                    String?
+  phoneNumber1               String?
+  phoneNumber2               String?
+  adress1                    String?
+  adress2                    String?
+  googleMap                  String?
+  email                      String?
+  fbLink                     String?
+  instagramLink              String?
+  tiktokLink                 String?
+  messengerLink              String?
+  whatsappNumber             String?
+  youTubeLink                String?
+  primaryColor               String?
+  secondaryColor             String?
+  accentColor                String?
+  lightBackground            String?
+  lightSurface               String?
+  lightText                  String?
+  darkBackground             String?
+  darkSurface                String?
+  darkText                   String?
+  baseFontSize               Int?
+  borderRadius               Int?
+  navbarHeight               Int?
+  footerImageHeight          Int?
+  orderReconfirmEnabled      Boolean  @default(true)
+  orderReconfirmMessage      String?  @db.VarChar(500)
+  cartButtonLabel            String?  @default("Add to Cart") @db.VarChar(40)
+  buyNowButtonLabel          String?  @default("Buy Now") @db.VarChar(40)
+  cartButtonColor            String?  @default("#ea580c") @db.VarChar(7)
+  buyNowButtonColor          String?  @default("#0f766e") @db.VarChar(7)
+  placeOrderButtonLabel      String?  @default("Place Order") @db.VarChar(40)
+  placeOrderButtonColor      String?  @default("#ea580c") @db.VarChar(7)
+  manualDeliveryEnabled      Boolean  @default(false)
+  createdAt                  DateTime @default(now()) // Timestamp for order placement
+  updatedAt                  DateTime @updatedAt // Auto-updated timestamp
 }
 
 model EmailConfiguration {
-  id                         String   @id @default("EMAIL")
-  encryptedCredentials      String?
-  fromEmail                 String?
-  fromName                  String?
-  supportInboxEmail          String?
-  emailVerificationEnabled  Boolean  @default(true)
-  passwordResetEnabled      Boolean  @default(true)
-  orderConfirmationEnabled  Boolean  @default(true)
-  orderStatusEnabled        Boolean  @default(true)
-  deliverySuccessEnabled    Boolean  @default(true)
-  updatedAt                 DateTime @updatedAt
+  id                       String   @id @default("EMAIL")
+  encryptedCredentials     String?
+  fromEmail                String?
+  fromName                 String?
+  supportInboxEmail        String?
+  emailVerificationEnabled Boolean  @default(true)
+  passwordResetEnabled     Boolean  @default(true)
+  orderConfirmationEnabled Boolean  @default(true)
+  orderStatusEnabled       Boolean  @default(true)
+  deliverySuccessEnabled   Boolean  @default(true)
+  updatedAt                DateTime @updatedAt
 }
 
 model SupportEmailConversation {
-  id             String               @id @default(cuid())
-  customerEmail  String
-  subject        String
+  id                String                @id @default(cuid())
+  customerEmail     String
+  subject           String
   normalizedSubject String
-  lastMessageAt  DateTime             @default(now())
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  messages       SupportEmailMessage[]
+  lastMessageAt     DateTime              @default(now())
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  messages          SupportEmailMessage[]
 
   @@index([lastMessageAt])
   @@index([customerEmail, normalizedSubject])
 }
 
 model SupportEmailMessage {
-  id                String                    @id @default(cuid())
+  id                String                   @id @default(cuid())
   conversationId    String
-  conversation      SupportEmailConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation      SupportEmailConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   direction         String
   fromEmail         String
   toEmail           String
   subject           String
-  textBody          String                    @db.Text
-  htmlBody          String?                   @db.Text
-  resendEmailId     String?                   @unique
+  textBody          String                   @db.Text
+  htmlBody          String?                  @db.Text
+  resendEmailId     String?                  @unique
   internetMessageId String?
-  attachmentsJson   String?                   @db.Text
-  isRead            Boolean                   @default(false)
-  createdAt         DateTime                  @default(now())
+  attachmentsJson   String?                  @db.Text
+  isRead            Boolean                  @default(false)
+  createdAt         DateTime                 @default(now())
 
   @@index([conversationId, createdAt])
   @@index([direction, isRead, createdAt])
 }
 
 model SupportEmailDraft {
-  id                String   @id @default(cuid())
-  conversationId    String?
-  toEmail           String?
-  subject           String?
-  textBody          String   @default("") @db.Text
-  attachmentsJson   String?  @db.Text
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String   @id @default(cuid())
+  conversationId  String?
+  toEmail         String?
+  subject         String?
+  textBody        String   @default("") @db.Text
+  attachmentsJson String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([updatedAt])
 }
@@ -1241,10 +1245,11 @@ model PurchaseOrder {
 
   items PurchaseItem[]
 
-  receipts         GoodsReceipt[]
-  supplierPayments SupplierPayment[]
-  expenses         Expense[]
-  createdAt        DateTime          @default(now())
+  receipts           GoodsReceipt[]
+  supplierPayments   SupplierPayment[]
+  advanceAllocations SupplierPaymentAllocation[]
+  expenses           Expense[]
+  createdAt          DateTime                    @default(now())
 
   updatedAt DateTime @updatedAt
   createdBy String?
@@ -1289,6 +1294,8 @@ model Warehouse {
 
   name String
 
+  type String @default("WAREHOUSE") // WAREHOUSE, SHOP, LOCATION
+
   address String?
 
   phone String?
@@ -1299,11 +1306,15 @@ model Warehouse {
 
   stocks Stock[]
 
-  transactions InventoryTransaction[]
-  goodsReceipt GoodsReceipt[]
-  deliveries   Delivery[]
-  returnItems  ReturnReceiptItem[]
-  createdAt    DateTime               @default(now())
+  transactions      InventoryTransaction[]
+  outgoingTransfers InventoryTransfer[]    @relation("TransferSource")
+  incomingTransfers InventoryTransfer[]    @relation("TransferDestination")
+  stockCounts       InventoryCount[]
+  conversions       InventoryConversion[]
+  goodsReceipt      GoodsReceipt[]
+  deliveries        Delivery[]
+  returnItems       ReturnReceiptItem[]
+  createdAt         DateTime               @default(now())
 
   updatedAt DateTime @updatedAt
   createdBy String?
@@ -1445,6 +1456,8 @@ model InventoryTransaction {
 
   balanceAfter Float
 
+  unitCost Float?
+
   referenceType InventoryReference
 
   referenceId String?
@@ -1456,6 +1469,119 @@ model InventoryTransaction {
 
   @@index([warehouseId, variationId, createdAt])
   @@index([referenceType, referenceId])
+}
+
+model InventoryTransfer {
+  id                     String                  @id @default(cuid())
+  transferNo             String                  @unique
+  sourceWarehouseId      String
+  sourceWarehouse        Warehouse               @relation("TransferSource", fields: [sourceWarehouseId], references: [id])
+  destinationWarehouseId String
+  destinationWarehouse   Warehouse               @relation("TransferDestination", fields: [destinationWarehouseId], references: [id])
+  status                 String                  @default("REQUESTED")
+  note                   String?
+  items                  InventoryTransferItem[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  createdBy              String?
+  updatedBy              String?
+  cancelledAt            DateTime?
+  cancelledBy            String?
+  cancelReason           String?
+
+  @@index([sourceWarehouseId, status, createdAt])
+  @@index([destinationWarehouseId, status, createdAt])
+}
+
+model InventoryTransferItem {
+  id               String            @id @default(cuid())
+  transferId       String
+  transfer         InventoryTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  variationId      String
+  variation        ProductVariation  @relation(fields: [variationId], references: [id])
+  quantity         Float
+  receivedQuantity Float             @default(0)
+  unitCost         Float?
+
+  @@index([transferId])
+}
+
+model InventoryCount {
+  id           String               @id @default(cuid())
+  countNo      String               @unique
+  warehouseId  String
+  warehouse    Warehouse            @relation(fields: [warehouseId], references: [id])
+  status       String               @default("DRAFT")
+  note         String?
+  items        InventoryCountItem[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  createdBy    String?
+  postedAt     DateTime?
+  postedBy     String?
+  cancelledAt  DateTime?
+  cancelledBy  String?
+  cancelReason String?
+
+  @@index([warehouseId, status, createdAt])
+}
+
+model InventoryCountItem {
+  id              String           @id @default(cuid())
+  countId         String
+  count           InventoryCount   @relation(fields: [countId], references: [id], onDelete: Cascade)
+  variationId     String
+  variation       ProductVariation @relation(fields: [variationId], references: [id])
+  systemQuantity  Float
+  countedQuantity Float?
+
+  @@unique([countId, variationId])
+}
+
+model InventoryBom {
+  id                String                  @id @default(cuid())
+  name              String
+  outputVariationId String
+  outputVariation   ProductVariation        @relation("BomOutput", fields: [outputVariationId], references: [id])
+  outputQuantity    Float                   @default(1)
+  isActive          Boolean                 @default(true)
+  components        InventoryBomComponent[]
+  conversions       InventoryConversion[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([outputVariationId, isActive])
+}
+
+model InventoryBomComponent {
+  id          String           @id @default(cuid())
+  bomId       String
+  bom         InventoryBom     @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  variationId String
+  variation   ProductVariation @relation(fields: [variationId], references: [id])
+  quantity    Float
+
+  @@unique([bomId, variationId])
+}
+
+model InventoryConversion {
+  id           String        @id @default(cuid())
+  conversionNo String        @unique
+  warehouseId  String
+  warehouse    Warehouse     @relation(fields: [warehouseId], references: [id])
+  bomId        String?
+  bom          InventoryBom? @relation(fields: [bomId], references: [id])
+  type         String // ASSEMBLY or DISASSEMBLY
+  quantity     Float
+  status       String        @default("POSTED")
+  note         String?
+  createdAt    DateTime      @default(now())
+  createdBy    String?
+  cancelledAt  DateTime?
+  cancelledBy  String?
+  cancelReason String?
+
+  @@index([warehouseId, status, createdAt])
 }
 
 model Stock {
@@ -1471,7 +1597,9 @@ model Stock {
 
   reserved Float @default(0)
 
-  available Float @default(0)
+  available         Float @default(0)
+  averageUnitCost   Float @default(0)
+  lowStockThreshold Float @default(0)
 
   updatedAt DateTime @updatedAt
   createdBy String?
@@ -1540,6 +1668,10 @@ model SupplierPayment {
   moneyAccount      MoneyAccount?      @relation(fields: [moneyAccountId], references: [id])
   moneyTransactions MoneyTransaction[]
 
+  paymentType String                      @default("PO_PAYMENT")
+  notes       String?
+  allocations SupplierPaymentAllocation[]
+
   amount Float
 
   paymentMethod String
@@ -1558,6 +1690,20 @@ model SupplierPayment {
   @@index([supplierId, paidAt])
   @@index([purchaseOrderId])
   @@index([moneyAccountId, paidAt])
+}
+
+model SupplierPaymentAllocation {
+  id                String          @id @default(cuid())
+  supplierPaymentId String
+  supplierPayment   SupplierPayment @relation(fields: [supplierPaymentId], references: [id], onDelete: Cascade)
+  purchaseOrderId   String
+  purchaseOrder     PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  amount            Float
+  allocatedAt       DateTime        @default(now())
+  createdBy         String?
+
+  @@index([supplierPaymentId, allocatedAt])
+  @@index([purchaseOrderId])
 }
 
 model FinancialAccount {
@@ -1788,6 +1934,7 @@ enum PurchaseStatus {
 enum ReceiptStatus {
   PENDING
   COMPLETED
+  CANCELLED
 }
 
 enum DeliveryStatus {

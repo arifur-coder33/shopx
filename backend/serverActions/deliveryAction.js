@@ -83,7 +83,7 @@ export async function createDelivery(formData) {
           },
         });
         await tx.goodsReceiptItem.update({ where: { id: row.goodsReceiptItemId }, data: { deliveredQuantity: { increment: row.quantity } } });
-        await tx.inventoryTransaction.create({ data: { warehouseId: values.warehouseId, variationId: row.variationId, type: "OUT", quantity: -row.quantity, balanceAfter, referenceType: "SALE", referenceId: result.id, remarks: `Delivery ${deliveryNo} for order ${order.orderNo}`, createdBy: userId } });
+        await tx.inventoryTransaction.create({ data: { warehouseId: values.warehouseId, variationId: row.variationId, type: "OUT", quantity: -row.quantity, balanceAfter, unitCost: stock.averageUnitCost || 0, referenceType: "SALE", referenceId: result.id, remarks: `Delivery ${deliveryNo} for order ${order.orderNo}`, createdBy: userId } });
       }
       await tx.order.update({ where: { id: order.id }, data: { status: "READY_TO_SHIP" } });
       await tx.orderTimeline.create({

@@ -118,6 +118,7 @@ export default function DeliveryAddress() {
         label="ডেলিভারি ঠিকানা "
         name={"deliveryAddress"}
         inputType={"text"}
+        inputClassName="placeholder:text-base md:placeholder:text-lg"
         autoComplete="address-line1"
         colSpan={"full"}
         placeholder="বাসা/রোড/এলাকা, থানা ও জেলা লিখুন"

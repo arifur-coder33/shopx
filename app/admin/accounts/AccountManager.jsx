@@ -9,6 +9,7 @@ import {
 } from "@/backend/serverActions/moneyAccountAction";
 import { recordProviderFee } from "@/backend/serverActions/paymentAction";
 import Modal from "@/components/modal/Modal";
+import AccountGuide from "./AccountGuide";
 import { Edit3, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -126,13 +127,15 @@ export default function AccountManager({ result }) {
     <main className="space-y-5 p-3 sm:p-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Money Accounts</h1>
+          <div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-bold">Money Accounts</h1><AccountGuide feature="dashboard" /></div>
           <p className="text-sm text-text-muted">
             Maintain balances across customer payment channels and business
             accounts.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/admin/accounts/payments" className="button">Supplier Payments</Link>
+          <Link href="/admin/accounts/expenses" className="button">Expenses</Link>
           <button onClick={() => setDialog("account")} className="button">
             <Plus className="h-4 w-4" /> Account
           </button>

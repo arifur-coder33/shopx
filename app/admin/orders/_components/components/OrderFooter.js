@@ -384,7 +384,7 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt, has
             {status === "PROCESSING" && (
               <>
                 {hasCourierBooking && <Link
-                  href="/admin/procurement/deliveries"
+                  href="/admin/inventory/deliveries"
                   className="px-4 py-2 bg-indigo-600 text-white rounded"
                 >
                   Open Delivery Queue

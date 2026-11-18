@@ -53,7 +53,7 @@ function getWeightedUnitCostByStock(receiptItems) {
 
 function calculateCostOfGoodsSold(salesOutflows, weightedUnitCosts) {
   return salesOutflows.reduce((total, outflow) => {
-    const unitCost = weightedUnitCosts.get(`${outflow.warehouseId}:${outflow.variationId}`);
+    const unitCost = outflow.unitCost ?? weightedUnitCosts.get(`${outflow.warehouseId}:${outflow.variationId}`);
     if (!unitCost) return total;
     return total + Math.abs(outflow.quantity) * unitCost;
   }, 0);
@@ -61,7 +61,7 @@ function calculateCostOfGoodsSold(salesOutflows, weightedUnitCosts) {
 
 function calculateInventoryAsset(stocks, weightedUnitCosts) {
   return stocks.reduce((total, stock) => {
-    const unitCost = weightedUnitCosts.get(`${stock.warehouseId}:${stock.variationId}`);
+    const unitCost = stock.averageUnitCost ?? weightedUnitCosts.get(`${stock.warehouseId}:${stock.variationId}`);
     return total + stock.quantity * (unitCost || 0);
   }, 0);
 }
@@ -94,10 +94,10 @@ export async function getMoneyManagement(params = {}) {
       prisma.financialAccount.findMany({ where: { isActive: true } }),
       prisma.journalLine.groupBy({ by: ["accountId"], where: { journalEntry: { status: "POSTED" } }, _sum: { debit: true, credit: true } }),
       prisma.moneyTransaction.groupBy({ by: ["type"], where: { status: "POSTED", isReversal: false }, _sum: { amount: true } }),
-      prisma.stock.findMany({ select: { variationId: true, warehouseId: true, quantity: true } }),
-      prisma.inventoryTransaction.groupBy({ by: ["variationId", "warehouseId"], where: { type: "OUT", referenceType: "SALE" }, _sum: { quantity: true } }),
+      prisma.stock.findMany({ select: { variationId: true, warehouseId: true, quantity: true, averageUnitCost: true } }),
+      prisma.inventoryTransaction.findMany({ where: { type: "OUT", referenceType: "SALE" }, select: { variationId: true, warehouseId: true, quantity: true, unitCost: true } }),
       prisma.goodsReceiptItem.findMany({
-        where: { goodsReceipt: { isNot: null } },
+        where: { goodsReceipt: { is: { status: "COMPLETED" } } },
         select: {
           variationId: true,
           quantity: true,
@@ -123,7 +123,7 @@ export async function getMoneyManagement(params = {}) {
     const typeBalances = allAccounts.reduce((result, account) => ({ ...result, [account.type]: (result[account.type] || 0) + account.balance }), {});
     const weightedUnitCosts = getWeightedUnitCostByStock(receiptItems);
     const costOfGoodsSold = calculateCostOfGoodsSold(
-      salesOutflows.map((row) => ({ ...row, quantity: row._sum.quantity || 0 })),
+      salesOutflows,
       weightedUnitCosts,
     );
     const inventoryAccount = financialAccounts.find((account) => account.code === "1200");
@@ -319,7 +319,7 @@ export async function deleteMoneyTransaction(formData) {
         include: {
           reversal: { select: { id: true } },
           expense: true,
-          supplierPayment: { include: { purchaseOrder: true } },
+          supplierPayment: { include: { purchaseOrder: true, allocations: true } },
           payment: { include: { order: true } },
           refund: { include: { payment: { include: { order: true } }, order: true } },
         },
@@ -339,6 +339,7 @@ export async function deleteMoneyTransaction(formData) {
 
       if (transaction.type === "SUPPLIER_PAYMENT" && transaction.supplierPayment && !transaction.supplierPayment.voidedAt) {
         const payment = transaction.supplierPayment;
+        if (payment.paymentType === "ADVANCE" && payment.allocations.length) throw new Error("Unapply this supplier advance from its purchase bills before reversing the cash payment.");
         const purchaseOrder = payment.purchaseOrder;
         if (purchaseOrder) {
           if (Number(purchaseOrder.paidAmount) + 0.001 < amount) throw new Error("The purchase order paid balance no longer matches this payment; review it before reversing.");
@@ -444,8 +445,8 @@ export async function deleteMoneyTransaction(formData) {
     });
 
     refresh();
-    revalidatePath("/admin/procurement/expenses");
-    revalidatePath("/admin/procurement/payments");
+    revalidatePath("/admin/accounts/expenses");
+    revalidatePath("/admin/accounts/payments");
     revalidatePath("/admin/procurement/purchases");
     revalidatePath("/admin/orders");
     revalidatePath("/admin/refunds");

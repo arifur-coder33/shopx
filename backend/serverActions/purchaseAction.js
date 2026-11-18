@@ -3,18 +3,36 @@ import prisma from "@/lib/prisma";
 import { generateCode } from "../utils/generateCode";
 import { actionError, refreshProcurement, requireProcurementPermission, toDate, toNumber } from "../utils/procurement";
 
+export async function getPurchaseVariationOptions() {
+  try {
+    await requireProcurementPermission("purchase", "create");
+    const variations = await prisma.productVariation.findMany({
+      where: { productId: { not: null }, product: { isActive: true } },
+      orderBy: [{ product: { title: "asc" } }, { sku: "asc" }],
+      take: 500,
+      select: { id: true, sku: true, productId: true, product: { select: { title: true } } },
+    });
+    return { success: true, data: variations };
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "Could not load product options." };
+  }
+}
+
 export async function createPurchaseOrder(formData) {
   try {
     const userId = await requireProcurementPermission("purchase", "create");
     const values = Object.fromEntries(formData.entries());
-    const items = JSON.parse(values.items || "[]").map((item) => ({ variationId: item.variationId, productId: item.productId, quantity: toNumber(item.quantity), unitCost: toNumber(item.unitCost), discount: toNumber(item.discount), total: toNumber(item.quantity) * toNumber(item.unitCost) - toNumber(item.discount) })).filter((item) => item.variationId && item.productId && item.quantity > 0 && item.unitCost >= 0);
+    const submittedItems = JSON.parse(values.items || "[]");
+    if (!Array.isArray(submittedItems) || submittedItems.some((item) => toNumber(item.quantity) <= 0 || toNumber(item.unitCost) < 0 || toNumber(item.discount) < 0 || toNumber(item.discount) > toNumber(item.quantity) * toNumber(item.unitCost))) throw new Error("Each item needs a valid quantity, unit cost, and discount that does not exceed its line value.");
+    const items = submittedItems.map((item) => ({ variationId: item.variationId, productId: item.productId, quantity: toNumber(item.quantity), unitCost: toNumber(item.unitCost), discount: toNumber(item.discount), total: toNumber(item.quantity) * toNumber(item.unitCost) - toNumber(item.discount) })).filter((item) => item.variationId && item.productId && item.quantity > 0 && item.unitCost >= 0);
     if (!values.supplierId || !items.length) return { success: false, message: "Supplier and at least one valid item are required." };
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
     const discount = toNumber(values.discount), vat = toNumber(values.vat), shippingCost = toNumber(values.shippingCost);
-    const total = Math.max(0, subtotal - discount + vat + shippingCost);
+    const itemDiscounts = items.reduce((sum, item) => sum + item.discount, 0);
+    const total = Math.max(0, subtotal - itemDiscounts - discount + vat + shippingCost);
     const result = await prisma.$transaction(async (tx) => {
       const poNo = await generateCode(tx, { name: "PURCHASE_ORDER", prefix: "PO-", padding: 6 });
-      return tx.purchaseOrder.create({ data: { poNo, supplierId: values.supplierId, status: values.status || "DRAFT", subtotal, discount, vat, shippingCost, total, dueAmount: total, expectedDate: values.expectedDate ? toDate(values.expectedDate) : null, notes: values.notes || null, createdBy: userId, updatedBy: userId, items: { create: items } } });
+      return tx.purchaseOrder.create({ data: { poNo, supplierId: values.supplierId, status: values.status || "DRAFT", subtotal, discount, vat, shippingCost, total, dueAmount: 0, expectedDate: values.expectedDate ? toDate(values.expectedDate) : null, notes: values.notes || null, createdBy: userId, updatedBy: userId, items: { create: items } } });
     });
     refreshProcurement();
     return { success: true, message: `Purchase order ${result.poNo} created.`, data: result };

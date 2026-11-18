@@ -29,7 +29,7 @@ export async function getProcurementDetail(section, id) {
       const delivered = data.items.some((item) => item.deliveryItems.length > 0 || item.deliveredQuantity > 0);
       const paid = await prisma.supplierPayment.count({ where: { purchaseOrderId: data.purchaseOrderId } });
       const locked = delivered || paid > 0;
-      capabilities = { canEdit: !locked, canDelete: !locked, reason: delivered ? "Stock from this receipt has been delivered." : paid ? "A supplier payment exists for this purchase order." : "" };
+      capabilities = { canEdit: !locked && data.status !== "CANCELLED", canDelete: false, reason: locked ? (delivered ? "Cancel dependent delivery first." : "Cancel dependent payment first.") : "Use Cancel receipt to reverse stock and accounting safely." };
     } else if (section === "warehouses") {
       const [receipts, deliveries] = await Promise.all([prisma.goodsReceipt.count({ where: { warehouseId: id } }), prisma.delivery.count({ where: { warehouseId: id } })]);
       const locked = data.stocks.some((stock) => stock.quantity !== 0 || stock.reserved !== 0) || receipts > 0 || deliveries > 0;
@@ -55,9 +55,9 @@ export async function updateProcurementRecord(section, id, formData) {
       if (locked) throw new Error("This purchase order is locked because it has a receipt or payment.");
       const current = await prisma.purchaseOrder.findUnique({ where: { id }, include: { items: true } });
       if (!current) throw new Error("Purchase order not found.");
-      const rows = current.items.map((item) => { const quantity = toNumber(values[`quantity_${item.id}`], item.quantity), unitCost = toNumber(values[`unitCost_${item.id}`], item.unitCost), discount = toNumber(values[`discount_${item.id}`], item.discount); if (quantity <= 0 || unitCost < 0 || discount < 0) throw new Error("Purchase item values are invalid."); return { id: item.id, quantity, unitCost, discount, total: quantity * unitCost - discount }; });
-      const subtotal = rows.reduce((sum, row) => sum + row.quantity * row.unitCost, 0), discount = toNumber(values.discount), vat = toNumber(values.vat), shippingCost = toNumber(values.shippingCost), total = Math.max(0, subtotal - discount + vat + shippingCost);
-      await prisma.$transaction([prisma.purchaseOrder.update({ where: { id }, data: { status: ["DRAFT", "APPROVED", "ORDERED", "CANCELLED"].includes(values.status) ? values.status : current.status, subtotal, discount, vat, shippingCost, total, dueAmount: total, expectedDate: values.expectedDate ? toDate(values.expectedDate) : null, notes: values.notes || null, updatedBy: userId } }), ...rows.map((row) => prisma.purchaseItem.update({ where: { id: row.id }, data: { quantity: row.quantity, unitCost: row.unitCost, discount: row.discount, total: row.total } }))]);
+      const rows = current.items.map((item) => { const quantity = toNumber(values[`quantity_${item.id}`], item.quantity), unitCost = toNumber(values[`unitCost_${item.id}`], item.unitCost), discount = toNumber(values[`discount_${item.id}`], item.discount); if (quantity <= 0 || unitCost < 0 || discount < 0 || discount > quantity * unitCost) throw new Error("Purchase item values are invalid."); return { id: item.id, quantity, unitCost, discount, total: quantity * unitCost - discount }; });
+      const subtotal = rows.reduce((sum, row) => sum + row.quantity * row.unitCost, 0), itemDiscounts = rows.reduce((sum, row) => sum + row.discount, 0), discount = toNumber(values.discount), vat = toNumber(values.vat), shippingCost = toNumber(values.shippingCost), total = Math.max(0, subtotal - itemDiscounts - discount + vat + shippingCost);
+      await prisma.$transaction([prisma.purchaseOrder.update({ where: { id }, data: { status: ["DRAFT", "APPROVED", "ORDERED", "CANCELLED"].includes(values.status) ? values.status : current.status, subtotal, discount, vat, shippingCost, total, dueAmount: 0, expectedDate: values.expectedDate ? toDate(values.expectedDate) : null, notes: values.notes || null, updatedBy: userId } }), ...rows.map((row) => prisma.purchaseItem.update({ where: { id: row.id }, data: { quantity: row.quantity, unitCost: row.unitCost, discount: row.discount, total: row.total } }))]);
     } else if (section === "receipts") {
       const receipt = await prisma.goodsReceipt.findUnique({ where: { id }, include: { items: { include: { deliveryItems: true } } } });
       if (!receipt) throw new Error("Goods receipt not found.");
@@ -92,28 +92,7 @@ export async function deleteProcurementRecord(section, id) {
       if (receipts || payments || expenses) throw new Error("Purchase order cannot be deleted after receipt, payment or linked expense.");
       await prisma.purchaseOrder.delete({ where: { id } });
     } else if (section === "receipts") {
-      await prisma.$transaction(async (tx) => {
-        const receipt = await tx.goodsReceipt.findUnique({ where: { id }, include: { items: { include: { deliveryItems: true } }, purchaseOrder: { include: { items: true } } } });
-        if (!receipt) throw new Error("Goods receipt not found.");
-        const paid = await tx.supplierPayment.count({ where: { purchaseOrderId: receipt.purchaseOrderId } });
-        if (paid || receipt.items.some((item) => item.deliveryItems.length || item.deliveredQuantity > 0)) throw new Error("Receipt cannot be deleted after payment or delivery.");
-        for (const item of receipt.items) {
-          const stock = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId: receipt.warehouseId, variationId: item.variationId } } });
-          if (!stock || stock.quantity < item.quantity || stock.available < item.quantity) throw new Error("Receipt stock has already been consumed or adjusted.");
-          await tx.stock.update({ where: { id: stock.id }, data: { quantity: { decrement: item.quantity }, available: { decrement: item.quantity }, updatedBy: userId } });
-          const purchaseItem = receipt.purchaseOrder.items.find((row) => row.variationId === item.variationId && row.receivedQty >= item.quantity);
-          if (!purchaseItem) throw new Error("Could not safely match the receipt to its purchase item.");
-          await tx.purchaseItem.update({ where: { id: purchaseItem.id }, data: { receivedQty: { decrement: item.quantity } } });
-        }
-        await tx.inventoryTransaction.deleteMany({ where: { referenceId: id, referenceType: "PURCHASE" } });
-        const journals = await tx.journalEntry.findMany({ where: { referenceId: id, referenceType: "GOODS_RECEIPT" }, select: { id: true } });
-        if (journals.length) await tx.journalLine.deleteMany({ where: { journalEntryId: { in: journals.map((row) => row.id) } } });
-        await tx.journalEntry.deleteMany({ where: { id: { in: journals.map((row) => row.id) } } });
-        await tx.goodsReceipt.delete({ where: { id } });
-        const remaining = await tx.purchaseItem.findMany({ where: { purchaseOrderId: receipt.purchaseOrderId } });
-        const status = remaining.every((item) => item.receivedQty <= 0) ? "ORDERED" : remaining.every((item) => item.receivedQty >= item.quantity) ? "RECEIVED" : "PARTIALLY_RECEIVED";
-        await tx.purchaseOrder.update({ where: { id: receipt.purchaseOrderId }, data: { status, updatedBy: userId } });
-      });
+      throw new Error("Goods receipts are cancelled through the safe stock and accounting reversal workflow; they are not deleted.");
     } else if (section === "warehouses") {
       const warehouse = await prisma.warehouse.findUnique({ where: { id } });
       const dependencies = await Promise.all([prisma.stock.count({ where: { warehouseId: id, OR: [{ quantity: { not: 0 } }, { reserved: { not: 0 } }] } }), prisma.goodsReceipt.count({ where: { warehouseId: id } }), prisma.delivery.count({ where: { warehouseId: id } })]);
