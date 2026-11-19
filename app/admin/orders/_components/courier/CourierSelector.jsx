@@ -6,6 +6,7 @@ import {
 } from "@/backend/serverActions/courierAction";
 import { ArrowLeft, CheckCircle2, ClipboardPenLine } from "lucide-react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function CourierSelector({ onSelect, activeCourierId }) {
   const [couriers, setCouriers] = useState([]);
@@ -62,7 +63,7 @@ export default function CourierSelector({ onSelect, activeCourierId }) {
           }`}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 font-bold text-white">{courier.name[0]}</div>
+            <span className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg bg-white p-1"><Image src={courier.logo} alt={`${courier.name} logo`} width={56} height={38} unoptimized className="h-full w-full object-contain" /></span>
             <div className="text-left"><span className="block font-semibold text-slate-700">{courier.name}</span><small className="text-slate-500">{courier.adapterKey}</small></div>
           </div>
           {activeCourierId === courier.id ? <CheckCircle2 className="text-green-600" size={20} /> : <span className="text-slate-400">→</span>}

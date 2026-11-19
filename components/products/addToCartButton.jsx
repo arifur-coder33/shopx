@@ -7,11 +7,12 @@ import Button from "../button";
 import KalapanaFont from "../KalapanaFont";
 import { toast } from "react-toastify";
 import { useSiteAppearance } from "@/components/common/Providers";
+import { bundleSelectionLabels } from "@/lib/bundleStock";
 export default function AddToCartButton(props) {
   const appearance = useSiteAppearance() || {};
   const { data: session } = useSession();
   const { addToCart } = useCart();
-  const { product, selectedVariation, productQty } = props;
+  const { product, selectedVariation, productQty, bundleSelections, disabled, ...buttonProps } = props;
   const { hasVariations, variations, title, weight, category, slug } = product;
 
   const getDiscountPrice = selectedVariation
@@ -31,6 +32,14 @@ export default function AddToCartButton(props) {
     : !variations?.combinations?.length > 0 && variations[0]?.weight;
 
   const handleAddToCart = () => {
+    if (disabled) return;
+    if (product.bundleOptions?.length && !bundleSelections) {
+      toast.warn("Bundle-এর সব অপশন বেছে নিন");
+      import("@/utils/uiUtils").then(({ scrollToAndHighlight }) => {
+        scrollToAndHighlight("#bundle-variation-list");
+      });
+      return;
+    }
     const productData = {
       title: title,
       discountPrice: getDiscountPrice,
@@ -53,6 +62,8 @@ export default function AddToCartButton(props) {
       id: product?.id,
       productId: product?.id,
       categoryId: product?.categoryId,
+      bundleSelections,
+      bundleSelectionLabels: bundleSelections ? bundleSelectionLabels(product.bundleOptions, bundleSelections) : undefined,
       codAvailable: product?.codAvailable !== false,
       advancePaymentType: product?.advancePaymentType || "NONE",
       advancePaymentValueType: product?.advancePaymentValueType || "FIXED",
@@ -110,7 +121,8 @@ if (
       className="border-b-4 px-2"
       style={{ backgroundColor: appearance.cartButtonColor || "#ea580c" }}
       onClick={handleAddToCart}
-      {...props}
+      disabled={disabled}
+      {...buttonProps}
     >
       <KalapanaFont>{appearance.cartButtonLabel || "Add to Cart"}</KalapanaFont>
     </Button>

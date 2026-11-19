@@ -1,16 +1,13 @@
 "use client";
-import { formatOrderAddress } from "@/lib/formatOrderAddress";
-import InvoiceButton from "@/components/PDF/getInvoice";
 import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { Suspense, useState } from "react";
+import AdminOrderAddressEditor from "./AdminOrderAddressEditor";
+import BanglaQrPaymentReview from "./BanglaQrPaymentReview";
 import AdminActions from "./components/AdminActions";
 import CustomerInfo from "./components/CustomerInfo";
 import DocumentActions from "./components/DocumentActions";
-import { generateInvoicePDF } from "./components/GenerateInvoice"; // আপনার ইম্পোর্ট
-import { downloadAWBPDF } from "./components/GenerateAWB";
-import { generatePackingListPDF } from "./components/GeneratePackingList";
 import OrderFooter from "./components/OrderFooter";
 import OrderHeader from "./components/OrderHeader";
 import OrderItemsTable from "./components/OrderItemsTable";
@@ -20,8 +17,6 @@ import OrderTimelineClient from "./components/OrderTimelineClient";
 import PaymentSummary from "./components/PaymentSummary";
 import CourierManagement from "./courier/CourierManagement";
 import OrderRiskAssessment from "./OrderRiskAssessment";
-import BanglaQrPaymentReview from "./BanglaQrPaymentReview";
-import AdminOrderAddressEditor from "./AdminOrderAddressEditor";
 
 // Server component ke lazy load kora hocche
 const OrderTimelineServer = dynamic(
@@ -31,7 +26,7 @@ const OrderTimelineServer = dynamic(
   },
 );
 
-export default function OrderDetailsPage({ order, children, shopName }) {
+export default function OrderDetailsPage({ order, children }) {
   // Global State for the order
   const { data: session } = useSession();
   const permissions = session?.user?.permissions;
@@ -45,35 +40,6 @@ export default function OrderDetailsPage({ order, children, shopName }) {
   // Handlers
   const handleUpdateStatus = () => alert(`Status updated to ${status}!`);
   const handleCourierUpdate = () => alert(`Courier Order Created: ${courier}`);
-
-  // Wrapper for PDF Download to keep logic clean
-  const handleDownloadInvoice = (type) => {
-    // এখানে আপনার আগের লজিক বা generateInvoicePDF ফাংশন কল করবেন
-    if (generateInvoicePDF) {
-      generateInvoicePDF({ actionType: type, orderData: order });
-    } else {
-      console.log("Generate PDF Function called for:", type);
-    }
-  };
-  const handleDownloadAWB = shipping?.cn
-    ? () =>
-        downloadAWBPDF({
-          shopName,
-          shopId: process.env.NEXT_PUBLIC_PATHAO_STORE_ID || "",
-          invoice: order.orderNo,
-          sfId: shipping.cn,
-          deliveryType: "Home",
-          weight: order.orderWeight || 0.5,
-          name: order.customerName,
-          phone: order.phoneNumber,
-          address: formatOrderAddress(order),
-          cod: shipping.cod ?? order.dueAmount ?? 0,
-          courierName:
-            shipping.courierName ||
-            order.selectedCourierProvider?.name ||
-            "Courier",
-        })
-    : undefined;
 
   const timeline = [
     {
@@ -113,12 +79,18 @@ export default function OrderDetailsPage({ order, children, shopName }) {
         <OrderRiskAssessment order={order} />
         <div className="card p-4 text-sm">
           <strong>Order source</strong>
-          <p className="mt-1 text-text-muted">{[
-            order.marketingAttribution?.channel || "Unattributed",
-            order.marketingAttribution?.source,
-            order.marketingAttribution?.campaign || order.marketingAttribution?.campaignId,
-            order.marketingAttribution?.ad || order.marketingAttribution?.adId,
-          ].filter(Boolean).join(" / ")}</p>
+          <p className="mt-1 text-text-muted">
+            {[
+              order.marketingAttribution?.channel || "Unattributed",
+              order.marketingAttribution?.source,
+              order.marketingAttribution?.campaign ||
+                order.marketingAttribution?.campaignId,
+              order.marketingAttribution?.ad ||
+                order.marketingAttribution?.adId,
+            ]
+              .filter(Boolean)
+              .join(" / ")}
+          </p>
         </div>
 
         {/* Timeline Section
@@ -145,13 +117,16 @@ export default function OrderDetailsPage({ order, children, shopName }) {
               paidAmount={order?.paidAmount}
               dueAmount={order?.dueAmount}
             />
-            <BanglaQrPaymentReview order={order} canUpdate={hasUIPermission(permissions, "order", "update")} />
+            <BanglaQrPaymentReview
+              order={order}
+              canUpdate={hasUIPermission(permissions, "order", "update")}
+            />
             {status !== "CANCELLED" && (
-              <CourierManagement setShipping={setShipping}
+              <CourierManagement
+                setShipping={setShipping}
                 setStatus={setStatus}
                 status={status}
                 order={order}
-                shopName={shopName}
               />
             )}
             {/* Mobile-first: Customer info stays with details usually, or move to sidebar */}
@@ -170,7 +145,10 @@ export default function OrderDetailsPage({ order, children, shopName }) {
             <div className="hidden lg:block">
               <CustomerInfo customer={order} />
             </div>
-            <AdminOrderAddressEditor order={order} canUpdate={hasUIPermission(permissions, "order", "update")} />
+            <AdminOrderAddressEditor
+              order={order}
+              canUpdate={hasUIPermission(permissions, "order", "update")}
+            />
 
             <AdminActions
               status={status}
@@ -186,19 +164,14 @@ export default function OrderDetailsPage({ order, children, shopName }) {
               orderId={order.id}
             />
 
-            <DocumentActions
-              onDownload={() => handleDownloadInvoice("download")}
-              onView={() => handleDownloadInvoice("view")}
-              onAWB={handleDownloadAWB}
-              onPacking={() => generatePackingListPDF(order, shopName)}
-            />
-            <InvoiceButton orderData={order} actionType={"print"} />
+            <DocumentActions order={order} hasConsignment={Boolean(shipping?.cn)} />
           </div>
         </div>
       </div>
 
       {hasUIPermission(permissions, "order", "update") && (
-        <OrderFooter hasCourierBooking={Boolean(shipping)}
+        <OrderFooter
+          hasCourierBooking={Boolean(shipping)}
           status={status}
           setStatus={setStatus}
           courier={courier}

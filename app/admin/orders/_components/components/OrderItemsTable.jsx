@@ -104,6 +104,13 @@ export default function OrderItemsTable({
                 <span className="text-xs  mr-2">
                   {item?.sku && `SKU: ${item.sku}`}
                 </span>
+                {item.bundleComponents?.length > 0 && (
+                  <ul className="mt-1 text-xs text-text-muted">
+                    {item.bundleComponents.map((component) => (
+                      <li key={component.variationId}>{component.title} · {component.label || component.sku} × {component.quantity * item.quantity}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 

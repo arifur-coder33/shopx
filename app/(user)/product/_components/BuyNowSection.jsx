@@ -5,7 +5,7 @@ import { useState } from "react";
 import ActionButtons from "./ActionButtons";
 import EMISection from "./EMI/EMISection";
 
-export default function BuyNowSection({ data, selectedVariation }) {
+export default function BuyNowSection({ data, selectedVariation, bundleSelections }) {
   const [productQty, setProductQty] = useState(1);
   const prices = (selectedVariation ? [selectedVariation] : data.variations || []).map((variation) => {
     if (variation.campaignPrice != null) return Number(variation.campaignPrice);
@@ -32,6 +32,7 @@ export default function BuyNowSection({ data, selectedVariation }) {
         productQty={productQty}
         product={data}
         selectedVariation={selectedVariation}
+        bundleSelections={bundleSelections}
       />
       <EMISection price={emiAmount} configuration={data.emi} />
     </>

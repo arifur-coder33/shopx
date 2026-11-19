@@ -1,6 +1,7 @@
 "use client";
 import { useCart } from "@/context/CartContext";
 import CartItem from "./CartItem";
+import { bundleSelectionKey } from "@/lib/bundleStock";
 
 export default function CartItems({ itemDiscounts = [], scopedOffers = [] }) {
   const { cartItems } = useCart();
@@ -16,7 +17,7 @@ export default function CartItems({ itemDiscounts = [], scopedOffers = [] }) {
       ...(campaignOffer ? [campaignOffer] : []),
       ...scopedOffers.filter((offer) => offer.productIds?.includes(productId)),
     ];
-    return <Item key={`${item.id}:${item.variation?.id || "default"}`} data={item} campaignOffer={campaignOffer} campaignRules={campaignRules} />;
+    return <Item key={`${item.id}:${item.variation?.id || "default"}:${bundleSelectionKey(item.bundleSelections)}`} data={item} campaignOffer={campaignOffer} campaignRules={campaignRules} />;
   });
 }
 

@@ -103,9 +103,9 @@ export async function getProcurementSectionData(section, params = {}) {
       let queueTotal = 0;
       [data.deliveries, data.orders, data.warehouses, data.batches, deliveryTotal, queueTotal] = await Promise.all([
         prisma.delivery.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" }, include: { order: { include: { orderItems: true, shipping: true, selectedCourierProvider: true } }, warehouse: true, items: { include: { orderItem: true, goodsReceiptItem: true } } } }),
-        prisma.order.findMany({ where: queueWhere, skip, take: limit, orderBy: { createdAt: "asc" }, include: { orderItems: true, shipping: true, selectedCourierProvider: true } }),
+        prisma.order.findMany({ where: queueWhere, skip, take: limit, orderBy: { createdAt: "asc" }, include: { orderItems: true, shipping: true, selectedCourierProvider: true, deliveries: { where: { status: { not: "CANCELLED" } }, select: { id: true }, take: 1 } } }),
         prisma.warehouse.findMany({ orderBy: { name: "asc" } }),
-        prisma.goodsReceiptItem.findMany({ where: { batchNumber: { not: null }, supplierLotNumber: { not: null }, goodsReceipt: { isNot: null } }, take: 500, include: { variation: { include: { product: true } }, goodsReceipt: { include: { warehouse: true } } } }),
+        prisma.goodsReceiptItem.findMany({ where: { batchNumber: { not: null }, supplierLotNumber: { not: null }, goodsReceipt: { status: "COMPLETED" } }, take: 500, include: { variation: { include: { product: true } }, goodsReceipt: { include: { warehouse: true } } } }),
         prisma.delivery.count({ where }),
         prisma.order.count({ where: queueWhere }),
       ]);

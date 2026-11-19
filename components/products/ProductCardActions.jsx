@@ -24,6 +24,10 @@ export default function ProductCardActions({ slug, checkoutTracking }) {
     setLoading(true);
     try {
       const result = await getStorefrontCartItem(slug);
+      if (result?.requiresSelection) {
+        window.location.assign(`/product/${encodeURIComponent(slug)}`);
+        return;
+      }
       if (!result?.success || !result.data) {
         throw new Error(result?.error || "Product is unavailable.");
       }

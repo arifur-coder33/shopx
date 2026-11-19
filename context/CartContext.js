@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { bundleSelectionKey } from "@/lib/bundleStock";
 
 const CartContext = createContext();
 
@@ -31,7 +32,7 @@ export const CartProvider = ({ children }) => {
     const sameProduct = a.id === b.id;
     const aVarId = a.variation?.id || null;
     const bVarId = b.variation?.id || null;
-    return sameProduct && aVarId === bVarId;
+    return sameProduct && aVarId === bVarId && bundleSelectionKey(a.bundleSelections) === bundleSelectionKey(b.bundleSelections);
   };
 
   // ✅ Add to cart

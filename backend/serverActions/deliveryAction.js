@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { generateCode } from "../utils/generateCode";
 import { actionError, refreshProcurement, requireProcurementPermission, toNumber } from "../utils/procurement";
+import { orderItemStockLines } from "@/lib/bundleStock";
 
 export async function createDelivery(formData) {
   try {
@@ -19,70 +20,87 @@ export async function createDelivery(formData) {
         where: { id: values.orderId },
         include: {
           shipping: true,
-          deliveries: { select: { id: true } },
-          orderItems: { include: { deliveryItems: true } },
+          deliveries: { where: { status: { not: "CANCELLED" } }, select: { id: true } },
+          orderItems: true,
         },
       });
       if (!order) throw new Error("Order was not found.");
-      if (order.status !== "PROCESSING") {
+      if (order.status !== "PROCESSING" && !(order.bundleReservationWarehouseId && order.status === "READY_TO_SHIP")) {
         throw new Error("Only a processing order can be prepared for delivery.");
       }
       if (!order.shipping?.courierProviderId) {
         throw new Error("Create the courier order before preparing delivery.");
       }
-      const isPosReservedOrder = order.adminNote === `POS_WAREHOUSE:${values.warehouseId}:RESERVED`;
+      if (order.bundleReservationWarehouseId && order.bundleReservationWarehouseId !== values.warehouseId) {
+        throw new Error("Pack this bundle order from its reserved warehouse.");
+      }
+      const usesReservedStock = Boolean(order.bundleReservationWarehouseId) || order.adminNote === `POS_WAREHOUSE:${values.warehouseId}:RESERVED`;
       if (order.deliveries.length) {
         throw new Error("A delivery document already exists for this order.");
       }
-      const orderItems = new Map(order.orderItems.map((item) => [item.id, item]));
+      if (order.bundleReservationWarehouseId) {
+        const locked = await tx.order.updateMany({
+          where: { id: order.id, status: order.status, bundleReservationWarehouseId: values.warehouseId, deliveries: { none: { status: { not: "CANCELLED" } } } },
+          data: { status: order.status },
+        });
+        if (!locked.count || await tx.delivery.count({ where: { orderId: order.id, status: { not: "CANCELLED" } } })) {
+          throw new Error("Order changed while preparing delivery.");
+        }
+      }
+      const keyFor = (orderItemId, variationId) => `${orderItemId}:${variationId}`;
+      const orderItems = new Map(order.orderItems.flatMap((item) =>
+        orderItemStockLines(item).map((line) => [keyFor(item.id, line.variationId), line]),
+      ));
+      const allocated = new Map();
+      const batchLimits = new Map();
+      const batchAllocated = new Map();
       const deliveryNo = await generateCode(tx, { name: "DELIVERY", prefix: "DEL-", padding: 7 });
       const rows = [];
 
       for (const item of items) {
-        const orderItem = orderItems.get(item.orderItemId);
         const batch = await tx.goodsReceiptItem.findUnique({ where: { id: item.goodsReceiptItemId }, include: { goodsReceipt: true } });
-        if (!orderItem || !batch || orderItem.variationId !== batch.variationId) throw new Error("The selected lot does not match the order item.");
-        if (!batch.goodsReceipt || batch.goodsReceipt.warehouseId !== values.warehouseId) throw new Error("The selected batch is orphaned or does not belong to the selected warehouse.");
-        const alreadyDelivered = orderItem.deliveryItems.reduce((sum, row) => sum + row.quantity, 0);
-        if (item.quantity > orderItem.quantity - alreadyDelivered) throw new Error(`Delivery quantity exceeds ordered quantity for ${orderItem.sku}.`);
-        if (item.quantity > batch.quantity - batch.deliveredQuantity) throw new Error(`Delivery quantity exceeds the available quantity in batch ${batch.batchNumber}.`);
+        const key = keyFor(item.orderItemId, batch?.variationId);
+        const orderItem = orderItems.get(key);
+        if (!orderItem || !batch) throw new Error("The selected lot does not match the order item.");
+        if (batch.goodsReceipt?.status !== "COMPLETED" || batch.goodsReceipt.warehouseId !== values.warehouseId) {
+          throw new Error("The selected batch is unavailable in this warehouse.");
+        }
+        const batchTotal = (batchAllocated.get(batch.id) || 0) + item.quantity;
+        if (batchTotal > batch.quantity - batch.deliveredQuantity) throw new Error(`Delivery quantity exceeds the available quantity in batch ${batch.batchNumber}.`);
+        batchAllocated.set(batch.id, batchTotal);
+        batchLimits.set(batch.id, batch.quantity);
+        allocated.set(key, (allocated.get(key) || 0) + item.quantity);
         rows.push({ orderItemId: item.orderItemId, goodsReceiptItemId: batch.id, variationId: batch.variationId, quantity: item.quantity });
       }
 
-      for (const orderItem of order.orderItems) {
-        const alreadyDelivered = orderItem.deliveryItems.reduce(
-          (sum, row) => sum + row.quantity,
-          0,
-        );
-        const allocatedNow = rows
-          .filter((row) => row.orderItemId === orderItem.id)
-          .reduce((sum, row) => sum + row.quantity, 0);
-        const remaining = orderItem.quantity - alreadyDelivered;
-        if (Math.abs(allocatedNow - remaining) > 0.0001) {
+      for (const [key, orderItem] of orderItems) {
+        if (Math.abs((allocated.get(key) || 0) - orderItem.quantity) > 0.0001) {
           throw new Error(
-            `Allocate the full remaining quantity (${remaining}) for ${orderItem.sku}.`,
+            `Allocate the full quantity (${orderItem.quantity}) for ${orderItem.sku}.`,
           );
         }
       }
 
-      const result = await tx.delivery.create({ data: { deliveryNo, orderId: order.id, warehouseId: values.warehouseId, status: values.status || "PACKED", note: values.note || null, createdBy: userId, updatedBy: userId, items: { create: rows } } });
-      for (const row of rows) {
+      const result = await tx.delivery.create({ data: { deliveryNo, orderId: order.id, warehouseId: values.warehouseId, status: "PACKED", note: values.note || null, createdBy: userId, updatedBy: userId, items: { create: rows } } });
+      for (const row of [...rows].sort((a, b) => a.variationId.localeCompare(b.variationId) || a.goodsReceiptItemId.localeCompare(b.goodsReceiptItemId))) {
         const stock = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId: values.warehouseId, variationId: row.variationId } } });
-        if (!stock || (isPosReservedOrder ? stock.reserved < row.quantity : stock.available < row.quantity)) {
-          throw new Error(isPosReservedOrder ? "Reserved warehouse stock is insufficient for this delivery." : "Warehouse stock is insufficient for this delivery.");
-        }
-        const balanceAfter = stock.quantity - row.quantity;
-        await tx.stock.update({
-          where: { id: stock.id },
+        const stockField = usesReservedStock ? "reserved" : "available";
+        if (!stock) throw new Error("Warehouse stock is missing.");
+        const updated = await tx.stock.updateMany({
+          where: { id: stock.id, quantity: { gte: row.quantity }, [stockField]: { gte: row.quantity } },
           data: {
             quantity: { decrement: row.quantity },
-            ...(isPosReservedOrder
-              ? { reserved: { decrement: row.quantity } }
-              : { available: { decrement: row.quantity } }),
+            [stockField]: { decrement: row.quantity },
             updatedBy: userId,
           },
         });
-        await tx.goodsReceiptItem.update({ where: { id: row.goodsReceiptItemId }, data: { deliveredQuantity: { increment: row.quantity } } });
+        if (!updated.count) throw new Error("Warehouse stock is insufficient for this delivery.");
+        const { quantity: balanceAfter } = await tx.stock.findUniqueOrThrow({ where: { id: stock.id }, select: { quantity: true } });
+        const batch = await tx.goodsReceiptItem.updateMany({
+          where: { id: row.goodsReceiptItemId, deliveredQuantity: { lte: batchLimits.get(row.goodsReceiptItemId) - row.quantity }, goodsReceipt: { status: "COMPLETED" } },
+          data: { deliveredQuantity: { increment: row.quantity } },
+        });
+        if (!batch.count) throw new Error("Batch availability changed. Refresh and retry.");
         await tx.inventoryTransaction.create({ data: { warehouseId: values.warehouseId, variationId: row.variationId, type: "OUT", quantity: -row.quantity, balanceAfter, unitCost: stock.averageUnitCost || 0, referenceType: "SALE", referenceId: result.id, remarks: `Delivery ${deliveryNo} for order ${order.orderNo}`, createdBy: userId } });
       }
       await tx.order.update({ where: { id: order.id }, data: { status: "READY_TO_SHIP" } });

@@ -22,6 +22,7 @@ export default function CheckoutClient({ checkoutProviders, deliveryRates, campa
       deliveryArea={deliveryArea}
       products={cartItems}
       deliveryCharge={deliveryCharge}
+      deliveryRates={deliveryRates}
       buyNow={false}
       data={cartItems}
       totalPrice={totalPrice}

@@ -6,6 +6,9 @@ import { requireProcurementPermission, actionError } from "@/backend/utils/procu
 import { generateCode } from "@/backend/utils/generateCode";
 import { ACCOUNT_CODES, moneyAccountCode, postJournal } from "@/backend/utils/accounting";
 import { postMoneyTransaction } from "@/backend/services/moneyTransactionService";
+import { deliveredOrderUnits, orderItemStockLines } from "@/lib/bundleStock";
+
+const activeDeliveryItems = { where: { delivery: { status: { not: "CANCELLED" } } }, select: { quantity: true, variationId: true } };
 
 export async function getReturnReceivingData() {
   try {
@@ -14,12 +17,12 @@ export async function getReturnReceivingData() {
       prisma.order.findMany({
         where: { status: { in: ["RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED"] } },
         orderBy: { updatedAt: "desc" }, take: 100,
-        select: { id: true, orderNo: true, customerName: true, phoneNumber: true, status: true, paymentMethod: true, paidAmount: true, deliveryCharge: true, deliveryDiscount: true, orderItems: { select: { id: true, productName: true, sku: true, price: true, quantity: true, variationId: true, deliveryItems: { select: { quantity: true } }, returnItems: { select: { quantity: true } } } } },
+        select: { id: true, orderNo: true, customerName: true, phoneNumber: true, status: true, paymentMethod: true, paidAmount: true, deliveryCharge: true, deliveryDiscount: true, orderItems: { select: { id: true, productName: true, sku: true, price: true, quantity: true, variationId: true, bundleComponents: true, deliveryItems: activeDeliveryItems, returnItems: { select: { quantity: true } } } } },
       }),
       prisma.warehouse.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, code: true } }),
       prisma.moneyAccount.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, type: true } }),
     ]);
-    const availableOrders = orders.map((order) => ({ ...order, orderItems: order.orderItems.map((item) => ({ ...item, receivedQuantity: Math.max(0, item.deliveryItems.reduce((sum, row) => sum + row.quantity, 0) - item.returnItems.reduce((sum, row) => sum + row.quantity, 0)) })).filter((item) => item.receivedQuantity > 0) })).filter((order) => order.orderItems.length);
+    const availableOrders = orders.map((order) => ({ ...order, orderItems: order.orderItems.map((item) => ({ ...item, receivedQuantity: Math.max(0, deliveredOrderUnits(item) - item.returnItems.reduce((sum, row) => sum + row.quantity, 0)) })).filter((item) => item.receivedQuantity > 0) })).filter((order) => order.orderItems.length);
     return { success: true, data: { orders: availableOrders, warehouses, accounts } };
   } catch (error) { return actionError(error, "Could not load return deliveries."); }
 }
@@ -31,10 +34,10 @@ export async function searchOrderForReturnReceiving(orderNo) {
     if (!number) return { success: false, message: "Enter an order number." };
     const order = await prisma.order.findUnique({
       where: { orderNo: number },
-      select: { id: true, orderNo: true, customerName: true, phoneNumber: true, status: true, paymentMethod: true, paidAmount: true, deliveryCharge: true, deliveryDiscount: true, orderItems: { select: { id: true, productName: true, sku: true, price: true, quantity: true, variationId: true, deliveryItems: { select: { quantity: true } }, returnItems: { select: { quantity: true } } } } },
+      select: { id: true, orderNo: true, customerName: true, phoneNumber: true, status: true, paymentMethod: true, paidAmount: true, deliveryCharge: true, deliveryDiscount: true, orderItems: { select: { id: true, productName: true, sku: true, price: true, quantity: true, variationId: true, bundleComponents: true, deliveryItems: activeDeliveryItems, returnItems: { select: { quantity: true } } } } },
     });
     if (!order) return { success: false, message: "Order number not found." };
-    const data = { ...order, orderItems: order.orderItems.map((item) => ({ ...item, receivedQuantity: Math.max(0, item.deliveryItems.reduce((sum, row) => sum + row.quantity, 0) - item.returnItems.reduce((sum, row) => sum + row.quantity, 0)) })).filter((item) => item.receivedQuantity > 0) };
+    const data = { ...order, orderItems: order.orderItems.map((item) => ({ ...item, receivedQuantity: Math.max(0, deliveredOrderUnits(item) - item.returnItems.reduce((sum, row) => sum + row.quantity, 0)) })).filter((item) => item.receivedQuantity > 0) };
     if (!data.orderItems.length) return { success: false, message: "This order has no delivered quantity left to return." };
     return { success: true, data };
   } catch (error) { return actionError(error, "Could not find this order."); }
@@ -54,7 +57,7 @@ export async function receiveReturnedOrder(formData) {
     let queuedRefundAmount = 0;
     let refundQueueNote = "No refundable paid balance.";
     await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: orderId }, include: { deliveries: { select: { id: true } }, orderItems: { include: { deliveryItems: true, returnItems: true } }, payments: { where: { status: { in: ["PAID", "PARTIALLY_REFUNDED"] } }, include: { refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } }, refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } });
+      const order = await tx.order.findUnique({ where: { id: orderId }, include: { deliveries: { where: { status: { not: "CANCELLED" } }, select: { id: true } }, orderItems: { include: { deliveryItems: activeDeliveryItems, returnItems: true } }, payments: { where: { status: { in: ["PAID", "PARTIALLY_REFUNDED"] } }, include: { refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } }, refunds: { where: { status: { in: ["PENDING", "APPROVED", "COMPLETED"] } }, select: { amount: true, status: true } } } });
       const allowedStatuses = reasonType === "DELIVERY_FAIL"
         ? ["RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED"]
         : ["DELIVERED", "RETURNING", "FAILED_RETURNING", "DELIVERY_FAILED", "RETURNED", "REFUNDING"];
@@ -62,61 +65,69 @@ export async function receiveReturnedOrder(formData) {
       const warehouse = await tx.warehouse.findUnique({ where: { id: warehouseId }, select: { id: true } });
       if (!warehouse) throw new Error("Warehouse not found.");
       const orderItems = new Map(order.orderItems.map((item) => [item.id, item]));
+      const returnQuantities = new Map();
       for (const item of items) {
         if (!["RESTOCK", "DISPOSE"].includes(item.disposition)) throw new Error("Choose restock or dispose for every returned item.");
         const source = orderItems.get(item.orderItemId);
         if (!source) throw new Error("A returned item does not belong to this order.");
-        const delivered = source.deliveryItems.reduce((sum, row) => sum + row.quantity, 0);
+        const delivered = deliveredOrderUnits(source);
         const previouslyReturned = source.returnItems.reduce((sum, row) => sum + row.quantity, 0);
-        if (item.quantity > delivered - previouslyReturned) throw new Error(`Return quantity exceeds the unreceived quantity for ${source.sku}.`);
+        const requested = (returnQuantities.get(source.id) || 0) + item.quantity;
+        returnQuantities.set(source.id, requested);
+        if (source.bundleComponents?.length && !Number.isInteger(item.quantity)) throw new Error("Returns must be in whole bundles.");
+        if (requested > delivered - previouslyReturned) throw new Error(`Return quantity exceeds the unreceived quantity for ${source.sku}.`);
       }
       const disposeItems = items.filter((item) => item.disposition === "DISPOSE");
       const disposalCosts = new Map();
       for (const item of disposeItems) {
         const source = orderItems.get(item.orderItemId);
-        const receivedLots = await tx.goodsReceiptItem.findMany({
-          where: { variationId: source.variationId, goodsReceipt: { is: { warehouseId } } },
-          select: {
-            quantity: true,
-            goodsReceipt: {
-              select: {
-                purchaseOrder: {
-                  select: {
-                    shippingCost: true,
-                    items: {
-                      select: {
-                        variationId: true,
-                        quantity: true,
-                        unitCost: true,
-                        discount: true,
+        let disposalCost = 0;
+        for (const line of orderItemStockLines({ ...source, quantity: item.quantity })) {
+          const receivedLots = await tx.goodsReceiptItem.findMany({
+            where: { variationId: line.variationId, goodsReceipt: { is: { warehouseId } } },
+            select: {
+              quantity: true,
+              goodsReceipt: {
+                select: {
+                  purchaseOrder: {
+                    select: {
+                      shippingCost: true,
+                      items: {
+                        select: {
+                          variationId: true,
+                          quantity: true,
+                          unitCost: true,
+                          discount: true,
+                        },
                       },
+                      expenses: { where: { voidedAt: null }, select: { amount: true } },
                     },
-                    expenses: { where: { voidedAt: null }, select: { amount: true } },
                   },
                 },
               },
             },
-          },
-        });
-        let weightedCost = 0;
-        let weightedQuantity = 0;
-        for (const lot of receivedLots) {
-          const po = lot.goodsReceipt?.purchaseOrder;
-          const matching = (po?.items || []).filter((entry) => entry.variationId === source.variationId);
-          const matchingQty = matching.reduce((sum, entry) => sum + entry.quantity, 0);
-          const poQty = (po?.items || []).reduce((sum, entry) => sum + entry.quantity, 0);
-          if (!po || matchingQty <= 0 || poQty <= 0) continue;
-          const unit = matching.reduce((sum, entry) => sum + Math.max(0, entry.unitCost - (entry.quantity ? entry.discount / entry.quantity : 0)) * entry.quantity, 0) / matchingQty + ((po.shippingCost || 0) + (po.expenses || []).reduce((sum, expense) => sum + expense.amount, 0)) / poQty;
-          weightedCost += unit * lot.quantity;
-          weightedQuantity += lot.quantity;
+          });
+          let weightedCost = 0;
+          let weightedQuantity = 0;
+          for (const lot of receivedLots) {
+            const po = lot.goodsReceipt?.purchaseOrder;
+            const matching = (po?.items || []).filter((entry) => entry.variationId === line.variationId);
+            const matchingQty = matching.reduce((sum, entry) => sum + entry.quantity, 0);
+            const poQty = (po?.items || []).reduce((sum, entry) => sum + entry.quantity, 0);
+            if (!po || matchingQty <= 0 || poQty <= 0) continue;
+            const unit = matching.reduce((sum, entry) => sum + Math.max(0, entry.unitCost - (entry.quantity ? entry.discount / entry.quantity : 0)) * entry.quantity, 0) / matchingQty + ((po.shippingCost || 0) + (po.expenses || []).reduce((sum, expense) => sum + expense.amount, 0)) / poQty;
+            weightedCost += unit * lot.quantity;
+            weightedQuantity += lot.quantity;
+          }
+          let unitCost = weightedQuantity > 0 ? weightedCost / weightedQuantity : 0;
+          if (!unitCost) {
+            const latestPurchase = await tx.purchaseItem.findFirst({ where: { variationId: line.variationId, purchaseOrder: { status: { in: ["ORDERED", "PARTIALLY_RECEIVED", "RECEIVED"] } } }, orderBy: { createdAt: "desc" }, select: { quantity: true, unitCost: true, discount: true } });
+            if (latestPurchase) unitCost = Math.max(0, latestPurchase.unitCost - (latestPurchase.quantity ? latestPurchase.discount / latestPurchase.quantity : 0));
+          }
+          if (!unitCost) throw new Error(`Buy price is unavailable for ${line.sku}; add a purchase receipt or purchase order cost before disposing it.`);
+          disposalCost += unitCost * line.quantity;
         }
-        let unitCost = weightedQuantity > 0 ? weightedCost / weightedQuantity : 0;
-        if (!unitCost) {
-          const latestPurchase = await tx.purchaseItem.findFirst({ where: { variationId: source.variationId, purchaseOrder: { status: { in: ["ORDERED", "PARTIALLY_RECEIVED", "RECEIVED"] } } }, orderBy: { createdAt: "desc" }, select: { quantity: true, unitCost: true, discount: true } });
-          if (latestPurchase) unitCost = Math.max(0, latestPurchase.unitCost - (latestPurchase.quantity ? latestPurchase.discount / latestPurchase.quantity : 0));
-        }
-        if (!unitCost) throw new Error(`Buy price is unavailable for ${source.sku}; add a purchase receipt or purchase order cost before disposing it.`);
-        disposalCosts.set(item.orderItemId, unitCost * item.quantity);
+        disposalCosts.set(item.orderItemId, (disposalCosts.get(item.orderItemId) || 0) + disposalCost);
       }
       const receipt = await tx.returnReceipt.create({ data: { orderId, reasonType, description, createdBy: userId } });
       const hasAdvancePayment = order.payments.some((payment) => payment.paymentMethod !== "COD");
@@ -151,15 +162,17 @@ export async function receiveReturnedOrder(formData) {
         const source = orderItems.get(item.orderItemId);
         await tx.returnReceiptItem.create({ data: { returnReceiptId: receipt.id, orderItemId: source.id, variationId: source.variationId, warehouseId, quantity: item.quantity, disposition: item.disposition } });
         if (item.disposition === "RESTOCK") {
-          const saleMovements = await tx.inventoryTransaction.findMany({ where: { referenceType: "SALE", referenceId: { in: [order.id, ...order.deliveries.map((delivery) => delivery.id)] }, variationId: source.variationId, type: "OUT" }, select: { quantity: true, unitCost: true } });
-          const soldQuantity = saleMovements.reduce((sum, movement) => sum + Math.abs(movement.quantity), 0);
-          const saleCost = saleMovements.reduce((sum, movement) => sum + Math.abs(movement.quantity) * (movement.unitCost || 0), 0);
-          const returnUnitCost = soldQuantity > 0 ? saleCost / soldQuantity : 0;
-          const current = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId, variationId: source.variationId } } });
-          const balanceAfter = (current?.quantity || 0) + item.quantity;
-          const averageUnitCost = balanceAfter > 0 ? (((current?.quantity || 0) * (current?.averageUnitCost || 0)) + item.quantity * returnUnitCost) / balanceAfter : 0;
-          const stock = await tx.stock.upsert({ where: { warehouseId_variationId: { warehouseId, variationId: source.variationId } }, create: { warehouseId, variationId: source.variationId, quantity: item.quantity, available: item.quantity, averageUnitCost: returnUnitCost, createdBy: userId, updatedBy: userId }, update: { quantity: { increment: item.quantity }, available: { increment: item.quantity }, averageUnitCost, updatedBy: userId } });
-          await tx.inventoryTransaction.create({ data: { warehouseId, variationId: source.variationId, type: "RETURN_IN", quantity: item.quantity, balanceAfter: stock.quantity, unitCost: returnUnitCost, referenceType: "RETURN", referenceId: receipt.id, remarks: `Restocked from order ${order.orderNo}; ${description}`, createdBy: userId } });
+          for (const { variationId, quantity } of orderItemStockLines({ ...source, quantity: item.quantity })) {
+            const saleMovements = await tx.inventoryTransaction.findMany({ where: { referenceType: "SALE", referenceId: { in: [order.id, ...order.deliveries.map((delivery) => delivery.id)] }, variationId, type: "OUT" }, select: { quantity: true, unitCost: true } });
+            const soldQuantity = saleMovements.reduce((sum, movement) => sum + Math.abs(movement.quantity), 0);
+            const saleCost = saleMovements.reduce((sum, movement) => sum + Math.abs(movement.quantity) * (movement.unitCost || 0), 0);
+            const returnUnitCost = soldQuantity > 0 ? saleCost / soldQuantity : 0;
+            const current = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId, variationId } } });
+            const balanceAfter = (current?.quantity || 0) + quantity;
+            const averageUnitCost = balanceAfter > 0 ? (((current?.quantity || 0) * (current?.averageUnitCost || 0)) + quantity * returnUnitCost) / balanceAfter : 0;
+            const stock = await tx.stock.upsert({ where: { warehouseId_variationId: { warehouseId, variationId } }, create: { warehouseId, variationId, quantity, available: quantity, averageUnitCost: returnUnitCost, createdBy: userId, updatedBy: userId }, update: { quantity: { increment: quantity }, available: { increment: quantity }, averageUnitCost, updatedBy: userId } });
+            await tx.inventoryTransaction.create({ data: { warehouseId, variationId, type: "RETURN_IN", quantity, balanceAfter: stock.quantity, unitCost: returnUnitCost, referenceType: "RETURN", referenceId: receipt.id, remarks: `Restocked from order ${order.orderNo}; ${description}`, createdBy: userId } });
+          }
         }
       }
 
@@ -173,7 +186,7 @@ export async function receiveReturnedOrder(formData) {
       const allReturned = order.orderItems.every((source) => {
         const oldQty = source.returnItems.reduce((sum, row) => sum + row.quantity, 0);
         const newQty = items.filter((item) => item.orderItemId === source.id).reduce((sum, item) => sum + item.quantity, 0);
-        const delivered = source.deliveryItems.reduce((sum, row) => sum + row.quantity, 0);
+        const delivered = deliveredOrderUnits(source);
         return delivered <= oldQty + newQty + 0.00001;
       });
       if (allReturned) await tx.order.update({ where: { id: order.id }, data: { status: reasonType === "DELIVERY_FAIL" ? "FAILED_RETURN_RECEIVED" : "RETURNED" } });
@@ -195,7 +208,7 @@ export async function receiveReturnedOrder(formData) {
         await postMoneyTransaction(tx, { transactionNo, type: "EXPENSE", amount: charge, fromAccountId: account.id, expenseId: expense.id, idempotencyKey: `EXPENSE:${expense.id}`, reference: order.orderNo, note: `Delivery fail expense for order ${order.orderNo}`, transactionDate: expense.expenseDate, createdBy: userId });
         await postJournal(tx, { entryDate: expense.expenseDate, description: expense.description, referenceType: "EXPENSE", referenceId: expense.id, createdBy: userId, lines: [{ accountCode: ACCOUNT_CODES.OPERATING_EXPENSE, debit: charge }, { accountCode: moneyAccountCode(account), accountName: `${account.type} · ${account.name}`, accountType: "ASSET", credit: charge }] });
       }
-    });
+    }, { isolationLevel: "Serializable" });
     revalidatePath("/admin/returns");
     revalidatePath("/admin/refunds");
     revalidatePath("/admin/inventory/stock");

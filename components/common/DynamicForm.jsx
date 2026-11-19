@@ -245,7 +245,9 @@ export default function DynamicForm({
               return (
                 <label key={field.name} className="my-3 grid gap-1 text-left text-sm font-medium md:col-span-2">
                   <span>{field.label}</span>
-                  <select name={field.name} defaultValue={data?.[field.name] ?? field.defaultValue} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                  <select name={field.name} defaultValue={data?.[field.name] ?? field.defaultValue}
+                    onChange={field.onValueChange ? (event) => field.onValueChange(event.target.value) : undefined}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
                     {(field.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>

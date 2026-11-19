@@ -1,8 +1,10 @@
 "use client";
 import OrderForm from "@/components/checkout/OrderForm";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import BuyNowProductDetails from "./BuyNowProductDetails";
+import { bundleSelectionLabels, completeBundleSelection } from "@/lib/bundleStock";
 export default function BuyNowCheckout({ data, deliveryRates, checkoutProviders, campaignOffers = [] }) {
   const [deliveryArea, setDeliveryArea] = useState("outside-dhaka");
   const searchParams = useSearchParams();
@@ -14,6 +16,13 @@ export default function BuyNowCheckout({ data, deliveryRates, checkoutProviders,
   const [orderWeight, setOrderWeight] = useState(0);
   const { hasVariations, variations, title, id, slug } = data;
   const selectedVariation = data?.variations?.find((v) => v.id === variationId);
+  const bundleOptions = data.bundleOptions || [];
+  let draftChoices = null;
+  try { draftChoices = JSON.parse(searchParams.get("bundle") || "null"); } catch { /* Show the product link below. */ }
+  const bundleSelections = bundleOptions.length ? completeBundleSelection(bundleOptions, draftChoices) : undefined;
+  if (data.stockMode === "COMPONENT_BASED" && ((hasVariations && !selectedVariation) || (bundleOptions.length && !bundleSelections))) {
+    return <Link className="button" href={`/product/${encodeURIComponent(slug)}`}>Bundle-এর সাইজ ও অপশন বেছে নিন</Link>;
+  }
   // const initialDeliveryCharge =
   //   deliveryArea === "inside-dhaka" ? data?.insideDhaka : data?.outSideDhaka;
   // const deliveryCharge =
@@ -56,6 +65,8 @@ export default function BuyNowCheckout({ data, deliveryRates, checkoutProviders,
     id: id,
     productId: id,
     categoryId: data?.categoryId,
+    bundleSelections,
+    bundleSelectionLabels: bundleSelections ? bundleSelectionLabels(bundleOptions, bundleSelections) : undefined,
     quantity: productQty,
     weight: selectedVariation
       ? selectedVariation?.weight
@@ -76,6 +87,7 @@ export default function BuyNowCheckout({ data, deliveryRates, checkoutProviders,
       deliveryArea={deliveryArea}
       products={[productData]}
       deliveryCharge={deliveryCharge}
+      deliveryRates={deliveryRates}
       buyNow={true}
       data={productData}
       initialQty={initialQty}

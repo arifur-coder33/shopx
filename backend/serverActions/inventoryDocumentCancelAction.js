@@ -5,6 +5,7 @@ import { generateCode } from "@/backend/utils/generateCode";
 import { assertAccountingPeriodOpen } from "@/backend/utils/accounting";
 import { revalidatePath } from "next/cache";
 import { getPurchaseReceiveSummary } from "../utils/purchaseReceiptValue";
+import { releaseBundleOrder } from "@/backend/services/bundleReservationService";
 
 async function move(tx, { warehouseId, variationId, quantity, unitCost, referenceType, referenceId, remarks, userId, type }) {
   const stock = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId, variationId } } });
@@ -59,9 +60,12 @@ export async function cancelPreparedDelivery(id) {
     await prisma.$transaction(async (tx) => {
       const delivery = await tx.delivery.findUnique({ where: { id }, include: { items: true, order: true } });
       if (!delivery || delivery.status !== "PACKED") throw new Error("Only a packed delivery can be cancelled; shipped/delivered orders must be reversed through returns.");
+      if (delivery.order.bundleReservationWarehouseId && !["PENDING", "PROCESSING", "READY_TO_SHIP", "CANCELLED"].includes(delivery.order.status)) {
+        throw new Error("This bundle has already left the warehouse. Use return receiving.");
+      }
       const movements = await tx.inventoryTransaction.findMany({ where: { referenceType: "SALE", referenceId: id } });
       await assertNoLater(tx, movements);
-      const posReserved = delivery.order.adminNote === `POS_WAREHOUSE:${delivery.warehouseId}:RESERVED`;
+      const posReserved = delivery.order.bundleReservationWarehouseId === delivery.warehouseId || delivery.order.adminNote === `POS_WAREHOUSE:${delivery.warehouseId}:RESERVED`;
       for (const movement of movements) {
         const stock = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId: movement.warehouseId, variationId: movement.variationId } } });
         if (posReserved) await tx.stock.update({ where: { id: stock.id }, data: { quantity: { increment: -movement.quantity }, reserved: { increment: -movement.quantity }, updatedBy: userId } });
@@ -70,8 +74,10 @@ export async function cancelPreparedDelivery(id) {
       }
       for (const item of delivery.items) await tx.goodsReceiptItem.update({ where: { id: item.goodsReceiptItemId }, data: { deliveredQuantity: { decrement: item.quantity } } });
       await tx.delivery.update({ where: { id }, data: { status: "CANCELLED", updatedBy: userId } });
-      await tx.order.update({ where: { id: delivery.orderId }, data: { status: "PROCESSING" } });
-      await tx.orderTimeline.create({ data: { orderId: delivery.orderId, orderNo: delivery.order.orderNo, status: "PROCESSING", title: "Delivery cancelled", message: `Packed delivery ${delivery.deliveryNo} was cancelled and stock restored.`, createdBy: userId } });
+      const status = delivery.order.bundleReservationWarehouseId && delivery.order.status === "CANCELLED" ? "CANCELLED" : "PROCESSING";
+      if (status === "CANCELLED") await releaseBundleOrder(tx, delivery.orderId);
+      await tx.order.update({ where: { id: delivery.orderId }, data: { status } });
+      await tx.orderTimeline.create({ data: { orderId: delivery.orderId, orderNo: delivery.order.orderNo, status, title: "Delivery cancelled", message: `Packed delivery ${delivery.deliveryNo} was cancelled and stock restored.`, createdBy: userId } });
     });
     refreshProcurement(); revalidatePath("/admin/orders"); return { success: true, message: "Packed delivery cancelled and stock restored." };
   } catch (error) { return actionError(error, "Could not cancel delivery."); }

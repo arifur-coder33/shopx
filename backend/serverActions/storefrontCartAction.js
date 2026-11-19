@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { isDatabaseId } from "@/lib/databaseId";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, bundleSelectionLabels, completeBundleSelection, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
 
 // A deliberately small action for quick-add buttons. Keeping it separate from
 // the admin product action bundle prevents every storefront page compiling it.
@@ -16,6 +17,8 @@ export async function getStorefrontCartItem(slug) {
         isActive: true,
         categoryId: true,
         hasVariations: true,
+        stockMode: true,
+        bundleProducts: productBundleItemsSelect,
         category: { select: { name: true, slug: true, fullPath: true } },
         thumbnail: { select: { name: true } },
         variations: {
@@ -26,6 +29,7 @@ export async function getStorefrontCartItem(slug) {
             weight: true,
             regularPrice: true,
             discountPrice: true,
+            bundleItems: { select: bundleComponentStockSelect },
             thumbnail: { select: { name: true } },
           },
         },
@@ -35,7 +39,8 @@ export async function getStorefrontCartItem(slug) {
     if (!product?.isActive) {
       return { success: false, error: "Product is unavailable." };
     }
-    if (product.hasVariations) {
+    const bundleOptions = product.stockMode === "COMPONENT_BASED" ? publicBundleOptions(product.bundleProducts) : [];
+    if (product.hasVariations || bundleOptions.some((item) => item.requiresSelection)) {
       return { success: false, requiresSelection: true };
     }
 
@@ -43,6 +48,12 @@ export async function getStorefrontCartItem(slug) {
     if (!variation) {
       return { success: false, error: "Product price is unavailable." };
     }
+    const bundleStock = bundleOptions.length
+      ? availableProductBundleUnits(product.bundleProducts) : availableBundleUnits(variation.bundleItems);
+    if (product.stockMode === "COMPONENT_BASED" && bundleStock === 0) {
+      return { success: false, error: "এই Bundle এখন স্টকে নেই।" };
+    }
+    const bundleSelections = bundleOptions.length ? completeBundleSelection(bundleOptions) : undefined;
 
     return {
       success: true,
@@ -51,6 +62,8 @@ export async function getStorefrontCartItem(slug) {
         productId: product.id,
         categoryId: product.categoryId,
         title: product.title,
+        bundleSelections,
+        bundleSelectionLabels: bundleSelections ? bundleSelectionLabels(bundleOptions, bundleSelections) : undefined,
         slug: product.slug,
         discountPrice: variation.discountPrice || variation.regularPrice,
         regularPrice: variation.regularPrice,

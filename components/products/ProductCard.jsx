@@ -16,6 +16,7 @@ export default function ProductCard({ product, priority = false }) {
 
     thumbnail,
   } = product || {};
+  const needsSelection = Boolean(product.requiresSelection ?? hasVariations);
   const price = discountPrice > 0 ? discountPrice : regularPrice;
   const displayPrice = product.campaignPrice > 0 ? product.campaignPrice : price;
   const showDiscount = Number(product.campaignDiscountPercent) > 0;
@@ -28,7 +29,7 @@ export default function ProductCard({ product, priority = false }) {
     typeof product.category === "string"
       ? product.category
       : product.category?.name;
-  const checkoutTracking = !hasVariations
+  const checkoutTracking = !needsSelection
     ? JSON.stringify({
         id: product.id,
         title,
@@ -99,7 +100,7 @@ export default function ProductCard({ product, priority = false }) {
           className="px-2 border-b-4 w-full border-orange-800 hover:border-orange-700 py-1"
           product={product}
         /> */}
-        {hasVariations ? (
+        {needsSelection ? (
           <Link
             className="mt-auto block min-h-11 w-full rounded-brand bg-brand px-2 py-2 text-center font-semibold"
             href={`/product/${encodeURIComponent(product?.slug)}`}

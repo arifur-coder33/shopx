@@ -66,6 +66,10 @@ export default function WishlistManager() {
         try {
           // Full stock data is requested only after a user clicks Add to Cart.
           const result = await getStorefrontCartItem(slug);
+          if (result?.requiresSelection) {
+            window.location.assign(`/product/${encodeURIComponent(slug)}`);
+            return;
+          }
           if (!result?.success || !result.data) {
             throw new Error(result?.error || "Product is unavailable");
           }

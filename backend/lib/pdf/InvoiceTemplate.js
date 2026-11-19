@@ -3,7 +3,8 @@ import path from "path";
 import QRCode from "qrcode";
 import { getSiteUrl } from "@/lib/siteUrl";
 
-const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/gu, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+import { escapeDocumentHtml as escapeHtml, getOrderDocumentFontCss } from "./orderDocumentFont";
+import { formatOrderAddress } from "@/lib/formatOrderAddress";
 
 function invoiceCombinations(value) {
   try {
@@ -20,23 +21,6 @@ export async function getInvoiceTemplate(orderData) {
   const qrCodeDataUrl = await QRCode.toDataURL(invoiceLink);
 
   // ২. লোকাল ফন্ট লোড করে Base64 এ কনভার্ট করা (দ্রুত লোডিংয়ের জন্য)
-  let fontBase64 = "";
-  try {
-    // আপনার ফন্টের নাম অনুযায়ী ফাইলের নাম দিন (public/fonts ফোল্ডারে থাকতে হবে)
-    const fontPath = path.join(
-      process.cwd(),
-      "public",
-      "fonts",
-      "SolaimanLipi.ttf",
-    );
-    if (fs.existsSync(fontPath)) {
-      fontBase64 = fs.readFileSync(fontPath).toString("base64");
-    }
-  } catch (err) {
-    console.error("Font loading failed", err);
-  }
-
-  // ৩. লোগো লোড করে Base64 এ কনভার্ট (নেটওয়ার্ক রিকোয়েস্ট এড়ানোর জন্য)
   let logoSrc = company.photoDataUrl || "";
   try {
     if (!logoSrc) {
@@ -50,9 +34,8 @@ export async function getInvoiceTemplate(orderData) {
       logoSrc = `data:image/png;base64,${logoBase64}`;
     }
     }
-  } catch (err) {
-    // ফলব্যাক যদি লোকাল লোগো না পাওয়া যায়
-    logoSrc = `${siteUrl}/android-chrome-192x192.png`;
+  } catch (error) {
+    console.error("Invoice logo could not be loaded:", error.message);
   }
 
   // ৪. তারিখ ফরম্যাট
@@ -103,12 +86,7 @@ export async function getInvoiceTemplate(orderData) {
 
   // ৭. Plain CSS Styles
   const css = `
-    @font-face {
-        font-family: 'BanglaFont';
-        src: url(data:font/ttf;base64,${fontBase64}) format('truetype');
-        font-weight: normal;
-        font-style: normal;
-    }
+    ${getOrderDocumentFontCss()}
     body { font-family: 'BanglaFont', sans-serif; font-size: 14px; color: #333; margin: 0; padding: 0; }
     .container { max-width: 800px; margin: 0 auto; padding: 40px; }
     
@@ -167,7 +145,7 @@ export async function getInvoiceTemplate(orderData) {
             <!-- Header -->
             <div class="header">
                 <div class="company-info">
-                    <img src="${logoSrc}" class="logo" />
+                    ${logoSrc ? `<img src="${escapeHtml(logoSrc)}" class="logo" alt="" />` : ""}
                     <div class="company-details">
                         <h1>${escapeHtml(company.name || process.env.NEXT_PUBLIC_NEXT_SHOP_NAME || "Shop")}</h1>
                         ${company.address ? `<p>${escapeHtml(company.address)}</p>` : ""}
@@ -192,14 +170,14 @@ export async function getInvoiceTemplate(orderData) {
                 <div class="address-col">
                     <div class="col-title">Bill To</div>
                     <p class="customer-name">${escapeHtml(orderData.customerName)}</p>
-                    <p>${escapeHtml(orderData.deliveryAddress)}</p>
+                    <p>${escapeHtml(formatOrderAddress(orderData))}</p>
                     <p>${escapeHtml(orderData.phoneNumber)}</p>
                     <p>${escapeHtml(orderData.email)}</p>
                 </div>
                 <div class="address-col">
                     <div class="col-title">Ship To</div>
                     <p class="customer-name">${escapeHtml(orderData.customerName)}</p>
-                    <p>${escapeHtml(orderData.deliveryAddress)}</p>
+                    <p>${escapeHtml(formatOrderAddress(orderData))}</p>
                     <p>${escapeHtml(orderData.phoneNumber)}</p>
                 </div>
             </div>

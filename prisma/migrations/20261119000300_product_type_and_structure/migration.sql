@@ -1,0 +1,6 @@
+CREATE TYPE "ProductType" AS ENUM ('PHYSICAL', 'DIGITAL', 'SERVICE', 'VOUCHER', 'RENTAL');
+CREATE TYPE "ProductStructure" AS ENUM ('SINGLE', 'BUNDLE', 'KIT', 'CONFIGURABLE');
+
+ALTER TABLE "Product"
+ADD COLUMN "productType" "ProductType" NOT NULL DEFAULT 'PHYSICAL',
+ADD COLUMN "productStructure" "ProductStructure" NOT NULL DEFAULT 'SINGLE';

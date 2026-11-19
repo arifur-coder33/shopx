@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { formatOrderTimelineMessage } from "@/lib/steadfastTimeline";
 
 export async function addOrderTimeline({
   orderId,
@@ -96,7 +97,7 @@ export async function getOrderTimeline(orderId, orderNo, phoneNumber) {
 
     return {
       supersede: true,
-      data: timeline,
+      data: timeline.map((entry) => ({ ...entry, message: formatOrderTimelineMessage(entry) })),
     };
   } catch (error) {
     console.error("Timeline Error:", error);

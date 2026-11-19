@@ -1,42 +1,92 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import FloatingInput from "../input/FloatingInput";
 import PhoneInput from "../input/PhoneInput";
-// const loadDivisionList = async () => {
-//   const location = await import("@/utils/data/bangladesh-all-thanas.json");
+import SearchableDropdown from "../input/SearchableDropdown";
 
-//   return {
-//     data: location.default.map((division) => ({
-//       id: division.division_en,
-//       name: division.division_bn,
-//       searchText: `${division.division_bn} ${division.division_en}`,
-//       districts: division.districts,
-//     })),
-//   };
-// };
+let districtList;
 
-export default function DeliveryAddress() {
-  // const [division, setDivision] = useState(null);
-  // const [district, setDistrict] = useState(null);
-  // const [thana, setThana] = useState(null);
+function loadDistricts() {
+  districtList ??= import("@/utils/data/bangladesh-all-thanas.json")
+    .then(({ default: divisions }) => ({
+      data: divisions
+        .flatMap((division) =>
+          division.districts.map((district) => ({
+            id: district.district_en,
+            name: district.district_bn,
+            searchText: district.district_en,
+            thanas: district.thanas.map((thana) => ({
+              id: thana.thana_en,
+              name: thana.thana_bn,
+              searchText: thana.thana_en,
+            })),
+          })),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name, "bn")),
+    }))
+    .catch(() => {
+      districtList = undefined;
+      return { data: [] };
+    });
+  return districtList;
+}
 
-  // const handleDivisionChange = (selectedDivision) => {
-  //   setDivision(selectedDivision);
-  //   setDistrict(null);
-  //   setThana(null);
-  // };
+export default function DeliveryAddress({
+  initialLocation,
+  onLocationChange,
+  setDeliveryArea,
+}) {
+  const [location, setLocation] = useState(null);
+  const { district, thana } = location || {};
+  const thanas = useMemo(() => district?.thanas || [], [district]);
 
-  // const handleDistrictChange = (selectedDistrict) => {
-  //   setDeliveryArea(
-  //     selectedDistrict?.id.toLowerCase() === "dhaka"
-  //       ? "inside-dhaka"
-  //       : "outside-dhaka",
-  //   );
-  //   setDistrict(selectedDistrict);
-  //   setThana(null);
-  // };
+  useEffect(() => {
+    if (!initialLocation?.district) return;
+    let active = true;
+    loadDistricts().then(({ data }) => {
+      if (!active) return;
+      const savedDistrict = data.find(
+        (item) => item.id === initialLocation.district,
+      );
+      if (!savedDistrict) return;
+      setLocation(
+        (current) =>
+          current ?? {
+            district: savedDistrict,
+            thana: savedDistrict.thanas.find(
+              (item) => item.id === initialLocation.thana,
+            ),
+          },
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialLocation]);
 
-  // const handleThanaChange = (selectedThana) => {
-  //   setThana(selectedThana);
-  // };
+  function selectDistrict(nextDistrict) {
+    if (nextDistrict?.id === district?.id) return;
+    setLocation({ district: nextDistrict, thana: null });
+    const nextArea = nextDistrict
+      ? nextDistrict.id === "Dhaka"
+        ? "inside-dhaka"
+        : "outside-dhaka"
+      : undefined;
+    if (nextArea) setDeliveryArea?.(nextArea);
+    onLocationChange?.(
+      { district: nextDistrict?.id || "", thana: "" },
+      nextArea,
+    );
+  }
+
+  function selectThana(nextThana) {
+    setLocation({ district, thana: nextThana });
+    onLocationChange?.({
+      district: district?.id || "",
+      thana: nextThana?.id || "",
+    });
+  }
 
   return (
     <address className="grid grid-cols-2 md:grid-cols-2 gap-3 pt-3 mb-2">
@@ -66,62 +116,36 @@ export default function DeliveryAddress() {
         largeMobile
       />
 
-      {/* <SearchableDropdown
-        defaultId={division}
-        label={"আপনার বিভাগঃ *"}
-        name="division"
-        onSelect={handleDivisionChange}
-        loadLists={loadDivisionList}
-        colSpan={"1"}
-        largeMobile
-      />
       <SearchableDropdown
-        defaultId={district}
-        label={"আপনার জেলাঃ *"}
         name="district"
-        onSelect={handleDistrictChange}
-        colSpan={"1"}
-        dropDownLists={
-          division
-            ? division.districts.map((district) => ({
-                id: district.district_en,
-                name: district.district_bn,
-                searchText: `${district.district_bn} ${district.district_en}`,
-                thanas: district.thanas,
-              }))
-            : []
-        }
-        largeMobile
-      />
-
-      <SearchableDropdown
-        colSpan={"full"}
-        defaultId={thana}
-        label={"আপনার থানা *"}
-        name="thana"
-        onSelect={handleThanaChange}
+        label="জেলা "
+        defaultId={district}
+        loadLists={loadDistricts}
+        onSelect={selectDistrict}
+        onClear={() => selectDistrict(null)}
         required={true}
-        largeMobile
-        dropDownLists={
-          district
-            ? district.thanas.map((item) => ({
-                id: item.thana_en,
-                name: item.thana_bn,
-                searchText: `${item.thana_bn} ${item.thana_en}`,
-              }))
-            : []
-        }
-      /> */}
+      />
+      <SearchableDropdown
+        key={district?.id || "no-district"}
+        name="thana"
+        label="থানা/উপজেলা"
+        defaultId={thana}
+        dropDownLists={thanas}
+        onSelect={selectThana}
+        onClear={() => selectThana(null)}
+        disabled={!district}
+        required={true}
+      />
       <FloatingInput
         defaultValue=""
         type={"text"}
-        label="ডেলিভারি ঠিকানা "
+        label="বাসা/রোড/এলাকা লিখুন "
         name={"deliveryAddress"}
         inputType={"text"}
         inputClassName="placeholder:text-base md:placeholder:text-lg"
         autoComplete="address-line1"
         colSpan={"full"}
-        placeholder="বাসা/রোড/এলাকা, থানা ও জেলা লিখুন"
+        // placeholder="বাসা/রোড/এলাকা লিখুন"
         required={true}
         largeMobile
       />
@@ -144,8 +168,6 @@ export default function DeliveryAddress() {
         colSpan={"full"}
         largeMobile
       />
-
-      {/* <DeliveryAreaSelector setDeliveryArea={setDeliveryArea} /> */}
     </address>
   );
 }

@@ -7,7 +7,6 @@ import { DEFAULT_CHAT_AI_MODELS, isChatAiModelAllowed } from "@/backend/services
 import { decryptProviderCredentials } from "@/backend/services/providerCredentialService";
 import { htmlToText } from "html-to-text";
 import { normalizeChatText } from "@/lib/chatText";
-import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 import { runOpenAiFunctionLoop } from "@/backend/services/chat/ai/openAiFunctionLoop";
 
 export const settingId = "primary";
@@ -535,9 +534,10 @@ export async function verifyBangladeshDeliveryAddress(address) {
   try {
     const setting = await prisma.chatSetting.findUnique({
       where: { id: "primary" },
-      select: { aiAutoReplyEnabled: true, aiProvider: true, openaiModel: true, googleAiStudioModel: true, encryptedCredentials: true },
+      select: { aiDeliveryAddressCheckEnabled: true, aiProvider: true, openaiModel: true, googleAiStudioModel: true, encryptedCredentials: true },
     });
-    if (!setting?.aiAutoReplyEnabled || !setting.encryptedCredentials) return unavailable;
+    if (!setting?.aiDeliveryAddressCheckEnabled) return { ...unavailable, skipped: true };
+    if (!setting.encryptedCredentials) return unavailable;
     const credentials = decryptProviderCredentials(setting.encryptedCredentials);
     const provider = setting.aiProvider === "GOOGLE_AI_STUDIO" ? "GOOGLE_AI_STUDIO" : "OPENAI";
     const apiKey = provider === "GOOGLE_AI_STUDIO" ? credentials.googleAiStudioApiKey : credentials.openaiApiKey;
@@ -563,10 +563,13 @@ export async function verifyBangladeshDeliveryAddress(address) {
       input: [{ role: "user", content: `এই ডেলিভারি ঠিকানাটি যাচাই করুন: ${String(address || "").slice(0, 500)}` }],
     });
     const result = JSON.parse(output);
-    if (!result.valid) return { available: true, valid: false, error: result.reason || "ঠিকানাটি সম্পূর্ণ নয়। বাসা/রোড/এলাকা, থানা ও জেলার নামসহ লিখুন।" };
-    const parsed = parseBangladeshAddress(address);
-    if (!parsed.valid) return { available: true, valid: false, error: parsed.error };
-    return { available: true, valid: true, district: parsed.district, thana: parsed.thana };
+    if (result.valid !== true) return { available: true, valid: false, error: result.reason || "ঠিকানাটি সম্পূর্ণ নয়। বাসা/রোড/এলাকা, থানা ও জেলার নামসহ লিখুন।" };
+    return {
+      available: true,
+      valid: true,
+      district: String(result.district || "").trim().slice(0, 100) || null,
+      thana: String(result.thana || "").trim().slice(0, 100) || null,
+    };
   } catch {
     if (aiConfigured) return { available: true, valid: false, error: "AI দিয়ে ঠিকানা যাচাই করা যাচ্ছে না। অনুগ্রহ করে একটু পরে আবার চেষ্টা করুন।" };
     return unavailable;

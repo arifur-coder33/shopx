@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { cache } from "react";
 import { normalizeProductVideos } from "@/backend/utils/productVideos";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
 
 export const getStorefrontProductBySlug = cache(async (slug) => {
   try {
@@ -15,6 +16,8 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
         categoryId: true,
         isActive: true,
         hasVariations: true,
+        stockMode: true,
+        bundleProducts: productBundleItemsSelect,
         allowOutOfStockOrder: true,
         codAvailable: true,
         advancePaymentType: true,
@@ -51,6 +54,7 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
             discountPrice: true,
             thumbnailId: true,
             stocks: { select: { available: true } },
+            bundleItems: { select: bundleComponentStockSelect },
             thumbnail: { select: { name: true, id: true, url: true } },
             combinations: {
               orderBy: { createdAt: "asc" },
@@ -68,15 +72,23 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
       return { success: false, error: "Product could not be found." };
     }
 
+    const { bundleProducts, ...publicData } = data;
+    const bundleOptions = data.stockMode === "COMPONENT_BASED" ? publicBundleOptions(bundleProducts) : [];
+    const productBundleStock = bundleOptions.length ? availableProductBundleUnits(bundleProducts) : null;
     return {
       success: true,
       data: {
-        ...data,
+        ...publicData,
+        bundleOptions,
         gallery: data.gallery.map((item) => item.media),
         videos: normalizeProductVideos(data.videos, data.videoUrl),
-        variations: data.variations.map((variation) => ({
+        allowOutOfStockOrder: data.stockMode !== "COMPONENT_BASED" && data.allowOutOfStockOrder,
+        variations: data.variations.map(({ bundleItems, ...variation }) => ({
           ...variation,
-          stock: variation.stocks.reduce(
+          bundleContents: data.stockMode === "COMPONENT_BASED" ? bundleItems.map(({ quantity, componentVariation }) => ({
+            quantity, sku: componentVariation.sku, title: componentVariation.product?.title,
+          })) : undefined,
+          stock: data.stockMode === "COMPONENT_BASED" ? (productBundleStock ?? availableBundleUnits(bundleItems)) : variation.stocks.reduce(
             (sum, row) => sum + Math.max(0, Number(row.available) || 0),
             0,
           ),
@@ -107,6 +119,8 @@ export const getStorefrontCheckoutProductBySlug = cache(async (slug) => {
         deliveryMaxDays: true,
         productCode: true,
         hasVariations: true,
+        stockMode: true,
+        bundleProducts: productBundleItemsSelect,
         thumbnail: { select: { name: true } },
         category: { select: { name: true, slug: true, fullPath: true } },
         variations: {
@@ -131,8 +145,8 @@ export const getStorefrontCheckoutProductBySlug = cache(async (slug) => {
     if (!data || data.isActive === false) {
       return { success: false, error: "Product could not be found." };
     }
-    const { isActive: _isActive, ...product } = data;
-    return { success: true, data: product };
+    const { isActive: _isActive, bundleProducts, ...product } = data;
+    return { success: true, data: { ...product, bundleOptions: data.stockMode === "COMPONENT_BASED" ? publicBundleOptions(bundleProducts) : [] } };
   } catch (error) {
     return { success: false, error: error.message };
   }

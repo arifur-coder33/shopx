@@ -85,11 +85,16 @@ const nextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "sharp"],
   productionBrowserSourceMaps: false,
 
-  // Keep these runtime assets limited to the two routes that render images/PDFs.
+  // Keep these runtime assets limited to routes that render images or PDFs.
   // The Bengali font is read with fs at runtime, and Chromium's compressed binary
   // must be present beside the function bundle.
   outputFileTracingIncludes: {
     "/api/pdf/invoice": [
+      "./node_modules/@sparticuz/chromium/bin/**/*",
+      "./public/fonts/SolaimanLipi.ttf",
+      "./public/android-chrome-192x192.png",
+    ],
+    "/api/admin/order-documents": [
       "./node_modules/@sparticuz/chromium/bin/**/*",
       "./public/fonts/SolaimanLipi.ttf",
       "./public/android-chrome-192x192.png",

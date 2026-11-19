@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import prisma from "@/lib/prisma";
+import { updateCourierOrderStatus } from "@/backend/services/bundleReservationService";
 import { getCourierWebhookSecret } from "@/backend/services/providerCredentialService";
 import { postCodCollection, postProviderFee } from "@/backend/services/paymentPostingService";
 
@@ -117,7 +118,7 @@ export async function POST(req) {
       Number.isFinite(actualDeliveryFee) && actualDeliveryFee >= 0;
 
     if (nextStatus && shipping.order.status !== nextStatus) {
-      await prisma.order.update({ where: { id: shipping.orderId }, data: { status: nextStatus } });
+      await updateCourierOrderStatus(prisma, shipping.order, nextStatus);
     }
     if (hasDeliveryFee) {
       await prisma.shipping.update({ where: { id: shipping.id }, data: { deliveryFee: actualDeliveryFee } });

@@ -26,6 +26,10 @@ export default function WishlistPageClient() {
     try {
       // Fetch full stock/variation data only after the click, keeping wishlist load fast.
       const result = await getStorefrontCartItem(product.slug);
+      if (result?.requiresSelection) {
+        window.location.assign(`/product/${encodeURIComponent(product.slug)}`);
+        return;
+      }
       if (!result?.success || !result.data) {
         throw new Error("Product is unavailable");
       }

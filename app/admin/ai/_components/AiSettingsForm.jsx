@@ -70,6 +70,16 @@ export default function AiSettingsForm({ settings, canUpdate }) {
       <form ref={aiForm} onSubmit={saveAiSettings} className="rounded-3xl border border-border bg-surface p-5 shadow-sm sm:p-7">
         <div className="flex items-start gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-violet-500/10 text-violet-700"><Bot size={22} /></span><div><h2 className="text-lg font-bold text-text">AI behavior</h2><p className="mt-1 text-xs leading-5 text-text-muted">কোন model চলবে এবং reply কীভাবে লিখবে সেট করুন।</p></div></div>
         <label className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-border bg-background p-4"><span><span className="block text-sm font-bold text-text">AI auto-reply</span><span className="mt-1 block text-xs text-text-muted">Customer message এলে AI উত্তর তৈরি করবে।</span></span><input name="aiAutoReplyEnabled" type="checkbox" defaultChecked={settings.aiAutoReplyEnabled} disabled={!canUpdate} className="h-5 w-5 accent-primary" /></label>
+        <label className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-border bg-background p-4">
+          <span>
+            <span className="block text-sm font-bold text-text">AI দিয়ে ডেলিভারি ঠিকানা যাচাই</span>
+            <span className="mt-1 block text-xs leading-5 text-text-muted">চালু থাকলে নির্বাচিত AI provider ঠিকানার পূর্ণতা যাচাই করবে। বন্ধ থাকলে গ্রাহকের দেওয়া ঠিকানাই সেভ হবে। এই সেটিংটি chat auto-reply থেকে আলাদা।</span>
+          </span>
+          <select name="aiDeliveryAddressCheckEnabled" defaultValue={settings.aiDeliveryAddressCheckEnabled ? "on" : "off"} disabled={!canUpdate} className="shrink-0 rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text disabled:opacity-60">
+            <option value="off">বন্ধ</option>
+            <option value="on">চালু</option>
+          </select>
+        </label>
         <div className="mt-5 rounded-2xl border border-border bg-background p-4"><div><h3 className="text-sm font-bold text-text">AI কোন channel-এ auto-reply দেবে?</h3><p className="mt-1 text-xs leading-5 text-text-muted">Channel চালু থাকা এবং AI auto-reply master switch on থাকাও প্রয়োজন।</p></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{[
           ["aiReplyWebsiteEnabled", "Website chat", settings.aiReplyWebsiteEnabled],
           ["aiReplyMessengerEnabled", "Messenger inbox", settings.aiReplyMessengerEnabled],

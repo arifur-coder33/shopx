@@ -1,6 +1,10 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { parseProductClassification } from "@/lib/productClassification";
+import { productCardBundleSelection, productCardRequiresSelection } from "@/lib/productCardSelection";
+import { parseNewBundleComposition, saveProductBundleComposition } from "@/backend/services/bundleCompositionService";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
 import { revalidateProductChange } from "@/backend/utils/revalidateCategoryProducts";
 import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
@@ -41,21 +45,38 @@ export async function getProductLiveStock(productId) {
       select: {
         isActive: true,
         allowOutOfStockOrder: true,
-        variations: { select: { id: true, stocks: { select: { available: true } } } },
+        stockMode: true,
+        bundleProducts: productBundleItemsSelect,
+        variations: { select: { id: true, stocks: { select: { available: true } }, bundleItems: { select: bundleComponentStockSelect } } },
       },
     });
     if (!product || product.isActive === false) return { success: false, message: "Product unavailable." };
+    const bundleOptions = product.stockMode === "COMPONENT_BASED" ? publicBundleOptions(product.bundleProducts) : [];
+    const bundleStock = bundleOptions.length ? availableProductBundleUnits(product.bundleProducts) : null;
     return {
       success: true,
-      allowOutOfStockOrder: Boolean(product.allowOutOfStockOrder),
+      allowOutOfStockOrder: product.stockMode !== "COMPONENT_BASED" && Boolean(product.allowOutOfStockOrder),
+      bundleOptions,
       variations: product.variations.map((variation) => ({
         id: variation.id,
-        stock: variation.stocks.reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0),
+        stock: product.stockMode === "COMPONENT_BASED" ? (bundleStock ?? availableBundleUnits(variation.bundleItems))
+          : variation.stocks.reduce((sum, row) => sum + Math.max(0, Number(row.available) || 0), 0),
       })),
     };
   } catch {
     return { success: false, message: "Could not check stock." };
   }
+}
+
+function productStockMode(input, classification, existing = {}) {
+  const mode = input ?? existing.stockMode ?? "OWN_STOCK";
+  if (mode !== "OWN_STOCK" && mode !== "COMPONENT_BASED") throw new Error("Select a valid stock mode.");
+  const type = classification.productType ?? existing.productType ?? "PHYSICAL";
+  const structure = classification.productStructure ?? existing.productStructure ?? "SINGLE";
+  if (mode === "COMPONENT_BASED" && (type !== "PHYSICAL" || !["BUNDLE", "CONFIGURABLE"].includes(structure))) {
+    throw new Error("Component stock is available for physical Bundle or Configurable products.");
+  }
+  return mode;
 }
 
 function parseProductFulfillmentSettings(data) {
@@ -399,6 +420,8 @@ export async function createProductAction(formData) {
     const productReviewRows = parseProductReviewRows(formData);
     const productQuestionsAnswers = parseProductQuestionsAnswers(data);
     const fulfillmentSettings = parseProductFulfillmentSettings(data);
+    const classification = parseProductClassification(data);
+    const stockMode = productStockMode(data.stockMode, classification);
 
     // --- Basic Validation ---
     if (!data?.title || !data?.thumbnail) {
@@ -423,6 +446,7 @@ export async function createProductAction(formData) {
     } else if (Array.isArray(data.variations)) {
       parsedProductVariations = data.variations;
     }
+    const bundleComposition = stockMode === "COMPONENT_BASED" ? parseNewBundleComposition(data.bundleItems) : null;
     const productVideos = parseProductVideosInput(data.videos, data.videoUrl);
 
     // --- Prisma Transaction ---
@@ -488,6 +512,8 @@ export async function createProductAction(formData) {
         seoKeyWord: data.seoKeyWord,
       });
       const preparedData = {
+        ...classification,
+        stockMode,
         productCode: newProductCode,
         title: data.title,
         slug: slug,
@@ -524,6 +550,7 @@ export async function createProductAction(formData) {
       const product = await tx.product.create({
         data: preparedData,
       });
+      if (stockMode === "COMPONENT_BASED") await saveProductBundleComposition(tx, product.id, bundleComposition);
 
       if (productQuestionsAnswers.length) {
         await tx.productQuestionAnswer.createMany({
@@ -574,6 +601,7 @@ export async function createProductAction(formData) {
             !variantData.matcherId ||
             !Array.isArray(variantData.combination)
           ) {
+            if (bundleComposition) throw new Error("A bundle variation is incomplete.");
             continue;
           }
 
@@ -587,6 +615,9 @@ export async function createProductAction(formData) {
             })
             .filter(Boolean);
 
+          if (bundleComposition && (!combinationsToCreate.length || combinationsToCreate.length !== variantData.combination.length)) {
+            throw new Error("A bundle variation contains an invalid option.");
+          }
           if (combinationsToCreate.length === 0) continue;
 
           await tx.productVariation.create({
@@ -661,6 +692,7 @@ export async function getProductById(id) {
     const product = await prisma.product.findUnique({
       where: { id: id },
       include: {
+        bundleProducts: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { quantity: true, componentProduct: { select: { id: true, title: true, productCode: true } } } },
         category: true,
         specifications: { orderBy: { sortOrder: "asc" }, include: { specification: { include: { parent: true } } } },
         thumbnail: {
@@ -716,6 +748,7 @@ export async function getProductById(id) {
         : `${getDiscountPrice.min}-${getDiscountPrice.max}`;
     const transformedProducts = {
       ...product,
+      bundleItems: product.bundleProducts.map(({ quantity, componentProduct }) => ({ ...componentProduct, quantity })),
       discountPrice: getDiscountPriceList,
 
       thumbnail: product.thumbnail
@@ -1123,6 +1156,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
       skip: offset,
       take: limit,
       include: {
+        bundleProducts: productCardBundleSelection,
         category: true,
         thumbnail: {
           select: { id: true, name: true },
@@ -1175,6 +1209,7 @@ export const getProductsOnScroll = async ({ page = 1, limit = 10 }) => {
           : `${getDiscountPrice.min}-${getDiscountPrice.max}`;
       return {
         ...product,
+        requiresSelection: productCardRequiresSelection(product),
         discountPrice: getDiscountPriceList,
 
         thumbnail: product.thumbnail
@@ -1705,6 +1740,7 @@ export async function updateProductAction({ id: productId, formData }) {
     const productQuestionsAnswers = parseProductQuestionsAnswers(data);
     const updatedBy = await getUserId();
     const fulfillmentSettings = parseProductFulfillmentSettings(data);
+    const classification = parseProductClassification(data);
     console.log("update data", data);
 
     if (!data?.title || !data?.thumbnail) {
@@ -1741,6 +1777,15 @@ export async function updateProductAction({ id: productId, formData }) {
       if (existingProduct.hasVariations && typeof data.variations !== "string") {
         throw new Error("Variations are still loading. Wait for the variation rows and save again.");
       }
+      const stockMode = productStockMode(data.stockMode, classification, existingProduct);
+      if (stockMode === "COMPONENT_BASED" && existingProduct.stockMode !== stockMode) {
+        const [stock, componentUse, usedAsProduct] = await Promise.all([
+          tx.stock.findFirst({ where: { variation: { productId }, OR: [{ quantity: { not: 0 } }, { reserved: { not: 0 } }] }, select: { id: true } }),
+          tx.bundleComponent.findFirst({ where: { componentVariation: { productId } }, select: { componentVariationId: true } }),
+          tx.productBundleItem.findFirst({ where: { componentProductId: productId }, select: { id: true } }),
+        ]);
+        if (stock || componentUse || usedAsProduct) throw new Error("Clear this product's own stock and remove it from other bundles before changing its stock mode.");
+      }
 
       let newSlug = existingProduct.slug;
       if (data.title && data.title !== existingProduct.title) {
@@ -1758,6 +1803,8 @@ export async function updateProductAction({ id: productId, formData }) {
       console.log("Generated searchText for product:", searchText);
 
       const productUpdateData = {
+        ...classification,
+        stockMode,
         title: data.title,
         slug: newSlug,
         description: data.description || null,
@@ -2165,6 +2212,7 @@ export const searchProducts = async (rawQuery, rawFilters = {}, cursor = null) =
     slug: true,
     categoryId: true,
     hasVariations: true,
+    bundleProducts: productCardBundleSelection,
     createdAt: true,
     thumbnail: { select: { name: true } },
     variations: {
@@ -2216,6 +2264,7 @@ export const searchProducts = async (rawQuery, rawFilters = {}, cursor = null) =
       regularPrice,
       discountPrice,
       hasVariations: product.hasVariations,
+      requiresSelection: productCardRequiresSelection(product),
       ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
       thumbnail: { name: product.thumbnail?.name || null },
       category: product.category?.name || "Uncategorized",

@@ -18,7 +18,7 @@ export async function GET(request) {
     const order = await prisma.order.findUnique({
       where: { orderNo },
       select: {
-        orderNo: true, customerName: true, phoneNumber: true, email: true, deliveryAddress: true,
+        orderNo: true, customerName: true, phoneNumber: true, email: true, deliveryAddress: true, city: true, thana: true,
         deliveryCharge: true, taxAmount: true, orderPrice: true, dueAmount: true, paidAmount: true, cartDiscount: true, paymentDiscount: true, paymentMethod: true, paymentStatus: true,
         note: true, createdAt: true,
         orderItems: { select: { productName: true, quantity: true, price: true, combinations: true } },
@@ -40,10 +40,12 @@ export async function GET(request) {
         headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
       });
     }
+    const disposition = params.get("download") === "1" ? "attachment" : "inline";
+    const safeOrderNo = order.orderNo.replace(/[^a-zA-Z0-9_-]/g, "_");
     return new NextResponse(pdf, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=invoice-${order.orderNo}.pdf`,
+        "Content-Disposition": `${disposition}; filename="invoice-${safeOrderNo}.pdf"`,
         "Cache-Control": "private, no-store",
       },
     });

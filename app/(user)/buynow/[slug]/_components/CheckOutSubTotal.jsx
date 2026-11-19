@@ -34,7 +34,7 @@ export default function CheckOutSubTotal({
 
       <Item
         label={"ডেলিভারি চার্জঃ (+)"}
-        value={deliveryCharge || 0}
+        value={campaignPreview?.originalDeliveryCharge ?? deliveryCharge}
       />
       {campaignPreview?.rows?.map(({ id, name, ruleText, discount, startAt, endAt }) => <div key={id} className="mt-1 rounded-md bg-primary-soft px-2 py-1.5 text-sm text-primary">
         <div className="flex items-center justify-between gap-2">
@@ -46,6 +46,9 @@ export default function CheckOutSubTotal({
         </div>
         {ruleText && <p className="mt-0.5 text-xs text-text-muted">{replaceNumbers(ruleText)}</p>}
       </div>)}
+      {campaignPreview?.deliveryCharge < campaignPreview?.originalDeliveryCharge && (
+        <Item label="ছাড়ের পর ডেলিভারি চার্জ" value={campaignPreview.deliveryCharge} />
+      )}
       {campaignPreview?.progress?.map(({ id, name, message, current, target, percent }) => <div key={id} className="mt-2 rounded-lg border border-primary/15 bg-primary-soft/40 px-3 py-2">
         <div className="mb-1 flex items-start justify-between gap-2">
           <div className="min-w-0">

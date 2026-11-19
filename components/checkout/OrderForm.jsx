@@ -16,6 +16,7 @@ import { flushSync } from "react-dom";
 import {
   cloneElement,
   isValidElement,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -26,6 +27,9 @@ import CheckoutProgressOverlay from "./CheckoutProgressOverlay";
 import DeliveryAreaSelector from "./DeliveryAreaSelector";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 const CHECKOUT_DRAFT_KEY = "checkout-customer-draft:v2";
+const CHECKOUT_CUSTOMER_FIELDS = [
+  "customerName", "phoneNumber", "deliveryAddress", "district", "thana", "email", "note",
+];
 
 export default function OrderForm({
   setDeliveryArea,
@@ -37,6 +41,7 @@ export default function OrderForm({
   initialQty,
   variationId,
   deliveryArea,
+  deliveryRates,
   totalPrice,
   orderWeight,
   checkoutProviders,
@@ -50,7 +55,10 @@ export default function OrderForm({
   const errorMessageRef = useRef(null);
   const checkoutDraftLoaded = useRef(false);
   const [leadDraft, setLeadDraft] = useState(null);
+  const [initialLocation, setInitialLocation] = useState(null);
   const leadSaveTimer = useRef(null);
+  const leadSaveQueue = useRef(Promise.resolve());
+  const invalidSubmitReported = useRef(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponInput, setCouponInput] = useState("");
   const [couponFeedback, setCouponFeedback] = useState("");
@@ -118,6 +126,7 @@ export default function OrderForm({
       ];
       if (saved && form) {
         setLeadDraft(saved);
+        setInitialLocation({ district: saved.district, thana: saved.thana });
         fieldNames.forEach((name) => {
           const field = form.elements.namedItem(name);
           if (field && typeof saved[name] === "string") {
@@ -134,7 +143,7 @@ export default function OrderForm({
     checkoutDraftLoaded.current = true;
   }, [setDeliveryArea]);
 
-  const saveCheckoutDraft = (nextDeliveryArea, saveImmediately = false) => {
+  const saveCheckoutDraft = (nextDeliveryArea, saveImmediately = false, location = {}) => {
     if (!checkoutDraftLoaded.current || !formRef.current) return;
     try {
       const form = formRef.current;
@@ -143,19 +152,22 @@ export default function OrderForm({
         "customerName",
         "phoneNumber",
         "deliveryAddress",
+        "district",
+        "thana",
         "email",
         "note",
       ].forEach((name) => {
         const field = form.elements.namedItem(name);
         if (field) draft[name] = field.value;
       });
+      Object.assign(draft, location);
       draft.deliveryArea =
         typeof nextDeliveryArea === "string" ? nextDeliveryArea : deliveryArea;
       setLeadDraft(draft);
       try { window.localStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft)); } catch { /* Local browser storage may be unavailable. */ }
       const phoneNumber = String(draft.phoneNumber || "").replace(/\D/g, "").slice(0, 13);
-      if (saveImmediately && /^01[3-9]\d{8}$/.test(phoneNumber)) {
-        saveAbandonedCheckoutLeadAction({ ...draft, phoneNumber, items: leadItems }).catch(() => {});
+      if (saveImmediately && !submittingRef.current && /^01[3-9]\d{8}$/.test(phoneNumber)) {
+        queueLeadSave({ ...draft, phoneNumber });
       }
     } catch {
       /* Checkout remains usable when browser storage is unavailable. */
@@ -176,32 +188,46 @@ export default function OrderForm({
     })
     .filter((item) => item.name), [products, comboRewardItems]);
 
+  const queueLeadSave = useCallback((draft) => {
+    const phoneNumber = String(draft.phoneNumber || "").replace(/\D/g, "").replace(/^880(?=1[3-9]\d{8}$)/u, "0");
+    if (!/^01[3-9]\d{8}$/.test(phoneNumber)) return;
+    leadSaveQueue.current = leadSaveQueue.current
+      .then(() => saveAbandonedCheckoutLeadAction({ ...draft, phoneNumber, items: leadItems }))
+      .catch(() => {});
+  }, [leadItems]);
+
   useEffect(() => {
     if (!leadDraft?.phoneNumber) return undefined;
-    let phoneNumber = String(leadDraft.phoneNumber).replace(/\D/g, "").slice(0, 13);
-    if (/^8801[3-9]\d{8}$/.test(phoneNumber)) phoneNumber = `0${phoneNumber.slice(2)}`;
-    if (!/^01[3-9]\d{8}$/.test(phoneNumber)) return undefined;
     leadSaveTimer.current = window.setTimeout(() => {
-      saveAbandonedCheckoutLeadAction({ ...leadDraft, phoneNumber, items: leadItems }).catch(() => {});
+      if (!submittingRef.current) queueLeadSave(leadDraft);
       leadSaveTimer.current = null;
     }, 900);
     return () => { if (leadSaveTimer.current) window.clearTimeout(leadSaveTimer.current); };
-  }, [leadDraft, leadItems]);
+  }, [leadDraft, queueLeadSave]);
   const campaignLineItems = useMemo(
     () =>
-      (products || []).map((item) => ({
+      [...(products || []), ...comboRewardItems].map((item) => ({
         variationId: item.variation?.id || item.variationId,
         quantity: Number(item.quantity) || 1,
+        shippingOnly: item.comboReward === true,
       })),
-    [products],
+    [products, comboRewardItems],
   );
-  const campaignLineKey = JSON.stringify(campaignLineItems);
+  const campaignRequestKey = JSON.stringify({
+    items: campaignLineItems,
+    paymentMethod: paymentSelection?.paymentMethod || null,
+    paymentGatewayId: paymentSelection?.paymentGatewayId || null,
+    couponCode,
+    deliveryArea,
+  });
   const fallbackCampaignPreview = useMemo(
     () =>
       calculateCampaignPreviewFallback({
         campaigns: campaignOffers,
         items: products || [],
         deliveryCharge,
+        deliveryArea,
+        deliveryRates,
         paymentMethod:
           paymentSelection?.paymentMethod === "COD"
             ? "COD"
@@ -215,45 +241,19 @@ export default function OrderForm({
       campaignOffers,
       products,
       deliveryCharge,
+      deliveryArea,
+      deliveryRates,
       paymentSelection,
       checkoutProviders,
       couponCode,
     ],
   );
-  const visibleCampaignPreview = useMemo(() => {
-    if (!campaignPreview?.rows?.length) return fallbackCampaignPreview;
-    const rows = new Map(
-      (fallbackCampaignPreview.rows || []).map((row) => [row.id, row]),
-    );
-    for (const row of campaignPreview.rows) rows.set(row.id, row);
-    return {
-      rows: [...rows.values()],
-      itemDiscounts: campaignPreview.itemDiscounts?.length
-        ? campaignPreview.itemDiscounts
-        : fallbackCampaignPreview.itemDiscounts || [],
-      progress: fallbackCampaignPreview.progress || [],
-      total: fallbackCampaignPreview.rows?.length
-        ? fallbackCampaignPreview.total
-        : campaignPreview.total,
-    };
-  }, [campaignPreview, fallbackCampaignPreview]);
-  const appliedDeliveryDiscount = (visibleCampaignPreview.rows || []).reduce(
-    (sum, row) => {
-      const campaign = campaignOffers.find((offer) => offer.id === row.id);
-      const isDeliveryCampaign =
-        campaign &&
-        (["DELIVERY", "DELIVERY_DISCOUNT"].includes(campaign.type) ||
-          (campaign.type === "PAYMENT_DISCOUNT" &&
-            campaign.configuration?.paymentDiscountTarget === "DELIVERY"));
-      return isDeliveryCampaign
-        ? sum + Math.max(0, Number(row.discount) || 0)
-        : sum;
-    },
-    0,
-  );
+  const visibleCampaignPreview = campaignPreview?.key === campaignRequestKey
+    ? campaignPreview.data
+    : fallbackCampaignPreview;
   const alreadyFreeDelivery =
-    Number(deliveryCharge) > 0 &&
-    appliedDeliveryDiscount >= Number(deliveryCharge);
+    Number(visibleCampaignPreview.originalDeliveryCharge) > 0 &&
+    visibleCampaignPreview.deliveryCharge === 0;
   const paymentDeliveryCampaigns = alreadyFreeDelivery
     ? []
     : campaignOffers.filter(
@@ -262,20 +262,21 @@ export default function OrderForm({
           campaign.configuration?.paymentDiscountTarget === "DELIVERY",
       );
   useEffect(() => {
-    if (!campaignLineItems.length) {
+    const request = JSON.parse(campaignRequestKey);
+    if (!request.items.length) {
       setCampaignPreview(null);
       return undefined;
     }
     let active = true;
-    getCheckoutCampaignPreview({
-      items: campaignLineItems,
-      paymentMethod: paymentSelection?.paymentMethod || null,
-      paymentGatewayId: paymentSelection?.paymentGatewayId || null,
-      couponCode,
-      deliveryArea,
-    })
+    getCheckoutCampaignPreview(request)
       .then((result) => {
-        if (active) setCampaignPreview(result?.success ? result.data : null);
+        if (active) setCampaignPreview(result?.success && result.data.deliveryCharge != null ? {
+          key: campaignRequestKey,
+          data: {
+            ...result.data,
+            progress: (result.data.cartOffers || []).filter((offer) => !offer.applied && offer.target > 0),
+          },
+        } : null);
       })
       .catch(() => {
         if (active) setCampaignPreview(null);
@@ -283,13 +284,7 @@ export default function OrderForm({
     return () => {
       active = false;
     };
-  }, [
-    campaignLineKey,
-    paymentSelection?.paymentMethod,
-    paymentSelection?.paymentGatewayId,
-    couponCode,
-    deliveryArea,
-  ]);
+  }, [campaignRequestKey]);
   const appliedCouponCampaign = campaignOffers.find(
     (campaign) =>
       campaign.type === "COUPON" &&
@@ -354,15 +349,39 @@ export default function OrderForm({
       el.classList.remove("blink-border");
     }, 1000);
   };
+  const recordCheckoutError = (formData, message) => {
+    const draft = Object.fromEntries(CHECKOUT_CUSTOMER_FIELDS.map((name) => [name, formData.get(name)]));
+    queueLeadSave({ ...draft, deliveryArea, checkoutError: message });
+  };
+
+  const handleInvalidCheckout = (event) => {
+    if (submittingRef.current || invalidSubmitReported.current) return;
+    invalidSubmitReported.current = true;
+    queueMicrotask(() => { invalidSubmitReported.current = false; });
+    const field = event.target;
+    const label = field.labels?.[0]?.textContent?.trim();
+    const message = field.validationMessage || "প্রয়োজনীয় তথ্য সঠিকভাবে দিন।";
+    recordCheckoutError(new FormData(event.currentTarget), label ? `${label} — ${message}` : message);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submittingRef.current) return;
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    if (!formData.get("district") || !formData.get("thana")) {
+      const message = "তালিকা থেকে জেলা ও থানা/উপজেলা নির্বাচন করুন।";
+      setError(message);
+      recordCheckoutError(formData, message);
+      return;
+    }
     if (!paymentSelection) {
+      recordCheckoutError(formData, "পেমেন্ট পদ্ধতি নির্বাচন করুন।");
       scrollToPaymentMethod();
       return;
     }
-    if (submittingRef.current) return;
     submittingRef.current = true;
-    const form = event.currentTarget;
+    if (leadSaveTimer.current) window.clearTimeout(leadSaveTimer.current);
     flushSync(() => {
       setLoadingStep("creating");
       setError(null);
@@ -372,7 +391,6 @@ export default function OrderForm({
     try {
       // Paint the progress modal before starting the server request.
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
-      const formData = new FormData(form);
       // Ask for device location without placing GPS permission or timeout on
       // the order submission's critical path.
       if (navigator.geolocation) {
@@ -405,22 +423,9 @@ export default function OrderForm({
       formData.append("products", JSON.stringify([...(products || []), ...comboRewardItems]));
       formData.append("deliveryArea", deliveryArea);
 
+      await leadSaveQueue.current;
       const response = await createOrder(formData);
       if (!response?.success || !response.data?.orderNo) {
-        const phoneNumber = String(formData.get("phoneNumber") || "").replace(/\D/g, "").replace(/^880(?=1[3-9]\d{8}$)/u, "0");
-        if (/^01[3-9]\d{8}$/u.test(phoneNumber)) {
-          await saveAbandonedCheckoutLeadAction({
-            customerName: formData.get("customerName"),
-            phoneNumber,
-            district: formData.get("district"),
-            thana: formData.get("thana"),
-            deliveryAddress: formData.get("deliveryAddress"),
-            email: formData.get("email"),
-            note: formData.get("note"),
-            deliveryArea,
-            items: leadItems,
-          }).catch(() => {});
-        }
         throw new Error(response?.error || "অর্ডার তৈরি করা যায়নি। আবার চেষ্টা করুন।");
       }
       createdOrder = response.data;
@@ -466,13 +471,17 @@ export default function OrderForm({
       setLoadingStep("success");
       window.location.replace(successUrl);
     } catch (submitError) {
-      setError(submitError?.message || "অর্ডার পাঠানো যায়নি। আবার চেষ্টা করুন।");
+      const message = submitError?.message || "অর্ডার পাঠানো যায়নি। আবার চেষ্টা করুন।";
+      setError(message);
       setLoadingStep(null);
-      if (!createdOrder) submittingRef.current = false;
+      if (!createdOrder) {
+        recordCheckoutError(formData, message);
+        submittingRef.current = false;
+      }
     }
   };
   return (
-    <form ref={formRef} onSubmit={handleSubmit} onChange={saveCheckoutDraft} onBlurCapture={(event) => { if (event.target?.name === "phoneNumber") saveCheckoutDraft(undefined, true); }}>
+    <form ref={formRef} onSubmit={handleSubmit} onInvalid={handleInvalidCheckout} onChange={saveCheckoutDraft} onBlurCapture={(event) => { if (event.target?.name === "phoneNumber") saveCheckoutDraft(undefined, true); }}>
       <div className="w-full mb-2">
         {error && (
           <div ref={errorMessageRef} role="alert" className="w-full rounded-md bg-red-200 p-2 text-base text-red-600">
@@ -545,8 +554,8 @@ export default function OrderForm({
             initialProviders={checkoutProviders}
             paymentDeliveryCampaigns={paymentDeliveryCampaigns}
             cartItems={products || []}
-            deliveryCharge={deliveryCharge}
-            orderTotal={totalPrice}
+            deliveryCharge={visibleCampaignPreview.deliveryCharge ?? deliveryCharge}
+            orderTotal={(visibleCampaignPreview.total ?? totalPrice + deliveryCharge) + comboRewardItems.reduce((sum, item) => sum + Number(item.discountPrice ?? item.price ?? 0) * Number(item.quantity || 1), 0)}
           />
         </div>
         <div className="w-full md:w-1/2">
@@ -555,7 +564,11 @@ export default function OrderForm({
               <Truck /> <span>ডেলিভারি ঠিকানাঃ</span>
             </div>
             <>
-              <DeliveryAddress />
+              <DeliveryAddress
+                initialLocation={initialLocation}
+                setDeliveryArea={setDeliveryArea}
+                onLocationChange={(location, area) => saveCheckoutDraft(area, false, location)}
+              />
               <DeliveryAreaSelector
                 setDeliveryArea={setDeliveryArea}
                 selectedArea={deliveryArea}

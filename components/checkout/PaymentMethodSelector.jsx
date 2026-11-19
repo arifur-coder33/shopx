@@ -13,11 +13,11 @@ const EMPTY_PROVIDERS = { codEnabled: false, gateways: [] };
 const logoByCode = {
   COD: "/images/payments/cod.svg",
   ONLINE: "/images/payments/card.svg",
-  SSLCOMMERZ: "/images/payments/sslcommerz.svg",
-  BKASH: "/images/payments/bkash.svg",
-  NAGAD: "/images/payments/nagad.svg",
-  ROCKET: "/images/payments/rocket.svg",
-  BANGLA_QR: "/images/payments/bangla-qr.svg",
+  SSLCOMMERZ: "/images/providor/ssl commere logo.webp",
+  BKASH: "/images/providor/bkash.webp",
+  NAGAD: "/images/providor/nagad.png",
+  ROCKET: "/images/providor/rocket logo.webp",
+  BANGLA_QR: "/images/providor/Bangla_QR_Logo.svg.webp",
   EMI: "/images/payments/emi.svg",
 };
 

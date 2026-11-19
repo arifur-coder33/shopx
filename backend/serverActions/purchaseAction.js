@@ -2,12 +2,13 @@
 import prisma from "@/lib/prisma";
 import { generateCode } from "../utils/generateCode";
 import { actionError, refreshProcurement, requireProcurementPermission, toDate, toNumber } from "../utils/procurement";
+import { assertOwnStockVariants } from "@/backend/services/bundleReservationService";
 
 export async function getPurchaseVariationOptions() {
   try {
     await requireProcurementPermission("purchase", "create");
     const variations = await prisma.productVariation.findMany({
-      where: { productId: { not: null }, product: { isActive: true } },
+      where: { productId: { not: null }, product: { isActive: true, stockMode: "OWN_STOCK" } },
       orderBy: [{ product: { title: "asc" } }, { sku: "asc" }],
       take: 500,
       select: { id: true, sku: true, productId: true, product: { select: { title: true } } },
@@ -31,6 +32,7 @@ export async function createPurchaseOrder(formData) {
     const itemDiscounts = items.reduce((sum, item) => sum + item.discount, 0);
     const total = Math.max(0, subtotal - itemDiscounts - discount + vat + shippingCost);
     const result = await prisma.$transaction(async (tx) => {
+      await assertOwnStockVariants(tx, [...new Set(items.map(({ variationId }) => variationId))]);
       const poNo = await generateCode(tx, { name: "PURCHASE_ORDER", prefix: "PO-", padding: 6 });
       return tx.purchaseOrder.create({ data: { poNo, supplierId: values.supplierId, status: values.status || "DRAFT", subtotal, discount, vat, shippingCost, total, dueAmount: 0, expectedDate: values.expectedDate ? toDate(values.expectedDate) : null, notes: values.notes || null, createdBy: userId, updatedBy: userId, items: { create: items } } });
     });

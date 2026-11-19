@@ -49,6 +49,7 @@ export async function getCheckoutCampaignPreview({
       .map((item) => ({
         variationId: String(item.variationId || ""),
         quantity: Math.max(0, Number(item.quantity) || 0),
+        shippingOnly: item.shippingOnly === true,
       }))
       .filter(
         (item) => isDatabaseId(item.variationId) && item.quantity > 0,
@@ -84,14 +85,15 @@ export async function getCheckoutCampaignPreview({
     const campaignPaymentMethod =
       paymentMethod === "COD" ? "COD" : provider?.code || paymentMethod;
     const campaigns = await getActiveCampaigns({ couponCode });
-    const priorityItems = requestedItems.map((item) => { const variation = variationMap[item.variationId]; if (!variation?.product) return null; const price = campaignBasePrice(variation); return { productId: variation.product.id, categoryId: variation.product.categoryId, quantity: item.quantity, basePrice: price, price }; }).filter(Boolean);
+    const purchasedItems = requestedItems.filter((item) => !item.shippingOnly);
+    const priorityItems = purchasedItems.map((item) => { const variation = variationMap[item.variationId]; if (!variation?.product) return null; const price = campaignBasePrice(variation); return { productId: variation.product.id, categoryId: variation.product.categoryId, quantity: item.quantity, basePrice: price, price }; }).filter(Boolean);
     const prioritizedCampaigns = selectCampaignsByPriority({ campaigns, items: priorityItems, paymentMethod: campaignPaymentMethod });
     const rowsByCampaign = new Map();
     const itemDiscounts = [];
     const selectedCampaigns = new Map();
     const compatible = () => compatibleCampaigns(prioritizedCampaigns, [...selectedCampaigns.values()]);
     const remember = (campaign) => { if (campaign) selectedCampaigns.set(campaign.id, campaign); };
-    const pricedItems = requestedItems
+    const pricedItems = purchasedItems
       .map((item) => {
         const variation = variationMap[item.variationId];
         if (!variation?.product) return null;
@@ -119,6 +121,7 @@ export async function getCheckoutCampaignPreview({
       productId: variation.product.id,
       categoryId: variation.product.categoryId,
       quantity: item.quantity,
+      weight: variation.weight,
       basePrice: campaignBasePrice(variation),
       price: pricing.price,
     }));
@@ -146,10 +149,20 @@ export async function getCheckoutCampaignPreview({
         discount: paymentPricing.discount,
       });
 
-    const weight = pricedItems.reduce(
+    const deliveryItems = [...campaignItems, ...requestedItems.filter((item) => item.shippingOnly).flatMap((item) => {
+      const variation = variationMap[item.variationId];
+      return variation?.product ? [{
+        productId: variation.product.id,
+        categoryId: variation.product.categoryId,
+        quantity: item.quantity,
+        weight: variation.weight,
+        price: 0,
+      }] : [];
+    })];
+    const weight = deliveryItems.reduce(
       (sum, line) =>
         sum +
-        Math.max(0, Number(line.variation.weight) || 0) * line.item.quantity,
+        Math.max(0, Number(line.weight) || 0) * line.quantity,
       0,
     );
     const deliveryRates = await getCheckoutDeliveryRates();
@@ -163,7 +176,9 @@ export async function getCheckoutCampaignPreview({
       subtotal: itemSubtotal,
       paymentMethod: campaignPaymentMethod,
       deliveryCharge: originalDeliveryCharge,
-      items: campaignItems,
+      items: deliveryItems,
+      deliveryArea,
+      deliveryRates,
     });
     remember(deliveryPricing.campaign);
     if (deliveryPricing.campaign)
@@ -177,7 +192,10 @@ export async function getCheckoutCampaignPreview({
       subtotal: itemSubtotal,
       paymentMethod: campaignPaymentMethod,
       deliveryCharge: deliveryPricing.deliveryCharge,
-      items: campaignItems,
+      items: deliveryItems,
+      deliveryArea,
+      deliveryRates,
+      previous: deliveryPricing,
     });
     remember(paymentDeliveryPricing.campaign);
     if (paymentDeliveryPricing.campaign)
@@ -271,6 +289,7 @@ export async function getCheckoutCampaignPreview({
         itemDiscounts,
         cartOffers,
         merchandiseTotal: money(paymentPricing.subtotal),
+        originalDeliveryCharge,
         deliveryCharge: money(paymentDeliveryPricing.deliveryCharge),
         total: money(paymentPricing.subtotal + paymentDeliveryPricing.deliveryCharge),
       },

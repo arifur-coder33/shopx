@@ -1,5 +1,7 @@
 "use client";
 
+import DeliveryStockAllocation from "./DeliveryStockAllocation";
+
 import { createDelivery } from "@/backend/serverActions/deliveryAction";
 import { createGoodsReceipt } from "@/backend/serverActions/goodsReceiptAction";
 import { adjustStock } from "@/backend/serverActions/inventoryAction";
@@ -136,7 +138,7 @@ export default function ProcurementManager({ initialResult, initialTab = "purcha
   });
   const prepareDelivery = (order) => {
     setDeliveryOrderId(order.id);
-    setDeliveryWarehouseId("");
+    setDeliveryWarehouseId(order.bundleReservationWarehouseId || "");
     setDeliveryItems({});
     setDialog("delivery");
   };
@@ -162,7 +164,7 @@ export default function ProcurementManager({ initialResult, initialTab = "purcha
 
       {tab === "deliveries" && <div className="space-y-4">
         <nav className="flex gap-2 rounded-brand border border-border bg-surface p-2"><Link href="/admin/inventory/deliveries?view=queue" className={`rounded-brand px-4 py-2 text-sm font-semibold ${deliveryView === "queue" ? "bg-primary text-white" : "hover:bg-surface-muted"}`}>Delivery Queue</Link><Link href="/admin/inventory/deliveries?view=prepared" className={`rounded-brand px-4 py-2 text-sm font-semibold ${deliveryView === "prepared" ? "bg-primary text-white" : "hover:bg-surface-muted"}`}>Prepared Deliveries</Link></nav>
-        {deliveryView === "queue" && <div className="space-y-3"><SectionTitle title="Delivery Queue" />{data.orders.length ? <Table heads={["Order", "Customer", "Courier / AWB", "Items", "Status", "Documents", "Action"]}>{data.orders.map((order) => <tr key={order.id}><Cell><Link className="font-semibold text-primary hover:underline" href={`/admin/order/view/${order.id}`}>{order.orderNo}</Link><small className="block text-text-muted">{day(order.createdAt)}</small></Cell><Cell>{order.customerName}<small className="block text-text-muted">{order.phoneNumber}</small></Cell><Cell>{order.shipping?.courierName || order.selectedCourierProvider?.name || "—"}<small className="block font-mono text-text-muted">{order.shipping?.cn || "No AWB"}</small></Cell><Cell>{order.orderItems.reduce((sum, item) => sum + item.quantity, 0)}</Cell><Cell><Badge>{order.status.replaceAll("_", " ")}</Badge></Cell><Cell><DeliveryPrintActions order={order} /></Cell><Cell>{!order.shipping ? <Link className={buttonClass} href={`/admin/order/view/${order.id}#courier`}>Book courier</Link> : order.status === "PROCESSING" ? <button type="button" className={buttonClass} onClick={() => prepareDelivery(order)}>Prepare delivery</button> : <span className="text-sm font-semibold text-emerald-600">Ready for delivery</span>}</Cell></tr>)}</Table> : <Empty>No courier orders are waiting in the delivery queue.</Empty>}</div>}
+        {deliveryView === "queue" && <div className="space-y-3"><SectionTitle title="Delivery Queue" />{data.orders.length ? <Table heads={["Order", "Customer", "Courier / AWB", "Items", "Status", "Documents", "Action"]}>{data.orders.map((order) => <tr key={order.id}><Cell><Link className="font-semibold text-primary hover:underline" href={`/admin/order/view/${order.id}`}>{order.orderNo}</Link><small className="block text-text-muted">{day(order.createdAt)}</small></Cell><Cell>{order.customerName}<small className="block text-text-muted">{order.phoneNumber}</small></Cell><Cell>{order.shipping?.courierName || order.selectedCourierProvider?.name || "—"}<small className="block font-mono text-text-muted">{order.shipping?.cn || "No AWB"}</small></Cell><Cell>{order.orderItems.reduce((sum, item) => sum + item.quantity, 0)}</Cell><Cell><Badge>{order.status.replaceAll("_", " ")}</Badge></Cell><Cell><DeliveryPrintActions order={order} /></Cell><Cell>{!order.shipping ? <Link className={buttonClass} href={`/admin/order/view/${order.id}#courier`}>Book courier</Link> : (order.status === "PROCESSING" || (order.bundleReservationWarehouseId && !order.deliveries?.length)) ? <button type="button" className={buttonClass} onClick={() => prepareDelivery(order)}>Prepare delivery</button> : <span className="text-sm font-semibold text-emerald-600">Ready for delivery</span>}</Cell></tr>)}</Table> : <Empty>No courier orders are waiting in the delivery queue.</Empty>}</div>}
         {deliveryView === "prepared" && <div className="space-y-3"><SectionTitle title="Prepared Deliveries" onAdd={() => setDialog("delivery")} />{data.deliveries.length ? <Table heads={["Delivery", "Order", "Customer", "Warehouse", "Status", "Batch / Supplier lot", "Documents", "Date / cancel"]}>{data.deliveries.map((delivery) => <tr key={delivery.id}><Cell><DetailLink section={tab} basePath={basePath} id={delivery.id}>{delivery.deliveryNo}</DetailLink></Cell><Cell>{delivery.order.orderNo}</Cell><Cell>{delivery.order.customerName}</Cell><Cell>{delivery.warehouse.name}</Cell><Cell><Badge>{delivery.status}</Badge></Cell><Cell>{delivery.items.map((item) => <div key={item.id} className="whitespace-nowrap">{item.orderItem.sku}: <strong>{item.goodsReceiptItem.batchNumber}</strong> · {item.goodsReceiptItem.supplierLotNumber} × {item.quantity}</div>)}</Cell><Cell><DeliveryPrintActions order={delivery.order} /></Cell><Cell>{day(delivery.createdAt)}{delivery.status === "PACKED" && <div className="mt-1"><DocumentCancelButton action={cancelPreparedDelivery} id={delivery.id} label="Cancel delivery" /></div>}</Cell></tr>)}</Table> : <Empty>No deliveries have been prepared yet.</Empty>}</div>}
       </div>}
 
@@ -202,7 +204,33 @@ export default function ProcurementManager({ initialResult, initialTab = "purcha
 
 
       <FormDialog title="Adjust warehouse stock" open={dialog === "adjustment"} onClose={close} action={adjustStock}><div className="grid gap-4 sm:grid-cols-2"><Label>Warehouse<select required name="warehouseId" className={fieldClass}><option value="">Select warehouse</option>{data.warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select></Label><Label>Product variation<select required name="variationId" className={fieldClass}><option value="">Select variation</option>{variationOptions.map((variation) => <option key={variation.id} value={variation.id}>{variation.label}</option>)}</select></Label><Label>Quantity change<input required type="number" step="0.01" name="quantity" className={fieldClass} placeholder="Use a negative number to reduce" /></Label><Label>Unit cost for added stock<input type="number" min="0" step="0.01" name="unitCost" className={fieldClass} placeholder="Required for opening stock" /><small className="font-normal text-text-muted">Positive adjustment-এর ক্ষেত্রে existing cost থাকলে সেটিই চলবে; opening stock হলে unit cost দিন।</small></Label><Label>Reason<input required name="remarks" className={fieldClass} /></Label></div></FormDialog>
-      <FormDialog title="Prepare order for delivery" open={dialog === "delivery"} onClose={close} action={createDelivery} transform={(form) => form.set("items", JSON.stringify(Object.entries(deliveryItems).map(([orderItemId, item]) => ({ orderItemId, goodsReceiptItemId: item.batchId, quantity: item.quantity }))))}><div className="grid gap-4 sm:grid-cols-2"><div><SearchableDropdown key={deliveryOrderId || "delivery-order"} name="orderId" label="Order" defaultId={selectedDeliveryOrder ? { id: selectedDeliveryOrder.id, name: `${selectedDeliveryOrder.orderNo} — ${selectedDeliveryOrder.customerName}` } : null} dropDownLists={(data.orders || []).map((order) => ({ id: order.id, name: `${order.orderNo} — ${order.customerName}` }))} onSelect={(item) => { setDeliveryOrderId(item.id); setDeliveryItems({}); }} /></div><div><SearchableDropdown name="warehouseId" label="Warehouse" dropDownLists={(data.warehouses || []).map((warehouse) => ({ id: warehouse.id, name: `${warehouse.name} (${warehouse.code})` }))} onSelect={(item) => { setDeliveryWarehouseId(item.id); setDeliveryItems({}); }} /></div><input type="hidden" name="status" value="PACKED" /><Label>Note<textarea name="note" className={fieldClass} /></Label></div>{selectedDeliveryOrder && deliveryWarehouseId && <div className="mt-5 space-y-3"><h3 className="font-bold">Allocate order items by batch / supplier lot</h3>{selectedDeliveryOrder.orderItems.map((orderItem) => { const availableBatches = (data.batches || []).filter((batch) => batch.variationId === orderItem.variationId && batch.goodsReceipt?.warehouseId === deliveryWarehouseId && batch.deliveredQuantity < batch.quantity); const current = deliveryItems[orderItem.id] || {}; return <div key={orderItem.id} className="grid gap-3 rounded-brand border border-border p-3 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,1fr)_7rem] sm:items-end"><div className="text-sm font-semibold">{orderItem.productName}<small className="block font-normal text-text-muted">{orderItem.sku} · ordered {orderItem.quantity}</small></div><SearchableDropdown name={`batch-${orderItem.id}`} label="Batch / supplier lot" dropDownLists={availableBatches.map((batch) => ({ id: batch.id, name: `${batch.batchNumber} — ${batch.supplierLotNumber} (${batch.quantity - batch.deliveredQuantity} available)` }))} onSelect={(batch) => setDeliveryItems((items) => ({ ...items, [orderItem.id]: { ...items[orderItem.id], batchId: batch.id } }))} /><Label>Quantity<input type="number" min="0" step="0.01" value={current.quantity || ""} onChange={(event) => setDeliveryItems((items) => ({ ...items, [orderItem.id]: { ...items[orderItem.id], quantity: event.target.value } }))} className={fieldClass} /></Label></div>; })}</div>}</FormDialog>
+      <FormDialog title="Prepare order for delivery" open={dialog === "delivery"} onClose={close} action={createDelivery}
+        transform={(form) => form.set("items", JSON.stringify(Object.values(deliveryItems).flat()))}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SearchableDropdown key={deliveryOrderId || "delivery-order"} name="orderId" label="Order"
+            defaultId={selectedDeliveryOrder ? { id: selectedDeliveryOrder.id, name: selectedDeliveryOrder.orderNo } : null}
+            dropDownLists={(data.orders || []).map((order) => ({ id: order.id, name: `${order.orderNo} — ${order.customerName}` }))}
+            onSelect={(item) => prepareDelivery(data.orders.find((order) => order.id === item.id))}
+            onClear={() => { setDeliveryOrderId(""); setDeliveryWarehouseId(""); setDeliveryItems({}); }} />
+          {selectedDeliveryOrder?.bundleReservationWarehouseId ? (
+            <div className="text-sm">
+              <input type="hidden" name="warehouseId" value={deliveryWarehouseId} />
+              Reserved warehouse: {data.warehouses.find(({ id }) => id === deliveryWarehouseId)?.name || deliveryWarehouseId}
+            </div>
+          ) : (
+            <SearchableDropdown key={deliveryOrderId || "delivery-warehouse"} name="warehouseId" label="Warehouse"
+              dropDownLists={(data.warehouses || []).map((warehouse) => ({ id: warehouse.id, name: `${warehouse.name} (${warehouse.code})` }))}
+              onSelect={(item) => { setDeliveryWarehouseId(item.id); setDeliveryItems({}); }}
+              onClear={() => { setDeliveryWarehouseId(""); setDeliveryItems({}); }} />
+          )}
+          <input type="hidden" name="status" value="PACKED" />
+          <Label>Note<textarea name="note" className={fieldClass} /></Label>
+        </div>
+        {selectedDeliveryOrder && deliveryWarehouseId && (
+          <DeliveryStockAllocation order={selectedDeliveryOrder} warehouseId={deliveryWarehouseId}
+            batches={data.batches || []} allocations={deliveryItems} setAllocations={setDeliveryItems} />
+        )}
+      </FormDialog>
     </section>
   );
 }

@@ -1,26 +1,13 @@
-import { Calendar, Truck, XCircle } from "lucide-react";
-import { downloadAWBPDF } from "../components/GenerateAWB";
+import { Calendar, XCircle } from "lucide-react";
+import InvoiceButton from "@/components/PDF/getInvoice";
 import GetCourierStatus from "./GetCourierStatus";
 
-export default function CourierStatus({ details, onCancel, order, status, shopName }) {
+export default function CourierStatus({ details, onCancel, order, status }) {
   const steadfastBooking = order?.fraudRiskFactors?.find((factor) => factor?.code === "STEADFAST_TRACKING");
   const savedTrackingCode = steadfastBooking?.trackingCode;
   const trackingCode = details.trackingCode || savedTrackingCode;
   const trackingLink = details.trackingLink || steadfastBooking?.trackingLink;
   const parcelStatus = details.status || steadfastBooking?.status;
-  const invoiceData = {
-    shopName,
-    shopId: "1181689",
-    invoice: order.orderNo,
-    sfId: details.cn,
-    deliveryType: "Home",
-    weight: order.weight || 0.5,
-    name: order.customerName || "",
-    phone: order.phoneNumber || "",
-    address: order.deliveryAddress || "",
-    cod: details.cod || order.amount || 0,
-    courierName: details.courierName,
-  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
@@ -78,12 +65,7 @@ export default function CourierStatus({ details, onCancel, order, status, shopNa
         </div>
       </div>
       <div className="flex gap-3">
-        <button
-          onClick={() => downloadAWBPDF(invoiceData)}
-          className="flex items-center justify-center gap-2 w-full py-2.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition text-sm font-medium"
-        >
-          <Truck size={16} /> Download AWB
-        </button>
+        <InvoiceButton orderData={order} actionType="download" documentType="awb" admin disabled={!details.cn} />
         {status !== "SHIPPED" && status !== "DELIVERED" && (
           <button
             onClick={onCancel}

@@ -23,6 +23,7 @@ export async function saveAbandonedCheckoutLead(input = {}) {
       })).filter((item) => item.name)
     : [];
   const now = new Date();
+  const lastError = cleanText(input.checkoutError, 500);
   const data = {
     customerName: cleanText(input.customerName, 120) || null,
     district: cleanText(input.district, 100) || null,
@@ -33,6 +34,7 @@ export async function saveAbandonedCheckoutLead(input = {}) {
     deliveryArea: ["inside-dhaka", "outside-dhaka"].includes(input.deliveryArea) ? input.deliveryArea : null,
     items,
     lastSeenAt: now,
+    ...(lastError && { lastError, lastErrorAt: now }),
   };
 
   await prisma.abandonedCheckoutLead.upsert({
@@ -51,6 +53,7 @@ export async function listAbandonedCheckoutLeads(limit = 250) {
       id: true, phoneNumber: true, customerName: true, district: true, thana: true,
       deliveryAddress: true, email: true, note: true, deliveryArea: true, items: true,
       createdAt: true, updatedAt: true, lastSeenAt: true,
+      lastError: true, lastErrorAt: true,
     },
   });
 }

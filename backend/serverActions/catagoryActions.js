@@ -10,6 +10,7 @@ import { getDataSelectFields } from "../utils/getDataSelectFields";
 import { categorySpecificationInput } from "../services/specificationService";
 import { hasPermission } from "../utils/hasPermission";
 import { getActiveCampaigns, getProductCardCampaignData } from "@/backend/services/campaignService";
+import { productCardBundleSelection, productCardRequiresSelection } from "@/lib/productCardSelection";
 import { buildStorefrontProductFilter } from "@/backend/utils/storefrontProductFilters";
 import { getStorefrontVariationOptions } from "@/backend/utils/getStorefrontVariationOptions";
 import { categorySizeChartInput } from "../services/sizeChartService";
@@ -516,6 +517,7 @@ export async function getAllCategoryWithproduct() {
             slug: true,
             productCode: true,
             hasVariations: true,
+            bundleProducts: productCardBundleSelection,
             variations: {
               select: {
                 sku: true,
@@ -562,6 +564,7 @@ export async function getAllCategoryWithproduct() {
               regularPrice: 0,
               discountPrice: 0,
               hasVariations: false,
+              requiresSelection: productCardRequiresSelection(product),
               ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
               thumbnail: product.thumbnail?.name || null,
               category: product.category.name,
@@ -589,6 +592,7 @@ export async function getAllCategoryWithproduct() {
             regularPrice: minRegular,
             discountPrice: minDiscount,
             hasVariations: product.hasVariations,
+            requiresSelection: productCardRequiresSelection(product),
             ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
             thumbnail: { name: product.thumbnail?.name || null },
             category: product.category.name,
@@ -882,6 +886,7 @@ export async function getCategoryPageData(slug, cursor = null, rawFilters = {}) 
         title: true,
         slug: true,
         hasVariations: true,
+        bundleProducts: productCardBundleSelection,
         variations: {
           ...(variationWhere && { where: variationWhere }),
           select: {
@@ -923,6 +928,7 @@ export async function getCategoryPageData(slug, cursor = null, rawFilters = {}) 
           regularPrice: 0,
           discountPrice: 0,
           hasVariations: false,
+          requiresSelection: productCardRequiresSelection(product),
           ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
           thumbnail: product.thumbnail?.name || null,
           ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: 0, discountPrice: 0 }),
@@ -949,6 +955,7 @@ export async function getCategoryPageData(slug, cursor = null, rawFilters = {}) 
         regularPrice: minRegular,
         discountPrice: minDiscount,
         hasVariations: product.hasVariations,
+        requiresSelection: productCardRequiresSelection(product),
         ...(reviewsByProductId.get(product.id) || { reviewCount: 0, reviewRating: 0 }),
         thumbnail: { name: product.thumbnail?.name || null },
         ...getProductCardCampaignData({ campaigns, productId: product.id, categoryId: product.categoryId, regularPrice: minRegular, discountPrice: minDiscount }),

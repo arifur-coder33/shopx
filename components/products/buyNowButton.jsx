@@ -12,6 +12,7 @@ export default function BuyNowButton({
   product,
   slug,
   selectedVariation,
+  bundleSelectionMissing,
   ...restProps
 }) {
   const appearance = useSiteAppearance() || {};
@@ -72,9 +73,13 @@ export default function BuyNowButton({
   };
 
   const handleVariationWarning = () => {
+    const message = bundleSelectionMissing
+      ? "Bundle-এর সব অপশন বেছে নিন"
+      : "দয়া করে ভ্যারিয়েশন সিলেক্ট করুন";
+    const selector = bundleSelectionMissing ? "#bundle-variation-list" : "#product-variation-list";
     import("react-toastify").then((module) => {
       const { toast } = module;
-      toast.warn("দয়া করে ভ্যারিয়েশন সিলেক্ট করুন");
+      toast.warn(message);
     });
     import("@/utils/sounds").then((module) => {
       const { errorSoundWithVibrate } = module;
@@ -82,7 +87,7 @@ export default function BuyNowButton({
     });
     import("@/utils/uiUtils").then((module) => {
       const { scrollToAndHighlight } = module;
-      scrollToAndHighlight("#product-variation-list");
+      scrollToAndHighlight(selector);
     });
   };
 
@@ -133,9 +138,9 @@ export default function BuyNowButton({
   }
 
   // CASE B: A variation needs to be selected. The button is CLICKABLE but warns the user.
-  if (hasVariations && !isVariationSelected) {
+  if (bundleSelectionMissing || (hasVariations && !isVariationSelected)) {
     return (
-      <Tooltip content="Please select a variation">
+      <Tooltip content={bundleSelectionMissing ? "Bundle-এর সব অপশন বেছে নিন" : "Please select a variation"}>
         <Button
           onClick={handleVariationWarning}
           className="w-full border-b-4 p-2"

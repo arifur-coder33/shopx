@@ -203,6 +203,11 @@ model Product {
   id              String                      @id @default(cuid())
   productCode     String?                     @unique
   title           String // Product title
+  productType     ProductType                 @default(PHYSICAL)
+  productStructure ProductStructure           @default(SINGLE)
+  stockMode       ProductStockMode            @default(OWN_STOCK)
+  bundleProducts  ProductBundleItem[]         @relation("BundleProductItems")
+  usedInProductBundles ProductBundleItem[]    @relation("BundleComponentProduct")
   slug            String                      @unique // Unique slug for URL identification
   description     String? // Optional detailed description
   categoryId      String? // Foreign key for Category
@@ -241,6 +246,26 @@ model Product {
   updatedAt               DateTime                @updatedAt // Auto-updated timestamp
 
   @@index([searchText])
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+  SERVICE
+  VOUCHER
+  RENTAL
+}
+
+enum ProductStructure {
+  SINGLE
+  BUNDLE
+  KIT
+  CONFIGURABLE
+}
+
+enum ProductStockMode {
+  OWN_STOCK
+  COMPONENT_BASED
 }
 
 // Roots can carry values directly; children are optional, reusable fields.
@@ -345,6 +370,32 @@ model ProductVariation {
   countItems        InventoryCountItem[]
   bomOutputs        InventoryBom[]          @relation("BomOutput")
   bomComponents     InventoryBomComponent[]
+  bundleItems       BundleComponent[] @relation("BundleVariant")
+  usedInBundles     BundleComponent[] @relation("ComponentVariant")
+}
+
+model BundleComponent {
+  bundleVariationId    String
+  componentVariationId String
+  quantity             Int
+  bundleVariation      ProductVariation @relation("BundleVariant", fields: [bundleVariationId], references: [id], onDelete: Cascade)
+  componentVariation   ProductVariation @relation("ComponentVariant", fields: [componentVariationId], references: [id], onDelete: Restrict)
+
+  @@id([bundleVariationId, componentVariationId])
+  @@index([componentVariationId])
+}
+
+model ProductBundleItem {
+  id                 String  @id @default(cuid())
+  bundleProductId    String
+  componentProductId String
+  quantity           Int
+  position           Int     @default(0)
+  bundleProduct      Product @relation("BundleProductItems", fields: [bundleProductId], references: [id], onDelete: Cascade)
+  componentProduct   Product @relation("BundleComponentProduct", fields: [componentProductId], references: [id], onDelete: Restrict)
+
+  @@unique([bundleProductId, componentProductId])
+  @@index([componentProductId])
 }
 
 // A campaign is a time-bound, server-evaluated promotion. Prices are never
@@ -452,6 +503,7 @@ model Order {
   userId                    String? // Foreign key for User
   user                      User?            @relation(fields: [userId], references: [id]) // Relation to User
   customerName              String
+  bundleReservationWarehouseId String?
   phoneNumber               String
   email                     String
   orderPrice                Float // Price of the product at the time of order
@@ -532,6 +584,7 @@ model OrderItem {
   thumbnail        String?
   price            Float
   quantity         Int // Foreign key for Product
+  bundleComponents Json?
   productId        String
   product          Product             @relation(fields: [productId], references: [id]) // Relation to Product
   combinations     String? // JSON string to store combination details
@@ -1984,6 +2037,8 @@ model AbandonedCheckoutLead {
   note            String?
   deliveryArea    String?
   items           Json?
+  lastError       String?
+  lastErrorAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   lastSeenAt      DateTime @default(now())
@@ -2086,6 +2141,7 @@ model ChatSetting {
   facebookCommentAutoReplyEnabled  Boolean  @default(false)
   instagramCommentAutoReplyEnabled Boolean  @default(false)
   aiAutoReplyEnabled               Boolean  @default(false)
+  aiDeliveryAddressCheckEnabled    Boolean  @default(false)
   aiReplyWebsiteEnabled            Boolean  @default(true)
   aiReplyWhatsAppEnabled           Boolean  @default(true)
   aiReplyMessengerEnabled          Boolean  @default(true)

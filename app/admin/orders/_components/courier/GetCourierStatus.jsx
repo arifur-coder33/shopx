@@ -22,10 +22,13 @@ export default function GetCourierStatus({ courierId, courierProviderId }) {
     fetchStatus();
   }, [courierId, courierProviderId]);
   if (data?.status) {
+    const updatedAt = data.updatedAt ? new Date(data.updatedAt) : null;
     return (
       <>
-        <span className="bg-green-300 rounded-3xl px-2">{data?.status}</span>;
-        <p>Updated at: {new Date(data?.updatedAt).toLocaleString("en-GB")}</p>
+        <span className="bg-green-300 rounded-3xl px-2">{data.status}</span>
+        {updatedAt && Number.isFinite(updatedAt.getTime()) && (
+          <p>Updated at: {updatedAt.toLocaleString("en-GB")}</p>
+        )}
       </>
     );
   }

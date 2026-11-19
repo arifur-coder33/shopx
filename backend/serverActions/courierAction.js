@@ -23,6 +23,7 @@ export async function getAvailableCourierProvidersForOrder() {
         name: true,
         code: true,
         adapterKey: true,
+        nonSecretConfig: true,
         isActive: true,
         moneyAccountId: true,
         encryptedCredentials: true,
@@ -41,6 +42,7 @@ export async function getAvailableCourierProvidersForOrder() {
         name,
         code,
         adapterKey,
+        logo: ({ PATHAO: "/images/providor/pathao.png", STEADFAST: "/images/providor/steady fast logo.webp" })[adapterKey] || "/images/providor/steady fast logo.webp",
         pickupPoints,
         deliveryFeeConfig: adapterKey === "MANUAL" ? nonSecretConfig || {} : null,
       }));
@@ -65,6 +67,7 @@ export async function getCourierProvidersForManualEntryAction() {
         name: true,
         code: true,
         adapterKey: true,
+        nonSecretConfig: true,
         nonSecretConfig: true,
         moneyAccount: { select: { id: true, isActive: true } },
       },

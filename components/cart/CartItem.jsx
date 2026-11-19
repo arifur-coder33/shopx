@@ -20,12 +20,18 @@ export default function CartItem({
   removeItem,
   variation = null,
   id,
+  bundleSelections,
+  bundleSelectionLabels = [],
 }) {
-  const product = { id, variation };
-  const baseUnitPrice = Number(discountPrice || regularPrice || 0);
+  const product = { id, variation, bundleSelections };
+  const regularUnitPrice = Math.max(0, Number(regularPrice) || 0);
+  const saleUnitPrice = Math.max(0, Number(discountPrice) || 0);
+  const baseUnitPrice = saleUnitPrice > 0 && (!regularUnitPrice || saleUnitPrice < regularUnitPrice)
+    ? saleUnitPrice
+    : regularUnitPrice;
   const campaignDiscount = Math.min(baseUnitPrice, Math.max(0, Number(campaignOffer?.discount) || 0));
   const unitPrice = Math.max(0, baseUnitPrice - campaignDiscount);
-  const hasDiscount = (Number(discountPrice) > 0 && Number(discountPrice) < Number(regularPrice)) || campaignDiscount > 0;
+  const hasDiscount = regularUnitPrice > unitPrice;
 
   return (
     <article className="relative rounded-2xl border border-border bg-surface p-3 shadow-sm">
@@ -71,13 +77,16 @@ export default function CartItem({
               ))}
             </div>
           )}
+          {bundleSelectionLabels.length > 0 && (
+            <ul className="mt-1 text-xs text-text-muted">
+              {bundleSelectionLabels.map((label, index) => <li key={index}>{label}</li>)}
+            </ul>
+          )}
 
           <div className="mt-2 flex flex-wrap items-baseline gap-2">
             <strong className="text-base text-primary">৳{money(unitPrice)}</strong>
             {hasDiscount && (
-              <span className="text-xs text-text-muted line-through">
-                ৳{money(baseUnitPrice)}
-              </span>
+              <del className="text-xs text-text-muted">৳{money(regularUnitPrice)}</del>
             )}
             {campaignDiscount > 0 && <span className="rounded-md bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">{campaignOffer.name}: ৳{money(campaignDiscount * productQty)} ছাড়</span>}
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Tooltip from "@/components/common/Tooltip";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 // A reusable Tooltip component built with Floating UI and Tailwind
 
 // The main selector component
@@ -14,7 +14,9 @@ const ProductVariationSelector = ({
   allowOutOfStockOrder = false,
   onVariationChange,
   initialOptions,
+  sectionId = "product-variation-list",
 }) => {
+  const radioGroup = useId();
   const [selectedOptions, setSelectedOptions] = useState(initialOptions || {});
 
   // --- LOGIC (No major changes here, just removal of one useEffect) ---
@@ -103,7 +105,7 @@ const ProductVariationSelector = ({
   // --- JSX (Updated with Tooltip and Selected Variant display) ---
 
   return (
-    <div id="product-variation-list" className="space-y-6">
+    <div id={sectionId || undefined} className="space-y-6">
       {/* Variation Options */}
       <div className="space-y-4">
         {Object.entries(options).map(([name, values]) => (
@@ -149,7 +151,7 @@ const ProductVariationSelector = ({
                     >
                       <input
                         type="radio"
-                        name={name}
+                        name={`${radioGroup}-${name}`}
                         value={value}
                         checked={isSelected}
                         onChange={() => handleOptionChange(name, value)}

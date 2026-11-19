@@ -4,6 +4,7 @@ import { generateCode } from "../utils/generateCode";
 import { ACCOUNT_CODES, postJournal } from "../utils/accounting";
 import { actionError, refreshProcurement, requireProcurementPermission, toNumber } from "../utils/procurement";
 import { getPurchaseReceiveSummary } from "../utils/purchaseReceiptValue";
+import { assertOwnStockVariants } from "@/backend/services/bundleReservationService";
 
 export async function createGoodsReceipt(formData) {
   try {
@@ -20,6 +21,7 @@ export async function createGoodsReceipt(formData) {
     if (receivedItems.some((item) => !item.supplierLotNumber)) return { success: false, message: "Supplier lot number is required for every received item." };
 
     const result = await prisma.$transaction(async (tx) => {
+      await assertOwnStockVariants(tx, [...new Set(receivedItems.map(({ variationId }) => variationId))]);
       const po = await tx.purchaseOrder.findUnique({ where: { id: values.purchaseOrderId }, include: { items: true } });
       if (!po || po.status === "CANCELLED") throw new Error("Purchase order is unavailable for receiving.");
       if (!["APPROVED", "ORDERED", "PARTIALLY_RECEIVED"].includes(po.status)) throw new Error("Approve or order the purchase order before receiving goods.");

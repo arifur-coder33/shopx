@@ -230,6 +230,7 @@ export default function SearchableDropdown({
   addForm,
   dropDownLists = [],
   loadLists,
+  searchOptions,
   onSelect = () => {},
   index,
   colSpan = 1,
@@ -237,6 +238,7 @@ export default function SearchableDropdown({
   itemId,
   isConfirm = false,
   required = false,
+  disabled = false,
   largeMobile = false,
   addFormData,
   onClear,
@@ -255,6 +257,24 @@ export default function SearchableDropdown({
   const [selected, setSelected] = useState(null);
   const [list, setList] = useState([]);
   const [dropdownStyle, setDropdownStyle] = useState(null);
+  const [remoteResult, setRemoteResult] = useState(null);
+  const [activeOptionIndex, setActiveOptionIndex] = useState(-1);
+  const searchTerm = query.trim();
+  const listId = `${inputId}-list`;
+
+  useEffect(() => {
+    if (!searchOptions || !isOpen || searchTerm.length < 2) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const options = await searchOptions(searchTerm);
+        if (active) setRemoteResult({ term: searchTerm, options });
+      } catch {
+        if (active) setRemoteResult({ term: searchTerm, options: [], failed: true });
+      }
+    }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [isOpen, searchOptions, searchTerm]);
 
   /* ---------------- Default value ---------------- */
   useEffect(() => {
@@ -282,7 +302,7 @@ export default function SearchableDropdown({
   }, [modalClosed, loadLists, setModalClosed]);
 
   /* ---------------- Filter (fast) ---------------- */
-  const filteredOptions = useMemo(() => {
+  const localOptions = useMemo(() => {
     if (!query) return list;
     const normalizedQuery = query.toLocaleLowerCase();
     return list.filter((item) =>
@@ -293,6 +313,13 @@ export default function SearchableDropdown({
         .includes(normalizedQuery),
     );
   }, [query, list]);
+  const hasRemoteResult = searchTerm.length >= 2 && remoteResult?.term === searchTerm;
+  const filteredOptions = searchOptions ? (hasRemoteResult ? remoteResult.options : []) : localOptions;
+  const emptyMessage = !searchOptions ? "No results found"
+    : searchTerm.length < 2 ? "নাম বা SKU-এর অন্তত ২টি অক্ষর লিখুন"
+    : !hasRemoteResult ? "খোঁজা হচ্ছে…"
+    : remoteResult.failed ? "সার্চ করা যায়নি। আবার চেষ্টা করুন।"
+    : "কোনো component পাওয়া যায়নি";
 
   /* ---------------- Open dropdown ---------------- */
   const openDropdown = async () => {
@@ -339,7 +366,8 @@ export default function SearchableDropdown({
     };
 
     document.addEventListener("pointerdown", handleOutsideClick);
-    return () => document.removeEventListener("pointerdown", handleOutsideClick);
+    return () =>
+      document.removeEventListener("pointerdown", handleOutsideClick);
   }, []);
 
   /* ---------------- Select ---------------- */
@@ -383,16 +411,50 @@ export default function SearchableDropdown({
           id={inputId}
           ref={inputRef}
           type="text"
+          role={searchOptions ? "combobox" : undefined}
+          aria-autocomplete={searchOptions ? "list" : undefined}
+          aria-controls={searchOptions && isOpen ? listId : undefined}
+          aria-expanded={searchOptions ? isOpen : undefined}
+          aria-activedescendant={searchOptions && isOpen && filteredOptions[activeOptionIndex] ? `${listId}-${activeOptionIndex}` : undefined}
           value={loading ? "Loading..." : query || selected?.name || ""}
           placeholder={label ? " " : placeholder || "Select an option"}
           readOnly={searchOff}
           onFocus={openDropdown}
           required={required}
+          disabled={disabled}
           onChange={(e) => {
             setQuery(e.target.value);
             setSelected(null);
+            if (searchOptions) {
+              if (e.target.value.trim() !== searchTerm) setRemoteResult(null);
+              setActiveOptionIndex(-1);
+              setIsOpen(true);
+            }
             onClear?.();
           }}
+          onKeyDown={searchOptions ? (event) => {
+            if (event.key === "Escape" && isOpen) {
+              event.stopPropagation();
+              setIsOpen(false);
+              setActiveOptionIndex(-1);
+            }
+            if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+              event.preventDefault();
+              setIsOpen(true);
+              if (filteredOptions.length) setActiveOptionIndex((current) => {
+                if (event.key === "ArrowDown") return (current + 1) % filteredOptions.length;
+                return current <= 0 ? filteredOptions.length - 1 : current - 1;
+              });
+            }
+            if (event.key === "Enter") {
+              event.preventDefault();
+              const option = filteredOptions[activeOptionIndex] || (filteredOptions.length === 1 ? filteredOptions[0] : null);
+              if (isOpen && option) {
+                handleSelect(option);
+                setActiveOptionIndex(-1);
+              } else setIsOpen(true);
+            }
+          } : undefined}
           className={`peer block h-12 w-full appearance-none rounded-lg border border-gray-300 bg-slate-200 px-2.5 pr-11 ${largeMobile ? "text-xl md:text-lg" : "text-lg"} text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-500
               user-invalid:border-red-500
             user-invalid:blink-border
@@ -407,12 +469,13 @@ export default function SearchableDropdown({
             htmlFor={inputId}
             className={`pointer-events-none absolute start-1 top-2 z-10 origin-[0] -translate-y-4 scale-75 rounded-md bg-slate-200 px-2 ${largeMobile ? "text-xl md:text-lg" : "text-lg"} font-medium text-slate-500 duration-300 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:-translate-y-4 peer-focus:scale-75 peer-focus:px-2 peer-focus:text-blue-600 dark:bg-slate-600 dark:text-gray-400 peer-focus:dark:text-slate-200`}
           >
-            {label}
+            {label} {required && <span className="text-red-500">*</span>}
           </label>
         )}
 
         <button
           type="button"
+          disabled={disabled}
           aria-label={`${label || "Option"} তালিকা ${isOpen ? "বন্ধ" : "খুলুন"}`}
           aria-expanded={isOpen}
           onClick={() => {
@@ -421,6 +484,7 @@ export default function SearchableDropdown({
               return;
             }
             inputRef.current?.focus();
+            if (searchOptions) setIsOpen(true);
           }}
           className="absolute inset-y-0 right-1 flex w-10 items-center justify-center rounded-r-lg text-slate-500 transition-colors hover:text-blue-600 dark:text-gray-300"
         >
@@ -437,6 +501,8 @@ export default function SearchableDropdown({
         createPortal(
           <ul
             ref={dropdownRef}
+            id={searchOptions ? listId : undefined}
+            role={searchOptions ? "listbox" : undefined}
             style={dropdownStyle}
             className="max-h-44 overflow-y-auto rounded-md border text-base
             bg-slate-100 dark:bg-slate-900
@@ -444,16 +510,19 @@ export default function SearchableDropdown({
             shadow-lg"
           >
             {filteredOptions.length ? (
-              filteredOptions.map((item) => (
+              filteredOptions.map((item, optionIndex) => (
                 <li
                   key={item.id}
+                  id={searchOptions ? `${listId}-${optionIndex}` : undefined}
+                  role={searchOptions ? "option" : undefined}
+                  aria-selected={searchOptions ? selected?.id === item.id : undefined}
                   onMouseDown={(e) => {
                     e.preventDefault(); // 🔥 important
                     handleSelect(item);
                   }}
                   className={`px-3 py-2 cursor-pointer
                   ${
-                    selected?.id === item.id
+                    selected?.id === item.id || (searchOptions && optionIndex === activeOptionIndex)
                       ? "bg-blue-500 text-white"
                       : "hover:bg-blue-500 hover:text-white"
                   }`}
@@ -463,10 +532,13 @@ export default function SearchableDropdown({
               ))
             ) : (
               <>
-                <li className="px-3 py-2 text-gray-500">No results found</li>
+                <li className="px-3 py-2 text-gray-500">{emptyMessage}</li>
                 {addForm && (
                   <li className="px-3 py-2 bg-blue-500 text-white">
-                    <LazyModalButton componentKey={addForm} data={{ ...addFormData, name: query }} />
+                    <LazyModalButton
+                      componentKey={addForm}
+                      data={{ ...addFormData, name: query }}
+                    />
                   </li>
                 )}
               </>

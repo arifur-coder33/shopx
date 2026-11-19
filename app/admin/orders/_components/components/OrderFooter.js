@@ -365,10 +365,10 @@ export default function OrderFooter({ orderId, status, setStatus, createdAt, has
               <>
                 <button
                   disabled={loading}
-                  onClick={scrollToCourier}
+                  onClick={hasCourierBooking ? () => handleStatusChange("PROCESSING") : scrollToCourier}
                   className="px-4 py-2 bg-green-600 text-white rounded"
                 >
-                  Confirm & Create Courier
+                  {hasCourierBooking ? "Confirm Existing Booking" : "Confirm & Create Courier"}
                 </button>
 
                 <button

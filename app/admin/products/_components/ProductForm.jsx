@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { productFormFields } from "./productFormFields";
 import ProductPhotoReviewsField from "./ProductPhotoReviewsField";
 import ProductQuestionsAnswersField from "./ProductQuestionsAnswersField";
+import BundleItemsField from "./BundleItemsField";
 const DynamicForm = dynamic(() => import("@/components/common/DynamicForm"), {
   ssr: false,
   loading: () => <LoadingSpinner />,
@@ -21,6 +22,8 @@ export default function ProductForm({ actionType, updateAction, id }) {
   const [loadingProductData, setLoadingProductData] = useState(true);
   const [data, setData] = useState({});
   const [specificationCategoryId, setSpecificationCategoryId] = useState("");
+  const [stockMode, setStockMode] = useState("OWN_STOCK");
+  const isCreate = actionType !== "edit";
 
   // const loadCategoryDropDownLists = async () => {
   //   console.log("Loading categories for dropdown");
@@ -105,8 +108,9 @@ export default function ProductForm({ actionType, updateAction, id }) {
       onSelectCategoryHandler,
       productVariationList,
       specificationCategoryId,
+      onStockModeChange: isCreate ? setStockMode : undefined,
     });
-  }, [categoryDropdownList, productVariationList, onSelectCategoryHandler, specificationCategoryId]);
+  }, [categoryDropdownList, productVariationList, onSelectCategoryHandler, specificationCategoryId, isCreate]);
 
   const handleCreateAction = createAction;
   const handleUpdateAction = updateAction;
@@ -122,6 +126,8 @@ export default function ProductForm({ actionType, updateAction, id }) {
       data={data}
       updateAction={handleUpdateAction}
     >
+      {isCreate && stockMode === "COMPONENT_BASED" && <BundleItemsField />}
+      {data.stockMode === "COMPONENT_BASED" && <BundleItemsField key={data.id} product={data} />}
       <ProductPhotoReviewsField reviews={data?.photoReviews || []} />
       <ProductQuestionsAnswersField questionsAnswers={data?.questionsAnswers || []} />
     </DynamicForm>

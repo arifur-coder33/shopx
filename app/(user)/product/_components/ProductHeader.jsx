@@ -22,6 +22,7 @@ export default async function ProductHeader({ data, imageProps, campaignOffers =
     campaignPrice: variation.campaignPrice,
     campaignName: variation.campaignName,
     stock: variation.stock,
+    bundleContents: variation.bundleContents,
     thumbnailId: variation.thumbnailId,
     thumbnail: variation.thumbnail
       ? { id: variation.thumbnail.id, name: variation.thumbnail.name }
@@ -54,6 +55,8 @@ export default async function ProductHeader({ data, imageProps, campaignOffers =
     slug: data.slug,
     weight: data.weight,
     hasVariations: Boolean(data.hasVariations),
+    stockMode: data.stockMode,
+    bundleOptions: data.bundleOptions,
     allowOutOfStockOrder: Boolean(data.allowOutOfStockOrder),
     stock: variations[0]?.stock || 0,
     category: data.category?.name

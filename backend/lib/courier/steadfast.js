@@ -135,6 +135,7 @@ export const getSteadfastDeliveryStatus = async (
     return {
       success: true,
       status: data.delivery_status,
+      updatedAt: data.updated_at ?? null,
     };
   } catch (error) {
     return {

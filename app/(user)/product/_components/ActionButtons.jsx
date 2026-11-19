@@ -6,22 +6,30 @@ export default function ActionButtons({
   product,
   productQty,
   selectedVariation,
+  bundleSelections,
 }) {
+  const bundleSelectionMissing = Boolean(product.bundleOptions?.length && !bundleSelections);
+  const customChoices = bundleSelections && Object.fromEntries(
+    (product.bundleOptions || []).filter((item) => item.requiresSelection).map(({ id }) => [id, bundleSelections[id]]),
+  );
+  const params = new URLSearchParams({ qty: String(productQty) });
+  if (selectedVariation?.id) params.set("v", selectedVariation.id);
+  if (customChoices && Object.keys(customChoices).length) params.set("bundle", JSON.stringify(customChoices));
   const buttons = (
     <>
       <AddToCartButton
         product={product}
         productQty={productQty}
         selectedVariation={selectedVariation}
+        bundleSelections={bundleSelections}
         className="min-h-12 w-full text-base sm:text-xl"
       />
       <div className="relative">
         <BuyNowButton
           product={product}
           selectedVariation={selectedVariation}
-          slug={`${product?.slug}?qty=${productQty}${
-            selectedVariation?.id ? `&v=${selectedVariation?.id}` : ""
-          }`}
+          slug={`${product?.slug}?${params}`}
+          bundleSelectionMissing={bundleSelectionMissing}
           bgcolor="bg-purple"
           className="button min-h-12 w-full text-base sm:text-xl"
         />

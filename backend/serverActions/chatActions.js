@@ -274,6 +274,7 @@ export async function getChatSettingsAction(scope = "chatInbox") {
         instagramEnabled: setting?.instagramEnabled ?? false,
         tiktokEnabled: setting?.tiktokEnabled ?? false,
         aiAutoReplyEnabled: setting?.aiAutoReplyEnabled ?? false,
+        aiDeliveryAddressCheckEnabled: setting?.aiDeliveryAddressCheckEnabled ?? false,
         aiReplyWebsiteEnabled: setting?.aiReplyWebsiteEnabled ?? true,
         aiReplyWhatsAppEnabled: setting?.aiReplyWhatsAppEnabled ?? true,
         aiReplyMessengerEnabled: setting?.aiReplyMessengerEnabled ?? true,
@@ -331,6 +332,7 @@ export async function getChatSettingsAction(scope = "chatInbox") {
       success: true,
       data: {
         aiAutoReplyEnabled: data.aiAutoReplyEnabled,
+        aiDeliveryAddressCheckEnabled: data.aiDeliveryAddressCheckEnabled,
         aiReplyWebsiteEnabled: data.aiReplyWebsiteEnabled,
         aiReplyWhatsAppEnabled: data.aiReplyWhatsAppEnabled,
         aiReplyMessengerEnabled: data.aiReplyMessengerEnabled,
@@ -510,6 +512,7 @@ export async function saveAiSettingsSectionAction(formData) {
     const existing = await getSetting();
     const credentials = existing?.encryptedCredentials ? decryptProviderCredentials(existing.encryptedCredentials) : {};
     const aiAutoReplyEnabled = formData.get("aiAutoReplyEnabled") === "on";
+    const addressCheck = formData.get("aiDeliveryAddressCheckEnabled");
     const facebookCommentAutoReplyEnabled = formData.get("facebookCommentAutoReplyEnabled") === "on";
     const instagramCommentAutoReplyEnabled = formData.get("instagramCommentAutoReplyEnabled") === "on";
     const aiProvider = trim(formData.get("aiProvider")) || "OPENAI";
@@ -525,6 +528,7 @@ export async function saveAiSettingsSectionAction(formData) {
     if (instagramCommentAutoReplyEnabled && (!credentials.instagramAccountId || !credentials.messengerPageAccessToken || !credentials.metaAppSecret || !credentials.webhookVerifyToken)) throw new Error("Instagram comment AI reply চালু করতে আগে Chat Settings-এর linked Instagram ID, Page token ও App credentials save করুন।");
     const data = {
       aiAutoReplyEnabled,
+      ...(["on", "off"].includes(addressCheck) && { aiDeliveryAddressCheckEnabled: addressCheck === "on" }),
       facebookCommentAutoReplyEnabled,
       instagramCommentAutoReplyEnabled,
       aiReplyWebsiteEnabled: formData.get("aiReplyWebsiteEnabled") === "on",

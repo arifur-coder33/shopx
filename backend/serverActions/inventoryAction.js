@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { actionError, refreshProcurement, requireProcurementPermission, toNumber } from "../utils/procurement";
+import { assertOwnStockVariants } from "@/backend/services/bundleReservationService";
 
 export async function adjustStock(formData) {
   try {
@@ -12,6 +13,7 @@ export async function adjustStock(formData) {
     const enteredCost = toNumber(values.unitCost, -1);
     if (hasEnteredCost && enteredCost < 0) throw new Error("Unit cost cannot be negative.");
     const result = await prisma.$transaction(async (tx) => {
+      await assertOwnStockVariants(tx, [values.variationId]);
       const current = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId: values.warehouseId, variationId: values.variationId } } });
       const balanceAfter = (current?.quantity || 0) + quantity;
       if (balanceAfter < 0) throw new Error("Adjustment would make stock negative.");
@@ -22,7 +24,7 @@ export async function adjustStock(formData) {
       const averageUnitCost = balanceAfter <= 0 ? 0 : quantity > 0 ? (((current?.quantity || 0) * previousUnitCost) + quantity * movementUnitCost) / balanceAfter : previousUnitCost;
       await tx.stock.upsert({ where: { warehouseId_variationId: { warehouseId: values.warehouseId, variationId: values.variationId } }, create: { warehouseId: values.warehouseId, variationId: values.variationId, quantity, available: quantity, averageUnitCost: movementUnitCost, createdBy: userId, updatedBy: userId }, update: { quantity: balanceAfter, available: balanceAfter - (current?.reserved || 0), averageUnitCost, updatedBy: userId } });
       return tx.inventoryTransaction.create({ data: { warehouseId: values.warehouseId, variationId: values.variationId, type: "ADJUSTMENT", quantity, balanceAfter, unitCost: movementUnitCost, referenceType: "ADJUSTMENT", remarks: values.remarks || "Manual stock adjustment", createdBy: userId } });
-    });
+    }, { isolationLevel: "Serializable" });
     refreshProcurement();
     return { success: true, message: "Stock adjusted successfully.", data: result };
   } catch (error) { return actionError(error, "Failed to adjust stock."); }

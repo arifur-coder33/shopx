@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { readScheduledCampaignData } from "@/backend/services/storefrontScheduleService";
 import { getProductCardCampaignData } from "@/backend/services/campaignService";
 import { getStorefrontActiveCampaigns as getActiveCampaigns } from "@/backend/services/storefrontCampaignService";
+import { productCardBundleSelection, productCardRequiresSelection } from "@/lib/productCardSelection";
 
 const PRODUCT_BATCH_SIZE = 10;
 
@@ -12,6 +13,7 @@ const productSelect = {
   title: true,
   slug: true,
   hasVariations: true,
+  bundleProducts: productCardBundleSelection,
   thumbnail: { select: { name: true } },
   category: { select: { name: true } },
   categoryId: true,
@@ -46,6 +48,7 @@ function storefrontProduct(product, campaigns = [], review = { reviewCount: 0, r
     title: product.title,
     slug: product.slug,
     hasVariations: Boolean(product.hasVariations),
+    requiresSelection: productCardRequiresSelection(product),
     regularPrice,
     discountPrice:
       lowestSalePrice > 0 && lowestSalePrice < regularPrice
@@ -146,12 +149,12 @@ async function loadMoreHomeProducts(cursor) {
 }
 
 export async function getHomeStorefrontData() {
-  return readScheduledCampaignData(loadHomeStorefrontData, ["home-storefront-data-v2"], ["home-storefront", "products", "campaigns", "categories"]);
+  return readScheduledCampaignData(loadHomeStorefrontData, ["home-storefront-data-v3"], ["home-storefront", "products", "campaigns", "categories"]);
 }
 
 export async function getMoreHomeProducts(cursor) {
   try {
-    return await readScheduledCampaignData(loadMoreHomeProducts, ["home-more-products-v2"], ["home-storefront", "products", "campaigns", "categories"], [cursor || null]);
+    return await readScheduledCampaignData(loadMoreHomeProducts, ["home-more-products-v3"], ["home-storefront", "products", "campaigns", "categories"], [cursor || null]);
   } catch (error) {
     return { success: false, error: error.message };
   }

@@ -2,11 +2,13 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { actionError, requireProcurementPermission, toNumber } from "@/backend/utils/procurement";
+import { assertOwnStockVariants } from "@/backend/services/bundleReservationService";
 
 const refresh = () => ["stock", "ledger", "warehouses", "transfers", "counts", "assembly", "reports"].forEach((s) => revalidatePath(`/admin/inventory/${s}`));
 const parseItems = (v) => { try { return JSON.parse(String(v || "[]")); } catch { return []; } };
 const serial = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 async function postMovement(tx, { warehouseId, variationId, quantity, unitCost, referenceType = "ADJUSTMENT", referenceId, remarks, userId, type }) {
+  await assertOwnStockVariants(tx, [variationId]);
   const old = await tx.stock.findUnique({ where: { warehouseId_variationId: { warehouseId, variationId } } });
   const newQuantity = (old?.quantity || 0) + quantity;
   if (newQuantity < -1e-8) throw new Error(`Insufficient available stock for variation ${variationId}.`);
@@ -15,7 +17,15 @@ async function postMovement(tx, { warehouseId, variationId, quantity, unitCost, 
   const movementCost = unitCost !== null && unitCost !== undefined && Number.isFinite(Number(unitCost)) ? Math.max(0, Number(unitCost)) : Math.max(0, old?.averageUnitCost || 0);
   const remainingValue = Math.max(0, (old?.quantity || 0) * (old?.averageUnitCost || 0) + quantity * movementCost);
   const averageUnitCost = newQuantity > 1e-8 ? remainingValue / newQuantity : 0;
-  await tx.stock.upsert({ where: { warehouseId_variationId: { warehouseId, variationId } }, create: { warehouseId, variationId, quantity: Math.max(0, newQuantity), available: Math.max(0, newQuantity), averageUnitCost: movementCost, createdBy: userId, updatedBy: userId }, update: { quantity: Math.max(0, newQuantity), available: Math.max(0, available), averageUnitCost, updatedBy: userId } });
+  if (old) {
+    const updated = await tx.stock.updateMany({
+      where: { id: old.id, quantity: old.quantity, reserved: old.reserved },
+      data: { quantity: Math.max(0, newQuantity), available: Math.max(0, available), averageUnitCost, updatedBy: userId },
+    });
+    if (!updated.count) throw new Error("Warehouse stock changed. Refresh and try again.");
+  } else {
+    await tx.stock.create({ data: { warehouseId, variationId, quantity: Math.max(0, newQuantity), available: Math.max(0, newQuantity), averageUnitCost: movementCost, createdBy: userId, updatedBy: userId } });
+  }
   return tx.inventoryTransaction.create({ data: { warehouseId, variationId, type, quantity, balanceAfter: Math.max(0, newQuantity), unitCost: movementCost, referenceType, referenceId, remarks, createdBy: userId } });
 }
 async function getUnitCost(tx, warehouseId, variationId) {

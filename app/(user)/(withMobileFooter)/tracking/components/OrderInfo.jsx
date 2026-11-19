@@ -91,7 +91,10 @@ export default function OrderInfo({ orderId, orderNo, phoneNumber }) {
             <CustomerInfo customer={order} />
           </div>
 
-          <InvoiceButton orderData={order} actionType={"view"} />
+          <div className="grid gap-2">
+            <InvoiceButton orderData={order} actionType="view" />
+            <InvoiceButton orderData={order} actionType="download" />
+          </div>
         </div>
       </div>
     </div>

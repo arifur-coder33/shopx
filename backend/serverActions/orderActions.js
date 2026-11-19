@@ -4,7 +4,6 @@ import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeServi
 import { postCodCollection, postCustomerPaymentInTransaction } from "@/backend/services/paymentPostingService";
 import { getProviderRuntimeConfiguration } from "@/backend/services/providerCredentialService";
 import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
-import { parseBangladeshAddress } from "@/lib/bangladeshAddress";
 import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
@@ -25,6 +24,8 @@ import { firePurchaseServer } from "./SocialPurchaseEventAction";
 import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyPaymentDeliveryCampaign, applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority } from "@/backend/services/campaignService";
 import { CUSTOMER_ORDER_STATUS_GROUPS } from "@/lib/customerOrderStatus";
 import { sendOrderEmail } from "@/backend/services/emailService";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, productBundleItemsSelect, resolveProductBundle } from "@/lib/bundleStock";
+import { releaseBundleOrder, reserveBundleOrder } from "@/backend/services/bundleReservationService";
 function compatibleCampaigns(campaigns, selectedCampaigns) {
   if (!selectedCampaigns.length) return campaigns;
   const selectedIds = new Set(selectedCampaigns.map((campaign) => campaign.id));
@@ -271,6 +272,9 @@ export async function createOrder(formData) {
   if (!Object.values(orderOrigin).some(Boolean)) orderOrigin.city = null;
   try {
     const data = Object.fromEntries(formData.entries());
+    data.deliveryAddress = String(data.deliveryAddress || "").trim();
+    data.district = String(data.district || "").trim() || null;
+    data.thana = String(data.thana || "").trim() || null;
     const orderItems = JSON.parse(data?.products);
     const requestedPaymentMethod = String(data.paymentMethod || "").toUpperCase();
     const paymentPlan = String(data.paymentPlan || "FULL").toUpperCase();
@@ -287,18 +291,12 @@ export async function createOrder(formData) {
       );
     }
     const { verifyBangladeshDeliveryAddress } = await import("@/backend/services/chatAiReplyService");
-    const fullAddressForCheck = [data.deliveryAddress, data.thana, data.district].map((part) => String(part || "").trim()).filter(Boolean).join(", ");
+    const fullAddressForCheck = [data.deliveryAddress, data.thana, data.district].filter(Boolean).join(", ");
     const addressAI = await verifyBangladeshDeliveryAddress(fullAddressForCheck);
-    const addressVerificationAvailable = addressAI.available;
     if (addressAI.available && !addressAI.valid) throw new Error(addressAI.error || "ঠিকানাটি যাচাই করা যায়নি। বাসা/রোড/এলাকা, থানা ও জেলার নামসহ লিখুন।");
-    if (addressAI.available && addressAI.valid) {
-      data.district = addressAI.district;
-      data.thana = addressAI.thana;
-    } else {
-      const parsedAddress = parseBangladeshAddress(data.deliveryAddress);
-      if (!parsedAddress.valid) throw new Error(parsedAddress.error);
-      data.district = parsedAddress.district;
-      data.thana = parsedAddress.thana;
+    if (addressAI.valid) {
+      data.district ||= addressAI.district;
+      data.thana ||= addressAI.thana;
     }
     if (!/^(?:01[3-9]\d{8}|8801[3-9]\d{8})$/.test(String(data.phoneNumber).replace(/\D/g, ""))) {
       throw new Error("সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01712345678 অথবা 8801712345678)।");
@@ -336,6 +334,9 @@ export async function createOrder(formData) {
       orderBy: { createdAt: "desc" },
       take: 100,
     }) : Promise.resolve([]);
+    if (orderItems.some((item) => !item?.variation?.id || !Number.isSafeInteger(Number(item.quantity)) || Number(item.quantity) < 1)) {
+      throw new Error("পণ্য ও পরিমাণ সঠিকভাবে নির্বাচন করুন।");
+    }
     const variationIds = orderItems.map((item) => item.variation.id);
     const campaignsPromise = getActiveCampaigns({ couponCode: data.campaignCode, includeComboDisplayNames: false });
     const deliveryRatesPromise = getCheckoutDeliveryRates();
@@ -354,12 +355,16 @@ export async function createOrder(formData) {
         discountPrice: true,
         weight: true,
         stocks: { select: { available: true } },
+        bundleItems: { select: bundleComponentStockSelect },
         product: {
           select: {
             id: true,
             title: true,
             productCode: true,
             categoryId: true,
+            stockMode: true,
+            bundleProducts: productBundleItemsSelect,
+            isActive: true,
             allowOutOfStockOrder: true,
             codAvailable: true,
             advancePaymentType: true,
@@ -392,7 +397,8 @@ export async function createOrder(formData) {
         v.id,
         {
           ...v,
-          available: v.stocks.reduce(
+          available: v.product?.stockMode === "COMPONENT_BASED" ? (v.product.bundleProducts.length
+            ? availableProductBundleUnits(v.product.bundleProducts) : availableBundleUnits(v.bundleItems)) : v.stocks.reduce(
             (sum, stock) => sum + Math.max(0, stock.available || 0),
             0,
           ),
@@ -409,10 +415,10 @@ export async function createOrder(formData) {
     );
     for (const [variationId, requested] of requestedByVariation) {
       const variation = variationMap[variationId];
-      if (!variation)
+      if (!variation?.product || variation.product.isActive === false)
         throw new Error("Selected product variation was not found.");
       if (
-        !variation.product?.allowOutOfStockOrder &&
+        (variation.product.stockMode === "COMPONENT_BASED" || !variation.product.allowOutOfStockOrder) &&
         variation.available < requested
       ) {
         const item = orderItems.find((row) => row.variation.id === variationId);
@@ -509,7 +515,7 @@ export async function createOrder(formData) {
         return { item, variation, pricing };
       });
       const campaignOrderPrice = pricedItems.reduce((total, { item, pricing }) => total + pricing.price * Number(item.quantity), 0);
-      const campaignItems = pricedItems.map(({ item, variation, pricing }) => ({ productId: variation.product.id, categoryId: variation.product.categoryId, quantity: Number(item.quantity), basePrice: Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < Number(variation.regularPrice) ? Number(variation.discountPrice) : Number(variation.regularPrice), price: pricing.price }));
+      const campaignItems = pricedItems.map(({ item, variation, pricing }) => ({ productId: variation.product.id, categoryId: variation.product.categoryId, quantity: Number(item.quantity), weight: variation.weight, basePrice: Number(variation.discountPrice) > 0 && Number(variation.discountPrice) < Number(variation.regularPrice) ? Number(variation.discountPrice) : Number(variation.regularPrice), price: pricing.price }));
       const cartPricing = applyCartCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, items: campaignItems });
       remember(cartPricing.campaign);
       const paymentPricing = applyPaymentCampaign({ campaigns: compatible(), subtotal: cartPricing.subtotal, paymentMethod: campaignPaymentMethod, items: campaignItems });
@@ -519,9 +525,9 @@ export async function createOrder(formData) {
         serverOrderWeight,
         deliveryRates,
       );
-      const deliveryPricing = applyDeliveryCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: originalDeliveryCharge, items: campaignItems });
+      const deliveryPricing = applyDeliveryCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: originalDeliveryCharge, items: campaignItems, deliveryArea, deliveryRates });
       remember(deliveryPricing.campaign);
-      const paymentDeliveryPricing = applyPaymentDeliveryCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: deliveryPricing.deliveryCharge, items: campaignItems });
+      const paymentDeliveryPricing = applyPaymentDeliveryCampaign({ campaigns: compatible(), subtotal: campaignOrderPrice, paymentMethod: campaignPaymentMethod, deliveryCharge: deliveryPricing.deliveryCharge, items: campaignItems, deliveryArea, deliveryRates, previous: deliveryPricing });
       remember(paymentDeliveryPricing.campaign);
       const deliveryCharge = paymentDeliveryPricing.deliveryCharge;
       const totalDeliveryDiscount = deliveryPricing.discount + paymentDeliveryPricing.discount;
@@ -584,6 +590,16 @@ export async function createOrder(formData) {
         select: { lastOrderNumber: true },
       });
       const newOrderNumber = counter.lastOrderNumber.toString();
+      const stockLines = pricedItems.map(({ item, variation }) => ({
+        variationId: variation.id,
+        quantity: Number(item.quantity),
+        bundleComponents: variation.product.stockMode === "COMPONENT_BASED"
+          ? resolveProductBundle(variation.product.bundleProducts, item.bundleSelections) ?? variation.bundleItems.map(({ quantity, componentVariation }) => ({
+              quantity, variationId: componentVariation.id, sku: componentVariation.sku, title: componentVariation.product.title,
+            }))
+          : undefined,
+      }));
+      const bundleReservationWarehouseId = await reserveBundleOrder(tx, stockLines);
       const order = await tx.order.create({
         data: {
           orderNo: newOrderNumber,
@@ -610,7 +626,7 @@ export async function createOrder(formData) {
           fraudRiskLevel: riskAssessment.level,
           fraudRiskFactors: [
             ...riskAssessment.factors,
-            ...(!addressVerificationAvailable ? [{ code: "ADDRESS_NOT_VERIFIED_BY_AI", points: 0, label: "ঠিকানা AI দিয়ে যাচাই হয়নি", detail: "AI address verification is unavailable; the customer-provided address was saved." }] : []),
+            ...(!addressAI.available && !addressAI.skipped ? [{ code: "ADDRESS_NOT_VERIFIED_BY_AI", points: 0, label: "ঠিকানা AI দিয়ে যাচাই হয়নি", detail: "AI address verification is unavailable; the customer-provided address was saved." }] : []),
             ...(Object.values(orderOrigin).some(Boolean) ? [{ code: "ORDER_ORIGIN", points: 0, origin: orderOrigin }] : []),
           ],
           appliedCouponCode: data.campaignCode ? String(data.campaignCode).trim().toUpperCase() : null,
@@ -645,6 +661,7 @@ export async function createOrder(formData) {
               thumbnail: item.thumbnail,
               productId: variation.product.id,
               variationId: variation.id,
+              bundleComponents: stockLines[i].bundleComponents,
               combinationId: item.variation.combinationId || undefined,
               combinations: JSON.stringify(
                 item.variation.combinations?.map((c) => ({
@@ -654,6 +671,7 @@ export async function createOrder(formData) {
               ),
             })),
           },
+          bundleReservationWarehouseId,
           payments: {
             create: {
               gateway: paymentPlan === "MINIMUM" || paymentMethod !== "COD" ? provider.code : "COD",
@@ -688,13 +706,13 @@ export async function createOrder(formData) {
       };
     });
     after(async () => {
+      await deleteAbandonedCheckoutLeadByPhone(data.phoneNumber);
       await updateRecentOrderRiskScores({ orderId: result.id, history: riskHistory });
       await enrichOrderOrigin({ orderId: result.id, ipAddress: ip });
       const steadfastHistory = await getOrFetchSteadfastHistory(result.id);
       if (!steadfastHistory.success) console.warn("Steadfast history was not saved for this order:", steadfastHistory.error);
       await Promise.all([
         notifyOrderCreated(result.id),
-        deleteAbandonedCheckoutLeadByPhone(data.phoneNumber),
         sendOrderEmail(result.id, "orderConfirmation").catch((error) => console.error("Order confirmation email failed:", error?.message)),
       ]);
     });
@@ -991,11 +1009,11 @@ export async function getOrders({ userId, status, page = 1, limit = 10 }) {
 }
 export async function deleteOrderById(orderId) {
   try {
+    await hasPermission("order", "delete");
     // Delete the order by its ID
-    const deletedOrder = await prisma.order.delete({
-      where: {
-        id: orderId,
-      },
+    const deletedOrder = await prisma.$transaction(async (tx) => {
+      await releaseBundleOrder(tx, orderId);
+      return tx.order.delete({ where: { id: orderId } });
     });
     revalidatePath("/admin/order");
     revalidateTag("order");
@@ -1032,8 +1050,9 @@ export async function updateOrderStatusAction(orderId, status, note) {
         dueAmount: true,
         selectedCourierProviderId: true,
         adminNote: true,
+        bundleReservationWarehouseId: true,
         orderItems: { select: { variationId: true, quantity: true } },
-        deliveries: { select: { id: true }, take: 1 },
+        deliveries: { where: { status: { not: "CANCELLED" } }, select: { id: true }, take: 1 },
         shipping: {
           select: { cn: true, cod: true, courierProviderId: true },
         },
@@ -1042,6 +1061,9 @@ export async function updateOrderStatusAction(orderId, status, note) {
 
     if (!order) {
       throw new Error("Order not found");
+    }
+    if (order.bundleReservationWarehouseId && ["SHIPPED", "DELIVERED"].includes(status) && !order.deliveries.length) {
+      throw new Error("Prepare the bundle delivery and allocate the component batches first.");
     }
     if (status === "PROCESSING" && order.paymentMethod && order.paymentMethod !== "COD" && order.paymentStatus !== "PAID" && Number(order.dueAmount || 0) > 0) {
       throw new Error(order.paymentStatus === "FAILED"
@@ -1092,7 +1114,16 @@ export async function updateOrderStatusAction(orderId, status, note) {
             data: { status, purchaseTrackingClaimedAt: new Date() },
           })
         : null;
-      if (!claim?.count) await tx.order.update({ where: { id: orderId }, data: { status } });
+      if (!claim?.count && status === "PENDING") {
+        const updated = await tx.order.updateMany({
+          where: { id: orderId, shipping: { is: null } },
+          data: { status },
+        });
+        if (!updated.count) throw new Error("Cancel the courier booking before moving this order back to Pending.");
+      } else if (!claim?.count) {
+        await tx.order.update({ where: { id: orderId }, data: { status } });
+      }
+      if (status === "CANCELLED") await releaseBundleOrder(tx, orderId);
       const reservedPosMatch = order.adminNote?.match(/^POS_WAREHOUSE:([^:]+):RESERVED$/);
       if (status === "CANCELLED" && reservedPosMatch && order.deliveries.length === 0) {
         const warehouseId = reservedPosMatch[1];
@@ -1208,6 +1239,7 @@ export async function cancelOrderById({
   cancelReasonType,
 }) {
   try {
+    await hasPermission("order", "update");
     await prisma.$transaction(async (tx) => {
       // 1️⃣ Order + items load
       const order = await tx.order.findUnique({
@@ -1231,8 +1263,7 @@ export async function cancelOrderById({
         throw new Error("Order already CANCELLED/returned");
       }
 
-      // Stock is maintained in the warehouse Stock model and is consumed on delivery.
-      // Cancelling an unfulfilled order therefore does not alter inventory.
+      await releaseBundleOrder(tx, orderId);
       await tx.order.update({
         where: { id: orderId },
         data: {
@@ -1412,6 +1443,7 @@ export async function cancelUnpaidCustomerOrder({
           "This order can no longer be cancelled by the customer.",
         );
       }
+      await releaseBundleOrder(tx, order.id);
       await tx.payment.updateMany({
         where: { orderId: order.id, status: "PENDING" },
         data: { status: "CANCELLED" },

@@ -1,4 +1,4 @@
-// import { getCategory } from "@/backend/serverActions/categoryActions";
+import { PRODUCT_STRUCTURES, PRODUCT_TYPES } from "@/lib/productClassification";
 
 export const productFormFields = ({
   categoryDropdownList,
@@ -6,6 +6,7 @@ export const productFormFields = ({
   loadCategoryDropDownLists,
   productVariationList,
   specificationCategoryId,
+  onStockModeChange,
 }) => [
   {
     type: "checkbox",
@@ -25,6 +26,31 @@ export const productFormFields = ({
     label: "Allow orders when stock is zero",
     name: "allowOutOfStockOrder",
     colSpan: "2",
+  },
+  {
+    type: "nativeSelect",
+    label: "Product Type",
+    name: "productType",
+    defaultValue: "PHYSICAL",
+    options: PRODUCT_TYPES,
+  },
+  {
+    type: "nativeSelect",
+    label: "Product Structure",
+    name: "productStructure",
+    defaultValue: "SINGLE",
+    options: PRODUCT_STRUCTURES,
+  },
+  {
+    type: "nativeSelect",
+    label: "Stock Mode",
+    name: "stockMode",
+    defaultValue: "OWN_STOCK",
+    onValueChange: onStockModeChange,
+    options: [
+      { value: "OWN_STOCK", label: "Own stock" },
+      { value: "COMPONENT_BASED", label: "Component based" },
+    ],
   },
   {
     type: "radioGroup",
