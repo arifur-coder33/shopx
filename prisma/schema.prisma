@@ -643,6 +643,7 @@ model Shipping {
   courierProvider        CourierProvider? @relation(fields: [courierProviderId], references: [id])
   isManualEntry          Boolean          @default(false)
   deliveryFee            Float?
+  note                   String?
   cod                    Float?
   codCollectedAt         DateTime?
   codCollectedAmount     Float?

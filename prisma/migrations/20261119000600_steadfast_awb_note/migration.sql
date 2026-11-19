@@ -1,0 +1,1 @@
+ALTER TABLE "Shipping" ADD COLUMN "note" TEXT;

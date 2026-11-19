@@ -88,7 +88,7 @@ export async function updateCourierOrderStatus(prisma, order, status, guard) {
     const updated = await updateStatus(tx);
     if (!updated) return false;
     if (status === "CANCELLED") await releaseBundleOrder(tx, order.id, { rejectPacked: false });
-    if (["SHIPPED", "DELIVERED"].includes(status) && !await tx.delivery.count({
+    if (["SHIPPED", "DELIVERED"].includes(status) && !guard?.allowEarlyShipment && !await tx.delivery.count({
       where: { orderId: order.id, status: { not: "CANCELLED" } },
     })) {
       throw new Error("Prepare the bundle delivery before applying the courier status.");

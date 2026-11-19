@@ -102,6 +102,7 @@ export async function POST(req) {
     };
     const detailText = describeSteadfastEvent(notification_type, body);
     const statusMap = {
+      pending: "SHIPPED",
       delivered: "DELIVERED",
       cancelled: "CANCELLED",
       partial_delivered: "DELIVERED",
@@ -125,7 +126,7 @@ export async function POST(req) {
       // recorded in the timeline without guessing a business-state transition.
       const canApplyStatus = currentStatus && activeOrderStatuses.includes(order.status);
       const statusChanged = canApplyStatus && Boolean(await updateCourierOrderStatus(
-        prisma, order, currentStatus, { expectedStatus: order.status, shippingId: currentShipping.id },
+        prisma, order, currentStatus, { expectedStatus: order.status, shippingId: currentShipping.id, allowEarlyShipment: status === "pending" },
       ));
       if (canApplyStatus && !statusChanged) {
         return Response.json({ status: "retry", message: "Order changed during sync." }, { status: 503 });

@@ -1203,22 +1203,42 @@ export async function updateOrderExtraDiscountAction({
   adminDiscount,
 }) {
   try {
-    if (!orderId) {
-      throw new Error("Order ID is required");
+    await hasPermission("order", "update");
+    if (!orderId) throw new Error("Order ID is required");
+    const discount = Number(adminDiscount);
+    if (!Number.isFinite(discount) || discount < 0) {
+      throw new Error("Discount must be zero or a positive amount.");
     }
-    const checkOrder = await prisma.order.findUnique({
-      where: { id: orderId },
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new Error("Order not found");
+      if (discount > Number(order.orderPrice) + Number(order.deliveryCharge) + Number(order.taxAmount || 0)) {
+        throw new Error("Discount cannot exceed the order total.");
+      }
+      const dueAmount = Math.max(
+        0,
+        Math.round((Number(order.orderPrice) + Number(order.deliveryCharge) + Number(order.taxAmount || 0) - discount - Number(order.paidAmount || 0)) * 100) / 100,
+      );
+      const updated = await tx.order.update({
+        where: { id: order.id },
+        data: { adminNote, adminDiscount: discount, dueAmount },
+      });
+      if (order.paymentMethod === "COD") {
+        await tx.shipping.updateMany({
+          where: { orderId: order.id, courierProviderId: { not: null } },
+          data: { cod: dueAmount },
+        });
+        await tx.payment.updateMany({
+          where: { orderId: order.id, paymentMethod: "COD", status: { in: ["PENDING", "UNPAID"] } },
+          data: { amount: dueAmount },
+        });
+      }
+      return updated;
     });
-    if (!checkOrder) {
-      throw new Error("Order not found");
-    }
-    const result = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        adminNote: adminNote,
-        adminDiscount: Number(adminDiscount),
-      },
-    });
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/orders2");
+    revalidatePath(`/admin/order/view/${orderId}`);
+    revalidatePath("/tracking");
 
     return {
       success: true,

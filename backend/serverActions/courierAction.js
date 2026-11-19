@@ -248,7 +248,7 @@ export async function createCourierDeliveryAction({ formData }) {
           recipient_phone: data.phone,
           recipient_address: data.address,
           cod_amount: Number(data.price) || 0,
-          note: "Call before delivery",
+          note: String(data.note || "").trim().slice(0, 480),
         };
         const steadfastResponse = await createSteadfastOrder(
           courierData,
@@ -312,6 +312,7 @@ export async function createCourierDeliveryAction({ formData }) {
         cn: orderResponseData.cn,
         courierName: orderResponseData.courierName,
         courierProviderId: provider.id,
+        note: provider.adapterKey === "STEADFAST" ? String(data.note || "").trim().slice(0, 480) || null : null,
         isManualEntry: Boolean(orderResponseData.isManualEntry),
         deliveryFee: orderResponseData?.deliveryFee,
         cod: Number(data.price) || 0,
@@ -321,6 +322,7 @@ export async function createCourierDeliveryAction({ formData }) {
         cn: orderResponseData.cn,
         courierName: orderResponseData.courierName,
         courierProviderId: provider.id,
+        note: provider.adapterKey === "STEADFAST" ? String(data.note || "").trim().slice(0, 480) || null : null,
         isManualEntry: Boolean(orderResponseData.isManualEntry),
         deliveryFee: orderResponseData?.deliveryFee,
         cod: Number(data.price) || 0,

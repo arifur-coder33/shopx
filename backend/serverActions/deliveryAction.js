@@ -25,7 +25,7 @@ export async function createDelivery(formData) {
         },
       });
       if (!order) throw new Error("Order was not found.");
-      if (order.status !== "PROCESSING" && !(order.bundleReservationWarehouseId && order.status === "READY_TO_SHIP")) {
+      if (!(["PROCESSING", "SHIPPED"].includes(order.status)) && !(order.bundleReservationWarehouseId && order.status === "READY_TO_SHIP")) {
         throw new Error("Only a processing order can be prepared for delivery.");
       }
       if (!order.shipping?.courierProviderId) {
@@ -103,12 +103,13 @@ export async function createDelivery(formData) {
         if (!batch.count) throw new Error("Batch availability changed. Refresh and retry.");
         await tx.inventoryTransaction.create({ data: { warehouseId: values.warehouseId, variationId: row.variationId, type: "OUT", quantity: -row.quantity, balanceAfter, unitCost: stock.averageUnitCost || 0, referenceType: "SALE", referenceId: result.id, remarks: `Delivery ${deliveryNo} for order ${order.orderNo}`, createdBy: userId } });
       }
-      await tx.order.update({ where: { id: order.id }, data: { status: "READY_TO_SHIP" } });
+      const deliveryStatus = order.status === "SHIPPED" ? "SHIPPED" : "READY_TO_SHIP";
+      if (order.status !== deliveryStatus) await tx.order.update({ where: { id: order.id }, data: { status: deliveryStatus } });
       await tx.orderTimeline.create({
         data: {
           orderId: order.id,
           orderNo: order.orderNo,
-          status: "READY_TO_SHIP",
+          status: deliveryStatus,
           title: "Ready for Delivery",
           message: `Delivery ${deliveryNo} packed and allocated from stock.`,
           createdBy: userId,

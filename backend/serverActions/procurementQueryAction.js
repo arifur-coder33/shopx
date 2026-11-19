@@ -88,7 +88,7 @@ export async function getProcurementSectionData(section, params = {}) {
     } else if (section === "deliveries") {
       const where = { ...(status && { status }), ...(date && { createdAt: date }), ...(search && { OR: [text("deliveryNo", search), { order: text("orderNo", search) }, { items: { some: { goodsReceiptItem: { OR: [text("batchNumber", search), text("supplierLotNumber", search)] } } } }] }) };
       const queueWhere = {
-        status: { in: ["PROCESSING", "READY_TO_SHIP"] },
+        status: { in: ["PROCESSING", "READY_TO_SHIP", "SHIPPED"] },
         shipping: { isNot: null },
         ...(date && { createdAt: date }),
         ...(search && {

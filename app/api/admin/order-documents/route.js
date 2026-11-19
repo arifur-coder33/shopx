@@ -28,7 +28,7 @@ export async function GET(request) {
       where: { id: orderId },
       include: {
         orderItems: { orderBy: { orderItemNo: "asc" }, select: { productName: true, sku: true, quantity: true, price: true, combinations: true } },
-        shipping: { select: { cn: true, cod: true, courierName: true, courierProvider: { select: { adapterKey: true } } } },
+        shipping: { select: { cn: true, cod: true, note: true, courierName: true, courierProvider: { select: { adapterKey: true, nonSecretConfig: true } } } },
         selectedCourierProvider: { select: { name: true } },
       },
     });
@@ -40,7 +40,7 @@ export async function GET(request) {
     let html;
     let pdfOptions;
     if (document === "awb") {
-      html = await getAwbTemplate(order, company.name);
+      html = await getAwbTemplate(order, company.name, company.photoDataUrl, order.shipping.courierProvider?.nonSecretConfig?.merchantId);
       pdfOptions = { preferCSSPageSize: true, margin: { top: "5mm", bottom: "5mm", left: "5mm", right: "5mm" } };
     } else if (document === "packing-list") {
       html = getPackingListTemplate(order, company.name);

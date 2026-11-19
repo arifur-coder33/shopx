@@ -49,15 +49,17 @@ export function getPackingListTemplate(order, shopName) {
   `);
 }
 
-export async function getAwbTemplate(order, shopName) {
+export async function getAwbTemplate(order, shopName, logo = "", merchantId = "") {
   const consignment = order.shipping.cn;
   const barcode = {};
   JsBarcode(barcode, consignment, { format: "CODE128", displayValue: false });
   const bars = barcode.encodings.map(({ data }) => data).join("");
   const path = Array.from(bars, (bar, i) => bar === "1" ? `M${i} 0h1v40h-1z` : "").join("");
   const qrCode = await QRCode.toDataURL(consignment, { margin: 1 });
+  const steadfastAwb = order.shipping.courierProvider?.adapterKey === "STEADFAST";
   return documentHtml("Air Waybill", `<header>
-    <h1>${escape(shopName)}</h1><p>Air Waybill · ${escape(order.shipping.courierName || order.selectedCourierProvider?.name || "Courier")}</p>
+    ${logo ? `<img class="shop-logo" src="${escape(logo)}" alt="">` : ""}<h1>${escape(shopName)}</h1><p>Air Waybill · ${escape(order.shipping.courierName || order.selectedCourierProvider?.name || "Courier")}</p>
+    ${steadfastAwb && merchantId ? `<p>Merchant ID: ${escape(merchantId)}</p>` : ""}
     ${process.env.NEXT_PUBLIC_PATHAO_STORE_ID && (order.shipping.courierProvider?.adapterKey === "PATHAO" || /^pathao/i.test(order.shipping.courierName || "")) ? `<p>Store ID: ${escape(process.env.NEXT_PUBLIC_PATHAO_STORE_ID)}</p>` : ""}
     </header>
     <svg role="img" aria-label="Consignment barcode" viewBox="-10 0 ${bars.length + 20} 40" preserveAspectRatio="none"><path d="${path}"/></svg>
@@ -65,17 +67,21 @@ export async function getAwbTemplate(order, shopName) {
     <div><p>Invoice: ${escape(order.orderNo)}</p><p>Consignment: ${escape(consignment)}</p>
     <p>Delivery type: Home</p><p>Weight: ${escape(order.orderWeight || 0.5)} kg</p></div></div>
     <section><p><strong>${escape(order.customerName)}</strong></p>
-    <p>${escape(order.phoneNumber)}</p><p>${escape(formatOrderAddress(order))}</p></section>
+    <p>${escape(order.phoneNumber)}</p><p>${escape(formatOrderAddress(order))}</p>${steadfastAwb && order.shipping.note ? `<p class="note">NOTE · ${escape(order.shipping.note)}</p>` : ""}</section>
     <p class="cod">COD: ৳${escape(order.shipping.cod ?? order.dueAmount ?? 0)}</p>`,
   `
-    @page { size: 100mm 150mm; }
-    header { text-align: center; background: #edf2f8; padding: 2mm; }
-    h1 { font-size: 18px; }
-    body { font-size: 13px; }
-    svg { display: block; width: 100%; height: 15mm; margin: 3mm 0; }
-    .shipment { display: flex; align-items: center; gap: 4mm; margin-bottom: 3mm; }
-    .shipment img { width: 25mm; height: 25mm; }
-    section, .cod { border: 1px solid #cbd5e1; padding: 2.5mm; break-inside: avoid; }
-    .cod { margin-top: 3mm; font-weight: bold; }
+    @page { size: 76.2mm 76.2mm; margin: 0; }
+    body { width: 76.2mm; height: 76.2mm; padding: 2mm; font-size: 7pt; }
+    header { height: 8mm; display: flex; align-items: center; justify-content: space-between; gap: 2mm; border-bottom: .3mm solid #334155; }
+    header h1 { font-size: 9pt; margin: 0; }
+    header p { font-size: 6pt; margin: 0; }
+    .shop-logo { width: 9mm; height: 7mm; object-fit: contain; }
+    svg { display: block; width: 100%; height: 9mm; margin: 1mm 0; }
+    .shipment { display: flex; align-items: center; gap: 2mm; margin: 1mm 0; }
+    .shipment img { width: 17mm; height: 17mm; }
+    section, .cod { border: .25mm solid #334155; padding: 1.2mm; break-inside: avoid; }
+    section p { margin-bottom: .7mm; }
+    .note { font-style: italic; }
+    .cod { display: flex; justify-content: space-between; margin-top: 1.5mm; font-size: 9pt; font-weight: bold; }
   `);
 }
