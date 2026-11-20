@@ -379,7 +379,7 @@ export async function handleChatOrderFlow({ conversation, inbound, credentials, 
         } else {
           const form = new FormData();
           for (const field of ["customerName", "phoneNumber", "district", "thana", "deliveryAddress", "deliveryArea"]) form.set(field, flow[field]);
-          form.set("paymentMethod", "COD"); form.set("email", ""); form.set("chatCheckoutKey", `chat:${flow.id}`); form.set("expectedTotal", String(quote.total));
+          form.set("paymentMethod", "COD"); form.set("email", ""); form.set("orderSource", conversation.channel); form.set("chatCheckoutKey", `chat:${flow.id}`); form.set("expectedTotal", String(quote.total));
           const orderItems = flow.cartItems?.length ? flow.cartItems : [{ productId: product.id, variantId: flow.variantId, quantity: 1 }];
           const cartProducts = await productsForFlow(flow, product);
           form.set("products", JSON.stringify(orderItems.map((item) => {

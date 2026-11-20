@@ -3,9 +3,11 @@
 import { hasPermission } from "@/backend/utils/hasPermission";
 import prisma from "@/lib/prisma";
 import { getStorefrontProductBySlug } from "@/backend/services/storefrontProductService";
-import { createOrder, updateOrderStatusAction } from "@/backend/serverActions/orderActions";
+import { createOrder, updateOrderExtraDiscountAction, updateOrderStatusAction } from "@/backend/serverActions/orderActions";
 import { createCourierDeliveryAction } from "@/backend/serverActions/courierAction";
 import { revalidatePath } from "next/cache";
+import { getCheckoutDeliveryRates } from "@/backend/services/deliveryChargeService";
+import { calculateDeliveryCharge } from "@/lib/deliveryCharge";
 import {
   deleteAbandonedCheckoutLead,
   listAbandonedCheckoutLeads,
@@ -48,6 +50,7 @@ export async function getAbandonedCheckoutOrderFormAction(id) {
       const variations = product.variations.map((variation) => ({
         id: variation.id,
         sku: variation.sku,
+        weight: Number(variation.weight) || 0,
         regularPrice: Number(variation.regularPrice) || 0,
         discountPrice: Number(variation.discountPrice) || 0,
         stock: Number(variation.stock) || 0,
@@ -77,11 +80,35 @@ export async function getAbandonedCheckoutOrderFormAction(id) {
         deliveryAddress: lead.deliveryAddress || "",
         note: lead.note || "",
         deliveryArea: lead.deliveryArea || "outside-dhaka",
+        deliveryRates: await getCheckoutDeliveryRates(),
         items,
       },
     };
   } catch (error) {
     return { success: false, message: error.message || "Order form খোলা যায়নি।" };
+  }
+}
+
+export async function getAbandonedCheckoutProductForOrderAction(slug) {
+  try {
+    await hasPermission("order", "update");
+    const safeSlug = String(slug || "").trim();
+    if (!/^[a-zA-Z0-9_-]{1,180}$/.test(safeSlug)) return { success: false, message: "পণ্যটি পাওয়া যায়নি।" };
+    const result = await getStorefrontProductBySlug(safeSlug);
+    if (!result.success) return { success: false, message: "পণ্যটি পাওয়া যায়নি।" };
+    const product = result.data;
+    const variations = (product.variations || []).map((variation) => ({
+      id: variation.id,
+      sku: variation.sku,
+      weight: Number(variation.weight) || 0,
+      regularPrice: Number(variation.regularPrice) || 0,
+      discountPrice: Number(variation.discountPrice) || 0,
+      label: variation.combinations.map(({ variationName, variationValue }) => `${variationName.name}: ${variationValue.value}`).join(" · ") || variation.sku,
+    }));
+    if (!variations.length) return { success: false, message: "এই পণ্যের বিক্রয়যোগ্য variation নেই।" };
+    return { success: true, data: { index: `added-${product.id}`, productId: product.id, slug: product.slug, name: product.title, quantity: 1, thumbnail: product.thumbnail?.name || null, variations, variationId: variations[0].id, bundleSelections: {}, bundleOptions: product.bundleOptions || [], unavailable: false } };
+  } catch (error) {
+    return { success: false, message: error.message || "পণ্যটি যোগ করা যায়নি।" };
   }
 }
 
@@ -95,15 +122,17 @@ export async function createAbandonedCheckoutOrderAction(input) {
     if (!requestedItems.length) throw new Error("কমপক্ষে একটি valid product রাখতে হবে।");
     const products = [];
     for (const item of requestedItems) {
-      const source = leadItems[Number(item.sourceIndex)];
-      const slug = String(source?.productUrl || "").match(/^\/product\/([a-zA-Z0-9_-]+)$/)?.[1];
+      const source = Number.isInteger(Number(item.sourceIndex)) && item.sourceIndex !== null ? leadItems[Number(item.sourceIndex)] : null;
+      const slug = source
+        ? String(source.productUrl || "").match(/^\/product\/([a-zA-Z0-9_-]+)$/)?.[1]
+        : String(item.productSlug || "").trim();
       if (!slug) throw new Error(`${source?.name || "পণ্য"}-এর product link পাওয়া যায়নি।`);
       const variation = await prisma.productVariation.findFirst({
         where: { id: String(item.variationId || ""), product: { slug, isActive: true } },
         select: { id: true, productId: true, sku: true, product: { select: { title: true } } },
       });
-      if (!variation) throw new Error(`${source.name}-এর নির্বাচিত variation আর পাওয়া যাচ্ছে না।`);
-      const quantity = Math.max(1, Math.min(99, Math.floor(Number(item.quantity) || Number(source.quantity) || 1)));
+      if (!variation) throw new Error(`${source?.name || slug}-এর নির্বাচিত variation আর পাওয়া যাচ্ছে না।`);
+      const quantity = Math.max(1, Math.min(99, Math.floor(Number(item.quantity) || Number(source?.quantity) || 1)));
       products.push({
         title: variation.product.title,
         slug,
@@ -133,10 +162,17 @@ export async function createAbandonedCheckoutOrderAction(input) {
     form.set("gbraid", lead.gbraid || "");
     form.set("wbraid", lead.wbraid || "");
     form.set("ttclid", lead.ttclid || "");
+    form.set("orderSource", "ABANDONED_CHECKOUT");
     form.set("marketingAttribution", JSON.stringify(lead.marketingAttribution || {}));
 
     const created = await createOrder(form);
     if (!created?.success || !created.data?.id) throw new Error(created?.error || "Order তৈরি করা যায়নি।");
+
+    const extraDiscount = Number(input.extraDiscount) || 0;
+    if (extraDiscount > 0) {
+      const discounted = await updateOrderExtraDiscountAction({ orderId: created.data.id, adminDiscount: extraDiscount, adminNote: "Created from abandoned checkout" });
+      if (!discounted.success) throw new Error(`Order #${created.data.orderNo} তৈরি হয়েছে, কিন্তু discount প্রয়োগ হয়নি: ${discounted.message}`);
+    }
 
     let courierWarning = null;
     if (input.courier?.courierProviderId) {

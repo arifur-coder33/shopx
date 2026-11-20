@@ -17,7 +17,6 @@ import OrderTimelineClient from "./components/OrderTimelineClient";
 import PaymentSummary from "./components/PaymentSummary";
 import CourierManagement from "./courier/CourierManagement";
 import OrderRiskAssessment from "./OrderRiskAssessment";
-import { CheckCircle2, Clock3 } from "lucide-react";
 
 // Server component ke lazy load kora hocche
 const OrderTimelineServer = dynamic(
@@ -76,15 +75,17 @@ export default function OrderDetailsPage({ order, children }) {
           orderId={order.orderNo}
           status={status}
           date={order.createdAt || "N/A"}
+          customerConfirmedAt={order.customerConfirmedAt}
         />
-        <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm ${order.customerConfirmedAt ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
-          <span className="inline-flex items-center gap-2 font-semibold">{order.customerConfirmedAt ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}{order.customerConfirmedAt ? "Customer re-confirmed this order" : "Customer has not re-confirmed this order"}</span>
-          {order.customerConfirmedAt && <time dateTime={new Date(order.customerConfirmedAt).toISOString()} className="text-xs">{new Date(order.customerConfirmedAt).toLocaleString("en-BD", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Dhaka" })}</time>}
-        </div>
         <OrderRiskAssessment order={order} />
         <div className="card p-4 text-sm">
           <strong>Order source</strong>
           <p className="mt-1 text-text-muted">
+            {({ WEBSITE: "Website", ABANDONED_CHECKOUT: "Abandoned Checkout", POS: "POS", MESSENGER: "Messenger", WHATSAPP: "WhatsApp", INSTAGRAM: "Instagram", TIKTOK: "TikTok" })[order.marketingAttribution?.orderSource] || (order.adminNote?.startsWith("POS_WAREHOUSE:") ? "POS" : "Website")}
+          </p>
+          {(order.marketingAttribution?.channel || order.marketingAttribution?.source || order.marketingAttribution?.campaign || order.marketingAttribution?.campaignId || order.marketingAttribution?.ad || order.marketingAttribution?.adId) && <>
+            <strong className="mt-3 block">Marketing attribution</strong>
+            <p className="mt-1 text-text-muted">
             {[
               order.marketingAttribution?.channel || "Unattributed",
               order.marketingAttribution?.source,
@@ -95,7 +96,8 @@ export default function OrderDetailsPage({ order, children }) {
             ]
               .filter(Boolean)
               .join(" / ")}
-          </p>
+            </p>
+          </>}
         </div>
 
         {/* Timeline Section

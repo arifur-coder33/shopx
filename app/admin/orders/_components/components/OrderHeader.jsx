@@ -1,7 +1,7 @@
 import { dateConvertToLocalString } from "@/utils/dateConvert";
-import { Package } from "lucide-react";
+import { CheckCircle2, Package } from "lucide-react";
 
-export default function OrderHeader({ orderId, status, date }) {
+export default function OrderHeader({ orderId, status, date, customerConfirmedAt }) {
   const getStatusColor = (s) => {
     switch (s) {
       case "DELIVERED":
@@ -28,12 +28,17 @@ export default function OrderHeader({ orderId, status, date }) {
           </p>
         </div>
       </div>
-      <div
-        className={`mt-4 md:mt-0 px-4 py-1.5 rounded-full text-sm font-bold border ${getStatusColor(
-          status,
-        )}`}
-      >
-        {status}
+      <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-2">
+        {customerConfirmedAt && <span
+          title={`Customer re-confirmed this order${dateConvertToLocalString(customerConfirmedAt) ? ` · ${dateConvertToLocalString(customerConfirmedAt)}` : ""}`}
+          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700"
+        >
+          <CheckCircle2 size={14} />
+          RE-CONFIRMED
+        </span>}
+        <span className={`rounded-full border px-4 py-1.5 text-sm font-bold ${getStatusColor(status)}`}>
+          {status}
+        </span>
       </div>
     </div>
   );

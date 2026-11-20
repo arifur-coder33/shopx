@@ -64,6 +64,7 @@ export async function POST(request) {
     if (product.codAvailable === false || ["DELIVERY_FEE", "PARTIAL"].includes(product.advancePaymentType)) return Response.json({ success: false, message: "এই পণ্যের জন্য ওয়েবসাইটে অনলাইন পেমেন্ট করে অর্ডার করুন।" }, { status: 400 });
     const form = new FormData();
     for (const [key, value] of Object.entries({ customerName, phoneNumber, deliveryAddress, district, thana, deliveryArea, paymentMethod: "COD" })) form.set(key, value);
+    form.set("orderSource", "MESSENGER");
     form.set("products", JSON.stringify([{ title: product.title, productId: product.id, variation: { id: variant.id, combinations: [] }, quantity: 1 }]));
     const order = await createOrder(form);
     if (!order?.success || !order.data?.orderNo) return Response.json({ success: false, message: order?.error || "অর্ডার করা যায়নি।" }, { status: 400 });

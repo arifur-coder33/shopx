@@ -363,6 +363,7 @@ export async function createPosSale(formData) {
           thana: clean(values.thana) || null,
           deliveryAddress: clean(values.deliveryAddress) || (fulfillment === "CUSTOMER_PICKUP" ? warehouse.address || warehouse.name : ""),
           paymentMethod,
+          marketingAttribution: { orderSource: "POS" },
           paymentStatus: receivedNow > 0 ? "PENDING" : "UNPAID",
           paidAmount: 0,
           dueAmount: total,

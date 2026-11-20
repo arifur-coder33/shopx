@@ -428,6 +428,7 @@ export default function OrderForm({
       formData.delete("quantity");
       formData.append("products", JSON.stringify([...(products || []), ...comboRewardItems]));
       formData.append("deliveryArea", deliveryArea);
+      formData.append("orderSource", "WEBSITE");
 
       await leadSaveQueue.current;
       const response = await createOrder(formData);

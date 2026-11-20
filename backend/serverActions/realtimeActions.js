@@ -76,7 +76,7 @@ export async function getOrderCardForAdminAction(orderId) {
     select: {
       id: true, orderNo: true, status: true, customerName: true, phoneNumber: true,
       orderPrice: true, deliveryCharge: true, paymentStatus: true, paidAmount: true,
-      dueAmount: true, createdAt: true, viewedBy: true,
+      dueAmount: true, createdAt: true, viewedBy: true, customerConfirmedAt: true,
       fraudRiskScore: true, fraudRiskLevel: true, fraudRiskFactors: true,
       orderItems: { select: { id: true, productName: true, price: true, quantity: true, thumbnail: true } },
     },

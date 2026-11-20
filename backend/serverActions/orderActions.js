@@ -263,6 +263,9 @@ export async function createOrder(formData) {
         : formData.get("ttclid") ? { channel: "Paid Ads", source: "tiktok" }
           : { channel: "Direct / Unknown" });
   }
+  const orderSource = String(formData.get("orderSource") || "WEBSITE").trim().toUpperCase();
+  const allowedOrderSources = new Set(["WEBSITE", "ABANDONED_CHECKOUT", "POS", "MESSENGER", "WHATSAPP", "INSTAGRAM", "TIKTOK"]);
+  marketingAttribution = { ...(marketingAttribution || {}), orderSource: allowedOrderSources.has(orderSource) ? orderSource : "WEBSITE" };
   const [h, userId] = await Promise.all([headers(), getUserId()]);
   const ip = getIP(h);
   const userAgent = h.get("user-agent") || "";
@@ -753,7 +756,7 @@ export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status, in
     select: {
       id: true, orderNo: true, status: true, customerName: true, phoneNumber: true,
       deliveryAddress: true, thana: true, city: true, orderPrice: true,
-      deliveryCharge: true, paymentMethod: true, paymentStatus: true, paidAmount: true, dueAmount: true, createdAt: true, viewedBy: true,
+      deliveryCharge: true, paymentMethod: true, paymentStatus: true, paidAmount: true, dueAmount: true, createdAt: true, viewedBy: true, customerConfirmedAt: true,
       fraudRiskScore: true, fraudRiskLevel: true, fraudRiskFactors: true,
       orderItems: { select: { id: true, productName: true, price: true, quantity: true, thumbnail: true } },
     },
@@ -1440,7 +1443,7 @@ export async function reconfirmCustomerOrderAction({ orderNo, phoneNumber }) {
       const confirmedAt = new Date();
       const changed = await tx.order.updateMany({ where: { id: order.id, status: "PENDING", customerConfirmedAt: null }, data: { customerConfirmedAt: confirmedAt } });
       if (!changed.count) return { success: true, orderId: order.id, message: "আপনার অর্ডারটি আগেই re-confirm করা হয়েছে।" };
-      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: String(orderNo), status: order.status, title: "Customer re-confirmed order", message: "Customer confirmed this order from the order success page.", createdBy: "customer" } });
+      await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: String(orderNo), status: order.status, title: "Customer re-confirmed order", message: "Customer confirmed this order from the order success page.", createdBy: "customer", createdAt: confirmedAt } });
       return { success: true, orderId: order.id, message: "ধন্যবাদ! আপনার অর্ডারটি re-confirm হয়েছে।" };
     });
     if (result.success && result.orderId) {
