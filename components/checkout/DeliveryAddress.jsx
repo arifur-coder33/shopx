@@ -20,9 +20,14 @@ export default function DeliveryAddress({
   function updateDistrict(value) {
     setDistrict(value);
     const normalized = value.trim().toLocaleLowerCase();
-    const nextArea = /^(?:ঢাকা(?:\s+জেলা|\s+শহর|\s+সিটি)?|dhaka(?:\s+district|\s+city|\s+zilla)?|dacca)$/u.test(normalized)
-      ? "inside-dhaka"
-      : value.trim() ? "outside-dhaka" : undefined;
+    const nextArea =
+      /^(?:ঢাকা(?:\s+জেলা|\s+শহর|\s+সিটি)?|dhaka(?:\s+district|\s+city|\s+zilla)?|dacca)$/u.test(
+        normalized,
+      )
+        ? "inside-dhaka"
+        : value.trim()
+          ? "outside-dhaka"
+          : undefined;
     if (nextArea) setDeliveryArea?.(nextArea);
     onLocationChange?.({ district: value, thana }, nextArea);
   }
@@ -73,7 +78,7 @@ export default function DeliveryAddress({
       />
       <FloatingInput
         name="thana"
-        label="থানা/উপজেলা লিখুন"
+        label="থানা/উপজেলা"
         value={thana}
         onChange={(event) => updateThana(event.target.value)}
         inputType="text"
