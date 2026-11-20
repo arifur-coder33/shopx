@@ -37,10 +37,13 @@ export async function GET(request) {
     }
 
     const company = await getInvoiceCompanySettings();
+    const siteIdentity = document === "awb"
+      ? await prisma.siteSetting.findFirst({ select: { name: true } })
+      : null;
     let html;
     let pdfOptions;
     if (document === "awb") {
-      html = await getAwbTemplate(order, company.name, company.photoDataUrl, order.shipping.courierProvider?.nonSecretConfig?.merchantId);
+      html = await getAwbTemplate(order, siteIdentity?.name || company.name, company.photoDataUrl, order.shipping.courierProvider?.nonSecretConfig?.merchantId);
       pdfOptions = { preferCSSPageSize: true, margin: { top: "5mm", bottom: "5mm", left: "5mm", right: "5mm" } };
     } else if (document === "packing-list") {
       html = getPackingListTemplate(order, company.name);

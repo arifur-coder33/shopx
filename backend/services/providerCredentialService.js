@@ -154,7 +154,6 @@ const DEFINITIONS = {
       accountType: "COURIER",
       credentials: [],
       config: [
-        { key: "merchantId", label: "Merchant ID", type: "text", required: false, defaultValue: "" },
         {
           key: "supportsCod",
           label: "COD collection available",
@@ -181,6 +180,7 @@ const DEFINITIONS = {
         },
       ],
       config: [
+        { key: "merchantId", label: "Merchant ID", type: "text", required: false, defaultValue: "" },
         {
           key: "supportsCod",
           label: "COD collection available",

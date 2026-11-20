@@ -21,8 +21,11 @@ export async function firePurchaseServer({ orderNo, orderId, actionSource = "web
         email: true,
         phoneNumber: true,
         fbp: true,
+        gaClientId: true,
         fbc: true,
         gclid: true,
+        gbraid: true,
+        wbraid: true,
         ttclid: true,
 
         ipAddress: true,
@@ -73,8 +76,11 @@ export async function firePurchaseServer({ orderNo, orderId, actionSource = "web
         userId: order.userId,
 
         fbp: order.fbp,
+        gaClientId: order.gaClientId,
         fbc: order.fbc,
         gclid: order.gclid,
+        gbraid: order.gbraid,
+        wbraid: order.wbraid,
         ttclid: order.ttclid,
 
         ip: order.ipAddress,

@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { cache } from "react";
 import { normalizeProductVideos } from "@/backend/utils/productVideos";
-import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, canOrderProductBundleWhenOutOfStock, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
 
 export const getStorefrontProductBySlug = cache(async (slug) => {
   try {
@@ -82,7 +82,9 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
         bundleOptions,
         gallery: data.gallery.map((item) => item.media),
         videos: normalizeProductVideos(data.videos, data.videoUrl),
-        allowOutOfStockOrder: data.stockMode !== "COMPONENT_BASED" && data.allowOutOfStockOrder,
+        allowOutOfStockOrder: data.stockMode === "COMPONENT_BASED"
+          ? canOrderProductBundleWhenOutOfStock(bundleProducts, data.allowOutOfStockOrder)
+          : data.allowOutOfStockOrder,
         variations: data.variations.map(({ bundleItems, ...variation }) => ({
           ...variation,
           bundleContents: data.stockMode === "COMPONENT_BASED" ? bundleItems.map(({ quantity, componentVariation }) => ({

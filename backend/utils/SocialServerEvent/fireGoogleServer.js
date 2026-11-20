@@ -7,7 +7,7 @@ export async function fireGoogleServer(data, configuredSettings) {
   if (!settings.googleAnalyticsId || !settings.googleAnalyticsSecret) {
     return { skipped: true, reason: "Google server tracking is not configured." };
   }
-  const client_id = (data.event === "user_engagement" && data.extra.clientId) || data.user.gclid || `${Date.now()}.${Math.random()}`;
+  const client_id = (data.event === "user_engagement" && data.extra.clientId) || data.user.gaClientId || `${Date.now()}.${Math.random()}`;
 
   const payload = {
     client_id,

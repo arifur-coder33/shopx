@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Copy, Phone, Search, Trash2 } from "lucide-react";
+import { Copy, Phone, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { deleteAbandonedCheckoutLeadAction, getAbandonedCheckoutLeadsAction } from "@/backend/serverActions/abandonedCheckoutActions";
 import { createOrderRealtimeToken } from "@/backend/serverActions/realtimeActions";
 import { useRealtimeConnection } from "@/hooks/useRealtimeConnection";
+import AbandonedCheckoutOrderModal from "./AbandonedCheckoutOrderModal";
 
 const digits = (value) => String(value || "").replace(/\D/g, "");
 const relativeDate = (value) => {
@@ -21,6 +22,7 @@ export default function AbandonedCheckoutLeads({ initialLeads = [], canDelete = 
   const [leads, setLeads] = useState(initialLeads);
   const [query, setQuery] = useState("");
   const [pendingId, setPendingId] = useState(null);
+  const [activeLead, setActiveLead] = useState(null);
   const [isPending, startTransition] = useTransition();
   const syncInProgress = useRef(false);
   const syncLeads = useCallback(async () => {
@@ -125,9 +127,10 @@ export default function AbandonedCheckoutLeads({ initialLeads = [], canDelete = 
             </div>
           )}
           {lead.items?.length > 0 && <div className="mt-3 border-t border-border pt-2"><p className="mb-1 text-[10px] font-semibold uppercase text-text-muted">কার্টে ছিল</p>{lead.items.slice(0, 3).map((item, index) => <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-2 text-xs">{item.productUrl ? <a href={item.productUrl} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate text-primary underline-offset-2 hover:underline">{item.name}</a> : <span className="min-w-0 truncate text-text-primary">{item.name}</span>}<span className="shrink-0 text-text-muted">×{item.quantity}{item.price != null && Number.isFinite(Number(item.price)) ? ` · ৳${Number(item.price).toLocaleString("en-BD")}` : ""}</span></div>)}{lead.items.length > 3 && <p className="mt-1 text-[10px] text-text-muted">আরও {lead.items.length - 3}টি পণ্য</p>}</div>}
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3"><span className="text-[10px] text-text-muted">শুরু · {new Date(lead.createdAt).toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" })}</span>{canDelete && <button type="button" disabled={isPending && pendingId === lead.id} onClick={() => removeLead(lead)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" />মুছুন</button>}</div>
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3"><span className="text-[10px] text-text-muted">শুরু · {new Date(lead.createdAt).toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" })}</span><div className="flex items-center gap-1">{canDelete && <button type="button" onClick={() => setActiveLead(lead)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90"><Plus className="h-3.5 w-3.5" />Create order</button>}{canDelete && <button type="button" disabled={isPending && pendingId === lead.id} onClick={() => removeLead(lead)} aria-label="লিড মুছুন" className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" />মুছুন</button>}</div></div>
         </article>
       ))}</div> : <div className="rounded-xl border border-dashed border-border bg-surface p-10 text-center text-sm text-text-muted">{leads.length ? "এই খোঁজে কোনো lead পাওয়া যায়নি।" : "এখনো কোনো অসম্পূর্ণ checkout নেই।"}</div>}
+      {activeLead && <AbandonedCheckoutOrderModal lead={activeLead} onClose={() => setActiveLead(null)} onCreated={(leadId) => { setLeads((current) => current.filter((item) => item.id !== leadId)); setActiveLead(null); }} />}
     </section>
   );
 }

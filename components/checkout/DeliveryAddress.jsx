@@ -1,91 +1,35 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import FloatingInput from "../input/FloatingInput";
 import PhoneInput from "../input/PhoneInput";
-import SearchableDropdown from "../input/SearchableDropdown";
-
-let districtList;
-
-function loadDistricts() {
-  districtList ??= import("@/utils/data/bangladesh-all-thanas.json")
-    .then(({ default: divisions }) => ({
-      data: divisions
-        .flatMap((division) =>
-          division.districts.map((district) => ({
-            id: district.district_en,
-            name: district.district_bn,
-            searchText: district.district_en,
-            thanas: district.thanas.map((thana) => ({
-              id: thana.thana_en,
-              name: thana.thana_bn,
-              searchText: thana.thana_en,
-            })),
-          })),
-        )
-        .sort((a, b) => a.name.localeCompare(b.name, "bn")),
-    }))
-    .catch(() => {
-      districtList = undefined;
-      return { data: [] };
-    });
-  return districtList;
-}
 
 export default function DeliveryAddress({
   initialLocation,
   onLocationChange,
   setDeliveryArea,
 }) {
-  const [location, setLocation] = useState(null);
-  const { district, thana } = location || {};
-  const thanas = useMemo(() => district?.thanas || [], [district]);
+  const [district, setDistrict] = useState(initialLocation?.district || "");
+  const [thana, setThana] = useState(initialLocation?.thana || "");
 
   useEffect(() => {
-    if (!initialLocation?.district) return;
-    let active = true;
-    loadDistricts().then(({ data }) => {
-      if (!active) return;
-      const savedDistrict = data.find(
-        (item) => item.id === initialLocation.district,
-      );
-      if (!savedDistrict) return;
-      setLocation(
-        (current) =>
-          current ?? {
-            district: savedDistrict,
-            thana: savedDistrict.thanas.find(
-              (item) => item.id === initialLocation.thana,
-            ),
-          },
-      );
-    });
-    return () => {
-      active = false;
-    };
+    setDistrict(initialLocation?.district || "");
+    setThana(initialLocation?.thana || "");
   }, [initialLocation]);
 
-  function selectDistrict(nextDistrict) {
-    if (nextDistrict?.id === district?.id) return;
-    setLocation({ district: nextDistrict, thana: null });
-    const nextArea = nextDistrict
-      ? nextDistrict.id === "Dhaka"
-        ? "inside-dhaka"
-        : "outside-dhaka"
-      : undefined;
+  function updateDistrict(value) {
+    setDistrict(value);
+    const normalized = value.trim().toLocaleLowerCase();
+    const nextArea = /^(?:ঢাকা(?:\s+জেলা|\s+শহর|\s+সিটি)?|dhaka(?:\s+district|\s+city|\s+zilla)?|dacca)$/u.test(normalized)
+      ? "inside-dhaka"
+      : value.trim() ? "outside-dhaka" : undefined;
     if (nextArea) setDeliveryArea?.(nextArea);
-    onLocationChange?.(
-      { district: nextDistrict?.id || "", thana: "" },
-      nextArea,
-    );
+    onLocationChange?.({ district: value, thana }, nextArea);
   }
 
-  function selectThana(nextThana) {
-    setLocation({ district, thana: nextThana });
-    onLocationChange?.({
-      district: district?.id || "",
-      thana: nextThana?.id || "",
-    });
+  function updateThana(value) {
+    setThana(value);
+    onLocationChange?.({ district, thana: value });
   }
 
   return (
@@ -116,25 +60,27 @@ export default function DeliveryAddress({
         largeMobile
       />
 
-      <SearchableDropdown
+      <FloatingInput
         name="district"
-        label="জেলা "
-        defaultId={district}
-        loadLists={loadDistricts}
-        onSelect={selectDistrict}
-        onClear={() => selectDistrict(null)}
-        required={true}
+        label="জেলা লিখুন"
+        value={district}
+        onChange={(event) => updateDistrict(event.target.value)}
+        inputType="text"
+        autoComplete="address-level2"
+        maxLength={100}
+        required
+        largeMobile
       />
-      <SearchableDropdown
-        key={district?.id || "no-district"}
+      <FloatingInput
         name="thana"
-        label="থানা/উপজেলা"
-        defaultId={thana}
-        dropDownLists={thanas}
-        onSelect={selectThana}
-        onClear={() => selectThana(null)}
-        disabled={!district}
-        required={true}
+        label="থানা/উপজেলা লিখুন"
+        value={thana}
+        onChange={(event) => updateThana(event.target.value)}
+        inputType="text"
+        autoComplete="address-level3"
+        maxLength={100}
+        required
+        largeMobile
       />
       <FloatingInput
         defaultValue=""

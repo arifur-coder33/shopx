@@ -17,6 +17,7 @@ import OrderTimelineClient from "./components/OrderTimelineClient";
 import PaymentSummary from "./components/PaymentSummary";
 import CourierManagement from "./courier/CourierManagement";
 import OrderRiskAssessment from "./OrderRiskAssessment";
+import { CheckCircle2, Clock3 } from "lucide-react";
 
 // Server component ke lazy load kora hocche
 const OrderTimelineServer = dynamic(
@@ -76,6 +77,10 @@ export default function OrderDetailsPage({ order, children }) {
           status={status}
           date={order.createdAt || "N/A"}
         />
+        <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm ${order.customerConfirmedAt ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+          <span className="inline-flex items-center gap-2 font-semibold">{order.customerConfirmedAt ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}{order.customerConfirmedAt ? "Customer re-confirmed this order" : "Customer has not re-confirmed this order"}</span>
+          {order.customerConfirmedAt && <time dateTime={new Date(order.customerConfirmedAt).toISOString()} className="text-xs">{new Date(order.customerConfirmedAt).toLocaleString("en-BD", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Dhaka" })}</time>}
+        </div>
         <OrderRiskAssessment order={order} />
         <div className="card p-4 text-sm">
           <strong>Order source</strong>

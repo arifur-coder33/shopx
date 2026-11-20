@@ -31,6 +31,7 @@ export const orderConfig = {
     { label: "Created At", field: "createdAt", type: "date", sort: true },
     { label: "Order No", field: "orderNo", type: "text", sort: true },
     { label: "Customer", field: "customerName", type: "text", sort: true },
+    { label: "Customer re-confirm", field: "customerConfirmedAt", type: "confirmationBadge", sort: true },
     { label: "Total Price", field: "orderPrice", type: "currency", sort: true },
     { label: "Status", field: "status", type: "badge" },
   ],

@@ -24,7 +24,7 @@ import { firePurchaseServer } from "./SocialPurchaseEventAction";
 import { applyCartCampaign, applyDeliveryCampaign, applyPaymentCampaign, applyPaymentDeliveryCampaign, applyProductCampaign, getActiveCampaigns, selectCampaignsByPriority } from "@/backend/services/campaignService";
 import { CUSTOMER_ORDER_STATUS_GROUPS } from "@/lib/customerOrderStatus";
 import { sendOrderEmail } from "@/backend/services/emailService";
-import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, productBundleItemsSelect, resolveProductBundle } from "@/lib/bundleStock";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, canOrderProductBundleWhenOutOfStock, productBundleItemsSelect, resolveProductBundle } from "@/lib/bundleStock";
 import { releaseBundleOrder, reserveBundleOrder } from "@/backend/services/bundleReservationService";
 function compatibleCampaigns(campaigns, selectedCampaigns) {
   if (!selectedCampaigns.length) return campaigns;
@@ -253,10 +253,16 @@ const statusMap = CUSTOMER_ORDER_STATUS_GROUPS;
 //   }
 // }
 export async function createOrder(formData) {
-  const marketingAttribution = parseOrderAttribution((await cookies()).get(ORDER_SOURCE_COOKIE)?.value)
-    || (formData.get("gclid") && formData.get("gclid") !== "null" ? { channel: "Paid Ads", source: "google" }
-      : formData.get("ttclid") && formData.get("ttclid") !== "null" ? { channel: "Paid Ads", source: "tiktok" }
-      : { channel: "Direct / Unknown" });
+  let marketingAttribution;
+  if (formData.has("marketingAttribution")) {
+    marketingAttribution = parseOrderAttribution(String(formData.get("marketingAttribution") || ""));
+  } else {
+    const cookieAttribution = parseOrderAttribution((await cookies()).get(ORDER_SOURCE_COOKIE)?.value);
+    marketingAttribution = cookieAttribution
+      || (formData.get("gclid") || formData.get("gbraid") || formData.get("wbraid") ? { channel: "Paid Ads", source: "google" }
+        : formData.get("ttclid") ? { channel: "Paid Ads", source: "tiktok" }
+          : { channel: "Direct / Unknown" });
+  }
   const [h, userId] = await Promise.all([headers(), getUserId()]);
   const ip = getIP(h);
   const userAgent = h.get("user-agent") || "";
@@ -418,7 +424,9 @@ export async function createOrder(formData) {
       if (!variation?.product || variation.product.isActive === false)
         throw new Error("Selected product variation was not found.");
       if (
-        (variation.product.stockMode === "COMPONENT_BASED" || !variation.product.allowOutOfStockOrder) &&
+        (variation.product.stockMode === "COMPONENT_BASED"
+          ? !canOrderProductBundleWhenOutOfStock(variation.product.bundleProducts, variation.product.allowOutOfStockOrder)
+          : !variation.product.allowOutOfStockOrder) &&
         variation.available < requested
       ) {
         const item = orderItems.find((row) => row.variation.id === variationId);
@@ -598,6 +606,8 @@ export async function createOrder(formData) {
               quantity, variationId: componentVariation.id, sku: componentVariation.sku, title: componentVariation.product.title,
             }))
           : undefined,
+        allowBackorder: variation.product.stockMode === "COMPONENT_BASED" &&
+          canOrderProductBundleWhenOutOfStock(variation.product.bundleProducts, variation.product.allowOutOfStockOrder),
       }));
       const bundleReservationWarehouseId = await reserveBundleOrder(tx, stockLines);
       const order = await tx.order.create({
@@ -642,7 +652,10 @@ export async function createOrder(formData) {
           note: data?.note,
           fbc: data?.fbc,
           fbp: data?.fbp,
+          gaClientId: data?.gaClientId,
           gclid: data?.gclid,
+          gbraid: data?.gbraid,
+          wbraid: data?.wbraid,
           ttclid: data?.ttclid || "",
           marketingAttribution: marketingAttribution ?? undefined,
           userAgent,
@@ -1419,17 +1432,22 @@ export async function getOrderSuccessPageData({ orderNo, phoneNumber }) {
 export async function reconfirmCustomerOrderAction({ orderNo, phoneNumber }) {
   if (!orderNo || !phoneNumber) return { success: false, message: "অর্ডারের তথ্য পাওয়া যায়নি।" };
   try {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({ where: { orderNo: String(orderNo), phoneNumber: String(phoneNumber) }, select: { id: true, status: true, customerConfirmedAt: true } });
       if (!order) return { success: false, message: "অর্ডারটি পাওয়া যায়নি।" };
-      if (order.customerConfirmedAt) return { success: true, message: "আপনার অর্ডারটি আগেই re-confirm করা হয়েছে।" };
+      if (order.customerConfirmedAt) return { success: true, orderId: order.id, message: "আপনার অর্ডারটি আগেই re-confirm করা হয়েছে।" };
       if (order.status !== "PENDING") return { success: false, message: "এই অর্ডারটি আর re-confirm করা যাবে না।" };
       const confirmedAt = new Date();
       const changed = await tx.order.updateMany({ where: { id: order.id, status: "PENDING", customerConfirmedAt: null }, data: { customerConfirmedAt: confirmedAt } });
-      if (!changed.count) return { success: true, message: "আপনার অর্ডারটি আগেই re-confirm করা হয়েছে।" };
+      if (!changed.count) return { success: true, orderId: order.id, message: "আপনার অর্ডারটি আগেই re-confirm করা হয়েছে।" };
       await tx.orderTimeline.create({ data: { orderId: order.id, orderNo: String(orderNo), status: order.status, title: "Customer re-confirmed order", message: "Customer confirmed this order from the order success page.", createdBy: "customer" } });
-      return { success: true, message: "ধন্যবাদ! আপনার অর্ডারটি re-confirm হয়েছে।" };
+      return { success: true, orderId: order.id, message: "ধন্যবাদ! আপনার অর্ডারটি re-confirm হয়েছে।" };
     });
+    if (result.success && result.orderId) {
+      revalidatePath("/admin/orders");
+      revalidatePath(`/admin/order/view/${result.orderId}`);
+    }
+    return result;
   } catch {
     return { success: false, message: "এখন re-confirm করা যাচ্ছে না। আবার চেষ্টা করুন।" };
   }

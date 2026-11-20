@@ -556,6 +556,9 @@ model Order {
   fbc                       String?
   fbp                       String?
   gclid                     String?
+  gbraid                    String?
+  wbraid                    String?
+  gaClientId                String?
   ttclid                    String
   marketingAttribution      Json?
   userAgent                 String?
@@ -2036,6 +2039,14 @@ model AbandonedCheckoutLead {
   deliveryAddress String?
   email           String?
   note            String?
+  fbc             String?
+  fbp             String?
+  gaClientId      String?
+  gclid           String?
+  gbraid          String?
+  wbraid          String?
+  ttclid          String?
+  marketingAttribution Json?
   deliveryArea    String?
   items           Json?
   lastError       String?

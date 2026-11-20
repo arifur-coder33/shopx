@@ -10,7 +10,7 @@ import { createOrder } from "@/backend/serverActions/orderActions";
 import { saveAbandonedCheckoutLeadAction } from "@/backend/serverActions/abandonedCheckoutActions";
 import { initiateConfiguredPayment } from "@/backend/serverActions/paymentInitiationAction";
 import { useCart } from "@/context/CartContext";
-import { getCookie } from "@/utils/cookie/cooike";
+import { getCapturedOrderAttribution, getOrderClickIds } from "@/lib/orderAttribution";
 import { useSession } from "next-auth/react";
 import { flushSync } from "react-dom";
 import {
@@ -183,6 +183,8 @@ export default function OrderForm({
         name: item.title || item.productName || "",
         quantity: Number(item.quantity) || 1,
         price: Number.isFinite(price) && price >= 0 ? price : null,
+        variationId: item.variation?.id || null,
+        bundleSelections: item.bundleSelections || null,
         productUrl: /^[a-zA-Z0-9_-]+$/.test(slug) ? `/product/${slug}` : null,
       };
     })
@@ -192,7 +194,7 @@ export default function OrderForm({
     const phoneNumber = String(draft.phoneNumber || "").replace(/\D/g, "").replace(/^880(?=1[3-9]\d{8}$)/u, "0");
     if (!/^01[3-9]\d{8}$/.test(phoneNumber)) return;
     leadSaveQueue.current = leadSaveQueue.current
-      .then(() => saveAbandonedCheckoutLeadAction({ ...draft, phoneNumber, items: leadItems }))
+      .then(() => saveAbandonedCheckoutLeadAction({ ...draft, ...getOrderClickIds(), marketingAttribution: getCapturedOrderAttribution(), phoneNumber, items: leadItems }))
       .catch(() => {});
   }, [leadItems]);
 
@@ -370,7 +372,7 @@ export default function OrderForm({
     const form = event.currentTarget;
     const formData = new FormData(form);
     if (!formData.get("district") || !formData.get("thana")) {
-      const message = "তালিকা থেকে জেলা ও থানা/উপজেলা নির্বাচন করুন।";
+      const message = "জেলা ও থানা/উপজেলার নাম লিখুন।";
       setError(message);
       recordCheckoutError(formData, message);
       return;
@@ -414,10 +416,14 @@ export default function OrderForm({
       formData.append("orderPrice", totalPrice);
       formData.append("deliveryCharge", deliveryCharge);
       formData.append("orderWeight", orderWeight);
-      formData.append("fbp", getCookie("_fbp"));
-      formData.append("fbc", getCookie("_fbc"));
-      formData.append("gclid", getCookie("gclid"));
-      formData.append("ttclid", getCookie("ttclid"));
+      const clickIds = getOrderClickIds();
+      formData.append("gaClientId", clickIds.gaClientId);
+      formData.append("fbp", clickIds.fbp);
+      formData.append("fbc", clickIds.fbc);
+      formData.append("gclid", clickIds.gclid);
+      formData.append("gbraid", clickIds.gbraid);
+      formData.append("wbraid", clickIds.wbraid);
+      formData.append("ttclid", clickIds.ttclid);
       formData.append("userAgent", navigator.userAgent);
       formData.delete("quantity");
       formData.append("products", JSON.stringify([...(products || []), ...comboRewardItems]));

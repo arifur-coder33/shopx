@@ -19,9 +19,20 @@ export async function saveAbandonedCheckoutLead(input = {}) {
         name: cleanText(item?.name, 120),
         quantity: Math.max(1, Math.min(99, Number(item?.quantity) || 1)),
         price: item?.price != null && Number.isFinite(Number(item.price)) && Number(item.price) >= 0 ? Number(item.price) : null,
+        variationId: /^[a-zA-Z0-9_-]{1,80}$/.test(String(item?.variationId || "")) ? String(item.variationId) : null,
+        bundleSelections: item?.bundleSelections && typeof item.bundleSelections === "object" && !Array.isArray(item.bundleSelections)
+          ? Object.fromEntries(Object.entries(item.bundleSelections).slice(0, 20).map(([id, values]) => [
+            String(id).slice(0, 80), Array.isArray(values) ? values.slice(0, 30).map((value) => String(value).slice(0, 80)) : [],
+          ]))
+          : null,
         productUrl: /^\/product\/[a-zA-Z0-9_-]+$/.test(String(item?.productUrl || "")) ? item.productUrl : null,
       })).filter((item) => item.name)
     : [];
+  const clickId = (value) => typeof value === "string" && /^[A-Za-z0-9._-]{1,512}$/.test(value.trim()) ? value.trim() : null;
+  const attributionFields = ["source", "medium", "campaign", "ad", "campaignId", "adId", "channel", "referrer"];
+  const marketingAttribution = input.marketingAttribution && typeof input.marketingAttribution === "object"
+    ? Object.fromEntries(attributionFields.map((key) => [key, cleanText(input.marketingAttribution[key], 120)]).filter(([, value]) => value))
+    : null;
   const now = new Date();
   const lastError = cleanText(input.checkoutError, 500);
   const data = {
@@ -31,6 +42,14 @@ export async function saveAbandonedCheckoutLead(input = {}) {
     deliveryAddress: cleanText(input.deliveryAddress, 300) || null,
     email: cleanText(input.email, 160) || null,
     note: cleanText(input.note, 300) || null,
+    fbc: clickId(input.fbc),
+    fbp: clickId(input.fbp),
+    gaClientId: clickId(input.gaClientId),
+    gclid: clickId(input.gclid),
+    gbraid: clickId(input.gbraid),
+    wbraid: clickId(input.wbraid),
+    ttclid: clickId(input.ttclid),
+    marketingAttribution: marketingAttribution && Object.keys(marketingAttribution).length ? marketingAttribution : undefined,
     deliveryArea: ["inside-dhaka", "outside-dhaka"].includes(input.deliveryArea) ? input.deliveryArea : null,
     items,
     lastSeenAt: now,

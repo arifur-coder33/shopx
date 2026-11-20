@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { parseProductClassification } from "@/lib/productClassification";
 import { productCardBundleSelection, productCardRequiresSelection } from "@/lib/productCardSelection";
 import { parseNewBundleComposition, saveProductBundleComposition } from "@/backend/services/bundleCompositionService";
-import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, canOrderProductBundleWhenOutOfStock, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
 import { revalidateProductChange } from "@/backend/utils/revalidateCategoryProducts";
 import arraySum from "@/utils/arraySum";
 import calculateInitialDisplayPrice from "@/utils/calculateInitialDisplayPrice";
@@ -55,7 +55,9 @@ export async function getProductLiveStock(productId) {
     const bundleStock = bundleOptions.length ? availableProductBundleUnits(product.bundleProducts) : null;
     return {
       success: true,
-      allowOutOfStockOrder: product.stockMode !== "COMPONENT_BASED" && Boolean(product.allowOutOfStockOrder),
+      allowOutOfStockOrder: product.stockMode === "COMPONENT_BASED"
+        ? canOrderProductBundleWhenOutOfStock(product.bundleProducts, product.allowOutOfStockOrder)
+        : Boolean(product.allowOutOfStockOrder),
       bundleOptions,
       variations: product.variations.map((variation) => ({
         id: variation.id,
@@ -933,6 +935,7 @@ export async function getAllProduct(params) {
       where: whereClause,
       select: {
         ...restSelectFields,
+        allowOutOfStockOrder: true,
         // Include variations to calculate minPrice if it's not already in selectFields
         variations: {
           select: {

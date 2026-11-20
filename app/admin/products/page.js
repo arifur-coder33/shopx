@@ -39,6 +39,7 @@ export default async function ProductListPage() {
     },
     { label: "Created At", field: "createdAt", type: "date", sort: true },
     { label: "Name", field: "title", type: "text", sort: true },
+    { label: "Allow order at zero stock", field: "allowOutOfStockOrder", type: "booleanBadge", sort: true },
     { label: "Product Code", field: "productCode", type: "text", sort: true },
 
     {

@@ -33,7 +33,10 @@ export async function reserveBundleOrder(tx, items) {
   }
   const warehouseId = [...byWarehouse].sort(([, a], [, b]) => Number(b.isDefault) - Number(a.isDefault))
     .find(([, { stock }]) => requirements.every(([id, needed]) => stock.get(id) >= needed))?.[0];
-  if (!warehouseId) throw new Error("এই অর্ডারের সব পণ্য ও bundle components একই গুদামে পর্যাপ্ত নেই।");
+  if (!warehouseId) {
+    if (items.filter(({ bundleComponents }) => bundleComponents?.length).every(({ allowBackorder }) => allowBackorder === true)) return null;
+    throw new Error("এই অর্ডারের সব পণ্য ও bundle components একই গুদামে পর্যাপ্ত নেই।");
+  }
 
   for (const [variationId, quantity] of requirements) {
     const result = await tx.stock.updateMany({

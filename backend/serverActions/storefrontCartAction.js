@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { isDatabaseId } from "@/lib/databaseId";
-import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, bundleSelectionLabels, completeBundleSelection, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
+import { availableBundleUnits, availableProductBundleUnits, bundleComponentStockSelect, bundleSelectionLabels, canOrderProductBundleWhenOutOfStock, completeBundleSelection, productBundleItemsSelect, publicBundleOptions } from "@/lib/bundleStock";
 
 // A deliberately small action for quick-add buttons. Keeping it separate from
 // the admin product action bundle prevents every storefront page compiling it.
@@ -18,6 +18,7 @@ export async function getStorefrontCartItem(slug) {
         categoryId: true,
         hasVariations: true,
         stockMode: true,
+        allowOutOfStockOrder: true,
         bundleProducts: productBundleItemsSelect,
         category: { select: { name: true, slug: true, fullPath: true } },
         thumbnail: { select: { name: true } },
@@ -50,7 +51,8 @@ export async function getStorefrontCartItem(slug) {
     }
     const bundleStock = bundleOptions.length
       ? availableProductBundleUnits(product.bundleProducts) : availableBundleUnits(variation.bundleItems);
-    if (product.stockMode === "COMPONENT_BASED" && bundleStock === 0) {
+    const canBackorderBundle = product.stockMode === "COMPONENT_BASED" && canOrderProductBundleWhenOutOfStock(product.bundleProducts, product.allowOutOfStockOrder);
+    if (product.stockMode === "COMPONENT_BASED" && bundleStock === 0 && !canBackorderBundle) {
       return { success: false, error: "এই Bundle এখন স্টকে নেই।" };
     }
     const bundleSelections = bundleOptions.length ? completeBundleSelection(bundleOptions) : undefined;

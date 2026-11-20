@@ -57,31 +57,55 @@ export async function getAwbTemplate(order, shopName, logo = "", merchantId = ""
   const path = Array.from(bars, (bar, i) => bar === "1" ? `M${i} 0h1v40h-1z` : "").join("");
   const qrCode = await QRCode.toDataURL(consignment, { margin: 1 });
   const steadfastAwb = order.shipping.courierProvider?.adapterKey === "STEADFAST";
-  return documentHtml("Air Waybill", `<header>
-    ${logo ? `<img class="shop-logo" src="${escape(logo)}" alt="">` : ""}<h1>${escape(shopName)}</h1><p>Air Waybill · ${escape(order.shipping.courierName || order.selectedCourierProvider?.name || "Courier")}</p>
-    ${steadfastAwb && merchantId ? `<p>Merchant ID: ${escape(merchantId)}</p>` : ""}
-    ${process.env.NEXT_PUBLIC_PATHAO_STORE_ID && (order.shipping.courierProvider?.adapterKey === "PATHAO" || /^pathao/i.test(order.shipping.courierName || "")) ? `<p>Store ID: ${escape(process.env.NEXT_PUBLIC_PATHAO_STORE_ID)}</p>` : ""}
+  const area = [order.thana, order.city].filter(Boolean).join(", ");
+  const printedAt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", dateStyle: "short", timeStyle: "short" }).format(new Date());
+  return documentHtml("Steadfast Parcel Label", `<main class="label">
+    <header>
+      ${logo ? `<img class="shop-logo" src="${escape(logo)}" alt="">` : ""}
+      <div class="shop"><h1>${escape(shopName)}</h1>${steadfastAwb && merchantId ? `<p>Merchant ID: ${escape(merchantId)}</p>` : ""}</div>
     </header>
-    <svg role="img" aria-label="Consignment barcode" viewBox="-10 0 ${bars.length + 20} 40" preserveAspectRatio="none"><path d="${path}"/></svg>
-    <div class="shipment"><img src="${qrCode}" alt="Consignment QR code">
-    <div><p>Invoice: ${escape(order.orderNo)}</p><p>Consignment: ${escape(consignment)}</p>
-    <p>Delivery type: Home</p><p>Weight: ${escape(order.orderWeight || 0.5)} kg</p></div></div>
-    <section><p><strong>${escape(order.customerName)}</strong></p>
-    <p>${escape(order.phoneNumber)}</p><p>${escape(formatOrderAddress(order))}</p>${steadfastAwb && order.shipping.note ? `<p class="note">NOTE · ${escape(order.shipping.note)}</p>` : ""}</section>
-    <p class="cod">COD: ৳${escape(order.shipping.cod ?? order.dueAmount ?? 0)}</p>`,
+    ${process.env.NEXT_PUBLIC_PATHAO_STORE_ID && (order.shipping.courierProvider?.adapterKey === "PATHAO" || /^pathao/i.test(order.shipping.courierName || "")) ? `<p>Store ID: ${escape(process.env.NEXT_PUBLIC_PATHAO_STORE_ID)}</p>` : ""}
+    <div class="barcode"><svg role="img" aria-label="Consignment barcode" viewBox="-10 0 ${bars.length + 20} 40" preserveAspectRatio="none"><path d="${path}"/></svg><strong>${escape(consignment)}</strong></div>
+    <div class="shipment"><img src="${qrCode}" alt="Consignment QR code"><div class="details">
+      <p><span>INVOICE</span><b>${escape(order.orderNo)}</b></p><p><span>SF-ID</span><b>${escape(consignment)}</b></p>
+      <p><span>DELIVERY</span><b>Home</b></p><p><span>WEIGHT</span><b>${escape(order.orderWeight ? `${order.orderWeight} kg` : "N/G")}</b></p>
+    </div></div>
+    <section><p class="row"><span>NAME</span><b>${escape(order.customerName)}</b></p>
+      <p class="row"><span>PHONE</span><b>${escape(order.phoneNumber)}</b></p>
+      <p class="row"><span>ADDRESS</span><b>${escape(order.deliveryAddress || formatOrderAddress(order))}</b></p>
+      ${area ? `<p class="row"><span>AREA</span><b>${escape(area)}</b></p>` : ""}
+      ${steadfastAwb && order.shipping.note ? `<p class="row"><span>NOTE</span><i>${escape(order.shipping.note)}</i></p>` : ""}
+    </section>
+    <p class="cod"><span>CASH ON DELIVERY</span><b>৳ ${escape(order.shipping.cod ?? order.dueAmount ?? 0)}</b></p>
+    <footer><span>Printed: ${escape(printedAt)}</span><b>✦ steadfast</b><small>steadfast.com.bd</small></footer>
+    </main>`,
   `
     @page { size: 76.2mm 76.2mm; margin: 0; }
-    body { width: 76.2mm; height: 76.2mm; padding: 2mm; font-size: 7pt; }
-    header { height: 8mm; display: flex; align-items: center; justify-content: space-between; gap: 2mm; border-bottom: .3mm solid #334155; }
-    header h1 { font-size: 9pt; margin: 0; }
+    body { width: 76.2mm; height: 76.2mm; padding: 0; font: 7pt Arial, sans-serif; color: #172033; overflow: hidden; }
+    .label { width: 76.2mm; height: 76.2mm; padding: 1.5mm; display: grid; grid-template-rows: 10mm 11mm 18mm minmax(0,1fr) 7mm 5mm; }
+    header { display: flex; align-items: center; gap: 2mm; border-bottom: .35mm solid #111; }
+    .shop-logo { width: 9mm; height: 8mm; object-fit: contain; }
+    .shop { margin-left: auto; text-align: right; }
+    header h1 { font-size: 9pt; margin: 0 0 1mm; }
     header p { font-size: 6pt; margin: 0; }
-    .shop-logo { width: 9mm; height: 7mm; object-fit: contain; }
-    svg { display: block; width: 100%; height: 9mm; margin: 1mm 0; }
-    .shipment { display: flex; align-items: center; gap: 2mm; margin: 1mm 0; }
-    .shipment img { width: 17mm; height: 17mm; }
-    section, .cod { border: .25mm solid #334155; padding: 1.2mm; break-inside: avoid; }
-    section p { margin-bottom: .7mm; }
-    .note { font-style: italic; }
-    .cod { display: flex; justify-content: space-between; margin-top: 1.5mm; font-size: 9pt; font-weight: bold; }
+    .barcode { text-align: center; border-bottom: .25mm solid #cbd5e1; }
+    .barcode svg { display: block; width: 88%; height: 7mm; margin: 1mm auto 0; }
+    .barcode path { fill: #000; }
+    .barcode strong { font: bold 7pt monospace; letter-spacing: 1.5mm; }
+    .shipment { display: flex; align-items: center; border-bottom: .25mm solid #cbd5e1; }
+    .shipment img { width: 17mm; height: 17mm; padding-right: 1mm; border-right: .25mm solid #cbd5e1; }
+    .details { flex: 1; padding-left: 2mm; }
+    .details p, .row { display: flex; justify-content: space-between; gap: 1mm; margin: 0; }
+    .details p { margin: .8mm 0; }
+    .details span, .row span, .cod span { color: #526276; letter-spacing: .15mm; }
+    .details b { text-align: right; }
+    section { padding: 1mm; overflow: hidden; }
+    .row { align-items: flex-start; margin-bottom: .7mm; line-height: 1.15; }
+    .row span { width: 13mm; flex: 0 0 13mm; }
+    .row b, .row i { flex: 1; overflow-wrap: anywhere; }
+    .cod { display: flex; align-self: end; align-items: center; justify-content: space-between; border: .3mm solid #111; padding: 1mm 2mm; margin: 0; }
+    .cod b { font-size: 11pt; }
+    footer { grid-row: 6; display: flex; align-items: center; justify-content: space-between; border-top: .25mm solid #cbd5e1; color: #718096; font-size: 5.5pt; }
+    footer b { color: #111; font-size: 7pt; }
   `);
 }

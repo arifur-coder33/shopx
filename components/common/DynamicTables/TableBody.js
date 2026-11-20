@@ -36,6 +36,23 @@ const renderDynamicField = (item, column) => {
   // const value = item?.[field];
   const value = getNestedValue(item, field);
   switch (type) {
+    case "booleanBadge":
+      return value ? (
+        <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">Enabled</span>
+      ) : (
+        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">Disabled</span>
+      );
+    case "confirmationBadge":
+      return value ? (
+        <span className="inline-flex flex-col items-start gap-0.5 whitespace-nowrap">
+          <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">Re-confirmed</span>
+          <time className="text-[10px] text-text-muted" dateTime={new Date(value).toISOString()}>
+            {new Date(value).toLocaleString("en-BD", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Dhaka" })}
+          </time>
+        </span>
+      ) : (
+        <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">Not re-confirmed</span>
+      );
     case "image":
       const imageUrl = value?.name || item?.mainImage || value;
       return imageUrl ? (
