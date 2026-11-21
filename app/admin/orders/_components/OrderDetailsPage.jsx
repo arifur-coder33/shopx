@@ -3,6 +3,7 @@ import { hasUIPermission } from "@/lib/hasUIPermission.js";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { Suspense, useState } from "react";
+import { CalendarDays } from "lucide-react";
 import AdminOrderAddressEditor from "./AdminOrderAddressEditor";
 import BanglaQrPaymentReview from "./BanglaQrPaymentReview";
 import AdminActions from "./components/AdminActions";
@@ -77,6 +78,11 @@ export default function OrderDetailsPage({ order, children }) {
           date={order.createdAt || "N/A"}
           customerConfirmedAt={order.customerConfirmedAt}
         />
+        {order.deliveredAt && <div className="-mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+          <CalendarDays size={16} className="shrink-0" />
+          <span className="font-semibold">ডেলিভারির সময়:</span>
+          <time dateTime={new Date(order.deliveredAt).toISOString()}>{dateConvertToLocalString(order.deliveredAt)}</time>
+        </div>}
         <OrderRiskAssessment order={order} />
         <div className="card p-4 text-sm">
           <strong>Order source</strong>
@@ -111,6 +117,7 @@ export default function OrderDetailsPage({ order, children }) {
             <OrderSummary
               subtotal={order.orderPrice}
               delivery={order.deliveryCharge}
+              courierFinalDeliveryFee={shipping?.deliveryFee}
               adminDiscount={adminDiscount}
               total={order.orderPrice + order.deliveryCharge - adminDiscount}
               dueAmount={order.dueAmount}

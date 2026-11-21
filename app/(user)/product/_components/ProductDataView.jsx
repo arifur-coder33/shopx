@@ -69,7 +69,12 @@ export default function ProductDataView({
     data.thumbnail,
     ...(data.gallery || []),
     ...(data.variations || []).map((variation) => variation.thumbnail),
-  ];
+    ...(data.bundleOptions || []).map((item) => item.sizeChart?.image && ({
+      id: item.sizeChart.image.id || item.sizeChart.image.name,
+      name: item.sizeChart.image.name,
+      seoAlt: `${item.title} size guide`,
+    })),
+  ].filter(Boolean);
   const hasPhotos = detailPhotos.some((photo) => photo?.name);
   const hasVideos = Boolean(
     (data.videos || []).some((video) => video?.url) || data.videoUrl,

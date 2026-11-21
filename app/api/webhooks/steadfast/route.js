@@ -19,11 +19,30 @@ function hasValidSignature(provider, rawBody, signature) {
   }
 }
 
+function hasValidBearerToken(provider, authorization) {
+  const token = /^Bearer\s+(.+)$/i.exec(String(authorization || ""))?.[1]?.trim();
+  if (!token) return false;
+  try {
+    const secret = getCourierWebhookSecret(provider);
+    if (!secret) return false;
+    const expected = Buffer.from(secret);
+    const received = Buffer.from(token);
+    return expected.length === received.length && timingSafeEqual(expected, received);
+  } catch {
+    return false;
+  }
+}
+
+function hasValidCredentials(provider, rawBody, req) {
+  return hasValidBearerToken(provider, req.headers.get("authorization")) &&
+    hasValidSignature(provider, rawBody, req.headers.get("x-signature") || "");
+}
+
 export async function POST(req) {
   try {
     // Verify the exact bytes Steadfast sent before parsing or mutating anything.
-    // The configured webhook secret (Steadfast API secret by default) signs
-    // X-Signature; Authorization Bearer is not required by this receiver.
+    // The configured webhook secret (Steadfast API secret by default) is both
+    // the Bearer token and the HMAC key, as specified by Steadfast.
     const rawBody = await req.text();
     let body;
     try {
@@ -36,8 +55,8 @@ export async function POST(req) {
       return Response.json({ status: "error", message: "Invalid webhook body." }, { status: 400 });
     }
 
+    const notificationType = String(body.notification_type || "").trim().toLowerCase();
     const {
-      notification_type,
       consignment_id,
       delivery_charge,
       delivery_fee,
@@ -45,7 +64,9 @@ export async function POST(req) {
       collected_amount,
       cod_amount,
     } = body;
-    const status = String(body.status ?? body.delivery_status ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    // Some Steadfast payloads use `status` for the HTTP/result code and put
+    // the parcel state in `delivery_status`; prefer the explicit parcel field.
+    const status = String(body.delivery_status ?? body.status ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const consignments = [
       ...(consignment_id == null ? [] : [consignment_id]),
       ...(Array.isArray(body.consignments)
@@ -57,10 +78,17 @@ export async function POST(req) {
         : []),
     ];
     const consignmentIds = [...new Set(consignments.map(String))];
+    const invoiceIds = [...new Set([body.invoice, body.merchant_order_id]
+      .filter((invoice) => invoice != null && String(invoice).trim())
+      .map((invoice) => String(invoice).trim()))];
 
-    const shipments = consignmentIds.length ? await prisma.shipping.findMany({
+    const shipmentMatchers = [
+      ...(consignmentIds.length ? [{ cn: { in: consignmentIds } }] : []),
+      ...(invoiceIds.length ? [{ orderNo: { in: invoiceIds } }] : []),
+    ];
+    const shipments = shipmentMatchers.length ? await prisma.shipping.findMany({
       where: {
-        cn: { in: consignmentIds },
+        OR: shipmentMatchers,
         isManualEntry: false,
         courierProvider: { is: { adapterKey: "STEADFAST" } },
       },
@@ -70,9 +98,8 @@ export async function POST(req) {
       },
     }) : [];
 
-    const signature = req.headers.get("x-signature") || "";
     const candidates = new Map(shipments.map(({ courierProvider }) => [courierProvider.id, courierProvider]));
-    let providers = [...candidates.values()].filter((provider) => hasValidSignature(provider, rawBody, signature));
+    let providers = [...candidates.values()].filter((provider) => hasValidCredentials(provider, rawBody, req));
     if (!providers.length) {
       // Account events and parcels booked outside this storefront can still
       // arrive at the account's callback URL.
@@ -80,7 +107,7 @@ export async function POST(req) {
         where: { adapterKey: "STEADFAST", encryptedCredentials: { not: null } },
         select: { id: true, adapterKey: true, encryptedCredentials: true },
       });
-      providers = configuredProviders.filter((provider) => hasValidSignature(provider, rawBody, signature));
+      providers = configuredProviders.filter((provider) => hasValidCredentials(provider, rawBody, req));
     }
     if (!providers.length) {
       return Response.json({ status: "error", message: "Unauthorized webhook." }, { status: 401 });
@@ -100,14 +127,14 @@ export async function POST(req) {
       return_request: "Return request",
       pickup_request: "Pickup request",
     };
-    const detailText = describeSteadfastEvent(notification_type, body);
+    const detailText = describeSteadfastEvent(notificationType, body);
     const statusMap = {
       pending: "SHIPPED",
       delivered: "DELIVERED",
       cancelled: "CANCELLED",
       partial_delivered: "DELIVERED",
     };
-    const currentStatus = notification_type === "delivery_status" && Object.hasOwn(statusMap, status)
+    const currentStatus = notificationType === "delivery_status" && Object.hasOwn(statusMap, status)
       ? statusMap[status]
       : undefined;
     const activeOrderStatuses = ["PENDING", "PROCESSING", "READY_TO_SHIP", "SHIPPED", "DELIVERY_FAILED"];
@@ -144,9 +171,9 @@ export async function POST(req) {
 
       // A completed delivery is the collection event for a full COD shipment.
       // Partial delivery is not financially posted without an explicit collected amount.
-      const isFullCollection = notification_type === "delivery_status" && status === "delivered";
+      const isFullCollection = notificationType === "delivery_status" && status === "delivered";
       const hasExplicitPartialCollection =
-        notification_type === "delivery_status" &&
+        notificationType === "delivery_status" &&
         status === "partial_delivered" &&
         Number(collected_amount) > 0;
       if (statusApplied && order.paymentMethod === "COD" && (isFullCollection || hasExplicitPartialCollection)) {
@@ -169,7 +196,7 @@ export async function POST(req) {
       }
 
       const isFeeFinal =
-        notification_type === "delivery_status" &&
+        notificationType === "delivery_status" &&
         ["delivered", "partial_delivered", "cancelled"].includes(status);
       if (statusApplied && isFeeFinal && hasDeliveryFee && actualDeliveryFee > 0) {
         await postProviderFee({
@@ -187,7 +214,7 @@ export async function POST(req) {
           orderId: order.id,
           orderNo: order.orderNo,
           status: statusApplied ? currentStatus : order.status,
-          title: Object.hasOwn(eventTitles, notification_type) ? eventTitles[notification_type] : "Steadfast update",
+          title: Object.hasOwn(eventTitles, notificationType) ? eventTitles[notificationType] : "Steadfast update",
           message: `${detailText} [${perConsignmentEventKey}]`,
           createdBy: "courier",
           createdAt: validEventDate,

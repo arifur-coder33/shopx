@@ -26,6 +26,7 @@ export default function BundleVariationPicker({ item, index, onSelect }) {
           variations={variations}
           hasVariations
           onVariationChange={onVariationChange}
+          sizeChart={item.sizeChart}
         />
       ) : <p className="text-sm text-text-muted">স্টকে নেই</p>}
     </section>

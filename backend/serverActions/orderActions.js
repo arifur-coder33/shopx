@@ -757,6 +757,8 @@ export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status, in
       id: true, orderNo: true, status: true, customerName: true, phoneNumber: true,
       deliveryAddress: true, thana: true, city: true, orderPrice: true,
       deliveryCharge: true, paymentMethod: true, paymentStatus: true, paidAmount: true, dueAmount: true, createdAt: true, viewedBy: true, customerConfirmedAt: true,
+      deliveries: { where: { deliveredAt: { not: null } }, orderBy: { deliveredAt: "desc" }, take: 1, select: { deliveredAt: true } },
+      timeline: { where: { status: "DELIVERED" }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
       fraudRiskScore: true, fraudRiskLevel: true, fraudRiskFactors: true,
       orderItems: { select: { id: true, productName: true, price: true, quantity: true, thumbnail: true } },
     },
@@ -769,7 +771,12 @@ export async function getRecentOrdersForAdmin({ limit = 50, cursorId, status, in
     ? await prisma.order.count({ where: { NOT: { viewedBy: { has: userId } } } })
     : 0;
   return {
-    orders: rows.slice(0, pageSize),
+    orders: rows.slice(0, pageSize).map((order) => ({
+      ...order,
+      deliveredAt: order.deliveries?.[0]?.deliveredAt || order.timeline?.[0]?.createdAt || null,
+      deliveries: undefined,
+      timeline: undefined,
+    })),
     hasMore: rows.length > pageSize,
     ...(includeUnseenCount ? { unseenCount } : {}),
   };
@@ -930,6 +937,8 @@ export async function getOrderById(orderId) {
       where: { id: orderId },
       include: {
         orderItems: { include: { variation: true, combination: true } },
+        deliveries: { where: { deliveredAt: { not: null } }, orderBy: { deliveredAt: "desc" }, take: 1, select: { deliveredAt: true } },
+        timeline: { where: { status: "DELIVERED" }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
         shipping: { include: { courierProvider: true } },
         selectedPaymentGateway: true,
         selectedCourierProvider: true,
@@ -938,7 +947,14 @@ export async function getOrderById(orderId) {
     });
     if (!data) return { success: true, data: null };
     const customerHistory = await getCustomerOrderHistoryForAdmin(data.phoneNumber);
-    return { success: true, data: { ...data, customerHistory: customerHistory.data || null } };
+    return {
+      success: true,
+      data: {
+        ...data,
+        deliveredAt: data.deliveries?.[0]?.deliveredAt || data.timeline?.[0]?.createdAt || null,
+        customerHistory: customerHistory.data || null,
+      },
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }

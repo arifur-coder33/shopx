@@ -3,6 +3,7 @@ import SSLCommerzPayButton from "@/components/payments/SSLCommerzPayButton";
 export default function OrderSummary({
   subtotal,
   delivery,
+  courierFinalDeliveryFee,
   adminDiscount,
   total,
   dueAmount,
@@ -22,6 +23,12 @@ export default function OrderSummary({
           <span>Delivery Charge</span>
           <span>+ {delivery} BDT</span>
         </div>
+        {courierFinalDeliveryFee !== undefined && (
+          <div className="flex justify-between text-text-muted">
+            <span>Courier final delivery fee</span>
+            <span>{courierFinalDeliveryFee == null ? "Awaiting courier update" : `${courierFinalDeliveryFee} BDT`}</span>
+          </div>
+        )}
         <div className="flex justify-between text-red-500">
           <span>Extra Discount</span>
           <span>- {adminDiscount} BDT</span>

@@ -77,9 +77,20 @@ export async function getOrderCardForAdminAction(orderId) {
       id: true, orderNo: true, status: true, customerName: true, phoneNumber: true,
       orderPrice: true, deliveryCharge: true, paymentStatus: true, paidAmount: true,
       dueAmount: true, createdAt: true, viewedBy: true, customerConfirmedAt: true,
+      deliveries: { where: { deliveredAt: { not: null } }, orderBy: { deliveredAt: "desc" }, take: 1, select: { deliveredAt: true } },
+      timeline: { where: { status: "DELIVERED" }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
       fraudRiskScore: true, fraudRiskLevel: true, fraudRiskFactors: true,
       orderItems: { select: { id: true, productName: true, price: true, quantity: true, thumbnail: true } },
     },
   });
-  return { success: Boolean(data), data: data ? { ...data, createdAt: data.createdAt.toISOString() } : null };
+  return {
+    success: Boolean(data),
+    data: data ? {
+      ...data,
+      createdAt: data.createdAt.toISOString(),
+      deliveredAt: data.deliveries?.[0]?.deliveredAt || data.timeline?.[0]?.createdAt || null,
+      deliveries: undefined,
+      timeline: undefined,
+    } : null,
+  };
 }

@@ -32,6 +32,7 @@ export const getStorefrontProductBySlug = cache(async (slug) => {
         updatedAt: true,
         category: { select: { name: true, slug: true, fullPath: true } },
         specifications: { orderBy: { sortOrder: "asc" }, select: { id: true, value: true, specification: { select: { id: true, name: true, parent: { select: { id: true, name: true } } } } } },
+        questionsAnswers: { orderBy: { sortOrder: "asc" }, select: { id: true, question: true, answer: true } },
         thumbnail: { select: { name: true, id: true, url: true } },
         gallery: { select: { media: { select: { id: true, name: true, url: true } } } },
         videos: {

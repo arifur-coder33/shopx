@@ -241,11 +241,25 @@ async function ProductPageContent({ detailsPromise }) {
   const hasSize = data.hasVariations && data.variations.some((variant) =>
     variant.combinations.some((option) => option.variationName?.name?.trim().toLowerCase() === "size"),
   );
-  const [reviews, sizeSettings, deliveryBenefits] = await Promise.all([
+  const sizeBundleOptions = (data.bundleOptions || []).filter((item) =>
+    item.options?.some((option) => option.combinations?.some((combination) =>
+      combination.variationName?.name?.trim().toLowerCase() === "size",
+    )),
+  );
+  const [reviews, sizeSettings, deliveryBenefits, componentSizeSettings] = await Promise.all([
     getPublishedProductPhotoReviews(data.id),
     hasSize ? getCategorySizeSettings(data.categoryId) : null,
     getCategoryDeliveryBenefits(data.category),
+    Promise.all([...new Set(sizeBundleOptions.map((item) => item.categoryId).filter(Boolean))]
+      .map(async (categoryId) => [categoryId, await getCategorySizeSettings(categoryId)])),
   ]);
+  const componentCharts = new Map(componentSizeSettings.map(([categoryId, settings]) => [categoryId, settings?.chart || null]));
+  const bundleOptions = (data.bundleOptions || []).map((item) => ({
+    ...item,
+    sizeChart: item.options?.some((option) => option.combinations?.some((combination) =>
+      combination.variationName?.name?.trim().toLowerCase() === "size",
+    )) ? componentCharts.get(item.categoryId) || null : null,
+  }));
 
   return (
     <div className="mb-16 pb-20 sm:pb-0">
@@ -264,7 +278,7 @@ async function ProductPageContent({ detailsPromise }) {
         ]}
       />
       <ProductDataView
-        data={{ ...data, variations: variationsWithCampaigns }}
+        data={{ ...data, bundleOptions, variations: variationsWithCampaigns }}
         campaignOffers={campaignOffers}
         deliveryCampaignLabel={deliveryCampaignLabel}
         deliveryBenefits={deliveryBenefits}
