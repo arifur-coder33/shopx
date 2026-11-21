@@ -5,7 +5,7 @@ import PhotoReviewCarousel from "@/components/reviews/PhotoReviewCarousel";
 import { Plus } from "lucide-react";
 import { SizeGuide } from "./SizeGuide";
 
-export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos, reviews = [], reviewSubtitle, questionsAnswers = [], sizeChart }) {
+export default function ProductInfoTabs({ description, specifications, hasSpecifications, videos, photos, reviews = [], reviewSubtitle, questionsAnswers = [], sizeChart, sizeCharts }) {
   const [activeTab, setActiveTab] = useState("description");
   const descriptionRef = useRef(null);
   const specificationsRef = useRef(null);
@@ -15,6 +15,7 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
   const reviewsRef = useRef(null);
   const questionsAnswersRef = useRef(null);
   const hasReviews = reviews.length > 0;
+  const guides = sizeCharts?.length ? sizeCharts : sizeChart ? [sizeChart] : [];
 
   const selectTab = (tab) => {
     setActiveTab(tab);
@@ -102,7 +103,7 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
             আরও ছবি
           </button>
         )}
-        {sizeChart && (
+        {guides.length > 0 && (
           <button
             type="button"
             role="tab"
@@ -180,9 +181,11 @@ export default function ProductInfoTabs({ description, specifications, hasSpecif
           </div>
         </section>
       )}
-      {sizeChart && (
+      {guides.length > 0 && (
         <section ref={sizeGuideRef} id="product-size-guide" role="tabpanel" className="my-5 scroll-mt-32 rounded-xl border border-border bg-surface p-4">
-          <SizeGuide chart={sizeChart} />
+          <div className="space-y-6">
+            {guides.map((chart) => <SizeGuide key={chart.id || chart.image?.id || chart.image?.name || chart.name} chart={chart} />)}
+          </div>
         </section>
       )}
     </section>

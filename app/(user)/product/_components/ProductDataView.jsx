@@ -76,6 +76,10 @@ export default function ProductDataView({
     })),
   ].filter(Boolean);
   const hasPhotos = detailPhotos.some((photo) => photo?.name);
+  const sizeGuides = [...new Map([
+    sizeChart,
+    ...(data.bundleOptions || []).map((item) => item.sizeChart),
+  ].filter(Boolean).map((chart) => [chart.id || chart.image?.id || chart.image?.name || chart.name, chart])).values()];
   const hasVideos = Boolean(
     (data.videos || []).some((video) => video?.url) || data.videoUrl,
   );
@@ -167,7 +171,7 @@ export default function ProductDataView({
         }}
       >
         <ProductInfoTabs
-          sizeChart={sizeChart}
+          sizeCharts={sizeGuides}
           hasSpecifications={hasSpecifications}
           description={<ProductDescription description={description} />}
           specifications={
