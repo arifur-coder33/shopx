@@ -107,6 +107,9 @@ export default function SizeChartEditor({ chart, options, canAddSize, onSaved })
           </tr>)}</tbody>
         </table>
       </div>
+      <label className="grid gap-1">Note (optional)
+        <textarea className={`${field} min-h-20 resize-y`} name="note" maxLength={3000} defaultValue={chart?.note || ""} placeholder="Add fit advice or measurement instructions shown below the size chart." />
+      </label>
       <div className="flex flex-wrap gap-2">
         <button className={button} type="button" onClick={() => addRow("measurement")}>Add measurement</button>
         <button className="rounded bg-primary px-3 py-1.5 font-semibold text-white" type="submit">{pending ? "Saving…" : "Save size chart"}</button>

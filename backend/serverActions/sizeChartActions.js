@@ -39,8 +39,9 @@ export async function saveSizeChart(id, formData) {
     const name = String(formData.get("name") || "").trim();
     const imageId = String(formData.get("imageId") || "");
     const unit = formData.get("unit");
+    const note = String(formData.get("note") || "").trim();
     const { sizes, rows } = JSON.parse(formData.get("table"));
-    if (!name || name.length > 120 || !imageId || !["mm", "cm", "inch"].includes(unit)) {
+    if (!name || name.length > 120 || !imageId || note.length > 3000 || !["mm", "cm", "inch"].includes(unit)) {
       throw new Error("Enter a name, choose a photo and select a unit.");
     }
     if (!Array.isArray(sizes) || !sizes.length || sizes.length > 40 || new Set(sizes).size !== sizes.length ||
@@ -81,7 +82,7 @@ export async function saveSizeChart(id, formData) {
     });
     const recommendation = normalized.find((row) => row.kind === "recommendation");
     const measurements = normalized.filter((row) => row.kind === "measurement");
-    const data = { name, imageId, unit, sizes, rows: recommendation ? [recommendation, ...measurements] : measurements };
+    const data = { name, imageId, unit, note: note || null, sizes, rows: recommendation ? [recommendation, ...measurements] : measurements };
     if (id) await prisma.sizeChart.update({ where: { id }, data });
     else await prisma.sizeChart.create({ data });
     revalidatePath("/admin/size-charts");

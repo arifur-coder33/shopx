@@ -27,6 +27,7 @@ export function SizeGuide({ chart }) {
           </tr>)}</tbody>
         </table>
       </div>
+      {chart.note && <p className="whitespace-pre-line rounded-lg bg-surface-muted px-3 py-2 text-sm leading-6 text-text-secondary">{chart.note}</p>}
     </div>
   </div>;
 }

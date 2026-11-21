@@ -133,6 +133,7 @@ model SizeChart {
   imageId    String?
   image      Media?     @relation(fields: [imageId], references: [id], onDelete: SetNull)
   unit       String
+  note       String?    @db.Text
   sizes      String[]
   rows       Json
   categories Category[]
